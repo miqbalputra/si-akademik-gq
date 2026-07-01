@@ -14,7 +14,6 @@ class TahfidzHalaqahForm
         return $schema
             ->components([
                 Select::make('academic_term_id')
-                    ->label('Periode Akademik')
                     ->relationship('academicTerm', 'name')
                     ->searchable()
                     ->preload()
@@ -33,7 +32,6 @@ class TahfidzHalaqahForm
                     ->preload()
                     ->label('Asisten Guru'),
                 Select::make('status')
-                    ->label('Status')
                     ->options([
                         'active' => 'Aktif',
                         'closed' => 'Ditutup',

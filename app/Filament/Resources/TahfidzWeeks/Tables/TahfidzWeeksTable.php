@@ -17,7 +17,6 @@ class TahfidzWeeksTable
                 TextColumn::make('starts_on')->date('d M Y')->label('Mulai'),
                 TextColumn::make('ends_on')->date('d M Y')->label('Selesai'),
                 TextColumn::make('academicTerm.name')->label('Periode'),
-                    ->label('Periode Akademik')
             ])
             ->defaultSort('week_number');
     }

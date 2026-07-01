@@ -17,13 +17,9 @@ class DiniyyahTeacherAssignmentsTable
                 TextColumn::make('classSubject.classroomTerm.name')->label('Kelas')->searchable(),
                 TextColumn::make('classSubject.subject.name')->label('Mapel')->searchable(),
                 TextColumn::make('teacher.name')->label('Guru')->searchable()->sortable(),
-                    ->label('Nama Guru')
                 TextColumn::make('assignment_role')->badge(),
-                    ->label('Peran Tugas')
                 TextColumn::make('starts_at')->date()->sortable(),
-                    ->label('Dimulai Pada')
                 TextColumn::make('ends_at')->date()->sortable(),
-                    ->label('Selesai Pada')
             ])
             ->filters([
                 //

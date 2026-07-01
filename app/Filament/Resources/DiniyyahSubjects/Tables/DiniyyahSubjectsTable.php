@@ -19,17 +19,11 @@ class DiniyyahSubjectsTable
         return $table
             ->columns([
                 TextColumn::make('sort_order')->sortable(),
-                    ->label('Urutan Tampil')
                 TextColumn::make('code')->searchable()->sortable(),
-                    ->label('Kode')
                 TextColumn::make('name')->searchable()->sortable(),
-                    ->label('Nama')
                 TextColumn::make('default_assessment_method')->badge(),
-                    ->label('Metode Penilaian Default')
                 IconColumn::make('is_active')->boolean(),
-                    ->label('Status Aktif')
                 TextColumn::make('updated_at')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
-                    ->label('Diperbarui Pada')
             ])
             ->filters([
                 TrashedFilter::make(),
