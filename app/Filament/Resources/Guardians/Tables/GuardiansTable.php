@@ -18,31 +18,41 @@ class GuardiansTable
         return $table
             ->columns([
                 TextColumn::make('user.name')
+                    ->label('Akun Pengguna')
                     ->searchable(),
                 TextColumn::make('name')
+                    ->label('Nama')
                     ->searchable(),
                 TextColumn::make('nik')
+                    ->label('NIK')
                     ->searchable(),
                 TextColumn::make('gender')
+                    ->label('Jenis Kelamin')
                     ->searchable(),
                 TextColumn::make('phone')
+                    ->label('Telepon')
                     ->searchable(),
                 TextColumn::make('whatsapp')
+                    ->label('WhatsApp')
                     ->searchable(),
                 TextColumn::make('email')
                     ->label('Email address')
                     ->searchable(),
                 TextColumn::make('status')
+                    ->label('Status')
                     ->searchable(),
                 TextColumn::make('created_at')
+                    ->label('Dibuat Pada')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('updated_at')
+                    ->label('Diperbarui Pada')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('deleted_at')
+                    ->label('Dihapus Pada')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),

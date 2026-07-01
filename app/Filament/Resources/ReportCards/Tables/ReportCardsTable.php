@@ -24,10 +24,15 @@ class ReportCardsTable
                 TextColumn::make('student.name')->label('Santri')->searchable()->sortable(),
                 TextColumn::make('classroomTerm.name')->label('Kelas')->searchable(),
                 TextColumn::make('academicTerm.name')->label('Periode')->searchable(),
+                    ->label('Periode Akademik')
                 TextColumn::make('status')->badge(),
+                    ->label('Status')
                 TextColumn::make('total_score')->numeric(),
+                    ->label('Total Nilai')
                 TextColumn::make('average_score')->numeric(),
+                    ->label('Nilai Rata-rata')
                 TextColumn::make('rank_in_class')->numeric(),
+                    ->label('Peringkat Kelas')
             ])
             ->filters([
                 //

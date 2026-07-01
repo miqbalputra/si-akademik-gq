@@ -14,15 +14,18 @@ class DiniyyahScoreValidationForm
         return $schema
             ->components([
                 Select::make('diniyyah_assessment_set_id')
+                    ->label('Set Ujian Diniyyah')
                     ->relationship('assessmentSet', 'title')
                     ->searchable()
                     ->preload()
                     ->required(),
                 Select::make('validated_by')
+                    ->label('Divalidasi Oleh')
                     ->relationship('validator', 'name')
                     ->searchable()
                     ->preload(),
                 Select::make('status')
+                    ->label('Status')
                     ->options([
                         'pending' => 'Pending',
                         'approved' => 'Approved',
@@ -32,7 +35,9 @@ class DiniyyahScoreValidationForm
                     ->required()
                     ->default('pending'),
                 DateTimePicker::make('validated_at'),
+                    ->label('Divalidasi Pada')
                 Textarea::make('notes')
+                    ->label('Catatan')
                     ->columnSpanFull(),
             ]);
     }

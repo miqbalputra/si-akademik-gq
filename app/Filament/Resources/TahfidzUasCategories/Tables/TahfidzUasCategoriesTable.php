@@ -16,7 +16,9 @@ class TahfidzUasCategoriesTable
                 TextColumn::make('code')->label('Kode'),
                 TextColumn::make('max_score')->label('Nilai Max'),
                 TextColumn::make('academicTerm.name')->label('Periode'),
+                    ->label('Periode Akademik')
                 TextColumn::make('is_active')->badge(),
+                    ->label('Status Aktif')
             ])
             ->defaultSort('sort_order');
     }

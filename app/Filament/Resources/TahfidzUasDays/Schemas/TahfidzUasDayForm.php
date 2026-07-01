@@ -16,6 +16,7 @@ class TahfidzUasDayForm
         return $schema
             ->components([
                 Select::make('academic_term_id')
+                    ->label('Periode Akademik')
                     ->relationship('academicTerm', 'name')
                     ->searchable()
                     ->preload()

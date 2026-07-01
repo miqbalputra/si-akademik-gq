@@ -15,15 +15,22 @@ class AcademicYearForm
         return $schema
             ->components([
                 Select::make('school_id')
+                    ->label('Sekolah')
                     ->relationship('school', 'name')
                     ->required(),
                 TextInput::make('name')
+                    ->label('Nama')
                     ->required(),
                 TextInput::make('hijri_label'),
+                    ->label('Label Hijriah')
                 TextInput::make('gregorian_label'),
+                    ->label('Label Masehi')
                 DatePicker::make('starts_at'),
+                    ->label('Dimulai Pada')
                 DatePicker::make('ends_at'),
+                    ->label('Selesai Pada')
                 Toggle::make('is_active')
+                    ->label('Status Aktif')
                     ->required(),
             ]);
     }
