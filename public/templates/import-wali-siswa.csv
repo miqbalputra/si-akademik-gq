@@ -1,0 +1,3 @@
+nis,nama_siswa,jenis_kelamin_siswa,status_siswa,nama_wali,nik_wali,jenis_kelamin_wali,no_hp,whatsapp,email,alamat,status_wali,hubungan,is_primary,can_login,buat_akun,password
+001,Ahmad Fulan,laki-laki,active,Abdullah,3276000000000001,laki-laki,081234567890,081234567890,abdullah@example.com,"Jl. Contoh No. 1",active,ayah,ya,ya,ya,rahasia123
+002,Aisyah Fulanah,perempuan,active,Aminah,3276000000000002,perempuan,081234567891,081234567891,aminah@example.com,"Jl. Contoh No. 2",active,ibu,ya,ya,ya,rahasia123

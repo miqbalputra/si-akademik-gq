@@ -1,0 +1,5 @@
+tahun_ajaran,periode,kelas_periode,kode_mapel,nama_mapel,nama_arab,assessment_method,kkm,daily_weight,exam_weight,masuk_leger,masuk_rapor,urutan_mapel,mapel_aktif,mapel_kelas_aktif,judul_set_nilai,materi,status_set,urutan_set,buat_default_komponen,component_code,component_name,component_group,component_sort,component_required
+2026/2027,ganjil,Mustawa 1 Ikhwan,AKD,Akidah Akhlak,,weighted,75,40,60,ya,ya,10,ya,ya,Akidah Akhlak Semester Ganjil,"Bab I - III",active,10,ya,,,,,
+2026/2027,ganjil,Mustawa 1 Ikhwan,FIQ,Fiqih,,weighted,75,40,60,ya,ya,20,ya,ya,Fiqih Semester Ganjil,"Bab I - III",active,20,tidak,keaktifan_presensi,Keaktifan/Presensi,daily,10,ya
+2026/2027,ganjil,Mustawa 1 Ikhwan,FIQ,Fiqih,,weighted,75,40,60,ya,ya,20,ya,ya,Fiqih Semester Ganjil,"Bab I - III",active,20,tidak,ulangan_harian_1,Ulangan Harian 1,daily,20,ya
+2026/2027,ganjil,Mustawa 1 Ikhwan,FIQ,Fiqih,,weighted,75,40,60,ya,ya,20,ya,ya,Fiqih Semester Ganjil,"Bab I - III",active,20,tidak,nilai_ujian,Nilai Ujian,exam,50,ya

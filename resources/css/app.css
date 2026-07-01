@@ -1,0 +1,264 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+
+@theme {
+    /* ===== FONTS ===== */
+    --font-sans: 'Outfit', 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+
+    /* ===== BRAND COLORS (Amber/Gold — Islamic school identity) ===== */
+    --color-brand-50:  #fffbeb;
+    --color-brand-100: #fef3c7;
+    --color-brand-200: #fde68a;
+    --color-brand-300: #fcd34d;
+    --color-brand-400: #fbbf24;
+    --color-brand-500: #f59e0b;
+    --color-brand-600: #d97706;
+    --color-brand-700: #b45309;
+    --color-brand-800: #92400e;
+    --color-brand-900: #78350f;
+
+    /* ===== EXTENDED SHADES (fill gaps Tailwind doesn't have) ===== */
+    --color-slate-150: #e9edf2;
+    --color-slate-250: #d8dfe8;
+    --color-slate-350: #b8c2ce;
+    --color-slate-450: #7d8fa1;
+    --color-slate-650: #3e5068;
+    --color-slate-750: #2a3a4d;
+    --color-slate-850: #172032;
+    --color-amber-150: #fef1c5;
+    --color-amber-250: #fcd97a;
+    --color-emerald-150: #c6f5df;
+    --color-emerald-250: #86efbe;
+    --color-indigo-150: #d0d9ff;
+    --color-indigo-250: #a5b4fc;
+    --color-red-150:  #fecaca;
+    --color-red-250:  #fca5a5;
+    --color-sky-150:  #bae8fd;
+    --color-sky-250:  #7dd3fc;
+
+    /* ===== ANIMATIONS ===== */
+    --animate-fade-in-up: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    --animate-float:      float 6s ease-in-out infinite;
+    --animate-pulse-soft: pulseSoft 2s ease-in-out infinite;
+}
+
+@keyframes fadeInUp {
+    0%   { opacity: 0; transform: translateY(16px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50%       { transform: translateY(-10px); }
+}
+
+@keyframes pulseSoft {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.6; }
+}
+
+/* ===== GLOBAL BASE ===== */
+@layer base {
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+        font-family: 'Outfit', ui-sans-serif, system-ui, sans-serif;
+        background-color: #f8fafc;
+        color: #1e293b;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+
+    h1, h2, h3, h4, h5, h6 { font-weight: 700; line-height: 1.25; }
+}
+
+/* ===== REUSABLE COMPONENTS ===== */
+@layer components {
+
+    /* ---- Background ---- */
+    .bg-grid {
+        background-size: 40px 40px;
+        background-image:
+            linear-gradient(to right,  rgba(0, 0, 0, 0.025) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(0, 0, 0, 0.025) 1px, transparent 1px);
+    }
+
+    /* ---- Cards ---- */
+    .card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.03);
+    }
+    .card-lg {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 24px;
+        box-shadow: 0 4px 16px -4px rgba(0, 0, 0, 0.08);
+    }
+    .glass-card {
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.6);
+        box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.06);
+        border-radius: 24px;
+    }
+
+    /* ---- Buttons ---- */
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        font-weight: 700;
+        font-size: 13px;
+        border-radius: 10px;
+        padding: 8px 18px;
+        transition: all 0.2s ease;
+        cursor: pointer;
+        border: none;
+        text-decoration: none;
+        line-height: 1;
+        white-space: nowrap;
+    }
+    .btn-primary {
+        background: #d97706;
+        color: #ffffff;
+        box-shadow: 0 2px 8px rgba(217, 119, 6, 0.3);
+    }
+    .btn-primary:hover {
+        background: #b45309;
+        box-shadow: 0 4px 12px rgba(217, 119, 6, 0.4);
+        transform: translateY(-1px);
+    }
+    .btn-secondary {
+        background: #0f172a;
+        color: #ffffff;
+    }
+    .btn-secondary:hover { background: #1e293b; transform: translateY(-1px); }
+    .btn-outline {
+        background: transparent;
+        border: 1.5px solid #e2e8f0;
+        color: #475569;
+    }
+    .btn-outline:hover { background: #f8fafc; border-color: #cbd5e1; }
+    .btn-danger { background: #ef4444; color: #fff; }
+    .btn-danger:hover { background: #dc2626; }
+    .btn-sm { padding: 5px 12px; font-size: 12px; border-radius: 8px; }
+    .btn-lg { padding: 11px 24px; font-size: 14px; border-radius: 12px; }
+
+    /* ---- Badges ---- */
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 10px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 1.6;
+    }
+    .badge-amber  { background: #fef3c7; color: #92400e; }
+    .badge-green  { background: #dcfce7; color: #166534; }
+    .badge-blue   { background: #dbeafe; color: #1e40af; }
+    .badge-indigo { background: #e0e7ff; color: #3730a3; }
+    .badge-red    { background: #fee2e2; color: #991b1b; }
+    .badge-slate  { background: #f1f5f9; color: #475569; }
+    .badge-purple { background: #f3e8ff; color: #6b21a8; }
+
+    /* ---- Nav ---- */
+    .portal-nav {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-bottom: 1px solid #f1f5f9;
+        box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
+    }
+
+    /* ---- Stat Cards ---- */
+    .stat-card {
+        background: #ffffff;
+        border: 1px solid #f1f5f9;
+        border-radius: 16px;
+        padding: 20px;
+        text-align: center;
+        transition: all 0.2s ease;
+    }
+    .stat-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px -8px rgba(0,0,0,0.1); }
+
+    /* ---- Form inputs ---- */
+    .form-input {
+        width: 100%;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 9px 13px;
+        font-size: 14px;
+        font-weight: 500;
+        color: #1e293b;
+        background: #f8fafc;
+        outline: none;
+        transition: border-color 0.2s, background 0.2s;
+    }
+    .form-input:focus {
+        border-color: #f59e0b;
+        background: #ffffff;
+        box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.12);
+    }
+
+    /* ---- Section divider ---- */
+    .section-title {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+    .section-title h2 { font-size: 16px; font-weight: 800; color: #0f172a; white-space: nowrap; }
+    .section-title::after {
+        content: '';
+        display: block;
+        flex: 1;
+        height: 1px;
+        background: #f1f5f9;
+    }
+
+    /* ---- Status dots ---- */
+    .status-dot { width: 8px; height: 8px; border-radius: 9999px; display: inline-block; }
+    .status-dot-amber  { background: #f59e0b; }
+    .status-dot-green  { background: #22c55e; }
+    .status-dot-red    { background: #ef4444; }
+    .status-dot-slate  { background: #94a3b8; }
+
+    /* ---- Page wrapper ---- */
+    .page-container {
+        min-height: 100vh;
+        background: #f8fafc;
+        font-family: 'Outfit', sans-serif;
+    }
+
+    /* ---- Hover card effect ---- */
+    .hover-card {
+        transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .hover-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.12);
+    }
+
+    /* ---- Empty state ---- */
+    .empty-state {
+        border: 2px dashed #e2e8f0;
+        border-radius: 16px;
+        padding: 48px 24px;
+        text-align: center;
+        background: #f8fafc;
+    }
+    .empty-state p { color: #94a3b8; font-weight: 600; font-size: 14px; margin-top: 8px; }
+}

@@ -1,0 +1,3 @@
+nama_guru,jenis_kelamin,no_hp,whatsapp,email,alamat,tanggal_bertugas,status,tugas,buat_akun,password,kelas_periode,kode_mapel,nama_mapel,assessment_method,kkm,bobot_harian,bobot_ujian,masuk_leger,masuk_rapor,assignment_role,mulai_mengajar,selesai_mengajar
+Ustadz Ahmad,laki-laki,081234567800,081234567800,ustadz.ahmad@example.com,"Jl. Guru No. 1",2026-01-01,active,guru_diniyyah,ya,rahasia123,Mustawa 1 Ikhwan,AKD,Akidah Akhlak,weighted,75,60,40,ya,ya,primary,2026-01-01,
+Ustadzah Fatimah,perempuan,081234567801,081234567801,ustadzah.fatimah@example.com,"Jl. Guru No. 2",2026-01-01,active,guru_diniyyah,ya,rahasia123,Mustawa 1 Akhwat,FIQ,Fiqih,weighted,75,60,40,ya,ya,primary,2026-01-01,
