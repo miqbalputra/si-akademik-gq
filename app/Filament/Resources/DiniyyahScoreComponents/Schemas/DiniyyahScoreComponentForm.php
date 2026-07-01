@@ -13,27 +13,27 @@ class DiniyyahScoreComponentForm
     {
         return $schema
             ->components([
-                Select::make('diniyyah_assessment_set_id')
+                Select::make('diniyyah_assessment_set_id')->label('Set Ujian Diniyyah')
                     ->relationship('assessmentSet', 'title')
                     ->searchable()
                     ->preload()
                     ->required(),
-                TextInput::make('code')
+                TextInput::make('code')->label('Kode')
                     ->required(),
-                TextInput::make('name')
+                TextInput::make('name')->label('Nama')
                     ->required(),
-                Select::make('component_group')
+                Select::make('component_group')->label('Grup Komponen')
                     ->options([
                         'daily' => 'Nilai Harian',
                         'exam' => 'Nilai Ujian',
                         'final' => 'Nilai Akhir',
                     ])
                     ->required(),
-                TextInput::make('sort_order')
+                TextInput::make('sort_order')->label('Urutan Tampil')
                     ->numeric()
                     ->default(0)
                     ->required(),
-                Toggle::make('is_required')
+                Toggle::make('is_required')->label('Wajib')
                     ->default(true),
             ]);
     }

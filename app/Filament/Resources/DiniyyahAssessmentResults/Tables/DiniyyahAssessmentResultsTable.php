@@ -17,12 +17,12 @@ class DiniyyahAssessmentResultsTable
             ->columns([
                 TextColumn::make('assessmentSet.title')->label('Assessment')->searchable(),
                 TextColumn::make('classEnrollment.student.name')->label('Santri')->searchable(),
-                TextColumn::make('daily_raw_score')->numeric(),
-                TextColumn::make('exam_raw_score')->numeric(),
-                TextColumn::make('final_score')->numeric()->sortable(),
-                IconColumn::make('is_complete')->boolean(),
-                IconColumn::make('is_passed')->boolean(),
-                TextColumn::make('calculated_at')->dateTime()->sortable(),
+                TextColumn::make('daily_raw_score')->label('Nilai Mentah Harian')->numeric(),
+                TextColumn::make('exam_raw_score')->label('Nilai Mentah Ujian')->numeric(),
+                TextColumn::make('final_score')->label('Nilai Akhir')->numeric()->sortable(),
+                IconColumn::make('is_complete')->label('Lengkap')->boolean(),
+                IconColumn::make('is_passed')->label('Lulus')->boolean(),
+                TextColumn::make('calculated_at')->label('Dihitung Pada')->dateTime()->sortable(),
             ])
             ->filters([
                 //

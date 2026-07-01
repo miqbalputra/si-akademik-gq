@@ -15,27 +15,27 @@ class AcademicYearsTable
     {
         return $table
             ->columns([
-                TextColumn::make('school.name')
+                TextColumn::make('school.name')->label('Nama Sekolah')
                     ->searchable(),
-                TextColumn::make('name')
+                TextColumn::make('name')->label('Nama')
                     ->searchable(),
-                TextColumn::make('hijri_label')
+                TextColumn::make('hijri_label')->label('Label Hijriah')
                     ->searchable(),
-                TextColumn::make('gregorian_label')
+                TextColumn::make('gregorian_label')->label('Label Masehi')
                     ->searchable(),
-                TextColumn::make('starts_at')
+                TextColumn::make('starts_at')->label('Dimulai Pada')
                     ->date()
                     ->sortable(),
-                TextColumn::make('ends_at')
+                TextColumn::make('ends_at')->label('Selesai Pada')
                     ->date()
                     ->sortable(),
-                IconColumn::make('is_active')
+                IconColumn::make('is_active')->label('Status Aktif')
                     ->boolean(),
-                TextColumn::make('created_at')
+                TextColumn::make('created_at')->label('Dibuat Pada')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('updated_at')
+                TextColumn::make('updated_at')->label('Diperbarui Pada')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),

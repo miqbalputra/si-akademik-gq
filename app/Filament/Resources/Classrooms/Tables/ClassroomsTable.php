@@ -18,26 +18,26 @@ class ClassroomsTable
     {
         return $table
             ->columns([
-                TextColumn::make('name')
+                TextColumn::make('name')->label('Nama')
                     ->searchable(),
-                TextColumn::make('level_name')
+                TextColumn::make('level_name')->label('Tingkat')
                     ->searchable(),
-                TextColumn::make('gender_group')
+                TextColumn::make('gender_group')->label('Kelompok Kelamin')
                     ->searchable(),
-                TextColumn::make('sort_order')
+                TextColumn::make('sort_order')->label('Urutan Tampil')
                     ->numeric()
                     ->sortable(),
-                IconColumn::make('is_active')
+                IconColumn::make('is_active')->label('Status Aktif')
                     ->boolean(),
-                TextColumn::make('created_at')
+                TextColumn::make('created_at')->label('Dibuat Pada')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('updated_at')
+                TextColumn::make('updated_at')->label('Diperbarui Pada')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('deleted_at')
+                TextColumn::make('deleted_at')->label('Dihapus Pada')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),

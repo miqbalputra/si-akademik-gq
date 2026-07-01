@@ -16,11 +16,11 @@ class DiniyyahScoreComponentsTable
         return $table
             ->columns([
                 TextColumn::make('assessmentSet.title')->label('Assessment')->searchable(),
-                TextColumn::make('sort_order')->sortable(),
-                TextColumn::make('code')->searchable(),
-                TextColumn::make('name')->searchable(),
-                TextColumn::make('component_group')->badge(),
-                IconColumn::make('is_required')->boolean(),
+                TextColumn::make('sort_order')->label('Urutan Tampil')->sortable(),
+                TextColumn::make('code')->label('Kode')->searchable(),
+                TextColumn::make('name')->label('Nama')->searchable(),
+                TextColumn::make('component_group')->label('Grup Komponen')->badge(),
+                IconColumn::make('is_required')->label('Wajib')->boolean(),
             ])
             ->filters([
                 //

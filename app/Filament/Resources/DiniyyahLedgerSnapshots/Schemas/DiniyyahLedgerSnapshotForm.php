@@ -13,19 +13,19 @@ class DiniyyahLedgerSnapshotForm
     {
         return $schema
             ->components([
-                Select::make('academic_term_id')
+                Select::make('academic_term_id')->label('Periode Akademik')
                     ->relationship('academicTerm', 'name')
                     ->searchable()
                     ->preload()
                     ->required(),
-                Select::make('classroom_term_id')
+                Select::make('classroom_term_id')->label('Kelas Periode')
                     ->relationship('classroomTerm', 'name')
                     ->searchable()
                     ->preload()
                     ->required(),
-                TextInput::make('title')
+                TextInput::make('title')->label('Judul')
                     ->required(),
-                Select::make('status')
+                Select::make('status')->label('Status')
                     ->options([
                         'draft' => 'Draft',
                         'validated' => 'Tervalidasi',
@@ -34,7 +34,7 @@ class DiniyyahLedgerSnapshotForm
                     ])
                     ->required()
                     ->default('draft'),
-                DateTimePicker::make('generated_at')->disabled(),
+                DateTimePicker::make('generated_at')->label('Dibuat Pada')->disabled(),
                 DateTimePicker::make('locked_at')->disabled(),
                 DateTimePicker::make('published_at')->disabled(),
             ]);

@@ -13,13 +13,13 @@ class DiniyyahSubjectForm
     {
         return $schema
             ->components([
-                TextInput::make('code')
+                TextInput::make('code')->label('Kode')
                     ->required()
                     ->unique(ignoreRecord: true),
-                TextInput::make('name')
+                TextInput::make('name')->label('Nama')
                     ->required(),
-                TextInput::make('arabic_name'),
-                Select::make('default_assessment_method')
+                TextInput::make('arabic_name')->label('Nama Arab'),
+                Select::make('default_assessment_method')->label('Metode Penilaian Default')
                     ->options([
                         'weighted' => 'Weighted 40/60',
                         'direct_final' => 'Nilai Akhir Langsung',
@@ -27,11 +27,11 @@ class DiniyyahSubjectForm
                     ])
                     ->required()
                     ->default('weighted'),
-                TextInput::make('sort_order')
+                TextInput::make('sort_order')->label('Urutan Tampil')
                     ->numeric()
                     ->default(0)
                     ->required(),
-                Toggle::make('is_active')
+                Toggle::make('is_active')->label('Status Aktif')
                     ->default(true)
                     ->required(),
             ]);

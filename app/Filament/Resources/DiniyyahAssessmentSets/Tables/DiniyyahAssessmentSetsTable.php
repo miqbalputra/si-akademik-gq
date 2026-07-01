@@ -25,11 +25,11 @@ class DiniyyahAssessmentSetsTable
             ->columns([
                 TextColumn::make('classSubject.classroomTerm.name')->label('Kelas')->searchable(),
                 TextColumn::make('classSubject.subject.name')->label('Mapel')->searchable(),
-                TextColumn::make('title')->searchable()->sortable(),
-                TextColumn::make('assessment_method')->badge(),
-                TextColumn::make('kkm')->numeric(),
-                TextColumn::make('status')->badge(),
-                IconColumn::make('appears_on_report')->boolean(),
+                TextColumn::make('title')->label('Judul')->searchable()->sortable(),
+                TextColumn::make('assessment_method')->label('Metode Penilaian')->badge(),
+                TextColumn::make('kkm')->label('KKM')->numeric(),
+                TextColumn::make('status')->label('Status')->badge(),
+                IconColumn::make('appears_on_report')->label('Tampil di Rapor')->boolean(),
             ])
             ->filters([
                 TrashedFilter::make(),

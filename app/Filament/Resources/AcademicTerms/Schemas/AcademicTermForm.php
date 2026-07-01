@@ -14,16 +14,16 @@ class AcademicTermForm
     {
         return $schema
             ->components([
-                Select::make('academic_year_id')
+                Select::make('academic_year_id')->label('Tahun Ajaran')
                     ->relationship('academicYear', 'name')
                     ->required(),
-                TextInput::make('name')
+                TextInput::make('name')->label('Nama')
                     ->required(),
-                TextInput::make('semester')
+                TextInput::make('semester')->label('Semester')
                     ->required(),
-                DatePicker::make('starts_at'),
-                DatePicker::make('ends_at'),
-                Toggle::make('is_active')
+                DatePicker::make('starts_at')->label('Dimulai Pada'),
+                DatePicker::make('ends_at')->label('Selesai Pada'),
+                Toggle::make('is_active')->label('Status Aktif')
                     ->required(),
             ]);
     }

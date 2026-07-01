@@ -15,7 +15,7 @@ class TahfidzUasDaysTable
                 TextColumn::make('label')->label('Label'),
                 TextColumn::make('test_date')->date('d M Y')->label('Tanggal'),
                 TextColumn::make('academicTerm.name')->label('Periode'),
-                TextColumn::make('is_active')->badge(),
+                TextColumn::make('is_active')->label('Status Aktif')->badge(),
             ])
             ->defaultSort('day_number');
     }

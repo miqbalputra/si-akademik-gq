@@ -25,9 +25,9 @@ class DiniyyahScoresTable
                 TextColumn::make('assessmentSet.title')->label('Assessment')->searchable(),
                 TextColumn::make('component.name')->label('Komponen')->searchable(),
                 TextColumn::make('classEnrollment.student.name')->label('Santri')->searchable(),
-                TextColumn::make('score')->numeric()->sortable(),
-                TextColumn::make('status')->badge(),
-                TextColumn::make('input_at')->dateTime()->sortable(),
+                TextColumn::make('score')->label('Nilai')->numeric()->sortable(),
+                TextColumn::make('status')->label('Status')->badge(),
+                TextColumn::make('input_at')->label('Diinput Pada')->dateTime()->sortable(),
             ])
             ->filters([
                 TrashedFilter::make(),

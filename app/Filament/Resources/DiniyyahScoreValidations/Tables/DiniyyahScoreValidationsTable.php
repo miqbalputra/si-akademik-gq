@@ -16,8 +16,8 @@ class DiniyyahScoreValidationsTable
             ->columns([
                 TextColumn::make('assessmentSet.title')->label('Assessment')->searchable(),
                 TextColumn::make('validator.name')->label('Validator')->searchable(),
-                TextColumn::make('status')->badge(),
-                TextColumn::make('validated_at')->dateTime()->sortable(),
+                TextColumn::make('status')->label('Status')->badge(),
+                TextColumn::make('validated_at')->label('Divalidasi Pada')->dateTime()->sortable(),
             ])
             ->filters([
                 //

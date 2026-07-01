@@ -22,7 +22,7 @@ class TahfidzHalaqahsTable
                 TextColumn::make('activeMembers_count')
                     ->counts('activeMembers')
                     ->label('Santri Aktif'),
-                TextColumn::make('status')
+                TextColumn::make('status')->label('Status')
                     ->badge()
                     ->color(fn ($state) => match ($state) {
                         'active' => 'success',

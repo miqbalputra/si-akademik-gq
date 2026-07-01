@@ -24,8 +24,8 @@ class DiniyyahLedgerSnapshotsTable
                 TextColumn::make('title')->searchable()->sortable(),
                 TextColumn::make('classroomTerm.name')->label('Kelas')->searchable(),
                 TextColumn::make('academicTerm.name')->label('Periode')->searchable(),
-                TextColumn::make('status')->badge(),
-                TextColumn::make('generated_at')->dateTime()->sortable(),
+                TextColumn::make('status')->label('Status')->badge(),
+                TextColumn::make('generated_at')->label('Dibuat Pada')->dateTime()->sortable(),
             ])
             ->filters([
                 //

@@ -17,33 +17,33 @@ class TeachersTable
     {
         return $table
             ->columns([
-                TextColumn::make('user.name')
+                TextColumn::make('user.name')->label('Akun Pengguna')
                     ->searchable(),
-                TextColumn::make('name')
+                TextColumn::make('name')->label('Nama')
                     ->searchable(),
-                TextColumn::make('gender')
+                TextColumn::make('gender')->label('Jenis Kelamin')
                     ->searchable(),
-                TextColumn::make('phone')
+                TextColumn::make('phone')->label('Telepon')
                     ->searchable(),
-                TextColumn::make('whatsapp')
+                TextColumn::make('whatsapp')->label('WhatsApp')
                     ->searchable(),
                 TextColumn::make('email')
                     ->label('Email address')
                     ->searchable(),
-                TextColumn::make('started_at')
+                TextColumn::make('started_at')->label('Dimulai Pada')
                     ->date()
                     ->sortable(),
-                TextColumn::make('status')
+                TextColumn::make('status')->label('Status')
                     ->searchable(),
-                TextColumn::make('created_at')
+                TextColumn::make('created_at')->label('Dibuat Pada')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('updated_at')
+                TextColumn::make('updated_at')->label('Diperbarui Pada')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('deleted_at')
+                TextColumn::make('deleted_at')->label('Dihapus Pada')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),

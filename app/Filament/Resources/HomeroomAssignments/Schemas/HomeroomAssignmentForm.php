@@ -12,14 +12,14 @@ class HomeroomAssignmentForm
     {
         return $schema
             ->components([
-                Select::make('classroom_term_id')
+                Select::make('classroom_term_id')->label('Kelas Periode')
                     ->relationship('classroomTerm', 'name')
                     ->required(),
-                Select::make('teacher_id')
+                Select::make('teacher_id')->label('Guru Utama')
                     ->relationship('teacher', 'name')
                     ->required(),
-                DatePicker::make('starts_at'),
-                DatePicker::make('ends_at'),
+                DatePicker::make('starts_at')->label('Dimulai Pada'),
+                DatePicker::make('ends_at')->label('Selesai Pada'),
             ]);
     }
 }

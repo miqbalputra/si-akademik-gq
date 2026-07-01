@@ -18,12 +18,12 @@ class DiniyyahSubjectsTable
     {
         return $table
             ->columns([
-                TextColumn::make('sort_order')->sortable(),
-                TextColumn::make('code')->searchable()->sortable(),
-                TextColumn::make('name')->searchable()->sortable(),
-                TextColumn::make('default_assessment_method')->badge(),
-                IconColumn::make('is_active')->boolean(),
-                TextColumn::make('updated_at')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('sort_order')->label('Urutan Tampil')->sortable(),
+                TextColumn::make('code')->label('Kode')->searchable()->sortable(),
+                TextColumn::make('name')->label('Nama')->searchable()->sortable(),
+                TextColumn::make('default_assessment_method')->label('Metode Penilaian Default')->badge(),
+                IconColumn::make('is_active')->label('Status Aktif')->boolean(),
+                TextColumn::make('updated_at')->label('Diperbarui Pada')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 TrashedFilter::make(),
