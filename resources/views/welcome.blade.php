@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>SIAKAD — Griya Qur'an & PKBM Tunas Ilmu</title>
+    <title>SIAKAD &mdash; Griya Qur'an Tunas Ilmu</title>
     <meta name="description" content="Sistem Informasi Akademik Griya Qur'an. Portal rapor digital, pantauan tahfidz, dan kehadiran santri.">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -251,8 +251,7 @@
                 <div class="logo-badge">GQ</div>
                 <div class="logo-text">
                     <strong>Griya Qur'an</strong>
-                    <span>PKBM Tunas Ilmu</span>
-                </div>
+                  </div>
             </a>
             <div class="nav-actions">
                 @auth
@@ -386,8 +385,7 @@
 
     {{-- ===== FOOTER ===== --}}
     <footer class="landing-footer">
-        &copy; {{ date('Y') }} Griya Qur'an &amp; PKBM Tunas Ilmu. Hak Cipta Dilindungi.
-        &mdash; SIAKAD v1.0 &middot; Laravel {{ app()->version() }}
+        &copy; {{ date('Y') }} Griya Qur'an Tunas Ilmu. Hak Cipta Dilindungi.
     </footer>
 
 </body>

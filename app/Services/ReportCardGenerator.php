@@ -48,21 +48,36 @@ class ReportCardGenerator
             ->get()
             ->keyBy('id');
 
-        $reportCard = ReportCard::updateOrCreate(
-            [
+        // Cari rapor yang sudah ada untuk enrollment+term+type ini. Bila sudah
+        // ada, segarkan HANYA data nilai (total/average/rank) tanpa menurunkan
+        // status workflow — jangan mengembalikan kartu yang sudah locked/published
+        // kembali ke draft, karena itu mencabut akses wali dan menghapus audit
+        // trail (locked_at/published_at/locked_by/published_by). Kartu baru tetap
+        // dibuat dengan status 'draft'.
+        $reportCard = ReportCard::firstWhere([
+            'academic_term_id' => $snapshot->academic_term_id,
+            'class_enrollment_id' => $row->class_enrollment_id,
+            'report_type' => 'diniyyah',
+        ]);
+
+        $scoreData = [
+            'classroom_term_id' => $snapshot->classroom_term_id,
+            'student_id' => $row->classEnrollment->student_id,
+            'total_score' => $row->total_diniyyah_score,
+            'average_score' => $row->average_diniyyah_score,
+            'rank_in_class' => $row->rank_in_class,
+        ];
+
+        if ($reportCard) {
+            $reportCard->fill($scoreData)->save();
+        } else {
+            $reportCard = ReportCard::create(array_merge($scoreData, [
                 'academic_term_id' => $snapshot->academic_term_id,
                 'class_enrollment_id' => $row->class_enrollment_id,
                 'report_type' => 'diniyyah',
-            ],
-            [
-                'classroom_term_id' => $snapshot->classroom_term_id,
-                'student_id' => $row->classEnrollment->student_id,
                 'status' => 'draft',
-                'total_score' => $row->total_diniyyah_score,
-                'average_score' => $row->average_diniyyah_score,
-                'rank_in_class' => $row->rank_in_class,
-            ],
-        );
+            ]));
+        }
 
         $reportCard->lines()->delete();
 

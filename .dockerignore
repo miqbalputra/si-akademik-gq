@@ -1,0 +1,55 @@
+# --- Environment & secrets (injected at runtime by Coolify) ---
+.env
+.env.*
+!.env.example
+
+# --- Build artifacts & dependencies (installed inside the image) ---
+vendor/
+node_modules/
+public/build/
+public/hot
+public/storage
+storage/*.key
+storage/pail/
+.phpunit.cache/
+.phpunit.result.cache
+.phpactor.json
+
+# --- Local database & runtime data ---
+database/*.sqlite
+database/*.sqlite-*
+*.log
+server.log
+login_page_output.txt
+
+# --- Source data / documents (not part of the app runtime) ---
+*.xlsx
+*.pdf
+scratch/
+
+# --- Local debug / scratch scripts at project root ---
+/check.php
+/test.php
+/test_query.php
+/test_schedule.php
+/read_history.php
+/read_transcript.php
+/nul
+
+# --- IDE / OS ---
+.idea/
+.vscode/
+.cursor/
+.codex/
+.zed/
+.nova
+.DS_Store
+Thumbs.db
+
+# --- VCS & Docker metadata ---
+.git
+.gitattributes
+.gitignore
+.dockerignore
+Dockerfile
+README*.md

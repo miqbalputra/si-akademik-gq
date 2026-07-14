@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ClassroomTerm;
 use App\Models\DiniyyahAssessmentSet;
+use App\Models\DiniyyahTeacherAssignment;
 use App\Models\SchoolEvent;
 use App\Models\SchoolHoliday;
 use App\Models\TahfidzHalaqah;
@@ -19,6 +20,46 @@ class GuruDashboardController extends Controller
         abort_unless($request->user()->hasRole('guru'), 403);
 
         $teacher = $request->user()->teacher;
+
+        // Auto-create assessment sets for assignments that don't have one yet
+        if ($teacher) {
+            $assignments = \App\Models\DiniyyahTeacherAssignment::with('classSubject.subject')
+                ->where('teacher_id', $teacher->id)
+                ->where(function ($query) {
+                    $query->whereNull('starts_at')->orWhere('starts_at', '<=', now()->toDateString());
+                })
+                ->where(function ($query) {
+                    $query->whereNull('ends_at')->orWhere('ends_at', '>=', now()->toDateString());
+                })
+                ->get();
+                
+            $builder = new \App\Services\DiniyyahAssessmentComponentBuilder();
+            
+            foreach ($assignments as $assignment) {
+                $classSubject = $assignment->classSubject;
+                if ($classSubject) {
+                    $exists = DiniyyahAssessmentSet::where('diniyyah_class_subject_id', $classSubject->id)->exists();
+                    if (!$exists) {
+                        $newSet = DiniyyahAssessmentSet::create([
+                            'diniyyah_class_subject_id' => $classSubject->id,
+                            'title' => 'Penilaian ' . $classSubject->subject?->name,
+                            'tested_material' => '-',
+                            'assessment_method' => $classSubject->assessment_method ?? 'weighted',
+                            'kkm' => $classSubject->kkm ?? 70,
+                            'daily_weight' => $classSubject->daily_weight ?? 40,
+                            'exam_weight' => $classSubject->exam_weight ?? 60,
+                            'appears_on_ledger' => $classSubject->appears_on_ledger ?? true,
+                            'appears_on_report' => $classSubject->appears_on_report ?? true,
+                            'sort_order' => $classSubject->sort_order ?? 10,
+                            'status' => 'active',
+                            'created_by' => $request->user()->id,
+                            'updated_by' => $request->user()->id,
+                        ]);
+                        $builder->createDefaults($newSet);
+                    }
+                }
+            }
+        }
 
         // 1. Data Wali Kelas
         $homeroomClassroomTerms = ClassroomTerm::query()
@@ -59,6 +100,17 @@ class GuruDashboardController extends Controller
             })
             ->latest()
             ->get();
+            
+        // 3b. Data Assignments Guru Diniyyah (Untuk Jurnal)
+        $diniyyahAssignments = DiniyyahTeacherAssignment::query()
+            ->where('teacher_id', $teacher?->id ?? 0)
+            ->where(function ($query) {
+                $query->whereNull('starts_at')->orWhere('starts_at', '<=', now()->toDateString());
+            })
+            ->where(function ($query) {
+                $query->whereNull('ends_at')->orWhere('ends_at', '>=', now()->toDateString());
+            })
+            ->get();
 
         // 4. Data Agenda & Libur Sekolah
         // We get classroom terms associated with this teacher (all roles) to filter events
@@ -87,6 +139,7 @@ class GuruDashboardController extends Controller
             'homeroomClassroomTerms',
             'diniyyahAssessmentSets',
             'tahfidzHalaqahs',
+            'diniyyahAssignments',
             'upcomingAlerts'
         ));
     }

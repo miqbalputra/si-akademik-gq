@@ -1,75 +1,30 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>UAS Tahfidz — {{ $halaqah->name }}</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
-    @else
-        <script src="https://cdn.tailwindcss.com"></script>
-        <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Outfit','sans-serif']},colors:{brand:{50:'#fffbeb',100:'#fef3c7',500:'#f59e0b',600:'#d97706',700:'#b45309'}}}}}</script>
-    @endif
+<x-layouts.portal title="UAS Tahfidz — {{ $halaqah->name }}" portalLabel="Portal Guru" breadcrumb="UAS Tahfidz">
+    <x-slot name="navLinks">
+        <a href="{{ route('guru.tahfidz.show', $halaqah) }}" class="btn btn-outline btn-sm">Input Pekanan</a>
+        <a href="{{ route('guru.tahfidz.index') }}" class="btn btn-outline btn-sm hidden sm:inline-flex">
+            Daftar Halaqah
+        </a>
+    </x-slot>
+
+    @push('styles')
     <style>
-        * { box-sizing: border-box; }
-        body { font-family: 'Outfit', sans-serif; background: #f8fafc; color: #1e293b; margin: 0; -webkit-font-smoothing: antialiased; }
-        .bg-grid { background-size: 40px 40px; background-image: linear-gradient(to right, rgba(0,0,0,.025) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,.025) 1px, transparent 1px); }
-        .portal-nav { position: sticky; top: 0; z-index: 50; background: rgba(255,255,255,.95); backdrop-filter: blur(16px); border-bottom: 1px solid #f1f5f9; box-shadow: 0 1px 0 rgba(0,0,0,.04); }
         .card { background: #fff; border: 1px solid #f1f5f9; border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.04); }
-        .btn-primary { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 14px; border-radius: 10px; padding: 10px 24px; background: #d97706; color: #fff; border: none; cursor: pointer; transition: all .2s; box-shadow: 0 2px 8px rgba(217,119,6,.3); font-family: 'Outfit', sans-serif; }
-        .btn-primary:hover { background: #b45309; transform: translateY(-1px); }
-        .btn-ghost { background: transparent; border: 1.5px solid #e2e8f0; color: #475569; border-radius: 10px; padding: 6px 14px; font-size: 12px; font-weight: 600; text-decoration: none; transition: all .2s; display: inline-flex; align-items: center; gap: 5px; font-family: 'Outfit', sans-serif; }
-        .btn-ghost:hover { background: #f8fafc; border-color: #fde68a; color: #d97706; }
         .score-input { width: 100%; border: 1.5px solid #e2e8f0; border-radius: 7px; padding: 5px 6px; font-size: 12px; font-family: 'Outfit', sans-serif; color: #1e293b; background: #f8fafc; outline: none; text-align: center; transition: border-color .15s; }
         .score-input:focus { border-color: #f59e0b; background: #fff; box-shadow: 0 0 0 3px rgba(245,158,11,.1); }
         .badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; }
         .badge-amber { background: #fef3c7; color: #92400e; }
         .badge-slate { background: #f1f5f9; color: #475569; }
-        @keyframes fadeInUp { 0%{opacity:0;transform:translateY(14px)} 100%{opacity:1;transform:translateY(0)} }
-        .fade-up { animation: fadeInUp .5s cubic-bezier(.16,1,.3,1) forwards; opacity: 0; }
     </style>
-    @include('partials.pwa-head')
-</head>
-<body>
-    <div class="fixed inset-0 z-[-1] bg-grid opacity-50"></div>
+    @endpush
 
-    {{-- Nav --}}
-    <nav class="portal-nav">
-        <div style="max-width:1400px;margin:0 auto;padding:0 24px;height:60px;display:flex;align-items:center;justify-content:space-between;">
-            <a href="{{ url('/') }}" style="display:flex;align-items:center;gap:10px;text-decoration:none;">
-                <span style="width:36px;height:36px;background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;color:#fff;">GQ</span>
-                <div>
-                    <span style="display:block;font-size:14px;font-weight:800;color:#0f172a;line-height:1.2;">Griya Qur'an</span>
-                    <span style="display:block;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#d97706;">UAS Tahfidz</span>
-                </div>
-            </a>
-            <div style="display:flex;align-items:center;gap:8px;">
-                <a href="{{ route('guru.tahfidz.show', $halaqah) }}" class="btn-ghost">Input Pekanan</a>
-                <a href="{{ route('guru.tahfidz.index') }}" class="btn-ghost">
-                    <svg style="width:13px;height:13px;" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" /></svg>
-                    Daftar Halaqah
-                </a>
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <button type="submit" class="btn-ghost">Keluar</button>
-                </form>
-            </div>
+    <!-- Header -->
+    <header class="fade-up" style="margin-bottom:24px;">
+        <div style="display:inline-flex;align-items:center;gap:6px;background:#fef3c7;border-radius:999px;padding:3px 12px;margin-bottom:10px;">
+            <span style="font-size:11px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:.05em;">Ujian Akhir Semester (UAS)</span>
         </div>
-    </nav>
-
-    <main style="max-width:1400px;margin:0 auto;padding:28px 24px;">
-
-        {{-- Header --}}
-        <header class="fade-up" style="margin-bottom:24px;">
-            <div style="display:inline-flex;align-items:center;gap:6px;background:#fef3c7;border-radius:999px;padding:3px 12px;margin-bottom:10px;">
-                <span style="font-size:11px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:.05em;">Ujian Akhir Semester (UAS)</span>
-            </div>
-            <h1 style="font-size:24px;font-weight:900;color:#0f172a;margin:0 0 4px;letter-spacing:-.02em;">UAS Tahfidz</h1>
-            <p style="font-size:13px;color:#64748b;font-weight:500;margin:0;">{{ $halaqah->name }} &middot; {{ $halaqah->academicTerm?->name }}</p>
-        </header>
+        <h1 style="font-size:24px;font-weight:900;color:#0f172a;margin:0 0 4px;letter-spacing:-.02em;">UAS Tahfidz</h1>
+        <p style="font-size:13px;color:#64748b;font-weight:500;margin:0;">{{ $halaqah->name }} &middot; {{ $halaqah->academicTerm?->name }}</p>
+    </header>
 
         @if (session('status'))
             <div style="margin-bottom:20px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:14px 18px;font-size:13px;font-weight:600;color:#166534;display:flex;align-items:center;gap:8px;" class="fade-up">
@@ -176,6 +131,4 @@
                 </div>
             </form>
         @endif
-    </main>
-</body>
-</html>
+</x-layouts.portal>

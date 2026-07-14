@@ -4,6 +4,7 @@ namespace App\Filament\Concerns;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use UnitEnum;
 
 trait HasRoleBasedResourceAccess
@@ -20,7 +21,7 @@ trait HasRoleBasedResourceAccess
 
     public static function canView(Model $record): bool
     {
-        return static::canViewAny();
+        return static::canViewAny() && static::policyAllows('view', $record);
     }
 
     public static function canCreate(): bool
@@ -30,12 +31,35 @@ trait HasRoleBasedResourceAccess
 
     public static function canEdit(Model $record): bool
     {
-        return static::canCreate();
+        return static::canCreate() && static::policyAllows('update', $record);
     }
 
     public static function canDelete(Model $record): bool
     {
-        return static::canCreate();
+        return static::canCreate() && static::policyAllows('delete', $record);
+    }
+
+    /**
+     * Consult the model's registered policy for a per-record ability when one
+     * is defined. Resources without a policy (or whose policy does not define
+     * the given ability) keep the role-only behaviour from {@see canCreate()}
+     * / {@see canViewAny()} above. This restores per-record policy enforcement
+     * (e.g. DiniyyahScore "locked" guard, ReportCard guardian ownership) that
+     * the role-only overrides would otherwise shadow.
+     */
+    protected static function policyAllows(string $ability, Model $record): bool
+    {
+        $policy = Gate::getPolicyFor($record);
+
+        if ($policy === null) {
+            return true;
+        }
+
+        if (! method_exists($policy, $ability)) {
+            return true;
+        }
+
+        return Gate::forUser(Auth::user())->allows($ability, $record);
     }
 
     public static function canDeleteAny(): bool

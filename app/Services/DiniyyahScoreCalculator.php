@@ -17,16 +17,18 @@ class DiniyyahScoreCalculator
 
         $classSubjectId = $assessmentSet->diniyyah_class_subject_id;
 
-        $totalDays = \App\Models\DiniyyahStudentAttendance::where('diniyyah_class_subject_id', $classSubjectId)
-            ->max('meeting_number') ?: 0;
-            
+        $assignmentIds = \App\Models\DiniyyahTeacherAssignment::where('diniyyah_class_subject_id', $classSubjectId)->pluck('id');
+        $journalIds = \App\Models\DiniyyahClassJournal::whereIn('diniyyah_teacher_assignment_id', $assignmentIds)->pluck('id');
+
+        $totalDays = $journalIds->count();
+
         if ($totalDays === 0) return;
-        
-        $query = \App\Models\DiniyyahStudentAttendance::where('diniyyah_class_subject_id', $classSubjectId)
-            ->selectRaw('class_enrollment_id, count(*) as total_hadir')
-            ->where('status', \App\Models\DiniyyahStudentAttendance::STATUS_PRESENT)
+
+        $query = \App\Models\DiniyyahClassJournalAbsence::whereIn('diniyyah_class_journal_id', $journalIds)
+            ->selectRaw('class_enrollment_id, count(*) as total_absen')
+            ->whereIn('status', ['sick', 'permission', 'absent', 'skipped'])
             ->groupBy('class_enrollment_id');
-            
+
         if ($enrollment) {
             $query->where('class_enrollment_id', $enrollment->id);
             $enrollments = collect([$enrollment->id]);
@@ -35,20 +37,23 @@ class DiniyyahScoreCalculator
                 ->where('status', 'active')
                 ->pluck('id');
         }
-        
-        $attendances = $query->pluck('total_hadir', 'class_enrollment_id');
-            
+
+        $absences = $query->pluck('total_absen', 'class_enrollment_id');
+
         $upsertData = [];
         $now = now();
         foreach ($enrollments as $enrollmentId) {
-            $hadir = $attendances->get($enrollmentId, 0);
+            $hadir = max(0, $totalDays - $absences->get($enrollmentId, 0));
             $score = round(($hadir / $totalDays) * 100, 2);
-            
+
             $upsertData[] = [
                 'diniyyah_assessment_set_id' => $assessmentSet->id,
                 'diniyyah_score_component_id' => $attendanceComponent->id,
                 'class_enrollment_id' => $enrollmentId,
                 'score' => $score,
+                // Hanya untuk baris baru; baris yang sudah ada mempertahankan
+                // statusnya (lihat kolom update di bawah) — jangan menurunkan
+                // skor yang sudah submitted/validated kembali ke draft.
                 'status' => 'draft',
                 'created_at' => $now,
                 'updated_at' => $now,
@@ -58,9 +63,34 @@ class DiniyyahScoreCalculator
         if (!empty($upsertData)) {
             \App\Models\DiniyyahScore::upsert(
                 $upsertData,
-                ['diniyyah_assessment_set_id', 'diniyyah_score_component_id', 'class_enrollment_id'],
-                ['score', 'status', 'updated_at']
+                // Cocokkan constraint unik DB: (component_id, enrollment_id).
+                // set_id redundan (komponen sudah terikat ke satu set) dan TIDAK
+                // menjadi bagian unique index — memakainya sebagai conflict target
+                // membuat SQLite/Postgres menolak ("ON CONFLICT clause does not
+                // match any PRIMARY KEY or UNIQUE constraint").
+                ['diniyyah_score_component_id', 'class_enrollment_id'],
+                // Hanya segarkan nilai & updated_at. Status TIDAK di-overwrite,
+                // sehingga skor presensi yang sudah submitted/validated tetap.
+                ['score', 'updated_at']
             );
+        }
+    }
+
+    /**
+     * Sinkronkan ulang skor presensi (keaktifan_presensi) untuk SEMUA assessment
+     * set dari sebuah class subject. Dipanggil observer jurnal/absensi diniyyah
+     * setiap kali jurnal atau catatan absensi dibuat/dihapus, agar skor presensi
+     * otomatis menyala dari data jurnal guru (presensi harian dari wali kelas +
+     * centang bolos oleh guru diniyyah) tanpa harus menunggu recalc manual admin.
+     */
+    public function syncAttendanceForClassSubject(int $classSubjectId): void
+    {
+        $assessmentSetIds = \App\Models\DiniyyahAssessmentSet::query()
+            ->where('diniyyah_class_subject_id', $classSubjectId)
+            ->pluck('id');
+
+        foreach ($assessmentSetIds as $assessmentSetId) {
+            $this->syncAttendanceScores(DiniyyahAssessmentSet::find($assessmentSetId));
         }
     }
     public function calculateAssessmentSet(DiniyyahAssessmentSet $assessmentSet): int

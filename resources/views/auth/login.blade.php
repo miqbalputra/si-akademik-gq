@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Masuk - SIAKAD Griya Qur'an & PKBM Tunas Ilmu</title>
+    <title>Masuk - SIAKAD Griya Qur'an Tunas Ilmu</title>
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -78,7 +78,7 @@
     </style>
     @include("partials.pwa-head")
 </head>
-<body class="min-h-screen text-slate-800 antialiased overflow-hidden selection:bg-brand-200 selection:text-brand-900 flex flex-col">
+<body class="min-h-screen text-slate-800 antialiased overflow-x-hidden selection:bg-brand-200 selection:text-brand-900 flex flex-col">
 
     <!-- Absolute Background Elements -->
     <div class="fixed inset-0 z-[-1] pointer-events-none">
@@ -105,22 +105,22 @@
     </nav>
 
     <!-- Main Form Section -->
-    <main class="flex-grow flex items-center justify-center px-4 py-12 w-full relative z-10">
+    <main class="flex-grow flex items-center justify-center px-4 pt-24 pb-8 w-full relative z-10">
         <section class="w-full max-w-md animate-fade-in-up" style="animation-delay: 200ms;">
-            <div class="glass-card rounded-[2.5rem] p-10 relative overflow-hidden">
+            <div class="glass-card rounded-[2.5rem] p-8 relative overflow-hidden">
                 
                 <!-- Decorative element inside card -->
                 <div class="absolute top-0 right-0 w-32 h-32 bg-brand-500/10 rounded-full blur-2xl -mr-10 -mt-10"></div>
                 
-                <div class="mb-10 relative z-10">
+                <div class="mb-6 relative z-10">
                     <span class="inline-flex items-center rounded-full bg-brand-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-brand-700 mb-4 border border-brand-200">
-                        Portal SIAKAD
+                        Portal Akademik
                     </span>
                     <h1 class="text-3xl font-black tracking-tight text-slate-900 leading-tight">Masuk ke akun</h1>
                     <p class="mt-2 text-sm font-medium text-slate-500">Silakan masuk menggunakan kredensial yang diberikan oleh admin sekolah.</p>
                 </div>
 
-                <form method="POST" action="{{ route('login.store') }}" class="space-y-6 relative z-10">
+                <form method="POST" action="{{ route('login.store') }}" class="space-y-4 relative z-10">
                     @csrf
 
                     <div>
@@ -140,7 +140,7 @@
                                 autofocus
                                 placeholder="nama@domain.com"
                                 autocomplete="email"
-                                class="block w-full rounded-2xl border-2 border-slate-100 bg-white/50 pl-11 pr-4 py-3.5 text-sm font-medium text-slate-900 shadow-sm outline-none transition-all placeholder:text-slate-400 focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-500/10"
+                                class="block w-full rounded-2xl border-2 border-slate-100 bg-white/50 pl-11 pr-4 py-3 text-sm font-medium text-slate-900 shadow-sm outline-none transition-all placeholder:text-slate-400 focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-500/10"
                             >
                         </div>
                         @error('email')
@@ -166,7 +166,7 @@
                                 required
                                 placeholder="••••••••"
                                 autocomplete="current-password"
-                                class="block w-full rounded-2xl border-2 border-slate-100 bg-white/50 pl-11 pr-4 py-3.5 text-sm font-medium text-slate-900 shadow-sm outline-none transition-all placeholder:text-slate-400 focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-500/10"
+                                class="block w-full rounded-2xl border-2 border-slate-100 bg-white/50 pl-11 pr-4 py-3 text-sm font-medium text-slate-900 shadow-sm outline-none transition-all placeholder:text-slate-400 focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-500/10"
                             >
                         </div>
                         @error('password')
@@ -189,7 +189,7 @@
                         </label>
                     </div>
 
-                    <button type="submit" class="group relative inline-flex w-full items-center justify-center overflow-hidden rounded-2xl bg-slate-900 py-4 text-sm font-bold text-white shadow-xl shadow-slate-900/10 transition-all hover:scale-[1.02] hover:shadow-slate-900/20 focus:outline-none focus:ring-4 focus:ring-slate-900/10">
+                    <button type="submit" class="group relative inline-flex w-full items-center justify-center overflow-hidden rounded-2xl bg-slate-900 py-3.5 text-sm font-bold text-white shadow-xl shadow-slate-900/10 transition-all hover:scale-[1.02] hover:shadow-slate-900/20 focus:outline-none focus:ring-4 focus:ring-slate-900/10">
                         <span class="relative z-10 flex items-center gap-2">
                             Masuk Ke Portal
                             <svg class="h-4 w-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
@@ -205,7 +205,7 @@
                         <div class="flex-grow border-t border-slate-200/60"></div>
                     </div>
 
-                    <a href="{{ route('auth.google') }}" class="group inline-flex w-full items-center justify-center gap-3 rounded-2xl border-2 border-slate-200 bg-white py-3.5 text-sm font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:border-slate-300 hover:scale-[1.02] focus:outline-none focus:ring-4 focus:ring-slate-100">
+                    <a href="{{ route('auth.google') }}" class="group inline-flex w-full items-center justify-center gap-3 rounded-2xl border-2 border-slate-200 bg-white py-3 text-sm font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:border-slate-300 hover:scale-[1.02] focus:outline-none focus:ring-4 focus:ring-slate-100">
                         <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
                             <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -218,7 +218,7 @@
             </div>
             
             <p class="text-center mt-8 text-xs font-medium text-slate-500">
-                &copy; 2026 Griya Qur'an & PKBM Tunas Ilmu.
+                &copy; 2026 Griya Qur'an Tunas Ilmu.
             </p>
         </section>
     </main>

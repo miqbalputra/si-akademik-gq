@@ -372,6 +372,61 @@ class SchoolEventVisibilityTest extends TestCase
             ->assertDontSee('Ujian Mustawa 1 Akhwat');
     }
 
+    public function test_guardian_does_not_see_level_gender_event_for_unowned_combination(): void
+    {
+        // Wali dengan dua anak: satu di (Mustawa 1, male) dan satu di
+        // (Mustawa 2, female). Event level_gender yang menargetkan kombinasi
+        // (Mustawa 1, female) — kombinasi yang TIDAK dimiliki wali — tidak
+        // boleh bocor via cross-product levels x genders.
+        Role::firstOrCreate(['name' => 'wali_santri', 'guard_name' => 'web']);
+
+        $guardianUser = User::factory()->create(['name' => 'Wali Dua Anak']);
+        $guardianUser->assignRole('wali_santri');
+        $guardian = Guardian::create(['user_id' => $guardianUser->id, 'name' => 'Wali Dua Anak']);
+
+        $school = School::create(['name' => 'Griya Quran']);
+        $year = AcademicYear::create(['school_id' => $school->id, 'name' => '2025/2026']);
+        $term = AcademicTerm::create([
+            'academic_year_id' => $year->id,
+            'name' => 'Semester Genap',
+            'semester' => 'genap',
+            'starts_at' => today()->subMonth()->toDateString(),
+            'ends_at' => today()->addMonths(3)->toDateString(),
+        ]);
+
+        $classroomMale1 = Classroom::create(['name' => 'Mustawa 1 Ikhwan', 'level_name' => 'Mustawa 1', 'gender_group' => 'male']);
+        $ctMale1 = ClassroomTerm::create(['academic_term_id' => $term->id, 'classroom_id' => $classroomMale1->id, 'name' => 'Mustawa 1 Ikhwan']);
+        $classroomFemale2 = Classroom::create(['name' => 'Mustawa 2 Akhwat', 'level_name' => 'Mustawa 2', 'gender_group' => 'female']);
+        $ctFemale2 = ClassroomTerm::create(['academic_term_id' => $term->id, 'classroom_id' => $classroomFemale2->id, 'name' => 'Mustawa 2 Akhwat']);
+
+        $son = Student::create(['name' => 'Anak Laki', 'gender' => 'male', 'nis' => '101']);
+        $daughter = Student::create(['name' => 'Anak Perempuan', 'gender' => 'female', 'nis' => '102']);
+        $guardian->students()->attach($son->id, ['relationship' => 'father', 'can_login' => true]);
+        $guardian->students()->attach($daughter->id, ['relationship' => 'father', 'can_login' => true]);
+        ClassEnrollment::create(['academic_term_id' => $term->id, 'classroom_term_id' => $ctMale1->id, 'student_id' => $son->id, 'status' => 'active']);
+        ClassEnrollment::create(['academic_term_id' => $term->id, 'classroom_term_id' => $ctFemale2->id, 'student_id' => $daughter->id, 'status' => 'active']);
+
+        // Kombinasi jenjang+gender yang TIDAK dimiliki wali.
+        SchoolEvent::create([
+            'school_id' => $school->id,
+            'academic_term_id' => $term->id,
+            'title' => 'Pengajian Mustawa 1 Akhwat',
+            'event_type' => 'religious',
+            'target_scope' => 'level_gender',
+            'target_level_name' => 'Mustawa 1',
+            'target_gender_group' => 'female',
+            'starts_on' => today()->addDays(2)->toDateString(),
+            'ends_on' => today()->addDays(2)->toDateString(),
+            'show_to_teachers' => true,
+            'show_to_guardians' => true,
+        ]);
+
+        $this->actingAs($guardianUser)
+            ->get(route('wali.dashboard'))
+            ->assertOk()
+            ->assertDontSee('Pengajian Mustawa 1 Akhwat');
+    }
+
     public function test_teacher_calendar_shows_gender_targeted_event_for_matching_classroom(): void
     {
         [$teacherUser, $term] = $this->makeTeacherContext();
