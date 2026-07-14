@@ -1,41 +1,16 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Presensi {{ $classroomTerm->name }} - SIAKAD Griya Qur'an</title>
+<x-layouts.portal title="Presensi {{ $classroomTerm->name }}" portalLabel="Portal Guru" breadcrumb="Presensi Kelas">
+    <x-slot name="navLinks">
+        <a href="{{ route('attendance.index', ['month' => $selectedMonth]) }}" class="btn btn-outline btn-sm hidden sm:inline-flex">
+            Kembali
+        </a>
+    </x-slot>
 
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    @push('scripts')
+        <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
+    @endpush
 
-    <!-- Tailwind CSS -->
-    @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
-    @else
-        <script src="https://cdn.tailwindcss.com"></script>
-        <script>
-            tailwind.config = {
-                theme: {
-                    extend: {
-                        fontFamily: {
-                            sans: ['Outfit', 'sans-serif'],
-                        }
-                    }
-                }
-            }
-        </script>
-    @endif
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
-
+    @push('styles')
     <style>
-        body { font-family: 'Outfit', sans-serif; background-color: #fafafa; }
-        .bg-grid {
-            background-size: 40px 40px;
-            background-image: linear-gradient(to right, rgba(0, 0, 0, 0.03) 1px, transparent 1px),
-                              linear-gradient(to bottom, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
-        }
         .glass-card {
             background: rgba(255, 255, 255, 0.85);
             backdrop-filter: blur(12px);
@@ -44,39 +19,10 @@
             box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
         }
     </style>
-    @include("partials.pwa-head")
-</head>
-<body class="min-h-screen text-slate-800 antialiased overflow-x-hidden selection:bg-amber-200 selection:text-amber-900">
-
-    <!-- Background Elements -->
-    <div class="fixed inset-0 z-[-1] pointer-events-none">
-        <div class="absolute inset-0 bg-grid"></div>
-        <div class="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-amber-400/10 rounded-full mix-blend-multiply filter blur-[80px]"></div>
-        <div class="absolute bottom-[-10%] right-[-10%] w-[400px] h-[400px] bg-brand-500/10 rounded-full mix-blend-multiply filter blur-[80px]"></div>
-    </div>
-
-    <!-- Top Navigation -->
-    <nav class="sticky top-0 z-50 glass-card border-b-0 border-white/40">
-        <div class="mx-auto max-w-7xl px-4 sm:px-6">
-            <div class="flex h-16 items-center justify-between">
-                <a href="{{ route('attendance.index') }}" class="flex items-center gap-3">
-                    <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 font-bold text-white shadow-md">
-                        GQ
-                    </span>
-                    <div>
-                        <span class="block text-sm font-bold text-slate-800 leading-tight">Griya Qur'an</span>
-                        <span class="block text-[9px] font-semibold uppercase tracking-wider text-slate-500">Presensi Kelas</span>
-                    </div>
-                </a>
-                <a href="{{ route('attendance.index', ['month' => $selectedMonth]) }}" class="rounded-xl border border-slate-200 bg-white px-4 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors">
-                    Kembali
-                </a>
-            </div>
-        </div>
-    </nav>
+    @endpush
 
     <!-- Main Content -->
-    <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+    <div class="mx-auto max-w-7xl">
         
         <!-- Header -->
         <header class="mb-6 rounded-3xl glass-card p-6 sm:p-8 animate-fade-in-up">
@@ -265,91 +211,93 @@
         </div>
     </main>
 
-    <script>
-        document.addEventListener('alpine:init', () => {
-            Alpine.data('attendanceManager', (endpointUrl) => ({
-                attendances: {},
-                studentTotals: {},
-                isSaving: false,
-                lastSaved: null,
-                
-                init() {
-                    // Initialize totals on mount
-                    setTimeout(() => this.recalculateTotals(), 100);
-                },
-
-                async updateAttendance(enrollmentId, date) {
-                    const code = this.attendances[`${enrollmentId}_${date}`];
-                    this.isSaving = true;
+        @push('scripts')
+        <script>
+            document.addEventListener('alpine:init', () => {
+                Alpine.data('attendanceManager', (endpointUrl) => ({
+                    attendances: {},
+                    studentTotals: {},
+                    isSaving: false,
+                    lastSaved: null,
                     
-                    try {
-                        const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') 
-                                      || document.querySelector('input[name="_token"]')?.value;
+                    init() {
+                        // Initialize totals on mount
+                        setTimeout(() => this.recalculateTotals(), 100);
+                    },
 
-                        const response = await fetch(endpointUrl, {
-                            method: 'PUT',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': token,
-                                'Accept': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                class_enrollment_id: enrollmentId,
-                                date: date,
-                                code: code
-                            })
-                        });
-
-                        if (!response.ok) throw new Error('Gagal menyimpan');
+                    async updateAttendance(enrollmentId, date) {
+                        const code = this.attendances[`${enrollmentId}_${date}`];
+                        this.isSaving = true;
                         
-                        this.lastSaved = new Date();
-                        this.recalculateTotals();
-                        
-                    } catch (error) {
-                        console.error('Error saving attendance:', error);
-                        alert('Gagal menyimpan data ke server. Silakan periksa koneksi internet Anda.');
-                    } finally {
-                        this.isSaving = false;
-                    }
-                },
+                        try {
+                            const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') 
+                                          || document.querySelector('input[name="_token"]')?.value;
 
-                recalculateTotals() {
-                    let newTotals = {};
-                    let classTotals = { sick: 0, permission: 0, absent: 0 };
-                    
-                    // Group by enrollment
-                    Object.entries(this.attendances).forEach(([key, code]) => {
-                        const enrollmentId = key.split('_')[0];
-                        if (!newTotals[enrollmentId]) {
-                            newTotals[enrollmentId] = { sick: 0, permission: 0, absent: 0 };
+                            const response = await fetch(endpointUrl, {
+                                method: 'PUT',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': token,
+                                    'Accept': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    class_enrollment_id: enrollmentId,
+                                    date: date,
+                                    code: code
+                                })
+                            });
+
+                            if (!response.ok) throw new Error('Gagal menyimpan');
+                            
+                            this.lastSaved = new Date();
+                            this.recalculateTotals();
+                            
+                        } catch (error) {
+                            console.error('Error saving attendance:', error);
+                            alert('Gagal menyimpan data ke server. Silakan periksa koneksi internet Anda.');
+                        } finally {
+                            this.isSaving = false;
                         }
+                    },
+
+                    recalculateTotals() {
+                        let newTotals = {};
+                        let classTotals = { sick: 0, permission: 0, absent: 0 };
                         
-                        if (code === 'S') { newTotals[enrollmentId].sick++; classTotals.sick++; }
-                        if (code === 'I') { newTotals[enrollmentId].permission++; classTotals.permission++; }
-                        if (code === 'A') { newTotals[enrollmentId].absent++; classTotals.absent++; }
-                    });
-                    
-                    this.studentTotals = newTotals;
-                    
-                    // Dispatch event for class totals header (we'll listen to this globally if needed, 
-                    // or just update DOM directly for simplicity since it's outside Alpine component)
-                    document.getElementById('header-sick').textContent = classTotals.sick;
-                    document.getElementById('header-permission').textContent = classTotals.permission;
-                    document.getElementById('header-absent').textContent = classTotals.absent;
-                }
-            }));
-        });
-
-        const filter = document.getElementById('student-filter');
-        const rows = Array.from(document.querySelectorAll('#attendance-rows tr'));
-
-        filter?.addEventListener('input', () => {
-            const value = filter.value.trim().toLowerCase();
-
-            rows.forEach((row) => {
-                row.hidden = value.length > 0 && ! row.dataset.student.includes(value);
+                        // Group by enrollment
+                        Object.entries(this.attendances).forEach(([key, code]) => {
+                            const enrollmentId = key.split('_')[0];
+                            if (!newTotals[enrollmentId]) {
+                                newTotals[enrollmentId] = { sick: 0, permission: 0, absent: 0 };
+                            }
+                            
+                            if (code === 'S') { newTotals[enrollmentId].sick++; classTotals.sick++; }
+                            if (code === 'I') { newTotals[enrollmentId].permission++; classTotals.permission++; }
+                            if (code === 'A') { newTotals[enrollmentId].absent++; classTotals.absent++; }
+                        });
+                        
+                        this.studentTotals = newTotals;
+                        
+                        // Dispatch event for class totals header (we'll listen to this globally if needed, 
+                        // or just update DOM directly for simplicity since it's outside Alpine component)
+                        document.getElementById('header-sick').textContent = classTotals.sick;
+                        document.getElementById('header-permission').textContent = classTotals.permission;
+                        document.getElementById('header-absent').textContent = classTotals.absent;
+                    }
+                }));
             });
-        });
-    </script>
-</body>
-</html>
+
+            const filter = document.getElementById('student-filter');
+            const rows = Array.from(document.querySelectorAll('#attendance-rows tr'));
+
+            filter?.addEventListener('input', () => {
+                const value = filter.value.trim().toLowerCase();
+
+                rows.forEach((row) => {
+                    row.hidden = value.length > 0 && ! row.dataset.student.includes(value);
+                });
+            });
+        </script>
+        @endpush
+    </div>
+</x-layouts.portal>

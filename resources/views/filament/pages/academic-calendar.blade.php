@@ -21,8 +21,8 @@
             align-items: center;
             justify-content: space-between;
             gap: 12px;
-            padding: 14px 18px;
-            border-radius: 16px;
+            padding: 16px 20px;
+            border-radius: 24px;
             border: 1px solid #e5e7eb;
             background: #ffffff;
             box-shadow: 0 1px 2px rgba(0,0,0,.04);
@@ -133,10 +133,10 @@
 
         /* ---------- Calendar Container ---------- */
         .ac-cal {
-            border-radius: 16px;
+            border-radius: 24px;
             border: 1px solid #e5e7eb;
             background: #ffffff;
-            box-shadow: 0 1px 3px rgba(0,0,0,.06);
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,.05), 0 2px 4px -2px rgba(0,0,0,.05);
             overflow: hidden;
         }
         .dark .ac-cal { border-color: #374151; background: #111827; }

@@ -21,7 +21,11 @@ Route::get('/', function () {
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');
-    Route::post('/login', [AuthenticatedSessionController::class, 'store'])->name('login.store');
+    // Throttle the credential submission endpoint to mitigate brute-force
+    // attempts (5 attempts per minute per IP).
+    Route::post('/login', [AuthenticatedSessionController::class, 'store'])
+        ->middleware('throttle:5,1')
+        ->name('login.store');
 });
 
 Route::get('/auth/google', [GoogleController::class, 'redirectToGoogle'])->name('auth.google');
@@ -44,8 +48,9 @@ Route::middleware('auth')->prefix('guru')->name('guru.')->group(function () {
     Route::put('/tahfidz/{halaqah}/single', [GuruTahfidzController::class, 'updateSingle'])->name('tahfidz.update-single');
     Route::get('/tahfidz/{halaqah}/uas', [GuruTahfidzController::class, 'uasIndex'])->name('tahfidz.uas');
     Route::put('/tahfidz/{halaqah}/uas', [GuruTahfidzController::class, 'uasUpdate'])->name('tahfidz.uas.update');
-    Route::get('/diniyyah-scores/{assessmentSet}/attendance', [\App\Http\Controllers\GuruDiniyyahAttendanceController::class, 'edit'])->name('diniyyah-attendance.edit');
-    Route::put('/diniyyah-scores/{assessmentSet}/attendance/single', [\App\Http\Controllers\GuruDiniyyahAttendanceController::class, 'updateSingle'])->name('diniyyah-attendance.update-single');
+    Route::get('/diniyyah-journals', [\App\Http\Controllers\GuruDiniyyahJournalController::class, 'index'])->name('diniyyah-journals.index');
+    Route::post('/diniyyah-journals', [\App\Http\Controllers\GuruDiniyyahJournalController::class, 'store'])->name('diniyyah-journals.store');
+    Route::delete('/diniyyah-journals/{diniyyah_journal}', [\App\Http\Controllers\GuruDiniyyahJournalController::class, 'destroy'])->name('diniyyah-journals.destroy');
 });
 
 Route::middleware('auth')->prefix('attendance')->name('attendance.')->group(function () {
@@ -75,6 +80,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/wali', [GuardianDashboardController::class, 'index'])->name('wali.dashboard');
     Route::get('/wali/calendar', [SchoolCalendarController::class, 'guardian'])->name('wali.calendar');
     Route::get('/wali/tahfidz', [GuardianTahfidzController::class, 'index'])->name('wali.tahfidz');
+    Route::get('/wali/diniyyah-journals', [\App\Http\Controllers\WaliClassJournalMonitoringController::class, 'index'])->name('wali.diniyyah-journals.index');
+    Route::get('/wali/diniyyah-journals/export-pdf', [\App\Http\Controllers\WaliClassJournalMonitoringController::class, 'exportPdf'])->name('wali.diniyyah-journals.export-pdf');
+    Route::get('/wali/diniyyah-journals/export-excel', [\App\Http\Controllers\WaliClassJournalMonitoringController::class, 'exportExcel'])->name('wali.diniyyah-journals.export-excel');
     Route::post('/wali/events/{event}/response', [GuardianSchoolEventResponseController::class, 'store'])->name('wali.events.response');
     Route::get('/school-events/{event}/recap/export', SchoolEventRecapExportController::class)->name('school-events.recap.export');
 });

@@ -47,4 +47,9 @@ class ClassEnrollment extends Model
     {
         return $this->hasMany(StudentAttendance::class);
     }
+
+    public function journalAbsences(): HasMany
+    {
+        return $this->hasMany(DiniyyahClassJournalAbsence::class);
+    }
 }

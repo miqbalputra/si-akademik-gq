@@ -103,7 +103,20 @@ class SchoolEvent extends Model
             ->values()
             ->all();
 
-        return $query->where(function (Builder $query) use ($ids, $levelNames, $genderGroups): void {
+        // Pasangan (level_name, gender_group) yang berasal dari classroom term
+        // yang SAMA. Dipakai untuk scope level_gender agar event yang menargetkan
+        // kombinasi jenjang+gender tertentu hanya cocok dengan penonton yang
+        // benar-benar memiliki kombinasi itu — bukan hasil cross-product semua
+        // jenjang × semua gender yang dimiliki penonton (yang akan membocorkan
+        // event ke kelas yang kombinasi jenjang+gender-nya tidak dimiliki).
+        $levelGenderTuples = $terms
+            ->map(fn ($term) => is_object($term) ? [$term->classroom?->level_name, $term->classroom?->gender_group] : null)
+            ->filter(fn ($pair) => $pair !== null && $pair[0] !== null && $pair[1] !== null)
+            ->unique(fn ($pair) => $pair[0].'::'.$pair[1])
+            ->values()
+            ->all();
+
+        return $query->where(function (Builder $query) use ($ids, $levelNames, $genderGroups, $levelGenderTuples): void {
             $query->where('target_scope', 'all');
 
             if ($ids !== []) {
@@ -129,11 +142,17 @@ class SchoolEvent extends Model
                 });
             }
 
-            if ($levelNames !== [] && $genderGroups !== []) {
-                $query->orWhere(function (Builder $query) use ($levelNames, $genderGroups): void {
+            if ($levelGenderTuples !== []) {
+                $query->orWhere(function (Builder $query) use ($levelGenderTuples): void {
                     $query->where('target_scope', 'level_gender')
-                        ->whereIn('target_level_name', $levelNames)
-                        ->whereIn('target_gender_group', $genderGroups);
+                        ->where(function (Builder $query) use ($levelGenderTuples): void {
+                            foreach ($levelGenderTuples as [$levelName, $genderGroup]) {
+                                $query->orWhere(function (Builder $query) use ($levelName, $genderGroup): void {
+                                    $query->where('target_level_name', $levelName)
+                                        ->where('target_gender_group', $genderGroup);
+                                });
+                            }
+                        });
                 });
             }
         });

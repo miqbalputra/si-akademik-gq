@@ -17,6 +17,19 @@ use Illuminate\Http\Request;
 
 class GuruTahfidzController extends Controller
 {
+    private function authorizeHalaqahAccess(Request $request, TahfidzHalaqah $halaqah): void
+    {
+        $user = $request->user();
+        if ($user->hasRole('admin') || $user->hasRole('kabag_tahfidz')) {
+            return;
+        }
+
+        $teacher = $user->teacher;
+        if (! $teacher || ($halaqah->teacher_id !== $teacher->id && $halaqah->assistant_teacher_id !== $teacher->id)) {
+            abort(403, 'Unauthorized access to this Halaqah.');
+        }
+    }
+
     public function index(Request $request): View
     {
         $user = $request->user();
@@ -39,6 +52,8 @@ class GuruTahfidzController extends Controller
 
     public function show(Request $request, TahfidzHalaqah $halaqah): View
     {
+        $this->authorizeHalaqahAccess($request, $halaqah);
+
         $halaqah->load(['academicTerm.academicYear', 'activeMembers.student', 'teacher']);
 
         $weeks = TahfidzWeek::where('academic_term_id', $halaqah->academic_term_id)
@@ -57,16 +72,24 @@ class GuruTahfidzController extends Controller
             ->get()
             ->keyBy(fn ($s) => $s->tahfidz_halaqah_member_id.'-'.$s->tahfidz_week_id);
 
+        $monthlyRecaps = \App\Models\TahfidzMonthlyRecap::query()
+            ->whereIn('tahfidz_halaqah_member_id', $members->pluck('id'))
+            ->where('month_number', $selectedMonth)
+            ->get()
+            ->keyBy('tahfidz_halaqah_member_id');
+
         $availableMonths = $weeks->groupBy('month_number')->map(fn ($w) => [
             'number' => $w->first()->month_number,
             'label' => $w->first()->month_label ?? 'Bulan '.$w->first()->month_number,
         ])->sortBy('number')->values();
 
-        return view('guru.tahfidz.show', compact('halaqah', 'weeks', 'monthWeeks', 'members', 'scores', 'availableMonths', 'selectedMonth'));
+        return view('guru.tahfidz.show', compact('halaqah', 'weeks', 'monthWeeks', 'members', 'scores', 'availableMonths', 'selectedMonth', 'monthlyRecaps'));
     }
 
     public function update(Request $request, TahfidzHalaqah $halaqah, TahfidzSabaqParser $parser, TahfidzScoreCalculator $calculator): RedirectResponse
     {
+        $this->authorizeHalaqahAccess($request, $halaqah);
+
         $validated = $request->validate([
             'scores' => ['array'],
             'scores.*' => ['array'],
@@ -90,37 +113,39 @@ class GuruTahfidzController extends Controller
             foreach ($weeksData as $weekId => $data) {
                 $sabaqBaris = $parser->parseToBaris($data['sabaq_amount'] ?? null);
 
-                // Skip if everything is empty
-                if (empty($data['surah_ayat']) && empty($data['sabaq_amount']) && empty($data['score']) && empty($data['notes'])) {
-                    // We might want to delete if it was previously filled, but for now we skip or create empty
-                    // Let's create/update anyway to allow clearing data
-                }
-
-                $scoreRecord = TahfidzWeeklyScore::withTrashed()->updateOrCreate(
-                    [
+                if (blank($data['surah_ayat'] ?? null) && blank($data['sabaq_amount'] ?? null) && blank($data['score'] ?? null) && blank($data['notes'] ?? null)) {
+                    TahfidzWeeklyScore::where([
                         'tahfidz_halaqah_member_id' => $memberId,
                         'tahfidz_week_id' => $weekId,
-                    ],
-                    [
-                        'tahfidz_halaqah_id' => $halaqah->id,
-                        'student_id' => $member->student_id,
-                        'surah_ayat' => $data['surah_ayat'] ?? null,
-                        'sabaq_amount' => $data['sabaq_amount'] ?? null,
-                        'sabaq_baris' => $sabaqBaris,
-                        'score' => $data['score'] ?? null,
-                        'category' => $data['category'] ?? 'sabaq',
-                        'notes' => $data['notes'] ?? null,
-                        'input_by' => $request->user()->id,
-                        'input_at' => now(),
-                        'status' => 'draft',
-                        'deleted_at' => null, // Restore if deleted
-                    ]
-                );
+                    ])->delete();
+                } else {
+                    TahfidzWeeklyScore::withTrashed()->updateOrCreate(
+                        [
+                            'tahfidz_halaqah_member_id' => $memberId,
+                            'tahfidz_week_id' => $weekId,
+                        ],
+                        [
+                            'tahfidz_halaqah_id' => $halaqah->id,
+                            'student_id' => $member->student_id,
+                            'surah_ayat' => $data['surah_ayat'] ?? null,
+                            'sabaq_amount' => $data['sabaq_amount'] ?? null,
+                            'sabaq_baris' => $sabaqBaris,
+                            'score' => $data['score'] ?? null,
+                            'category' => $data['category'] ?? 'sabaq',
+                            'notes' => $data['notes'] ?? null,
+                            'input_by' => $request->user()->id,
+                            'input_at' => now(),
+                            'status' => 'draft',
+                            'deleted_at' => null, // Restore if deleted
+                        ]
+                    );
+                }
             }
         }
 
         foreach ($members as $member) {
             $calculator->recalculateMonthlyRecaps($member);
+            $calculator->calculateSemesterRecap($member);
         }
 
         return redirect()->back()->with('status', 'Data pekanan berhasil disimpan.');
@@ -128,6 +153,8 @@ class GuruTahfidzController extends Controller
 
     public function updateSingle(Request $request, TahfidzHalaqah $halaqah, TahfidzSabaqParser $parser, TahfidzScoreCalculator $calculator)
     {
+        $this->authorizeHalaqahAccess($request, $halaqah);
+
         $validated = $request->validate([
             'week_id' => ['required', 'exists:tahfidz_weeks,id'],
             'member_id' => ['required', 'exists:tahfidz_halaqah_members,id'],
@@ -142,7 +169,7 @@ class GuruTahfidzController extends Controller
         
         $sabaqBaris = $parser->parseToBaris($validated['sabaq_amount'] ?? null);
 
-        if (empty($validated['surah_ayat']) && empty($validated['sabaq_amount']) && empty($validated['score']) && empty($validated['notes'])) {
+        if (blank($validated['surah_ayat']) && blank($validated['sabaq_amount']) && blank($validated['score']) && blank($validated['notes'])) {
             TahfidzWeeklyScore::where([
                 'tahfidz_halaqah_member_id' => $member->id,
                 'tahfidz_week_id' => $validated['week_id'],
@@ -171,12 +198,15 @@ class GuruTahfidzController extends Controller
         }
 
         $calculator->recalculateMonthlyRecaps($member);
+        $calculator->calculateSemesterRecap($member);
 
         return response()->json(['success' => true]);
     }
 
     public function uasIndex(Request $request, TahfidzHalaqah $halaqah): View
     {
+        $this->authorizeHalaqahAccess($request, $halaqah);
+
         $halaqah->load(['academicTerm.academicYear', 'activeMembers.student']);
 
         $categories = TahfidzUasCategory::where('academic_term_id', $halaqah->academic_term_id)
@@ -201,6 +231,8 @@ class GuruTahfidzController extends Controller
 
     public function uasUpdate(Request $request, TahfidzHalaqah $halaqah, TahfidzUasCalculator $calculator): RedirectResponse
     {
+        $this->authorizeHalaqahAccess($request, $halaqah);
+
         $validated = $request->validate([
             'scores' => ['array'],
             'scores.*' => ['array'],

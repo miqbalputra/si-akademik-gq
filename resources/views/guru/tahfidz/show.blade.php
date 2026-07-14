@@ -1,277 +1,264 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ $halaqah->name }} — Input Pekanan</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
-    @else
-        <script src="https://cdn.tailwindcss.com"></script>
-        <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Outfit','sans-serif']},colors:{brand:{50:'#fffbeb',100:'#fef3c7',500:'#f59e0b',600:'#d97706',700:'#b45309'}}}}}</script>
-    @endif
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <style>
-        * { box-sizing: border-box; }
-        body { font-family: 'Outfit', sans-serif; background: #f8fafc; color: #1e293b; margin: 0; -webkit-font-smoothing: antialiased; }
-        .bg-grid { background-size: 40px 40px; background-image: linear-gradient(to right, rgba(0,0,0,.025) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,.025) 1px, transparent 1px); }
-        .portal-nav { position: sticky; top: 0; z-index: 50; background: rgba(255,255,255,.95); backdrop-filter: blur(16px); border-bottom: 1px solid #f1f5f9; box-shadow: 0 1px 0 rgba(0,0,0,.04); }
-        .card { background: #fff; border: 1px solid #f1f5f9; border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.04); }
-        .btn-primary { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 14px; border-radius: 10px; padding: 10px 24px; background: #d97706; color: #fff; border: none; cursor: pointer; transition: all .2s; box-shadow: 0 2px 8px rgba(217,119,6,.3); }
-        .btn-primary:hover { background: #b45309; transform: translateY(-1px); }
-        .btn-ghost { background: transparent; border: 1.5px solid #e2e8f0; color: #475569; border-radius: 10px; padding: 6px 14px; font-size: 12px; font-weight: 600; text-decoration: none; transition: all .2s; display: inline-flex; align-items: center; gap: 5px; font-family: 'Outfit', sans-serif; }
-        .btn-ghost:hover { background: #f8fafc; border-color: #fde68a; color: #d97706; }
-        .month-tab { display: inline-flex; align-items: center; padding: 6px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; text-decoration: none; transition: all .15s; border: 1.5px solid #e2e8f0; color: #64748b; background: #fff; }
-        .month-tab:hover { border-color: #fde68a; color: #d97706; }
-        .month-tab.active { background: #d97706; color: #fff; border-color: #d97706; box-shadow: 0 2px 8px rgba(217,119,6,.25); }
-        .score-input { width: 100%; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 5px 8px; font-size: 12px; font-family: 'Outfit', sans-serif; color: #1e293b; background: #f8fafc; outline: none; transition: border-color .15s, background .15s; margin-bottom: 4px; }
-        .score-input:focus { border-color: #f59e0b; background: #fff; box-shadow: 0 0 0 3px rgba(245,158,11,.1); }
-        .score-input:last-child { margin-bottom: 0; }
-        .th-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #94a3b8; }
-        @keyframes fadeInUp { 0%{opacity:0;transform:translateY(14px)} 100%{opacity:1;transform:translateY(0)} }
-        .fade-up { animation: fadeInUp .5s cubic-bezier(.16,1,.3,1) forwards; opacity: 0; }
-        .summary-box { background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 10px; cursor: pointer; transition: all .2s; min-height: 60px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 11px; font-weight: 600; color: #475569; }
-        .summary-box:hover { border-color: #f59e0b; background: #fffbeb; color: #d97706; }
-        .summary-box.filled { background: #fff; border-color: #d97706; color: #b45309; }
-        .modal-overlay { position: fixed; inset: 0; z-index: 100; background: rgba(15,23,42,.4); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; padding: 16px; }
-        .modal-card { background: #fff; border-radius: 20px; width: 100%; max-width: 480px; box-shadow: 0 20px 40px -10px rgba(0,0,0,.1); overflow: hidden; transform: scale(1); transition: all .2s; }
-        .modal-header { padding: 16px 24px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; background: #fafaf8; }
-        .modal-body { padding: 24px; display: grid; gap: 16px; }
-        .modal-footer { padding: 16px 24px; border-top: 1px solid #f1f5f9; display: flex; justify-content: flex-end; gap: 10px; background: #fafaf8; }
-        .form-group { display: flex; flex-direction: column; gap: 6px; }
-        .form-label { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: .05em; }
-        .form-select, .form-input { padding: 10px 14px; border-radius: 10px; border: 1.5px solid #e2e8f0; font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 500; color: #0f172a; width: 100%; transition: all .2s; background: #f8fafc; }
-        .form-select:focus, .form-input:focus { outline: none; border-color: #f59e0b; background: #fff; box-shadow: 0 0 0 3px rgba(245,158,11,.15); }
-    </style>
-    @include('partials.pwa-head')
-</head>
-<body>
-    <div class="fixed inset-0 z-[-1] bg-grid opacity-50"></div>
+<x-layouts.portal title="{{ $halaqah->name }} — Input Pekanan" portalLabel="Portal Guru" breadcrumb="Input Tahfidz Pekanan">
+    <x-slot name="navLinks">
+        <a href="{{ route('guru.tahfidz.uas', $halaqah) }}" class="btn btn-outline btn-sm hover:bg-slate-100 transition-colors">Mode UAS</a>
+        <a href="{{ route('guru.tahfidz.index') }}" class="btn btn-outline btn-sm hidden sm:inline-flex hover:bg-slate-100 transition-colors">
+            Daftar Halaqah
+        </a>
+    </x-slot>
 
-    {{-- Nav --}}
-    <nav class="portal-nav">
-        <div style="max-width:1200px;margin:0 auto;padding:0 24px;height:60px;display:flex;align-items:center;justify-content:space-between;">
-            <a href="{{ url('/') }}" style="display:flex;align-items:center;gap:10px;text-decoration:none;">
-                <span style="width:36px;height:36px;background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;color:#fff;">GQ</span>
-                <div>
-                    <span style="display:block;font-size:14px;font-weight:800;color:#0f172a;line-height:1.2;">Griya Qur'an</span>
-                    <span style="display:block;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#d97706;">Input Tahfidz Pekanan</span>
+    @push('scripts')
+        <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    @endpush
+
+    <!-- Header Section -->
+    <header class="animate-fade-in-up mb-8 rounded-3xl glass-card p-6 sm:p-8 relative overflow-hidden">
+        <div class="absolute -right-10 -top-10 w-40 h-40 bg-amber-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20"></div>
+        <div class="absolute -left-10 -bottom-10 w-40 h-40 bg-orange-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20"></div>
+        <div class="relative flex items-start justify-between gap-4 flex-wrap z-10">
+            <div>
+                <div class="inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-100 to-orange-100 text-amber-800 rounded-full px-3 py-1 mb-3 text-[10px] font-black uppercase tracking-wider shadow-sm border border-amber-200">
+                    Rekap Pekanan
                 </div>
-            </a>
-            <div style="display:flex;align-items:center;gap:8px;">
-                <a href="{{ route('guru.tahfidz.uas', $halaqah) }}" class="btn-ghost">Mode UAS</a>
-                <a href="{{ route('guru.tahfidz.index') }}" class="btn-ghost">
-                    <svg style="width:13px;height:13px;" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" /></svg>
-                    Daftar Halaqah
-                </a>
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <button type="submit" class="btn-ghost">Keluar</button>
-                </form>
+                <h1 class="text-3xl font-black text-slate-900 leading-tight mb-1">{{ $halaqah->name }}</h1>
+                <p class="text-sm font-semibold text-slate-500 flex items-center gap-2">
+                    <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                    {{ $halaqah->teacher?->name }} &middot; {{ $halaqah->academicTerm?->name }}
+                </p>
             </div>
         </div>
-    </nav>
+    </header>
 
-    <main style="max-width:1200px;margin:0 auto;padding:28px 24px;">
+    @if (session('status'))
+        <div class="mb-6 bg-emerald-50 border border-emerald-200 rounded-2xl p-4 text-sm font-semibold text-emerald-800 flex items-center gap-3 shadow-sm animate-fade-in-up">
+            <div class="flex-shrink-0 w-8 h-8 flex items-center justify-center bg-emerald-100 rounded-full text-emerald-600">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
+            </div>
+            {{ session('status') }}
+        </div>
+    @endif
 
-        {{-- Header --}}
-        <header class="fade-up" style="margin-bottom:24px;">
-            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;">
-                <div>
-                    <div style="display:inline-flex;align-items:center;gap:6px;background:#fef3c7;border-radius:999px;padding:3px 12px;margin-bottom:10px;">
-                        <span style="font-size:11px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:.05em;">Rekap Pekanan</span>
-                    </div>
-                    <h1 style="font-size:24px;font-weight:900;color:#0f172a;margin:0 0 4px;letter-spacing:-.02em;">{{ $halaqah->name }}</h1>
-                    <p style="font-size:13px;color:#64748b;font-weight:500;margin:0;">{{ $halaqah->teacher?->name }} &middot; {{ $halaqah->academicTerm?->name }}</p>
+    <form method="POST" action="{{ route('guru.tahfidz.update', $halaqah) }}">
+        @csrf
+        @method('PUT')
+
+        {{-- Month Selector (Modern Pills) --}}
+        <div class="flex flex-wrap gap-2 mb-6 animate-fade-in-up" style="animation-delay: 50ms;">
+            @foreach ($availableMonths as $month)
+                <a href="?month={{ $month['number'] }}" 
+                   class="px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 transform hover:-translate-y-0.5 {{ $selectedMonth === $month['number'] ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/30 border-transparent' : 'bg-white text-slate-500 border border-slate-200 hover:border-amber-300 hover:text-amber-600 hover:shadow-md' }}">
+                    {{ $month['label'] }}
+                </a>
+            @endforeach
+        </div>
+
+        @if ($monthWeeks->isEmpty())
+            <div class="rounded-3xl border-2 border-dashed border-slate-200 bg-white/50 p-12 text-center flex flex-col items-center justify-center animate-fade-in-up" style="animation-delay: 100ms;">
+                <div class="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mb-4 text-slate-400">
+                    <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" /></svg>
                 </div>
+                <p class="text-sm font-bold text-slate-500">Belum ada pekan untuk bulan ini. PJ Tahfidz perlu mengatur pekan terlebih dahulu.</p>
             </div>
-        </header>
-
-        @if (session('status'))
-            <div style="margin-bottom:20px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:14px 18px;font-size:13px;font-weight:600;color:#166534;display:flex;align-items:center;gap:8px;">
-                <svg style="width:16px;height:16px;flex-shrink:0;" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
-                {{ session('status') }}
-            </div>
-        @endif
-
-        <form method="POST" action="{{ route('guru.tahfidz.update', $halaqah) }}">
-            @csrf
-            @method('PUT')
-
-            {{-- Month Selector --}}
-            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px;" class="fade-up">
-                @foreach ($availableMonths as $month)
-                    <a href="?month={{ $month['number'] }}" class="month-tab {{ $selectedMonth === $month['number'] ? 'active' : '' }}">
-                        {{ $month['label'] }}
-                    </a>
-                @endforeach
-            </div>
-
-            @if ($monthWeeks->isEmpty())
-                <div class="card" style="padding:40px;text-align:center;">
-                    <svg style="width:36px;height:36px;color:#cbd5e1;margin:0 auto 12px;" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" /></svg>
-                    <p style="font-size:13px;font-weight:600;color:#94a3b8;">Belum ada pekan untuk bulan ini. PJ Tahfidz perlu mengatur pekan terlebih dahulu.</p>
-                </div>
-            @else
-                {{-- Score Table --}}
-                <div class="card fade-up" style="overflow:hidden;margin-bottom:20px;">
-                    {{-- Table header info --}}
-                    <div style="padding:16px 20px;border-bottom:1px solid #f1f5f9;background:#fafaf8;display:flex;align-items:center;gap:8px;">
-                        <svg style="width:15px;height:15px;color:#d97706;" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" /></svg>
-                        <span style="font-size:12px;font-weight:600;color:#64748b;">Isi surah:ayat, jumlah baris, nilai (0–100), dan catatan untuk setiap pekan.</span>
+        @else
+            {{-- Score Table --}}
+            <div class="rounded-3xl glass-card border border-slate-200 shadow-xl shadow-slate-200/40 overflow-hidden mb-6 animate-fade-in-up" style="animation-delay: 100ms;">
+                {{-- Table header info --}}
+                <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3">
+                    <div class="flex items-center justify-center w-8 h-8 rounded-full bg-amber-100 text-amber-600">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" /></svg>
                     </div>
-                    <div style="overflow-x:auto;">
-                        <table style="min-width:100%;border-collapse:collapse;font-size:13px;">
-                            <thead>
-                                <tr style="background:#f8fafc;border-bottom:2px solid #f1f5f9;">
-                                    <th style="padding:12px 16px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;white-space:nowrap;">No</th>
-                                    <th style="padding:12px 16px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;min-width:160px;">Nama Santri</th>
+                    <span class="text-xs font-bold text-slate-600">Klik kotak pada tiap pekan untuk mengisi surah, jumlah sabaq, nilai, dan catatan hafalan santri.</span>
+                </div>
+                
+                <div class="overflow-x-auto w-full pb-2">
+                    <table class="w-full text-sm text-left">
+                        <thead>
+                            <tr class="bg-slate-50/80 border-b-2 border-slate-100">
+                                <th class="hidden sm:table-cell px-5 py-4 text-xs font-black text-slate-400 uppercase tracking-wider sticky left-0 z-20 bg-slate-50/90 backdrop-blur-sm border-r border-slate-100 w-16">No</th>
+                                <th class="px-5 py-4 text-xs font-black text-slate-400 uppercase tracking-wider sticky left-0 sm:left-16 z-20 bg-slate-50/90 backdrop-blur-sm border-r border-slate-100 min-w-[150px] sm:min-w-[200px] shadow-[4px_0_12px_rgba(0,0,0,0.02)]">Nama Santri</th>
+                                @foreach ($monthWeeks as $week)
+                                    <th class="px-4 py-4 text-center text-[11px] font-black text-slate-500 uppercase tracking-wider min-w-[180px] border-r border-slate-50 last:border-r-0">
+                                        <div class="inline-flex flex-col items-center">
+                                            <span class="text-amber-600">{{ $week->date_label ?? 'Pekan '.$week->week_number }}</span>
+                                            <span class="text-[9px] text-slate-400 mt-0.5 font-bold">Ketuk untuk isi</span>
+                                        </div>
+                                    </th>
+                                @endforeach
+                                <th class="px-5 py-4 text-center text-xs font-black text-amber-700 uppercase tracking-wider bg-amber-50/90 border-l border-amber-200 min-w-[120px]">
+                                    Rekap<br>Bulan Ini
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            @foreach ($members as $member)
+                                <tr class="group hover:bg-slate-50/50 transition-colors {{ $loop->even ? 'bg-slate-50/30' : 'bg-white' }}">
+                                    <td class="hidden sm:table-cell px-5 py-4 text-xs font-bold text-slate-400 sticky left-0 z-10 bg-inherit border-r border-slate-100">{{ $loop->iteration }}</td>
+                                    <td class="px-5 py-4 font-bold text-slate-800 sticky left-0 sm:left-16 z-10 bg-inherit border-r border-slate-100 shadow-[4px_0_12px_rgba(0,0,0,0.02)] group-hover:text-amber-700 transition-colors">
+                                        {{ $member->student->name }}
+                                    </td>
                                     @foreach ($monthWeeks as $week)
-                                        <th style="padding:12px 16px;text-align:center;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#64748b;min-width:140px;border-left:1px solid #f1f5f9;">
-                                            {{ $week->date_label ?? 'Pekan '.$week->week_number }}
-                                        </th>
-                                    @endforeach
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach ($members as $member)
-                                    <tr style="border-top:1px solid #f8fafc;{{ $loop->even ? 'background:#fafaf8;' : 'background:#fff;' }}">
-                                        <td style="padding:12px 16px;color:#94a3b8;font-size:12px;font-weight:600;">{{ $loop->iteration }}</td>
-                                        <td style="padding:12px 16px;font-weight:700;color:#0f172a;">{{ $member->student->name }}</td>
-                                        @foreach ($monthWeeks as $week)
-                                            @php $score = $scores->get($member->id.'-'.$week->id); @endphp
-                                            <td style="padding:10px 12px;border-left:1px solid #f1f5f9;vertical-align:top;" x-data="tahfidzCell('{{ addslashes($score?->surah_ayat) }}', '{{ addslashes($score?->sabaq_amount) }}', '{{ $score?->score }}', '{{ addslashes($score?->notes) }}', '{{ $member->id }}', '{{ $week->id }}', '{{ route('guru.tahfidz.update-single', $halaqah) }}')">
+                                        @php $score = $scores->get($member->id.'-'.$week->id); @endphp
+                                        <td class="p-2 border-r border-slate-50 last:border-r-0" x-data="tahfidzCell('{{ addslashes($score?->surah_ayat) }}', '{{ addslashes($score?->sabaq_amount) }}', '{{ $score?->score }}', '{{ addslashes($score?->notes) }}', '{{ $member->id }}', '{{ $week->id }}', '{{ route('guru.tahfidz.update-single', $halaqah) }}')">
+                                            
+                                            <!-- Clickable Summary Box -->
+                                            <div @click="showModal = true" class="relative group/box cursor-pointer h-full min-h-[70px] w-full rounded-2xl border-2 flex flex-col items-center justify-center p-2 text-center transition-all duration-300"
+                                                 :class="hasData ? 'border-amber-200 bg-amber-50/40 hover:bg-amber-100/60 hover:border-amber-400 hover:shadow-md' : 'border-dashed border-slate-200 bg-slate-50/50 hover:border-amber-300 hover:bg-amber-50/30 text-slate-400'">
                                                 
-                                                <!-- Clickable Summary Box -->
-                                                <div @click="showModal = true" class="summary-box relative" :class="hasData ? 'filled' : ''">
-                                                    <span x-html="summaryHtml"></span>
-                                                    
-                                                    <!-- Loading Indicator -->
-                                                    <div x-show="isSaving" class="absolute top-2 right-2 text-amber-500">
-                                                        <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                                        </svg>
-                                                    </div>
-                                                    
-                                                    <!-- Success Indicator -->
-                                                    <div x-show="saveSuccess" class="absolute top-2 right-2 text-emerald-500" x-transition.opacity>
-                                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                                                        </svg>
-                                                    </div>
+                                                <div x-html="summaryHtml" class="w-full flex flex-col items-center justify-center gap-1"></div>
+                                                
+                                                <!-- Loading Indicator -->
+                                                <div x-show="isSaving" class="absolute top-2 right-2 text-amber-500 bg-amber-100 p-1 rounded-full shadow-sm">
+                                                    <svg class="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                    </svg>
                                                 </div>
                                                 
-                                                <!-- Hidden Inputs for Form Submission -->
-                                                <input type="hidden" name="scores[{{ $member->id }}][{{ $week->id }}][surah_ayat]" :value="combinedSurahAyat">
-                                                <input type="hidden" name="scores[{{ $member->id }}][{{ $week->id }}][sabaq_amount]" :value="formattedSabaq">
-                                                <input type="hidden" name="scores[{{ $member->id }}][{{ $week->id }}][score]" :value="(score === '-' || baris.toLowerCase() === 'murojaah') ? '' : score">
-                                                <input type="hidden" name="scores[{{ $member->id }}][{{ $week->id }}][notes]" :value="notes">
-                                                <input type="hidden" name="scores[{{ $member->id }}][{{ $week->id }}][category]" value="sabaq">
-                                                
-                                                <!-- Pop-up Modal -->
-                                                <template x-teleport="body">
-                                                    <div x-show="showModal" style="display:none;" class="modal-overlay" x-transition.opacity>
-                                                        <div @click.outside="closeAndSave()" class="modal-card" x-show="showModal" x-transition.scale.origin.bottom>
-                                                            <div class="modal-header">
-                                                                <div>
-                                                                    <h3 style="margin:0;font-size:16px;font-weight:800;color:#0f172a;">Input Hafalan Pekanan</h3>
-                                                                    <p style="margin:2px 0 0;font-size:11px;font-weight:600;color:#64748b;">{{ $member->student->name }} &middot; {{ $week->date_label ?? 'Pekan '.$week->week_number }}</p>
-                                                                </div>
-                                                                <button type="button" @click="closeAndSave()" style="background:transparent;border:none;cursor:pointer;color:#94a3b8;"><svg style="width:20px;height:20px;" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg></button>
+                                                <!-- Success Indicator -->
+                                                <div x-show="saveSuccess" class="absolute top-2 right-2 text-emerald-500 bg-emerald-100 p-1 rounded-full shadow-sm" x-transition.opacity>
+                                                    <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                                                    </svg>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Hidden Inputs for Form Submission -->
+                                            <input type="hidden" name="scores[{{ $member->id }}][{{ $week->id }}][surah_ayat]" :value="combinedSurahAyat">
+                                            <input type="hidden" name="scores[{{ $member->id }}][{{ $week->id }}][sabaq_amount]" :value="formattedSabaq">
+                                            <input type="hidden" name="scores[{{ $member->id }}][{{ $week->id }}][score]" :value="(score === '-' || baris.toLowerCase() === 'murojaah') ? '' : score">
+                                            <input type="hidden" name="scores[{{ $member->id }}][{{ $week->id }}][notes]" :value="notes">
+                                            <input type="hidden" name="scores[{{ $member->id }}][{{ $week->id }}][category]" value="sabaq">
+                                            
+                                            <!-- Modern Modal -->
+                                            <template x-teleport="body">
+                                                <div x-show="showModal" style="display:none;" class="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6" x-transition.opacity>
+                                                    <!-- Backdrop -->
+                                                    <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" @click="cancelAndClose()"></div>
+                                                    
+                                                    <!-- Modal Content -->
+                                                    <div class="relative bg-white rounded-[24px] w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-full" 
+                                                         x-show="showModal" 
+                                                         x-transition:enter="transition ease-out duration-300"
+                                                         x-transition:enter-start="opacity-0 translate-y-8 scale-95"
+                                                         x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+                                                         x-transition:leave="transition ease-in duration-200"
+                                                         x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+                                                         x-transition:leave-end="opacity-0 translate-y-8 scale-95">
+                                                        
+                                                        <div class="px-6 py-5 border-b border-slate-100 bg-slate-50/80 flex justify-between items-center sticky top-0 z-10 backdrop-blur-md">
+                                                            <div>
+                                                                <h3 class="text-lg font-black text-slate-900 leading-tight">Input Hafalan Pekanan</h3>
+                                                                <p class="text-xs font-bold text-slate-500 mt-1">{{ $member->student->name }} &middot; <span class="text-amber-600">{{ $week->date_label ?? 'Pekan '.$week->week_number }}</span></p>
                                                             </div>
-                                                            <div class="modal-body">
-                                                                <!-- Dari -->
-                                                                <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;">
-                                                                    <div class="form-group">
-                                                                        <label class="form-label">Nama Surat Dari <span style="color:#ef4444;">*</span></label>
-                                                                        <select class="form-select" x-model="startSurah">
-                                                                            <option value="">- Pilih Surah -</option>
-                                                                            <option value="-">- (Murojaah / Kosong)</option>
-                                                                            <template x-for="surah in quranSurahs" :key="surah">
-                                                                                <option :value="surah" x-text="surah" :selected="startSurah === surah"></option>
-                                                                            </template>
-                                                                        </select>
-                                                                    </div>
-                                                                    <div class="form-group">
-                                                                        <label class="form-label">Dari Ayat <span style="color:#ef4444;">*</span></label>
-                                                                        <input type="text" class="form-input" x-model="startAyat" :disabled="startSurah === '-'" placeholder="Mis: 1">
-                                                                    </div>
+                                                            <button type="button" @click="cancelAndClose()" class="p-2 bg-white rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors shadow-sm border border-slate-200">
+                                                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+                                                            </button>
+                                                        </div>
+                                                        
+                                                        <div class="p-6 space-y-6 overflow-y-auto">
+                                                            <!-- Dari -->
+                                                            <div class="grid grid-cols-3 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                                                                <div class="col-span-2 space-y-1.5">
+                                                                    <label class="text-[10px] font-black text-slate-500 uppercase tracking-wider">Mulai Surat <span class="text-red-500">*</span></label>
+                                                                    <select class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all shadow-sm" x-model="startSurah">
+                                                                        <option value="">- Pilih Surah -</option>
+                                                                        <option value="-">- (Murojaah / Kosong)</option>
+                                                                        <template x-for="surah in quranSurahs" :key="surah">
+                                                                            <option :value="surah" x-text="surah" :selected="startSurah === surah"></option>
+                                                                        </template>
+                                                                    </select>
                                                                 </div>
-                                                                
-                                                                <!-- Sampai -->
-                                                                <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;">
-                                                                    <div class="form-group">
-                                                                        <label class="form-label">Nama Surat Sampai <span style="color:#ef4444;">*</span></label>
-                                                                        <select class="form-select" x-model="endSurah">
-                                                                            <option value="">- Pilih Surah -</option>
-                                                                            <option value="-">- (Murojaah / Kosong)</option>
-                                                                            <template x-for="surah in quranSurahs" :key="surah">
-                                                                                <option :value="surah" x-text="surah" :selected="endSurah === surah"></option>
-                                                                            </template>
-                                                                        </select>
+                                                                    <div class="space-y-1.5">
+                                                                        <label class="text-[10px] font-black text-slate-500 uppercase tracking-wider">Ayat <span class="text-red-500">*</span></label>
+                                                                        <input type="text" class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all shadow-sm disabled:opacity-50 disabled:bg-slate-100" x-model="startAyat" x-on:input="startAyat = startAyat.replace(/[^0-9]/g, '')" :disabled="startSurah === '-'" placeholder="Mis: 1">
                                                                     </div>
-                                                                    <div class="form-group">
-                                                                        <label class="form-label">Sampai Ayat <span style="color:#ef4444;">*</span></label>
-                                                                        <input type="text" class="form-input" x-model="endAyat" :disabled="endSurah === '-'" placeholder="Mis: 5">
-                                                                    </div>
-                                                                </div>
-                                                                
-                                                                <!-- Sabaq & Nilai -->
-                                                                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-                                                                    <div class="form-group">
-                                                                        <label class="form-label">Jumlah Sabaq (Baris) <span style="color:#ef4444;">*</span></label>
-                                                                        <div style="position:relative;">
-                                                                            <input type="text" list="sabaqOptions-{{ $member->id }}-{{ $week->id }}" class="form-input" x-model="baris" placeholder="Mis: 18 atau 'Murojaah'">
-                                                                            <datalist id="sabaqOptions-{{ $member->id }}-{{ $week->id }}">
-                                                                                <option value="Murojaah">
-                                                                            </datalist>
-                                                                            <div style="position:absolute;bottom:-18px;left:4px;font-size:10px;font-weight:700;color:#d97706;" x-text="formattedSabaq"></div>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="form-group">
-                                                                        <label class="form-label">Nilai (1-100) <span style="color:#ef4444;">*</span></label>
-                                                                        <input type="text" class="form-input" x-model="score" :disabled="baris && baris.toLowerCase() === 'murojaah'" placeholder="Bulat, Mis: 85">
-                                                                    </div>
-                                                                </div>
-                                                                
-                                                                <!-- Catatan -->
-                                                                <div class="form-group" style="margin-top:12px;">
-                                                                    <label class="form-label">Catatan (Opsional)</label>
-                                                                    <input type="text" class="form-input" x-model="notes" placeholder="Tuliskan evaluasi/catatan hafalan">
-                                                                </div>
                                                             </div>
-                                                            <div class="modal-footer">
-                                                                <button type="button" @click="clearForm(); closeAndSave()" style="background:#fef2f2;color:#ef4444;border:none;border-radius:10px;padding:8px 16px;font-weight:700;font-size:12px;font-family:'Outfit',sans-serif;cursor:pointer;margin-right:auto;">Kosongkan</button>
-                                                                <button type="button" @click="closeAndSave()" style="background:#f1f5f9;color:#64748b;border:none;border-radius:10px;padding:8px 20px;font-weight:700;font-size:13px;font-family:'Outfit',sans-serif;cursor:pointer;">
-                                                                    Selesai
+                                                            
+                                                            <!-- Sampai -->
+                                                            <div class="grid grid-cols-3 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                                                                <div class="col-span-2 space-y-1.5">
+                                                                    <label class="text-[10px] font-black text-slate-500 uppercase tracking-wider">Sampai Surat <span class="text-red-500">*</span></label>
+                                                                    <select class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all shadow-sm" x-model="endSurah">
+                                                                        <option value="">- Pilih Surah -</option>
+                                                                        <option value="-">- (Murojaah / Kosong)</option>
+                                                                        <template x-for="surah in quranSurahs" :key="surah">
+                                                                            <option :value="surah" x-text="surah" :selected="endSurah === surah"></option>
+                                                                        </template>
+                                                                    </select>
+                                                                </div>
+                                                                    <div class="space-y-1.5">
+                                                                        <label class="text-[10px] font-black text-slate-500 uppercase tracking-wider">Ayat <span class="text-red-500">*</span></label>
+                                                                        <input type="text" class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all shadow-sm disabled:opacity-50 disabled:bg-slate-100" x-model="endAyat" x-on:input="endAyat = endAyat.replace(/[^0-9]/g, '')" :disabled="endSurah === '-'" placeholder="Mis: 5">
+                                                                    </div>
+                                                            </div>
+                                                            
+                                                            <!-- Sabaq & Nilai -->
+                                                            <div class="grid grid-cols-2 gap-4">
+                                                                <div class="space-y-1.5">
+                                                                    <label class="text-[10px] font-black text-slate-500 uppercase tracking-wider">Jml Sabaq (Baris) <span class="text-red-500">*</span></label>
+                                                                    <div class="relative">
+                                                                        <input type="text" list="sabaqOptions-{{ $member->id }}-{{ $week->id }}" class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all shadow-sm" x-model="baris" placeholder="Mis: 18 / Murojaah">
+                                                                        <datalist id="sabaqOptions-{{ $member->id }}-{{ $week->id }}">
+                                                                            <option value="Murojaah">
+                                                                        </datalist>
+                                                                        <div class="absolute -bottom-5 left-2 text-[10px] font-black text-amber-600" x-text="formattedSabaq"></div>
+                                                                    </div>
+                                                                </div>
+                                                                    <div class="space-y-1.5">
+                                                                        <label class="text-[10px] font-black text-slate-500 uppercase tracking-wider">Nilai (1-100) <span class="text-red-500">*</span></label>
+                                                                        <input type="text" class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all shadow-sm disabled:opacity-50 disabled:bg-slate-100" x-model="score" x-on:input="score = score.replace(/[^0-9]/g, '')" :disabled="baris && baris.toLowerCase() === 'murojaah'" placeholder="Mis: 85">
+                                                                    </div>
+                                                            </div>
+                                                            
+                                                            <!-- Catatan -->
+                                                            <div class="space-y-1.5 pt-2">
+                                                                <label class="text-[10px] font-black text-slate-500 uppercase tracking-wider">Catatan Evaluasi (Opsional)</label>
+                                                                <input type="text" class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all shadow-sm" x-model="notes" placeholder="Tuliskan evaluasi hafalan santri...">
+                                                            </div>
+                                                        </div>
+                                                        <div class="px-6 py-4 border-t border-slate-100 bg-slate-50/80 flex justify-between items-center mt-auto gap-2">
+                                                            <button type="button" @click="clearForm()" class="px-4 py-2 bg-red-50 text-red-600 rounded-xl text-xs font-bold hover:bg-red-100 transition-colors">Kosongkan</button>
+                                                            <div class="flex gap-2">
+                                                                <button type="button" @click="cancelAndClose()" class="px-4 py-2.5 bg-white text-slate-600 border border-slate-200 rounded-xl text-sm font-bold hover:bg-slate-50 transition-colors">Batal</button>
+                                                                <button type="button" @click="closeAndSave()" class="px-6 py-2.5 bg-slate-900 text-white rounded-xl text-sm font-bold hover:bg-slate-800 transition-colors shadow-md shadow-slate-900/20">
+                                                                    Simpan
                                                                 </button>
                                                             </div>
                                                         </div>
                                                     </div>
-                                                </template>
-                                            </td>
-                                        @endforeach
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
+                                                </div>
+                                            </template>
+                                        </td>
+                                    @endforeach
+                                    
+                                    <td class="px-3 py-4 text-center bg-amber-50/40 border-l border-amber-200">
+                                        @php $recap = $monthlyRecaps->get($member->id); @endphp
+                                        @if($recap && ($recap->average_score !== null || $recap->sabaq_monthly_baris > 0))
+                                            <div class="flex flex-col items-center justify-center gap-1">
+                                                <div class="text-[9px] font-black text-amber-600/70 uppercase tracking-wider">Rata-rata</div>
+                                                <div class="text-sm font-black text-amber-800">{{ $recap->average_score ?? '-' }}</div>
+                                                <div class="text-[9px] font-bold text-amber-700 mt-1 bg-amber-100/50 px-2 py-0.5 rounded-full border border-amber-200/50">{{ $recap->sabaq_monthly ?? '0 Baris' }}</div>
+                                            </div>
+                                        @else
+                                            <div class="text-xs font-bold text-amber-600/30">-</div>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
                 </div>
+            </div>
 
-                <div style="display:flex;align-items:center;justify-content:flex-end;gap:12px;">
-                    <button type="submit" class="btn-primary">
-                        <svg style="width:15px;height:15px;" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
-                        Simpan Data Pekanan
-                    </button>
-                </div>
-            @endif
-        </form>
-    </main>
+            <div class="flex items-center justify-end gap-3 mb-10 animate-fade-in-up" style="animation-delay: 150ms;">
+                <button type="submit" class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-bold text-sm hover:from-amber-600 hover:to-orange-600 transition-all shadow-lg shadow-amber-500/30 transform hover:-translate-y-0.5">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
+                    Simpan Semua Perubahan
+                </button>
+            </div>
+        @endif
+    </form>
 
+    @push('scripts')
     <script>
         const quranSurahs = [
             "Al-Fatihah", "Al-Baqarah", "Ali 'Imran", "An-Nisa'", "Al-Ma'idah", "Al-An'am", "Al-A'raf", "Al-Anfal", "At-Taubah", "Yunus", "Hud", "Yusuf", "Ar-Ra'd", "Ibrahim", "Al-Hijr", "An-Nahl", "Al-Isra'", "Al-Kahf", "Maryam", "Taha", "Al-Anbiya'", "Al-Hajj", "Al-Mu'minun", "An-Nur", "Al-Furqan", "Asy-Syu'ara'", "An-Naml", "Al-Qasas", "Al-'Ankabut", "Ar-Rum", "Luqman", "As-Sajdah", "Al-Ahzab", "Saba'", "Fatir", "Yasin", "As-Saffat", "Sad", "Az-Zumar", "Gafir", "Fussilat", "Asy-Syura", "Az-Zukhruf", "Ad-Dukhan", "Al-Jasiyah", "Al-Ahqaf", "Muhammad", "Al-Fath", "Al-Hujurat", "Qaf", "Az-Zariyat", "At-Tur", "An-Najm", "Al-Qamar", "Ar-Rahman", "Al-Waqi'ah", "Al-Hadid", "Al-Mujadalah", "Al-Hasyr", "Al-Mumtahanah", "As-Saff", "Al-Jumu'ah", "Al-Munafiqun", "At-Tagabun", "At-Talaq", "At-Tahrim", "Al-Mulk", "Al-Qalam", "Al-Haqqah", "Al-Ma'arij", "Nuh", "Al-Jinn", "Al-Muzzammil", "Al-Muddassir", "Al-Qiyamah", "Al-Insan", "Al-Mursalat", "An-Naba'", "An-Nazi'at", "'Abasa", "At-Takwir", "Al-Infitar", "Al-Mutaffifin", "Al-Insyiqaq", "Al-Buruj", "At-Tariq", "Al-A'la", "Al-Gasyiyah", "Al-Fajr", "Al-Balad", "Asy-Syams", "Al-Lail", "Ad-Duha", "Asy-Syarh", "At-Tin", "Al-'Alaq", "Al-Qadr", "Al-Bayyinah", "Az-Zalzalah", "Al-'Adiyat", "Al-Qari'ah", "At-Takasur", "Al-'Asr", "Al-Humazah", "Al-Fil", "Quraisy", "Al-Ma'un", "Al-Kausar", "Al-Kafirun", "An-Nasr", "Al-Lahab", "Al-Ikhlas", "Al-Falaq", "An-Naas"
@@ -281,12 +268,12 @@
             Alpine.data('tahfidzCell', (initialSurahAyat, initialSabaqAmount, initialScore, initialNotes, memberId, weekId, updateUrl) => {
                 let sSurah = '', sAyat = '', eSurah = '', eAyat = '';
                 
-                // Parser for "Al-Baqarah:1 - Ali 'Imran:5" or simple formats
+                // Parser
                 if (initialSurahAyat) {
-                    if (initialSurahAyat === '-') {
-                        sSurah = '-'; sAyat = '-';
-                        eSurah = '-'; eAyat = '-';
-                    } else {
+                        if (initialSurahAyat === '-') {
+                            sSurah = '-'; sAyat = '';
+                            eSurah = '-'; eAyat = '';
+                        } else {
                         let parts = initialSurahAyat.split(' - ');
                         let startParts = parts[0].split(':');
                         sSurah = startParts[0].trim();
@@ -300,11 +287,9 @@
                     }
                 }
                 
-                // Ensure parsed surah exists in dropdown
                 if (sSurah && sSurah !== '-' && !quranSurahs.includes(sSurah)) sSurah = '';
                 if (eSurah && eSurah !== '-' && !quranSurahs.includes(eSurah)) eSurah = '';
 
-                // Score as string
                 let parsedScore = initialScore ? Math.round(parseFloat(initialScore)).toString() : '';
                 if (initialSabaqAmount && initialSabaqAmount.toLowerCase() === 'murojaah') {
                     parsedScore = '-';
@@ -330,10 +315,10 @@
                         this._originalData = this.currentDataString();
                         
                         this.$watch('startSurah', value => {
-                            if (value === '-') this.startAyat = '-';
+                            if (value === '-') this.startAyat = '';
                         });
                         this.$watch('endSurah', value => {
-                            if (value === '-') this.endAyat = '-';
+                            if (value === '-') this.endAyat = '';
                         });
                         this.$watch('baris', value => {
                             if (value && value.toLowerCase() === 'murojaah') this.score = '-';
@@ -341,25 +326,70 @@
                         });
                     },
                     
+                    cancelAndClose() {
+                        this.revertToOriginal();
+                        this.showModal = false;
+                    },
+
+                    revertToOriginal() {
+                        let orig = JSON.parse(this._originalData);
+                        
+                        let initialSurahAyat = orig.surah_ayat;
+                        if (initialSurahAyat) {
+                            if (initialSurahAyat === '-') {
+                                this.startSurah = '-'; this.startAyat = '';
+                                this.endSurah = '-'; this.endAyat = '';
+                            } else {
+                                let parts = initialSurahAyat.split(' - ');
+                                let startParts = parts[0].split(':');
+                                this.startSurah = startParts[0].trim();
+                                this.startAyat = startParts[1] ? startParts[1].trim() : '';
+                                
+                                if (parts.length > 1) {
+                                    let endParts = parts[1].split(':');
+                                    this.endSurah = endParts[0].trim();
+                                    this.endAyat = endParts[1] ? endParts[1].trim() : '';
+                                } else {
+                                    this.endSurah = ''; this.endAyat = '';
+                                }
+                            }
+                        } else {
+                            this.startSurah = ''; this.startAyat = '';
+                            this.endSurah = ''; this.endAyat = '';
+                        }
+                        
+                        if (this.startSurah && this.startSurah !== '-' && !quranSurahs.includes(this.startSurah)) this.startSurah = '';
+                        if (this.endSurah && this.endSurah !== '-' && !quranSurahs.includes(this.endSurah)) this.endSurah = '';
+
+                        this.baris = orig.sabaq_amount ? orig.sabaq_amount.replace(/[^0-9]/g, '') : '';
+                        if (orig.sabaq_amount && orig.sabaq_amount.toLowerCase() === 'murojaah') {
+                            this.baris = 'Murojaah';
+                        }
+                        
+                        this.score = orig.score ? Math.round(parseFloat(orig.score)).toString() : '';
+                        if (this.baris.toLowerCase() === 'murojaah') this.score = '-';
+                        
+                        this.notes = orig.notes || '';
+                    },
+
                     closeAndSave() {
-                        // Check if the form is completely empty (which means they are clearing it or it's untouched)
+                        if (this.currentDataString() === this._originalData) {
+                            this.showModal = false;
+                            return;
+                        }
+
                         const isEmpty = !this.startSurah && !this.startAyat && !this.endSurah && !this.endAyat && !this.baris && (this.score === '' || this.score === null) && !this.notes;
                         
-                        // If it's not empty, validate all required fields
                         if (!isEmpty) {
                             if (!this.startSurah) { alert("Nama Surat Dari wajib diisi!"); return; }
-                            if (!this.startAyat) { alert("Dari Ayat wajib diisi!"); return; }
+                            if (this.startSurah !== '-' && !this.startAyat) { alert("Dari Ayat wajib diisi dengan angka!"); return; }
                             if (!this.endSurah) { alert("Nama Surat Sampai wajib diisi (Pilih '-' jika kosong)!"); return; }
-                            if (!this.endAyat) { alert("Sampai Ayat wajib diisi (Ketik '-' jika kosong)!"); return; }
+                            if (this.endSurah !== '-' && !this.endAyat) { alert("Sampai Ayat wajib diisi dengan angka!"); return; }
                             if (!this.baris) { alert("Jumlah Sabaq wajib diisi!"); return; }
                             if (this.score === '' || this.score === null) { alert("Nilai wajib diisi!"); return; }
                         }
                         
-                        if (this.currentDataString() !== this._originalData) {
-                            this.autoSave();
-                        } else {
-                            this.showModal = false;
-                        }
+                        this.autoSave();
                     },
                     
                     currentDataString() {
@@ -375,7 +405,6 @@
                         this.startSurah = ''; this.startAyat = '';
                         this.endSurah = ''; this.endAyat = '';
                         this.baris = ''; this.score = ''; this.notes = '';
-                        // Do not automatically close here, let closeAndSave handle it
                     },
                     
                     async autoSave() {
@@ -428,10 +457,10 @@
                         if (this.startSurah === '-' && this.endSurah === '-') return '-';
                         if (!this.startSurah) return '';
                         let combined = this.startSurah;
-                        if (this.startAyat && this.startAyat !== '-') combined += ':' + this.startAyat;
+                        if (this.startAyat) combined += ':' + this.startAyat;
                         if (this.endSurah && this.endSurah !== '-') {
                             combined += ' - ' + this.endSurah;
-                            if (this.endAyat && this.endAyat !== '-') combined += ':' + this.endAyat;
+                            if (this.endAyat) combined += ':' + this.endAyat;
                         }
                         return combined;
                     },
@@ -450,16 +479,30 @@
                     },
 
                     get summaryHtml() {
-                        if (!this.hasData) return '<span style="color:#cbd5e1;">Kosong<br><small>(Klik untuk isi)</small></span>';
+                        if (!this.hasData) {
+                            return `
+                                <div class="text-slate-300 group-hover/box:text-amber-400 transition-colors flex flex-col items-center">
+                                    <svg class="w-5 h-5 mb-1 opacity-50 group-hover/box:opacity-100" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                                    <span class="text-[10px] font-bold">Isi Data</span>
+                                </div>
+                            `;
+                        }
+                        
                         let parts = [];
-                        if (this.combinedSurahAyat) parts.push('<span style="font-weight:800;color:#0f172a;">' + this.combinedSurahAyat + '</span>');
-                        if (this.formattedSabaq) parts.push('<span style="color:#d97706;font-size:10px;display:block;margin-top:2px;">' + this.formattedSabaq + '</span>');
-                        if (this.score) parts.push('<span style="background:#fef3c7;color:#b45309;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:800;display:inline-block;margin-top:4px;">Nilai: ' + this.score + '</span>');
+                        if (this.combinedSurahAyat) {
+                            parts.push(`<span class="font-bold text-slate-800 text-[11px] leading-tight break-words max-w-[150px] line-clamp-2">${this.combinedSurahAyat}</span>`);
+                        }
+                        if (this.formattedSabaq) {
+                            parts.push(`<span class="text-amber-600 font-bold text-[9px] uppercase tracking-wider">${this.formattedSabaq}</span>`);
+                        }
+                        if (this.score) {
+                            parts.push(`<span class="inline-block mt-1 bg-gradient-to-r from-amber-100 to-orange-100 text-amber-800 px-2 py-0.5 rounded border border-amber-200 text-[10px] font-black shadow-sm">Nilai: ${this.score}</span>`);
+                        }
                         return parts.join('');
                     }
                 }
             })
         });
     </script>
-</body>
-</html>
+    @endpush
+</x-layouts.portal>

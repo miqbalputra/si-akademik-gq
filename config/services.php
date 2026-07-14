@@ -39,6 +39,18 @@ return [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
         'redirect' => env('GOOGLE_REDIRECT_URI'),
+        // Optional Workspace hosted-domain restriction. When set, only Google
+        // accounts whose verified hosted domain matches may log in via OAuth.
+        'hosted_domain' => env('GOOGLE_HOSTED_DOMAIN'),
+    ],
+
+    // Integration token for the n8n automation that consumes the
+    // "missing diniyyah journal reminders" endpoint. MUST be set in .env —
+    // there is intentionally no fallback: a missing/empty token denies all
+    // access (fail-closed) rather than authenticating against a guessable
+    // default. Compare with hash_equals() to avoid timing leaks.
+    'n8n' => [
+        'token' => env('N8N_API_TOKEN'),
     ],
 
 ];

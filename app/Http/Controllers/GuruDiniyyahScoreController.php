@@ -6,6 +6,7 @@ use App\Models\ClassEnrollment;
 use App\Models\ClassroomTerm;
 use App\Models\DiniyyahAssessmentResult;
 use App\Models\DiniyyahAssessmentSet;
+use App\Models\DiniyyahLedgerSnapshot;
 use App\Models\DiniyyahScore;
 use App\Models\SchoolEvent;
 use App\Models\SchoolHoliday;
@@ -22,6 +23,48 @@ class GuruDiniyyahScoreController extends Controller
 {
     public function index(Request $request, DiniyyahInputProgressService $progressService): View
     {
+        $teacher = $request->user()->teacher;
+
+        // Auto-create assessment sets for assignments that don't have one yet
+        if ($teacher && ! $request->user()->hasAnyRole(['admin', 'kabag_diniyyah'])) {
+            $assignments = \App\Models\DiniyyahTeacherAssignment::with('classSubject.subject')
+                ->where('teacher_id', $teacher->id)
+                ->where(function ($query) {
+                    $query->whereNull('starts_at')->orWhere('starts_at', '<=', now()->toDateString());
+                })
+                ->where(function ($query) {
+                    $query->whereNull('ends_at')->orWhere('ends_at', '>=', now()->toDateString());
+                })
+                ->get();
+                
+            $builder = new \App\Services\DiniyyahAssessmentComponentBuilder();
+            
+            foreach ($assignments as $assignment) {
+                $classSubject = $assignment->classSubject;
+                if ($classSubject) {
+                    $exists = DiniyyahAssessmentSet::where('diniyyah_class_subject_id', $classSubject->id)->exists();
+                    if (!$exists) {
+                        $newSet = DiniyyahAssessmentSet::create([
+                            'diniyyah_class_subject_id' => $classSubject->id,
+                            'title' => 'Penilaian ' . $classSubject->subject?->name,
+                            'tested_material' => '-',
+                            'assessment_method' => $classSubject->assessment_method ?? 'weighted',
+                            'kkm' => $classSubject->kkm ?? 70,
+                            'daily_weight' => $classSubject->daily_weight ?? 40,
+                            'exam_weight' => $classSubject->exam_weight ?? 60,
+                            'appears_on_ledger' => $classSubject->appears_on_ledger ?? true,
+                            'appears_on_report' => $classSubject->appears_on_report ?? true,
+                            'sort_order' => $classSubject->sort_order ?? 10,
+                            'status' => 'active',
+                            'created_by' => $request->user()->id,
+                            'updated_by' => $request->user()->id,
+                        ]);
+                        $builder->createDefaults($newSet);
+                    }
+                }
+            }
+        }
+
         $assessmentSets = DiniyyahAssessmentSet::query()
             ->with([
                 'classSubject.classroomTerm' => function ($query) {
@@ -33,7 +76,6 @@ class GuruDiniyyahScoreController extends Controller
                 'components',
                 'results'
             ])
-            ->whereIn('status', ['active', 'needs_revision'])
             ->when(! $request->user()->hasAnyRole(['admin', 'kabag_diniyyah']), function ($query) use ($request) {
                 $teacher = $request->user()->teacher;
 
@@ -145,6 +187,20 @@ class GuruDiniyyahScoreController extends Controller
             403,
         );
 
+        // Cegah mengubah nilai setelah leger kelas dikunci/dipublikasikan —
+        // nilai sumber sudah dibekukan ke snapshot leger, mengubahnya akan
+        // mendesinkronisasi rapor yang sudah terbit.
+        $ledgerFrozen = DiniyyahLedgerSnapshot::query()
+            ->where('classroom_term_id', $assessmentSet->classSubject->classroom_term_id)
+            ->whereIn('status', ['locked', 'published'])
+            ->exists();
+        abort_if($ledgerFrozen, 403, 'Nilai tidak dapat diubah karena leger kelas sudah dikunci atau dipublikasikan.');
+
+        // Catat apakah set yang akan diedit sudah submitted/validated — admin
+        // masih diperbolehkan mengeditnya, tetapi setelah edit set harus kembali
+        // ke needs_revision agar status set konsisten dengan isi skor (draft).
+        $wasSubmitted = in_array($assessmentSet->status, ['submitted', 'validated'], true);
+
         $validated = $request->validate([
             'scores' => ['array'],
             'scores.*' => ['array'],
@@ -185,6 +241,14 @@ class GuruDiniyyahScoreController extends Controller
             }
 
             $calculator->calculate($assessmentSet, ClassEnrollment::findOrFail($enrollmentId));
+        }
+
+        // Bila admin/kabag mengedit set yang sudah submitted/validated, kembalikan
+        // set ke needs_revision agar set tidak ditinggalkan dalam status
+        // "submitted"/"validated" berisi skor draft (inkonsisten). Set perlu
+        // ditinjau & disubmit ulang sebelum leger dibekukan.
+        if ($wasSubmitted && $assessmentSet->status !== 'needs_revision') {
+            $assessmentSet->update(['status' => 'needs_revision']);
         }
 
         return redirect()

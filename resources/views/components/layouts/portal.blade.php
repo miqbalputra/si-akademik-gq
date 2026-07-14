@@ -18,7 +18,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $title ?? 'Portal' }} — SIAKAD Griya Qur'an</title>
-    <meta name="description" content="Sistem Informasi Akademik Griya Qur'an & PKBM Tunas Ilmu">
+    <meta name="description" content="Sistem Informasi Akademik Griya Qur'an Tunas Ilmu">
 
     {{-- Google Fonts --}}
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -127,18 +127,30 @@
             <div class="flex h-15 items-center justify-between py-3">
 
                 {{-- Logo + School Name --}}
-                <a href="{{ url('/') }}" class="flex items-center gap-3 group">
-                    <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 font-black text-white text-sm shadow-md group-hover:shadow-amber-300/40 transition-shadow">
-                        GQ
-                    </span>
-                    <div>
-                        <span class="block text-sm font-extrabold text-slate-800 leading-none">Griya Qur'an</span>
-                        <span class="block text-[9px] font-bold uppercase tracking-widest text-amber-600 mt-0.5">{{ $portalLabel ?? 'SIAKAD' }}</span>
+                <div class="flex items-center gap-3">
+                    <a href="{{ url('/') }}" class="flex items-center gap-3 group">
+                        <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 font-black text-white text-sm shadow-md group-hover:shadow-amber-300/40 transition-shadow">
+                            GQ
+                        </span>
+                        <div>
+                            <span class="block text-sm font-extrabold text-slate-800 leading-none">Griya Qur'an</span>
+                            <span class="block text-[9px] font-bold uppercase tracking-widest text-amber-600 mt-0.5">{{ $portalLabel ?? 'SIAKAD' }}</span>
+                        </div>
+                    </a>
+                    
+                    @isset($breadcrumb)
+                    <div class="hidden sm:flex items-center gap-2 pl-3 ml-3 border-l-2 border-slate-200">
+                        <span class="text-xs font-bold text-slate-500">{{ $breadcrumb }}</span>
                     </div>
-                </a>
+                    @endisset
+                </div>
 
                 {{-- Nav Links + Actions --}}
                 <div class="flex items-center gap-2">
+                    <a href="{{ route('guru.dashboard') }}" class="btn btn-sm {{ request()->routeIs('guru.dashboard') ? 'bg-slate-100 text-slate-800' : 'text-slate-500 hover:bg-slate-50' }} hidden sm:inline-flex">
+                        Dashboard
+                    </a>
+
                     @isset($navLinks)
                         {{ $navLinks }}
                     @endisset
@@ -164,7 +176,7 @@
 
     {{-- ===== FOOTER ===== --}}
     <footer class="mt-12 border-t border-slate-100 bg-white/60 py-6 text-center text-xs font-medium text-slate-400">
-        &copy; {{ date('Y') }} Griya Qur'an &amp; PKBM Tunas Ilmu &mdash; SIAKAD v1.0
+        &copy; {{ date('Y') }} Griya Qur'an Tunas Ilmu
     </footer>
 
     @stack('scripts')

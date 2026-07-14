@@ -1,4 +1,4 @@
-const CACHE_NAME = 'nilai-gq-v1';
+const CACHE_NAME = 'nilai-gq-v2';
 const STATIC_ASSETS = [
     '/',
     '/login',
