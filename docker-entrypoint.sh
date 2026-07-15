@@ -24,4 +24,10 @@ php artisan event:cache
 
 # Hand off to Octane (FrankenPHP). Exec so the process replaces the shell
 # and receives signals (graceful reload / shutdown) correctly.
-exec php artisan octane:start --server=frankenphp --host=0.0.0.0 --port="${PORT:-8000}"
+#
+# --admin-port is explicit (not auto-calculated). Octane's default admin port
+# formula is `2019 + (app_port - 8000)`, which goes NEGATIVE when the app port
+# is below 5981 (e.g. Coolify injecting PORT=80/3000). A negative value throws
+# "Unable to determine admin port" and crashes the container on every start.
+# Pinning admin port to 2019 (the FrankenPHP default) avoids that entirely.
+exec php artisan octane:start --server=frankenphp --host=0.0.0.0 --port="${PORT:-8000}" --admin-port=2019

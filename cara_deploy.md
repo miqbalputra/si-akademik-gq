@@ -44,8 +44,10 @@ terhubung via hostname internal Docker.
    > Catatan: repo ini adalah direktori aplikasi langsung, jadi base directory
    > biasanya kosong. Sesuaikan dengan struktur repo Anda.
 5. **Dockerfile Location**: `Dockerfile`.
-6. Port exposenya `8000` (sesuai `EXPOSE` di Dockerfile). Bila Coolify butuh port
-   custom, set env `PORT` — entrypoint membaca `PORT` (default 8000).
+6. Port exposenya `8000` (sesuai `EXPOSE` di Dockerfile). Entrypoint dengar di
+   `${PORT:-8000}` — bila Coolify menginjeksi `PORT` env, pastikan field **Port
+   Exposes** di Coolify sama dengan nilai itu (default 8000). `--admin-port=2019`
+   sudah di-fix di entrypoint, jadi port < 5981 tidak lagi bikin crash.
 7. Aktifkan **Build Pack: Dockerfile**.
 
 > **Jangan klik Deploy dulu** — selesaikan langkah 2 (env vars) dan langkah 3
@@ -275,6 +277,12 @@ Tanpa persistent volume, isi `/app/storage` hilang setiap rebuild container.
   build-time `ARG`. Tandai variabel sensitif sebagai **Runtime only** di Coolify
   (lihat peringatan di langkah 2), lalu rotasi secret yang sempat terbocorkan
   (`DB_PASSWORD`, `GOOGLE_CLIENT_SECRET`, `APP_KEY`) di sumber masing-masing.
+- **`Unable to determine admin port. Please specify the [--admin-port] option`
+  + restart loop + 503 "no available server"**: Octane menghitung admin port
+  `2019 + (app_port - 8000)` yang jadi negatif bila app port < 5981 (mis. Coolify
+  inject `PORT=80`). Fix sudah ada di entrypoint: `--admin-port=2019`. Pastikan
+  entrypoint baris `octane:start` memuat opsi itu. Lalu pastikan field **Port
+  Exposes** Coolify sama dengan port yang didengar app (default 8000).
 
 ---
 
