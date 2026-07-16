@@ -254,6 +254,7 @@ class AdminPanelProvider extends PanelProvider
                 NavigationGroup::make('Diniyyah'),
                 NavigationGroup::make('Tahfidz'),
                 NavigationGroup::make('Leger & Rapor'),
+                NavigationGroup::make('Pengaturan'),
             ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
