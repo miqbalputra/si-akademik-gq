@@ -12,13 +12,18 @@ use Spatie\Permission\Models\Role;
 
 class GuardianStudentCsvImporter
 {
-    /** @var array<int, string> */
+    /**
+     * Header wajib. Wali (nama_wali/hubungan) bersifat OPSIONAL: baris tanpa
+     * wali hanya membuat/memperbarui data santri. Memungkinkan import santri
+     * dulu, lalu wali/ayah/ibu di-link menyusul (re-import NIS sama dgn wali
+     * menambah tanpa menghapus data lama berkat syncWithoutDetaching).
+     *
+     * @var array<int, string>
+     */
     private const REQUIRED_HEADERS = [
         'nis',
         'nama_siswa',
         'jenis_kelamin_siswa',
-        'nama_wali',
-        'hubungan',
     ];
 
     public function import(string $path): GuardianStudentImportResult
@@ -152,6 +157,11 @@ class GuardianStudentCsvImporter
             $errors[] = "Baris {$lineNumber}: email wajib diisi jika buat_akun bernilai ya/true.";
         }
 
+        // buat_akun membuat akun login untuk wali -> wajib ada nama_wali.
+        if ($this->truthy($data['buat_akun'] ?? '') && ($data['nama_wali'] ?? '') === '') {
+            $errors[] = "Baris {$lineNumber}: nama_wali wajib diisi jika buat_akun bernilai ya/true.";
+        }
+
         return $errors;
     }
 
@@ -172,6 +182,11 @@ class GuardianStudentCsvImporter
         } else {
             $student = Student::create(['nis' => $data['nis']] + $studentPayload);
             $result->studentsCreated++;
+        }
+
+        // Wali opsional: jika baris tanpa nama_wali, cukup santri (wali menyusul).
+        if (($data['nama_wali'] ?? '') === '') {
+            return;
         }
 
         $guardian = $this->findGuardian($data);
