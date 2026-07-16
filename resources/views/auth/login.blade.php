@@ -124,7 +124,7 @@
                     @csrf
 
                     <div>
-                        <label for="email" class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Alamat Email</label>
+                        <label for="login" class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Email atau Username</label>
                         <div class="relative">
                             <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
                                 <svg class="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
@@ -132,18 +132,18 @@
                                 </svg>
                             </div>
                             <input
-                                id="email"
-                                name="email"
-                                type="email"
-                                value="{{ old('email') }}"
+                                id="login"
+                                name="login"
+                                type="text"
+                                value="{{ old('login') }}"
                                 required
                                 autofocus
-                                placeholder="nama@domain.com"
-                                autocomplete="email"
+                                placeholder="nama@domain.com atau username"
+                                autocomplete="username"
                                 class="block w-full rounded-2xl border-2 border-slate-100 bg-white/50 pl-11 pr-4 py-3 text-sm font-medium text-slate-900 shadow-sm outline-none transition-all placeholder:text-slate-400 focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-500/10"
                             >
                         </div>
-                        @error('email')
+                        @error('login')
                             <p class="mt-2 text-xs font-bold text-red-500 flex items-center gap-1">
                                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                                 {{ $message }}
