@@ -176,44 +176,6 @@
         .portal-card.guru:hover  { box-shadow: 0 20px 48px -12px rgba(79,70,229,.15); }
         .portal-card.admin:hover { box-shadow: 0 20px 48px -12px rgba(15,23,42,.15); }
 
-        /* ---- Demo Section ---- */
-        .demo-section {
-            max-width: 860px; margin: 0 auto;
-            padding: 0 24px 80px;
-        }
-        .demo-card {
-            background: #fff; border: 1px solid #f1f5f9;
-            border-radius: 24px; overflow: hidden;
-            box-shadow: 0 4px 24px -8px rgba(0,0,0,.06);
-        }
-        .demo-header {
-            background: #fafaf8; border-bottom: 1px solid #f1f5f9;
-            padding: 20px 28px;
-            display: flex; align-items: center; justify-content: space-between; gap: 16px;
-        }
-        .demo-header-left { display: flex; align-items: center; gap: 14px; }
-        .demo-icon {
-            width: 44px; height: 44px; border-radius: 12px;
-            background: #fef3c7;
-            display: flex; align-items: center; justify-content: center; color: #d97706;
-        }
-        .demo-header h3 { font-size: 16px; font-weight: 800; color: #0f172a; margin: 0 0 2px; }
-        .demo-header p  { font-size: 12px; color: #64748b; font-weight: 500; margin: 0; }
-        .demo-btn {
-            display: inline-flex; align-items: center; gap: 6px;
-            padding: 8px 18px; border-radius: 10px;
-            background: #d97706; color: #fff; border: none;
-            font-size: 12px; font-weight: 700;
-            text-decoration: none; transition: all .2s; white-space: nowrap;
-            box-shadow: 0 2px 8px rgba(217,119,6,.3);
-        }
-        .demo-btn:hover { background: #b45309; transform: translateY(-1px); }
-        .demo-table { width: 100%; border-collapse: collapse; }
-        .demo-table th { padding: 10px 20px; text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #94a3b8; background: #fafaf8; border-bottom: 1px solid #f1f5f9; }
-        .demo-table td { padding: 12px 20px; font-size: 13px; font-weight: 600; color: #334155; border-bottom: 1px solid #f8fafc; vertical-align: middle; }
-        .demo-table tr:last-child td { border-bottom: 0; }
-        .demo-table tr:hover td { background: #fafaf8; }
-        .demo-table td:first-child { font-weight: 700; color: #0f172a; }
         .code-chip {
             display: inline-flex; align-items: center;
             background: #f1f5f9; border: 1px solid #e2e8f0;
@@ -333,54 +295,6 @@
             </a>
         </div>
 
-        {{-- ===== DEMO SECTION ===== --}}
-        <div class="demo-section">
-            <div class="demo-card fade-up delay-5">
-                <div class="demo-header">
-                    <div class="demo-header-left">
-                        <div class="demo-icon">
-                            <svg style="width:22px;height:22px;" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 0 1-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 0 1 4.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0 1 12 15a9.065 9.065 0 0 0-6.23-.693L5 14.5m14.8.8 1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0 1 12 21a48.278 48.278 0 0 1-8.132-.687c-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" /></svg>
-                        </div>
-                        <div>
-                            <h3>Akun Demo Sistem</h3>
-                            <p>Gunakan kredensial ini untuk mencoba semua fitur SIAKAD.</p>
-                        </div>
-                    </div>
-                    <a href="{{ url('/admin/demo-flow') }}" class="demo-btn">
-                        Panduan Demo
-                        <svg style="width:13px;height:13px;" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" /></svg>
-                    </a>
-                </div>
-                <table class="demo-table">
-                    <thead>
-                        <tr>
-                            <th>Peran</th>
-                            <th>Email / Username</th>
-                            <th>Kata Sandi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @php
-                            $accounts = [
-                                ['role' => 'Admin Utama',    'email' => 'admin@example.com'],
-                                ['role' => 'PJ Diniyyah',    'email' => 'kabag@example.com'],
-                                ['role' => 'Kepala Sekolah', 'email' => 'kepala@example.com'],
-                                ['role' => 'Guru Pengajar',  'email' => 'guru@example.com'],
-                                ['role' => 'Wali Kelas',     'email' => 'walikelas@example.com'],
-                                ['role' => 'Wali Santri',    'email' => 'wali@example.com'],
-                            ];
-                        @endphp
-                        @foreach ($accounts as $acc)
-                            <tr>
-                                <td>{{ $acc['role'] }}</td>
-                                <td><span class="code-chip">{{ $acc['email'] }}</span></td>
-                                <td><span class="code-chip">password</span></td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-        </div>
     </div>
 
     {{-- ===== FOOTER ===== --}}
