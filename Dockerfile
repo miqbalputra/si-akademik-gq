@@ -33,6 +33,12 @@ RUN composer install --optimize-autoloader --no-dev --no-interaction
 # Install Node dependencies and build frontend assets
 RUN npm ci && npm run build
 
+# Publish Filament panel assets (Alpine components, JS, CSS) into public/.
+# Filament serves these as static files from public/ (no route fallback). If this
+# step is missing, the browser 404s the JS and Filament buttons (Create/Save/etc.)
+# silently do nothing — the server and DB work, but no Livewire request is ever sent.
+RUN php artisan filament:assets
+
 # Set appropriate permissions for directories the runtime must write to.
 # Run as non-root where possible; storage & bootstrap/cache stay group-writable.
 RUN chown -R root:root /app && \
