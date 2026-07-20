@@ -208,6 +208,16 @@ class TeacherAssignmentCsvImporter
             'email' => $data['email'],
         ];
 
+        // Set username bila diberikan CSV dan belum dipakai akun lain, agar login
+        // by username (didukung AuthenticatedSessionController) bisa dipakai guru.
+        $username = trim((string) ($data['username'] ?? ''));
+
+        if ($username !== '' && ! User::where('username', $username)
+            ->when($user, fn ($query) => $query->whereKeyNot($user->id))
+            ->exists()) {
+            $payload['username'] = $username;
+        }
+
         if ($user) {
             $user->update($payload);
 
