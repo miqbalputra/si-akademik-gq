@@ -154,11 +154,15 @@ class AdminPanelProvider extends PanelProvider
                             margin-bottom: 6px !important;
                         }
 
-                        /* ── Submit button ── */
-                        .fi-btn-primary,
-                        .fi-form-component-action-button[type="submit"],
-                        button[type="submit"].fi-btn {
+                        /* ── Submit button ──
+                           Hanya diterapkan di halaman auth (fi-simple-layout) agar
+                           tombol primary/submit di panel admin (Simpan) dan AccountWidget
+                           (Keluar) tetap memakai warna bawaan Filament yang terlihat. */
+                        .fi-simple-layout .fi-btn-primary,
+                        .fi-simple-layout .fi-form-component-action-button[type="submit"],
+                        .fi-simple-layout button[type="submit"].fi-btn {
                             background: #0f172a !important;
+                            color: #ffffff !important;
                             border-radius: 12px !important;
                             font-weight: 700 !important;
                             font-size: 14px !important;
@@ -169,9 +173,10 @@ class AdminPanelProvider extends PanelProvider
                             box-shadow: 0 4px 12px rgba(15,23,42,.15) !important;
                             border: none !important;
                         }
-                        .fi-btn-primary:hover,
-                        button[type="submit"].fi-btn:hover {
+                        .fi-simple-layout .fi-btn-primary:hover,
+                        .fi-simple-layout button[type="submit"].fi-btn:hover {
                             background: #1e293b !important;
+                            color: #ffffff !important;
                             transform: translateY(-1px) !important;
                         }
 
