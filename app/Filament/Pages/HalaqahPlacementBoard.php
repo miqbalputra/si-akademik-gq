@@ -24,7 +24,7 @@ class HalaqahPlacementBoard extends Page
 
     protected static ?string $navigationLabel = 'Penempatan Halaqah (Drag & Drop)';
 
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 11;
 
     protected string $view = 'filament.pages.halaqah-placement-board';
 

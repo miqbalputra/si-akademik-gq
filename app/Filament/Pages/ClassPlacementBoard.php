@@ -23,7 +23,7 @@ class ClassPlacementBoard extends Page
 
     protected static ?string $navigationLabel = 'Penempatan Santri (Drag & Drop)';
 
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 21;
 
     protected string $view = 'filament.pages.class-placement-board';
 
