@@ -21,7 +21,7 @@ class TahfidzHalaqahMember extends Model
 
     public function halaqah(): BelongsTo
     {
-        return $this->belongsTo(TahfidzHalaqah::class);
+        return $this->belongsTo(TahfidzHalaqah::class, 'tahfidz_halaqah_id');
     }
 
     public function student(): BelongsTo
