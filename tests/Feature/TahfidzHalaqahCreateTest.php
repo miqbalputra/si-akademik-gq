@@ -55,6 +55,18 @@ class TahfidzHalaqahCreateTest extends TestCase
         $resp->assertSee('Semester Ganjil'); // pilihan dropdown dari academic_terms
     }
 
+    public function test_admin_sees_create_button_on_halaqah_list_page(): void
+    {
+        $this->makePrerequisites();
+
+        $resp = $this->actingAs($this->admin())->get('/admin/tahfidz-halaqahs');
+
+        $resp->assertOk();
+        // Filament v5 ListRecords tidak otomatis merender tombol Create; harus
+        // didefinisikan via getHeaderActions(). Tombol ini link ke /create.
+        $resp->assertSee('tahfidz-halaqahs/create');
+    }
+
     public function test_kepala_sekolah_cannot_create_halaqah(): void
     {
         $u = User::create(['name' => 'KS', 'email' => 'ks@test.com', 'password' => bcrypt('x')]);
