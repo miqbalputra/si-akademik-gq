@@ -88,7 +88,7 @@ class PlacementService
                 return $active;
             }
 
-            // Pindah halaqah: soft-move yang lama, lalu buat member aktif baru.
+            // Pindah halaqah: soft-move yang lama, lalu aktifkan/buat member di tujuan.
             $this->softMove($active);
 
             $classEnrollmentId = ClassEnrollment::query()
@@ -96,6 +96,26 @@ class PlacementService
                 ->where('student_id', $studentId)
                 ->where('status', 'active')
                 ->value('id');
+
+            // unique(tahfidz_halaqah_id, student_id) berlaku untuk SEMUA status,
+            // jadi bila santri pernah di halaqah ini (sekarang moved/inactive),
+            // reaktifkan baris itu — jangan insert baru (akan tabrakan constraint).
+            $existing = TahfidzHalaqahMember::query()
+                ->where('tahfidz_halaqah_id', $halaqahId)
+                ->where('student_id', $studentId)
+                ->lockForUpdate()
+                ->first();
+
+            if ($existing) {
+                $existing->update([
+                    'status' => 'active',
+                    'left_at' => null,
+                    'joined_at' => now()->toDateString(),
+                    'class_enrollment_id' => $classEnrollmentId,
+                ]);
+
+                return $existing->fresh();
+            }
 
             return TahfidzHalaqahMember::create([
                 'tahfidz_halaqah_id' => $halaqahId,

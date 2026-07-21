@@ -260,6 +260,66 @@ class PlacementBoardTest extends TestCase
         ]);
     }
 
+    public function test_rejoin_same_halaqah_reactivates_existing_row(): void
+    {
+        // unique(tahfidz_halaqah_id, student_id) berlaku untuk semua status.
+        // Masuk -> keluar -> masuk lagi ke halaqah yang sama harus reaktifasi,
+        // bukan insert baru (kalau insert akan tabrakan constraint).
+        $term = $this->makeTerm();
+        $h1 = $this->makeHalaqah($term, 'Halaqah 1');
+        $student = $this->makeStudent('Ahmad', 'N001');
+
+        $page = \Livewire\Livewire::actingAs($this->admin())->test(HalaqahPlacementBoard::class)
+            ->set('academicTermId', $term->id);
+
+        $page->call('assignToHalaqah', $student->id, $h1->id);
+        $page->call('assignToHalaqah', $student->id, null);   // keluar -> moved
+        $page->call('assignToHalaqah', $student->id, $h1->id); // masuk balik
+
+        // Tetap satu baris untuk (h1, student), status aktif, left_at null.
+        $this->assertSame(1, TahfidzHalaqahMember::query()
+            ->where('tahfidz_halaqah_id', $h1->id)
+            ->where('student_id', $student->id)
+            ->count());
+        $row = TahfidzHalaqahMember::query()
+            ->where('tahfidz_halaqah_id', $h1->id)
+            ->where('student_id', $student->id)
+            ->first();
+        $this->assertSame('active', $row->status);
+        $this->assertNull($row->left_at);
+    }
+
+    public function test_return_to_previous_halaqah_after_moving_reactivates_row(): void
+    {
+        $term = $this->makeTerm();
+        $h1 = $this->makeHalaqah($term, 'Halaqah 1');
+        $h2 = $this->makeHalaqah($term, 'Halaqah 2');
+        $student = $this->makeStudent('Ahmad', 'N001');
+
+        $page = \Livewire\Livewire::actingAs($this->admin())->test(HalaqahPlacementBoard::class)
+            ->set('academicTermId', $term->id);
+
+        $page->call('assignToHalaqah', $student->id, $h1->id);
+        $page->call('assignToHalaqah', $student->id, $h2->id); // h1 -> moved, h2 active
+        $page->call('assignToHalaqah', $student->id, $h1->id); // balik ke h1
+
+        $active = TahfidzHalaqahMember::query()
+            ->where('student_id', $student->id)
+            ->where('status', 'active')
+            ->whereHas('halaqah', fn ($q) => $q->where('academic_term_id', $term->id))
+            ->get();
+        $this->assertCount(1, $active);
+        $this->assertSame($h1->id, (int) $active->first()->tahfidz_halaqah_id);
+
+        // h2 sekarang moved, h1 aktif. Total baris = 2 (satu per halaqah).
+        $this->assertSame(2, TahfidzHalaqahMember::query()->where('student_id', $student->id)->count());
+        $this->assertDatabaseHas('tahfidz_halaqah_members', [
+            'tahfidz_halaqah_id' => $h2->id,
+            'student_id' => $student->id,
+            'status' => 'moved',
+        ]);
+    }
+
     public function test_kepala_sekolah_forbidden_on_halaqah_board(): void
     {
         $this->actingAs($this->userWithRole('kepala_sekolah'))
