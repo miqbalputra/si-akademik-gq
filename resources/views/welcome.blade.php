@@ -217,6 +217,20 @@
             </a>
             <div class="nav-actions">
                 @auth
+                    @php
+                        // Tujuan tombol Dashboard disesuaikan dgn role user:
+                        // panel admin (admin/kabag_*/kepsek) -> /admin, guru -> /guru, wali -> /wali.
+                        $dashboardUrl = match (true) {
+                            auth()->user()->hasAnyRole(['admin', 'kabag_diniyyah', 'kabag_tahfidz', 'kepala_sekolah']) => url('/admin'),
+                            auth()->user()->hasRole('guru') => route('guru.dashboard'),
+                            auth()->user()->hasRole('wali_santri') => route('wali.dashboard'),
+                            default => url('/admin'),
+                        };
+                    @endphp
+                    <a href="{{ $dashboardUrl }}" class="nav-btn-primary">
+                        <svg style="width:14px;height:14px;" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.5a.75.75 0 00.75.75h4.5a.75.75 0 00.75-.75V15a.75.75 0 01.75-.75h3a.75.75 0 01.75.75v5.25c0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75V9.75" /></svg>
+                        Dashboard
+                    </a>
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
                         <button type="submit" class="nav-btn-ghost">
