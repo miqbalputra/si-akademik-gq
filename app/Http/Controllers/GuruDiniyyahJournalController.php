@@ -10,6 +10,7 @@ use App\Models\DiniyyahTeacherAssignment;
 use App\Models\StudentAttendance;
 use App\Models\ClassEnrollment;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Database\QueryException;
 
 class GuruDiniyyahJournalController extends Controller
 {
@@ -135,19 +136,32 @@ class GuruDiniyyahJournalController extends Controller
             ])->withInput()->with('error', 'Jurnal untuk kelas, tanggal, dan jam sesi ini sudah pernah diisi.');
         }
 
-        $journal = DiniyyahClassJournal::create([
-            'diniyyah_teacher_assignment_id' => $validated['diniyyah_teacher_assignment_id'],
-            'date' => $validated['date'],
-            'session_hour' => $validated['session_hour'],
-            'material' => $validated['material'],
-            'jp_count' => 1,
-        ]);
-
-        foreach ($absences as $enrollmentId => $status) {
-            $journal->absences()->create([
-                'class_enrollment_id' => $enrollmentId,
-                'status' => $status,
+        try {
+            $journal = DiniyyahClassJournal::create([
+                'diniyyah_teacher_assignment_id' => $validated['diniyyah_teacher_assignment_id'],
+                'date' => $validated['date'],
+                'session_hour' => $validated['session_hour'],
+                'material' => $validated['material'],
+                'jp_count' => 1,
             ]);
+
+            foreach ($absences as $enrollmentId => $status) {
+                $journal->absences()->create([
+                    'class_enrollment_id' => $enrollmentId,
+                    'status' => $status,
+                ]);
+            }
+        } catch (QueryException $e) {
+            // Backstop untuk race kondisi double-submit yang lolos pengecekan exists()
+            // di atas: unique index (diniyyah_teacher_assignment_id, date, session_hour).
+            if ($this->isDuplicateKeyException($e)) {
+                return redirect()->route('guru.diniyyah-journals.index', [
+                    'classroom_term_id' => $validated['classroom_term_id'],
+                    'date' => $validated['date']
+                ])->withInput()->with('error', 'Jurnal untuk kelas, tanggal, dan jam sesi ini sudah pernah diisi.');
+            }
+
+            throw $e;
         }
 
         return redirect()->route('guru.diniyyah-journals.index', [
@@ -159,6 +173,9 @@ class GuruDiniyyahJournalController extends Controller
     public function destroy(DiniyyahClassJournal $diniyyah_journal)
     {
         $teacher = Auth::user()->teacher;
+        if (!$teacher) {
+            abort(403, 'Akses ditolak. Akun Anda tidak terhubung dengan data Guru.');
+        }
         if ($diniyyah_journal->teacherAssignment->teacher_id !== $teacher->id) {
             abort(403);
         }
@@ -172,5 +189,17 @@ class GuruDiniyyahJournalController extends Controller
             'classroom_term_id' => $classroomTermId,
             'date' => $date
         ])->with('success', 'Jurnal berhasil dihapus.');
+    }
+
+    /**
+     * Deteksi QueryException pelanggaran unique constraint lintas driver
+     * (SQLite error code 19 / MySQL SQLSTATE 23000).
+     */
+    private function isDuplicateKeyException(QueryException $e): bool
+    {
+        $sqlstate = $e->errorInfo[0] ?? null;
+        $driverCode = $e->errorInfo[1] ?? null;
+
+        return $sqlstate === '23000' || $driverCode === 19;
     }
 }

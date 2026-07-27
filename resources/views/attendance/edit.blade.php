@@ -180,9 +180,9 @@
                                         </select>
                                     </td>
                                 @endforeach
-                                <td class="px-4 py-3 text-center font-black text-red-700 text-base" x-text="studentTotals['{{ $enrollment->id }}']?.sick || {{ $totals['sick'] }}"></td>
-                                <td class="px-4 py-3 text-center font-black text-sky-700 text-base" x-text="studentTotals['{{ $enrollment->id }}']?.permission || {{ $totals['permission'] }}"></td>
-                                <td class="px-4 py-3 text-center font-black text-slate-700 text-base" x-text="studentTotals['{{ $enrollment->id }}']?.absent || {{ $totals['absent'] }}"></td>
+                                <td class="px-4 py-3 text-center font-black text-red-700 text-base" x-text="studentTotals['{{ $enrollment->id }}']?.sick ?? {{ $totals['sick'] }}"></td>
+                                <td class="px-4 py-3 text-center font-black text-sky-700 text-base" x-text="studentTotals['{{ $enrollment->id }}']?.permission ?? {{ $totals['permission'] }}"></td>
+                                <td class="px-4 py-3 text-center font-black text-slate-700 text-base" x-text="studentTotals['{{ $enrollment->id }}']?.absent ?? {{ $totals['absent'] }}"></td>
                             </tr>
                         @endforeach
                     </tbody>

@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\DiniyyahClassJournals;
 
 use App\Filament\Resources\DiniyyahClassJournals\Pages;
+use App\Filament\Concerns\HasRoleBasedResourceAccess;
 use App\Models\DiniyyahClassJournal;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -17,15 +18,21 @@ use Illuminate\Database\Eloquent\Builder;
 
 class DiniyyahClassJournalResource extends Resource
 {
+    use HasRoleBasedResourceAccess;
+
     protected static ?string $model = DiniyyahClassJournal::class;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-book-open';
-    
+
     protected static string|\UnitEnum|null $navigationGroup = 'Akademik Diniyyah';
-    
+
     protected static ?string $navigationLabel = 'Jurnal KBM';
-    
+
     protected static ?string $modelLabel = 'Jurnal KBM';
+
+    protected const VIEW_ROLES = ['admin', 'kabag_diniyyah', 'kepala_sekolah'];
+
+    protected const MANAGE_ROLES = ['admin', 'kabag_diniyyah'];
 
     public static function form(Schema $schema): Schema
     {

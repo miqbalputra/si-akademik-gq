@@ -178,6 +178,15 @@ class AttendanceController extends Controller
             ->where('classroom_term_id', $classroomTerm->id)
             ->firstOrFail();
 
+        // Validasi tanggal presensi: harus hari sekolah, dalam rentang semester,
+        // bukan libur, dan tidak di masa depan.
+        $date = CarbonImmutable::parse($validated['date']);
+        abort_unless(
+            $this->isValidAttendanceDate($classroomTerm, $date),
+            422,
+            'Tanggal tidak valid untuk presensi: di luar semester, akhir pekan, libur, atau masa depan.'
+        );
+
         $status = StudentAttendance::statusFromCode($validated['code']);
 
         StudentAttendance::updateOrCreate(
@@ -292,6 +301,39 @@ class AttendanceController extends Controller
      * @param  Collection<string, StudentAttendance>  $attendances
      * @return array{array<int, array{sick: int, permission: int, absent: int}>, array{sick: int, permission: int, absent: int}}
      */
+    /**
+     * Apakah tanggal valid untuk mencatat presensi: hari kerja (Senin–Jumat),
+     * bukan libur sekolah, dalam rentang semester, dan tidak di masa depan.
+     */
+    private function isValidAttendanceDate(ClassroomTerm $classroomTerm, CarbonImmutable $date): bool
+    {
+        if ($date->isSaturday() || $date->isSunday()) {
+            return false;
+        }
+
+        if ($date->greaterThan(now()->endOfDay())) {
+            return false;
+        }
+
+        $term = $classroomTerm->academicTerm;
+        if ($term?->starts_at && $date->lessThan(CarbonImmutable::parse($term->starts_at)->startOfDay())) {
+            return false;
+        }
+        if ($term?->ends_at && $date->greaterThan(CarbonImmutable::parse($term->ends_at)->endOfDay())) {
+            return false;
+        }
+
+        $isHoliday = SchoolHoliday::query()
+            ->where('academic_term_id', $classroomTerm->academic_term_id)
+            ->whereDate('holiday_date', $date->toDateString())
+            ->exists();
+        if ($isHoliday) {
+            return false;
+        }
+
+        return true;
+    }
+
     private function totalsFor(Collection $enrollments, Collection $days, Collection $attendances): array
     {
         $studentTotals = [];
