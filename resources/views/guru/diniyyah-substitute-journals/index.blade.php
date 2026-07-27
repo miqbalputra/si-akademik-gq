@@ -1,7 +1,14 @@
-<x-layouts.portal title="Jurnal Kelas Diniyyah" portalLabel="Portal Guru" breadcrumb="Jurnal Kelas">
+<x-layouts.portal title="Jurnal Guru Pengganti" portalLabel="Portal Guru" breadcrumb="Jurnal Pengganti">
+    <x-slot name="navLinks">
+        <a href="{{ route('guru.dashboard') }}" class="btn btn-ghost text-slate-500 hover:bg-slate-50">Dashboard</a>
+        <a href="{{ route('guru.diniyyah-journals.index') }}" class="btn btn-ghost {{ request()->routeIs('guru.diniyyah-journals.index') ? 'bg-slate-100 text-slate-800' : 'text-slate-500 hover:bg-slate-50' }}">Jurnal Kelas</a>
+    </x-slot>
+
     <div class="mb-6 flex justify-between items-center glass-card p-4 rounded-2xl">
-        <h1 class="text-2xl font-black text-slate-900">Isi Jurnal Kelas</h1>
-        <a href="{{ route('guru.dashboard') }}" class="text-sm font-bold text-slate-500 hover:text-amber-600">Ke Dashboard</a>
+        <div>
+            <h1 class="text-2xl font-black text-slate-900">Jurnal Guru Pengganti</h1>
+            <p class="text-xs font-semibold text-slate-500 mt-1">Catat jurnal KBM diniyyah saat Anda menggantikan guru lain yang berhalangan. JP tercatat ke Anda (untuk penghitungan gaji).</p>
+        </div>
     </div>
 
     @if(session('success'))
@@ -18,9 +25,9 @@
 
     <!-- Filter Kelas dan Tanggal -->
     <div class="glass-card rounded-2xl p-6 mb-6">
-        <form method="GET" action="{{ route('guru.diniyyah-journals.index') }}" class="flex flex-col sm:flex-row gap-4 items-end" id="filter-form">
+        <form method="GET" action="{{ route('guru.diniyyah-substitute-journals.index') }}" class="flex flex-col sm:flex-row gap-4 items-end" id="filter-form">
             <div class="flex-1">
-                <label class="block text-sm font-bold text-slate-700 mb-1">Kelas</label>
+                <label class="block text-sm font-bold text-slate-700 mb-1">Kelas (yang ingin Anda gantikan)</label>
                 <select name="classroom_term_id" class="w-full rounded-xl border-slate-300 shadow-sm text-sm py-2" onchange="document.getElementById('filter-form').submit()">
                     <option value="">-- Pilih Kelas --</option>
                     @foreach($classes as $classTerm)
@@ -41,7 +48,7 @@
     </div>
 
     @if($selectedClassroomTermId)
-        <!-- Tabel Jurnal (Seperti Excel) -->
+        <!-- Tabel Jurnal -->
         <div class="glass-card rounded-2xl overflow-hidden mb-8 border border-slate-200">
             <div class="bg-slate-50 p-4 border-b border-slate-200 text-center">
                 <h2 class="font-black text-lg uppercase tracking-wider text-slate-800">Jurnal Kelas Pembelajaran Diniyyah</h2>
@@ -53,7 +60,7 @@
                 <thead>
                     <tr class="bg-slate-100 text-xs uppercase tracking-wider text-slate-600 font-bold border-b border-slate-200">
                         <th class="p-3 border-r border-slate-200 w-16 text-center">Jam</th>
-                        <th class="p-3 border-r border-slate-200">Guru</th>
+                        <th class="p-3 border-r border-slate-200">Guru Asli</th>
                         <th class="p-3 border-r border-slate-200">Mapel</th>
                         <th class="p-3 border-r border-slate-200 w-1/3">Materi</th>
                         <th class="p-3 border-r border-slate-200">Tidak Hadir</th>
@@ -62,7 +69,7 @@
                 </thead>
                 <tbody>
                     @forelse($existingJournals as $journal)
-                        <tr class="border-b border-slate-100 {{ $journal->teacherAssignment->teacher_id === $teacher->id ? 'bg-amber-50/30' : '' }}">
+                        <tr class="border-b border-slate-100 {{ $journal->substitute_teacher_id === $teacher->id ? 'bg-amber-50/40' : '' }}">
                             <td class="p-3 border-r border-slate-200 text-center font-bold text-slate-700">
                                 @php
                                     $s = $classSessions->firstWhere('session_name', $journal->session_hour);
@@ -75,9 +82,9 @@
                             <td class="p-3 border-r border-slate-200 text-sm text-slate-700 font-semibold">
                                 {{ $journal->teacherAssignment->teacher->name }}
                                 @if($journal->substitute_teacher_id !== null)
-                                    <span class="block mt-1 text-[10px] font-bold {{ $journal->teacherAssignment->teacher_id === $teacher->id ? 'text-red-700 bg-red-100 border-red-200' : 'text-amber-700 bg-amber-100 border-amber-200' }} border rounded px-1.5 py-0.5 w-fit">
-                                        @if($journal->teacherAssignment->teacher_id === $teacher->id)
-                                            Anda sudah digantikan oleh {{ $journal->substituteTeacher->name }}
+                                    <span class="block mt-1 text-[10px] font-bold text-amber-700 bg-amber-100 border border-amber-200 rounded px-1.5 py-0.5 w-fit">
+                                        @if($journal->substitute_teacher_id === $teacher->id)
+                                            Diisi Anda sebagai pengganti
                                         @else
                                             Digantikan oleh {{ $journal->substituteTeacher->name }}
                                         @endif
@@ -98,8 +105,8 @@
                                 @endif
                             </td>
                             <td class="p-3 text-center">
-                                @if($journal->substitute_teacher_id === null && $journal->teacherAssignment->teacher_id === $teacher->id)
-                                    <form action="{{ route('guru.diniyyah-journals.destroy', $journal) }}" method="POST" onsubmit="return confirm('Hapus jurnal jam ke-{{ $journal->session_hour }}?');">
+                                @if($journal->substitute_teacher_id === $teacher->id)
+                                    <form action="{{ route('guru.diniyyah-substitute-journals.destroy', $journal) }}" method="POST" onsubmit="return confirm('Hapus jurnal pengganti jam ke-{{ $journal->session_hour }}?');">
                                         @csrf @method('DELETE')
                                         <button type="submit" class="text-xs font-bold text-red-600 hover:text-red-800">Hapus</button>
                                     </form>
@@ -118,7 +125,7 @@
             <!-- Mobile Card View -->
             <div class="block md:hidden">
                 @forelse($existingJournals as $journal)
-                    <div class="border-b border-slate-200 p-4 {{ $journal->teacherAssignment->teacher_id === $teacher->id ? 'bg-amber-50/30' : 'bg-white' }} last:border-b-0">
+                    <div class="border-b border-slate-200 p-4 {{ $journal->substitute_teacher_id === $teacher->id ? 'bg-amber-50/40' : 'bg-white' }} last:border-b-0">
                         <div class="flex justify-between items-start mb-2">
                             <div class="flex gap-3">
                                 <div class="flex flex-col items-center justify-center bg-slate-100 rounded-lg p-2 min-w-[3.5rem] border border-slate-200">
@@ -134,9 +141,9 @@
                                     <div class="font-bold text-slate-800 text-sm">{{ $journal->teacherAssignment->classSubject->subject->name }}</div>
                                     <div class="text-xs text-slate-600 mt-0.5">{{ $journal->teacherAssignment->teacher->name }}</div>
                                     @if($journal->substitute_teacher_id !== null)
-                                        <span class="inline-block mt-1 text-[10px] font-bold {{ $journal->teacherAssignment->teacher_id === $teacher->id ? 'text-red-700 bg-red-100 border-red-200' : 'text-amber-700 bg-amber-100 border-amber-200' }} border rounded px-1.5 py-0.5">
-                                            @if($journal->teacherAssignment->teacher_id === $teacher->id)
-                                                Anda sudah digantikan oleh {{ $journal->substituteTeacher->name }}
+                                        <span class="inline-block mt-1 text-[10px] font-bold text-amber-700 bg-amber-100 border border-amber-200 rounded px-1.5 py-0.5">
+                                            @if($journal->substitute_teacher_id === $teacher->id)
+                                                Diisi Anda sebagai pengganti
                                             @else
                                                 Digantikan oleh {{ $journal->substituteTeacher->name }}
                                             @endif
@@ -144,9 +151,9 @@
                                     @endif
                                 </div>
                             </div>
-                            
-                            @if($journal->substitute_teacher_id === null && $journal->teacherAssignment->teacher_id === $teacher->id)
-                                <form action="{{ route('guru.diniyyah-journals.destroy', $journal) }}" method="POST" onsubmit="return confirm('Hapus jurnal jam ke-{{ $journal->session_hour }}?');">
+
+                            @if($journal->substitute_teacher_id === $teacher->id)
+                                <form action="{{ route('guru.diniyyah-substitute-journals.destroy', $journal) }}" method="POST" onsubmit="return confirm('Hapus jurnal pengganti jam ke-{{ $journal->session_hour }}?');">
                                     @csrf @method('DELETE')
                                     <button type="submit" class="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors" title="Hapus">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -156,12 +163,12 @@
                                 </form>
                             @endif
                         </div>
-                        
+
                         <div class="mt-3">
                             <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Materi</span>
                             <p class="text-sm text-slate-700 bg-slate-50 p-3 rounded-lg border border-slate-100">{{ $journal->material }}</p>
                         </div>
-                        
+
                         <div class="mt-3">
                             <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Santri Tidak Hadir</span>
                             @if($journal->absences->isEmpty())
@@ -170,7 +177,7 @@
                                 <div class="flex flex-wrap gap-1.5">
                                     @foreach($journal->absences as $abs)
                                         <span class="bg-amber-100 border border-amber-200 text-amber-800 px-2 py-1 rounded-md text-xs font-bold shadow-sm">
-                                            {{ $abs->classEnrollment->student->name }} 
+                                            {{ $abs->classEnrollment->student->name }}
                                             <span class="text-[10px] font-normal opacity-80">({{ $abs->status === 'skipped' ? 'Bolos' : ucfirst($abs->status) }})</span>
                                         </span>
                                     @endforeach
@@ -184,12 +191,15 @@
             </div>
         </div>
 
-        <!-- Form Tambah Jurnal (Hanya untuk kelas/mapel yang diajarkan guru ini) -->
+        <!-- Form Isi Jurnal Pengganti -->
         @if($classAssignments->isNotEmpty())
         <div class="glass-card rounded-2xl p-6 border border-slate-200">
-            <h3 class="text-lg font-black text-slate-800 mb-4 border-b border-slate-100 pb-2">Isi Jam Pelajaran Anda</h3>
-            
-            <form method="POST" action="{{ route('guru.diniyyah-journals.store') }}">
+            <h3 class="text-lg font-black text-slate-800 mb-2 border-b border-slate-100 pb-2">Isi Jurnal Pengganti</h3>
+            <p class="text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
+                Pilih guru asli yang Anda gantikan. Anda akan tercatat sebagai <strong>Guru Pengganti</strong> untuk slot ini, dan JP-nya dihitung ke Anda.
+            </p>
+
+            <form method="POST" action="{{ route('guru.diniyyah-substitute-journals.store') }}">
                 @csrf
                 <input type="hidden" name="classroom_term_id" value="{{ $selectedClassroomTermId }}">
                 <input type="hidden" name="date" value="{{ $selectedDate }}">
@@ -202,7 +212,7 @@
                                 <option value="" disabled selected>Pilih Jam Ke-</option>
                                 @foreach($classSessions as $session)
                                     <option value="{{ $session->session_name }}" {{ $session->is_break ? 'disabled' : '' }}>
-                                        Jam Ke-{{ $session->session_name }} 
+                                        Jam Ke-{{ $session->session_name }}
                                         @if($session->starts_at)
                                             ({{ \Carbon\Carbon::parse($session->starts_at)->format('H:i') }} - {{ \Carbon\Carbon::parse($session->ends_at)->format('H:i') }})
                                         @endif
@@ -212,16 +222,17 @@
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-bold text-slate-700 mb-1">Mata Pelajaran</label>
+                            <label class="block text-sm font-bold text-slate-700 mb-1">Guru Asli yang Digantikan (Mapel)</label>
                             <select name="diniyyah_teacher_assignment_id" required class="w-full rounded-xl border-slate-300 shadow-sm text-sm">
+                                <option value="" disabled selected>Pilih guru asli...</option>
                                 @foreach($classAssignments as $assignment)
-                                    <option value="{{ $assignment->id }}">{{ $assignment->classSubject->subject->name }}</option>
+                                    <option value="{{ $assignment->id }}">{{ $assignment->classSubject->subject->name }} — {{ $assignment->teacher->name }}</option>
                                 @endforeach
                             </select>
                         </div>
                         <div>
                             <label class="block text-sm font-bold text-slate-700 mb-1">Materi</label>
-                            <textarea name="material" rows="5" required class="w-full rounded-xl border-slate-300 shadow-sm text-sm focus:ring-emerald-500 focus:border-emerald-500" placeholder="Tuliskan materi yang diajarkan..."></textarea>
+                            <textarea name="material" rows="5" required class="w-full rounded-xl border-slate-300 shadow-sm text-sm focus:ring-amber-500 focus:border-amber-500" placeholder="Tuliskan materi yang diajarkan..."></textarea>
                         </div>
                     </div>
 
@@ -229,24 +240,24 @@
                         <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
                             <h4 class="text-sm font-bold text-slate-800 mb-3 border-b border-slate-200 pb-2">Presensi Sesi Ini</h4>
                             <p class="text-xs text-slate-500 mb-3">Centang santri yang tidak hadir. Santri yang absen harian oleh wali kelas otomatis tercatat.</p>
-                            
+
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-2">
                                 @foreach($students as $enrollment)
                                     @php
                                         $dailyStatus = $dailyAbsences[$enrollment->id] ?? null;
                                         $isAbsent = $dailyStatus !== null;
                                     @endphp
-                                    <div class="flex items-center p-3 border {{ $isAbsent ? 'border-amber-200 bg-amber-50' : 'border-slate-200 bg-white hover:border-slate-300' }} rounded-xl transition-colors cursor-pointer" onclick="document.getElementById('student_{{ $enrollment->id }}').click()">
+                                    <div class="flex items-center p-3 border {{ $isAbsent ? 'border-amber-200 bg-amber-50' : 'border-slate-200 bg-white hover:border-slate-300' }} rounded-xl transition-colors cursor-pointer" onclick="document.getElementById('sub_student_{{ $enrollment->id }}').click()">
                                         <div class="flex items-center h-5">
                                             @if($isAbsent)
                                                 <input type="hidden" name="absences[{{ $enrollment->id }}]" value="{{ $dailyStatus }}">
                                                 <input type="checkbox" checked disabled class="h-4.5 w-4.5 text-amber-600 rounded border-slate-300 pointer-events-none">
                                             @else
-                                                <input id="student_{{ $enrollment->id }}" type="checkbox" name="absences[{{ $enrollment->id }}]" value="skipped" class="h-4.5 w-4.5 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer" onclick="event.stopPropagation()">
+                                                <input id="sub_student_{{ $enrollment->id }}" type="checkbox" name="absences[{{ $enrollment->id }}]" value="skipped" class="h-4.5 w-4.5 text-amber-600 rounded border-slate-300 focus:ring-amber-500 cursor-pointer" onclick="event.stopPropagation()">
                                             @endif
                                         </div>
                                         <div class="ml-3 flex-1 flex justify-between items-center text-sm">
-                                            <label for="student_{{ $enrollment->id }}" class="font-bold text-slate-700 truncate cursor-pointer select-none w-full" onclick="event.stopPropagation()">{{ $enrollment->student->name }}</label>
+                                            <label for="sub_student_{{ $enrollment->id }}" class="font-bold text-slate-700 truncate cursor-pointer select-none w-full" onclick="event.stopPropagation()">{{ $enrollment->student->name }}</label>
                                             @if($isAbsent)
                                                 <span class="text-[10px] font-bold text-amber-800 uppercase bg-amber-200 px-2 py-0.5 rounded ml-2">{{ $dailyStatus }}</span>
                                             @endif
@@ -259,12 +270,16 @@
                 </div>
 
                 <div class="mt-6 flex justify-start">
-                    <button type="submit" class="rounded-xl bg-emerald-600 px-6 py-3 text-sm font-bold text-white hover:bg-emerald-700 shadow-sm transition-colors">
-                        Simpan Jurnal Jam Ini
+                    <button type="submit" class="rounded-xl bg-amber-600 px-6 py-3 text-sm font-bold text-white hover:bg-amber-700 shadow-sm transition-colors">
+                        Simpan Jurnal Pengganti
                     </button>
                 </div>
             </form>
         </div>
+        @else
+            <div class="glass-card rounded-2xl p-8 border border-slate-200 text-center text-slate-500 font-medium">
+                Tidak ada guru asli yang dapat digantikan untuk kelas ini (mungkin Anda adalah satu-satunya guru diniyyah di kelas ini, atau belum ada assignment diniyyah aktif).
+            </div>
         @endif
 
     @else
@@ -272,7 +287,7 @@
             <svg class="mx-auto h-12 w-12 text-slate-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            Pilih Kelas dan Tanggal di atas untuk mulai mengisi jurnal KBM.
+            Pilih Kelas dan Tanggal di atas untuk mulai mengisi jurnal pengganti.
         </div>
     @endif
 </x-layouts.portal>

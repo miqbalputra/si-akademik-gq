@@ -5,6 +5,7 @@ namespace App\Filament\Resources\DiniyyahClassJournals;
 use App\Filament\Resources\DiniyyahClassJournals\Pages;
 use App\Filament\Concerns\HasRoleBasedResourceAccess;
 use App\Models\DiniyyahClassJournal;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -41,6 +42,11 @@ class DiniyyahClassJournalResource extends Resource
                 Forms\Components\Select::make('diniyyah_teacher_assignment_id')
                     ->relationship('teacherAssignment', 'id')
                     ->required(),
+                Forms\Components\Select::make('substitute_teacher_id')
+                    ->relationship('substituteTeacher', 'name')
+                    ->label('Guru Pengganti')
+                    ->nullable()
+                    ->helperText('Kosongkan jika jurnal diisi guru asli. Diisi = guru pengganti yang mengajar (JP ke pengganti).'),
                 Forms\Components\DatePicker::make('date')
                     ->required(),
                 Forms\Components\TextInput::make('session_hour')
@@ -71,6 +77,16 @@ class DiniyyahClassJournalResource extends Resource
                     ->label('Guru')
                     ->sortable()
                     ->searchable(),
+                Tables\Columns\TextColumn::make('substituteTeacher.name')
+                    ->label('Pengganti')
+                    ->placeholder('-')
+                    ->sortable()
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('guru_mengajar')
+                    ->label('Guru Mengajar (gaji)')
+                    ->placeholder('-')
+                    ->getStateUsing(fn (DiniyyahClassJournal $record): ?string => $record->effectiveTeacher()?->name)
+                    ->sortable(false),
                 Tables\Columns\TextColumn::make('teacherAssignment.classSubject.subject.name')
                     ->label('Mapel')
                     ->sortable()
@@ -92,6 +108,19 @@ class DiniyyahClassJournalResource extends Resource
                 Tables\Filters\SelectFilter::make('guru')
                     ->relationship('teacherAssignment.teacher', 'name')
                     ->label('Guru'),
+                Tables\Filters\SelectFilter::make('tipe_jurnal')
+                    ->label('Tipe Jurnal')
+                    ->options([
+                        'regular' => 'Reguler (guru asli)',
+                        'substitute' => 'Pengganti',
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return match ($data['value'] ?? null) {
+                            'regular' => $query->whereNull('substitute_teacher_id'),
+                            'substitute' => $query->whereNotNull('substitute_teacher_id'),
+                            default => $query,
+                        };
+                    }),
                 Tables\Filters\Filter::make('date')
                     ->form([
                         Forms\Components\DatePicker::make('date_from'),
@@ -112,6 +141,20 @@ class DiniyyahClassJournalResource extends Resource
             ->actions([
                 ViewAction::make(),
                 EditAction::make(),
+            ])
+            ->headerActions([
+                Action::make('exportAllJournalsExcel')
+                    ->label('Export Semua Jurnal (.xls)')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->color('success')
+                    ->url(fn (): string => route('admin.diniyyah-journals.export', ['format' => 'excel']))
+                    ->openUrlInNewTab(),
+                Action::make('exportAllJournalsCsv')
+                    ->label('Export CSV')
+                    ->icon('heroicon-o-document-text')
+                    ->color('gray')
+                    ->url(fn (): string => route('admin.diniyyah-journals.export', ['format' => 'csv']))
+                    ->openUrlInNewTab(),
             ])
             ->bulkActions([
                 BulkActionGroup::make([

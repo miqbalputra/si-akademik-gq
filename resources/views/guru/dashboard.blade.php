@@ -92,7 +92,25 @@
         </section>
         @endif
 
-        <!-- 3. GURU TAHFIDZ WIDGET -->
+        <!-- 3. JURNAL GURU PENGGANTI WIDGET -->
+        @if($teacher)
+        <section class="rounded-3xl glass-card p-6 animate-fade-in-up" style="animation-delay: 125ms;">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
+                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1a4 4 0 100-8 4 4 0 000 8zm6-4a3 3 0 100-6 3 3 0 000 6z" />
+                    </svg>
+                </div>
+                <h2 class="text-xl font-black text-slate-800">Jurnal Guru Pengganti</h2>
+            </div>
+            <p class="text-sm text-slate-500 mb-4">Catat jurnal KBM diniyyah saat Anda menggantikan guru lain yang berhalangan. JP tercatat ke Anda untuk penghitungan gaji.</p>
+            <a href="{{ route('guru.diniyyah-substitute-journals.index') }}" class="block w-full text-center rounded-xl bg-amber-600 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-amber-700 transition-colors">
+                Buka Jurnal Pengganti
+            </a>
+        </section>
+        @endif
+
+        <!-- 4. GURU TAHFIDZ WIDGET -->
         @if($tahfidzHalaqahs->isNotEmpty())
         <section class="rounded-3xl glass-card p-6 animate-fade-in-up" style="animation-delay: 150ms;">
             <div class="flex items-center gap-3 mb-4">

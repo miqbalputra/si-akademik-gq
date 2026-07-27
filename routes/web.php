@@ -5,11 +5,13 @@ use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\DiniyyahLedgerController;
 use App\Http\Controllers\DiniyyahMonitoringController;
+use App\Http\Controllers\DiniyyahJournalExportController;
 use App\Http\Controllers\GuardianDashboardController;
 use App\Http\Controllers\GuardianTahfidzController;
 use App\Http\Controllers\GuruTahfidzController;
 use App\Http\Controllers\GuardianSchoolEventResponseController;
 use App\Http\Controllers\GuruDiniyyahScoreController;
+use App\Http\Controllers\GuruDiniyyahSubstituteJournalController;
 use App\Http\Controllers\ReportCardController;
 use App\Http\Controllers\SchoolCalendarController;
 use App\Http\Controllers\SchoolEventRecapExportController;
@@ -51,6 +53,12 @@ Route::middleware('auth')->prefix('guru')->name('guru.')->group(function () {
     Route::get('/diniyyah-journals', [\App\Http\Controllers\GuruDiniyyahJournalController::class, 'index'])->name('diniyyah-journals.index');
     Route::post('/diniyyah-journals', [\App\Http\Controllers\GuruDiniyyahJournalController::class, 'store'])->name('diniyyah-journals.store');
     Route::delete('/diniyyah-journals/{diniyyah_journal}', [\App\Http\Controllers\GuruDiniyyahJournalController::class, 'destroy'])->name('diniyyah-journals.destroy');
+
+    // Menu "Jurnal Guru Pengganti" — semua guru (akun terhubung Teacher) dapat
+    // mengisi jurnal menggantikan guru asli yang berhalangan.
+    Route::get('/diniyyah-substitute-journals', [GuruDiniyyahSubstituteJournalController::class, 'index'])->name('diniyyah-substitute-journals.index');
+    Route::post('/diniyyah-substitute-journals', [GuruDiniyyahSubstituteJournalController::class, 'store'])->name('diniyyah-substitute-journals.store');
+    Route::delete('/diniyyah-substitute-journals/{diniyyah_journal}', [GuruDiniyyahSubstituteJournalController::class, 'destroy'])->name('diniyyah-substitute-journals.destroy');
 });
 
 Route::middleware('auth')->prefix('attendance')->name('attendance.')->group(function () {
@@ -67,6 +75,11 @@ Route::middleware('auth')->prefix('diniyyah')->name('diniyyah.')->group(function
     Route::post('/ledger/generate/{classroomTerm}', [DiniyyahLedgerController::class, 'generate'])->name('ledger.generate');
     Route::get('/ledger/{snapshot}', [DiniyyahLedgerController::class, 'show'])->name('ledger.show');
     Route::get('/ledger/{snapshot}/export-excel', [DiniyyahLedgerController::class, 'exportExcel'])->name('ledger.export-excel');
+});
+
+// Ekspor lengkap seluruh jurnal diniyyah (reguler + pengganti) untuk admin/kabag/kepala_sekolah.
+Route::middleware('auth')->prefix('admin/diniyyah-journals')->name('admin.diniyyah-journals.')->group(function () {
+    Route::get('/export', [DiniyyahJournalExportController::class, 'export'])->name('export');
 });
 
 Route::middleware('auth')->group(function () {

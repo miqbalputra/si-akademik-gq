@@ -12,7 +12,18 @@ use App\Models\ClassEnrollment;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\QueryException;
 
-class GuruDiniyyahJournalController extends Controller
+/**
+ * Menu "Jurnal Guru Pengganti": semua guru (akun terhubung ke Teacher) dapat
+ * mengisi jurnal KBM diniyyah saat menggantikan guru asli yang berhalangan.
+ *
+ * Penyimpanan: kolom diniyyah_teacher_assignment_id TETAP menunjuk assignment
+ * guru asli (yang digantikan), dan kolom substitute_teacher_id menunjuk guru
+ * pengganti yang mengajar. Dengan demikian jurnal pengganti:
+ *  - mengisi slot jadwal asli (unik index assignment+date+session tetap berlaku),
+ *  - muncul di daftar jurnal guru asli dengan tanda "digantikan oleh ...",
+ *  - JP-nya dihitung ke pengganti (lihat DiniyyahClassJournal::effectiveTeacher()).
+ */
+class GuruDiniyyahSubstituteJournalController extends Controller
 {
     public function index(Request $request)
     {
@@ -20,61 +31,73 @@ class GuruDiniyyahJournalController extends Controller
         if (!$teacher) {
             abort(403, 'Akses ditolak. Akun Anda tidak terhubung dengan data Guru.');
         }
-        
-        // Active assignments for this teacher
-        $assignments = DiniyyahTeacherAssignment::with(['classSubject.subject', 'classSubject.classroomTerm.classroom'])
-            ->where('teacher_id', $teacher->id)
+
+        // Muat SEMUA assignment diniyyah aktif (semua guru), bukan hanya milik guru ini.
+        $allAssignments = DiniyyahTeacherAssignment::with(['classSubject.subject', 'classSubject.classroomTerm.classroom', 'teacher'])
+            ->where(function ($query) {
+                $query->whereNull('starts_at')->orWhere('starts_at', '<=', now()->toDateString());
+            })
+            ->where(function ($query) {
+                $query->whereNull('ends_at')->orWhere('ends_at', '>=', now()->toDateString());
+            })
             ->get();
-            
-        // Group by classroom_term_id to get unique classes
-        $classes = $assignments->pluck('classSubject.classroomTerm')->unique('id');
-            
+
+        // Daftar kelas yang punya assignment diniyyah aktif (bisa digantikan).
+        $classes = $allAssignments->pluck('classSubject.classroomTerm')->filter()->unique('id')->values();
+
         $selectedClassroomTermId = $request->query('classroom_term_id');
         $selectedDate = $request->query('date', date('Y-m-d'));
-        
+
         $students = collect();
         $dailyAbsences = [];
         $existingJournals = collect();
         $classAssignments = collect();
-        
+
         if ($selectedClassroomTermId) {
-            $classAssignments = $assignments->filter(function($assignment) use ($selectedClassroomTermId) {
-                return $assignment->classSubject->classroom_term_id == $selectedClassroomTermId;
-            });
-            
+            // Daftar guru asli yang bisa digantikan untuk kelas ini, kecualikan diri sendiri.
+            $classAssignments = $allAssignments->filter(function ($assignment) use ($selectedClassroomTermId, $teacher) {
+                return $assignment->classSubject->classroom_term_id == $selectedClassroomTermId
+                    && $assignment->teacher_id !== $teacher->id;
+            })->values();
+
             $students = ClassEnrollment::with('student')
                 ->where('classroom_term_id', $selectedClassroomTermId)
                 ->where('status', 'active')
                 ->get();
-                
+
             $attendances = StudentAttendance::where('classroom_term_id', $selectedClassroomTermId)
                 ->where('attendance_date', $selectedDate)
                 ->get();
-                
+
             foreach ($attendances as $attendance) {
                 if (in_array($attendance->status, ['sick', 'permission', 'absent'])) {
                     $dailyAbsences[$attendance->class_enrollment_id] = $attendance->status;
                 }
             }
-            
-            // Fetch existing journals for THIS class and THIS date, by ALL teachers, so they can see the whole log.
-            // Termasuk jurnal pengganti (substituteTeacher) agar guru asli melihat tanda "digantikan oleh ...".
-            $existingJournals = DiniyyahClassJournal::with(['teacherAssignment.teacher', 'substituteTeacher', 'teacherAssignment.classSubject.subject', 'absences.classEnrollment.student'])
+
+            // Seluruh jurnal kelas+tanggal ini (termasuk jurnal reguler maupun pengganti)
+            // agar pengganti melihat log lengkap dan terhindar dari double-submit.
+            $existingJournals = DiniyyahClassJournal::with([
+                'teacherAssignment.teacher',
+                'substituteTeacher',
+                'teacherAssignment.classSubject.subject',
+                'absences.classEnrollment.student',
+            ])
                 ->whereDate('date', $selectedDate)
-                ->whereHas('teacherAssignment.classSubject', function($query) use ($selectedClassroomTermId) {
+                ->whereHas('teacherAssignment.classSubject', function ($query) use ($selectedClassroomTermId) {
                     $query->where('classroom_term_id', $selectedClassroomTermId);
                 })
                 ->orderBy('session_hour', 'asc')
                 ->get();
         }
-        
+
         $classSessions = ClassSession::orderBy('starts_at')->get();
 
-        return view('guru.diniyyah-journals.index', compact(
-            'classes', 
-            'selectedClassroomTermId', 
-            'selectedDate', 
-            'students', 
+        return view('guru.diniyyah-substitute-journals.index', compact(
+            'classes',
+            'selectedClassroomTermId',
+            'selectedDate',
+            'students',
             'dailyAbsences',
             'classAssignments',
             'existingJournals',
@@ -101,20 +124,22 @@ class GuruDiniyyahJournalController extends Controller
         }
 
         $assignment = DiniyyahTeacherAssignment::with('classSubject')->findOrFail($validated['diniyyah_teacher_assignment_id']);
-        if ($assignment->teacher_id !== $teacher->id) {
-            abort(403);
-        }
 
-        // Pastikan tugas mengajar benar-benar milik classroom_term yang dipilih —
-        // cegah guru mengisi jurnal untuk kelas lain via parameter yang dipalsukan.
+        // Tugas mengajar harus milik classroom_term yang dipilih.
         $assignmentClassroomTermId = $assignment->classSubject->classroom_term_id;
         if ((int) $assignmentClassroomTermId !== (int) $validated['classroom_term_id']) {
             abort(403, 'Tugas mengajar tidak sesuai dengan kelas yang dipilih.');
         }
 
-        // Hanya terima absensi untuk enrollment yang AKTIF di classroom_term ini.
-        // Kunci (enrollment id) divalidasi terhadap daftar ini agar guru tidak bisa
-        // menambah catatan absensi untuk siswa kelas/term lain.
+        // Tidak boleh menggantikan diri sendiri — gunakan menu Jurnal Kelas biasa.
+        if ($assignment->teacher_id === $teacher->id) {
+            return redirect()->route('guru.diniyyah-substitute-journals.index', [
+                'classroom_term_id' => $validated['classroom_term_id'],
+                'date' => $validated['date'],
+            ])->withInput()->with('error', 'Anda tidak bisa menggantikan diri sendiri. Gunakan menu Jurnal Kelas biasa untuk kelas/mapel Anda sendiri.');
+        }
+
+        // Hanya terima absensi untuk enrollment aktif di classroom_term ini.
         $validEnrollmentIds = ClassEnrollment::query()
             ->where('classroom_term_id', $validated['classroom_term_id'])
             ->where('status', 'active')
@@ -124,22 +149,24 @@ class GuruDiniyyahJournalController extends Controller
         $absences = collect($validated['absences'] ?? [])
             ->filter(fn ($status, $enrollmentId) => in_array((int) $enrollmentId, $validEnrollmentIds, true));
 
-        // Cek double journaling
+        // Cek double slot: assignment asli + tanggal + jam sesi (unik). Bisa terisi
+        // oleh guru asli (jurnal reguler) atau pengganti lain.
         $exists = DiniyyahClassJournal::where('diniyyah_teacher_assignment_id', $validated['diniyyah_teacher_assignment_id'])
             ->where('date', $validated['date'])
             ->where('session_hour', $validated['session_hour'])
             ->exists();
 
         if ($exists) {
-            return redirect()->route('guru.diniyyah-journals.index', [
+            return redirect()->route('guru.diniyyah-substitute-journals.index', [
                 'classroom_term_id' => $validated['classroom_term_id'],
-                'date' => $validated['date']
-            ])->withInput()->with('error', 'Jurnal untuk kelas, tanggal, dan jam sesi ini sudah pernah diisi.');
+                'date' => $validated['date'],
+            ])->withInput()->with('error', 'Slot jurnal untuk kelas, tanggal, dan jam sesi ini sudah terisi (oleh guru asli atau pengganti lain).');
         }
 
         try {
             $journal = DiniyyahClassJournal::create([
                 'diniyyah_teacher_assignment_id' => $validated['diniyyah_teacher_assignment_id'],
+                'substitute_teacher_id' => $teacher->id,
                 'date' => $validated['date'],
                 'session_hour' => $validated['session_hour'],
                 'material' => $validated['material'],
@@ -153,48 +180,47 @@ class GuruDiniyyahJournalController extends Controller
                 ]);
             }
         } catch (QueryException $e) {
-            // Backstop untuk race kondisi double-submit yang lolos pengecekan exists()
-            // di atas: unique index (diniyyah_teacher_assignment_id, date, session_hour).
+            // Backstop race kondisi double-submit yang lolos pengecekan exists():
+            // unique index (diniyyah_teacher_assignment_id, date, session_hour).
             if ($this->isDuplicateKeyException($e)) {
-                return redirect()->route('guru.diniyyah-journals.index', [
+                return redirect()->route('guru.diniyyah-substitute-journals.index', [
                     'classroom_term_id' => $validated['classroom_term_id'],
-                    'date' => $validated['date']
-                ])->withInput()->with('error', 'Jurnal untuk kelas, tanggal, dan jam sesi ini sudah pernah diisi.');
+                    'date' => $validated['date'],
+                ])->withInput()->with('error', 'Slot jurnal untuk kelas, tanggal, dan jam sesi ini sudah terisi (oleh guru asli atau pengganti lain).');
             }
 
             throw $e;
         }
 
-        return redirect()->route('guru.diniyyah-journals.index', [
+        return redirect()->route('guru.diniyyah-substitute-journals.index', [
             'classroom_term_id' => $validated['classroom_term_id'],
-            'date' => $validated['date']
-        ])->with('success', 'Jurnal jam ke-'.$validated['session_hour'].' berhasil disimpan.');
+            'date' => $validated['date'],
+        ])->with('success', 'Jurnal pengganti jam ke-'.$validated['session_hour'].' berhasil disimpan. JP tercatat ke Anda.');
     }
-    
+
     public function destroy(DiniyyahClassJournal $diniyyah_journal)
     {
         $teacher = Auth::user()->teacher;
         if (!$teacher) {
             abort(403, 'Akses ditolak. Akun Anda tidak terhubung dengan data Guru.');
         }
-        // Jurnal pengganti hanya boleh dihapus oleh pengganti yang mengisinya
-        // (lewat menu Jurnal Guru Pengganti), bukan oleh guru asli di sini.
-        if ($diniyyah_journal->substitute_teacher_id !== null) {
-            abort(403, 'Jurnal ini diisi oleh guru pengganti. Hanya pengganti yang dapat menghapusnya melalui menu Jurnal Guru Pengganti.');
-        }
-        if ($diniyyah_journal->teacherAssignment->teacher_id !== $teacher->id) {
-            abort(403);
-        }
-        
+
+        // Hanya pengganti yang mengisi jurnal ini yang boleh menghapusnya.
+        abort_unless(
+            $diniyyah_journal->substitute_teacher_id === $teacher->id,
+            403,
+            'Jurnal ini hanya dapat dihapus oleh guru pengganti yang mengisinya.'
+        );
+
         $classroomTermId = $diniyyah_journal->teacherAssignment->classSubject->classroom_term_id;
         $date = $diniyyah_journal->date->format('Y-m-d');
-        
+
         $diniyyah_journal->delete();
-        
-        return redirect()->route('guru.diniyyah-journals.index', [
+
+        return redirect()->route('guru.diniyyah-substitute-journals.index', [
             'classroom_term_id' => $classroomTermId,
-            'date' => $date
-        ])->with('success', 'Jurnal berhasil dihapus.');
+            'date' => $date,
+        ])->with('success', 'Jurnal pengganti berhasil dihapus.');
     }
 
     /**

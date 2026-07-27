@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['diniyyah_teacher_assignment_id', 'date', 'session_hour', 'material', 'jp_count'])]
+#[Fillable(['diniyyah_teacher_assignment_id', 'substitute_teacher_id', 'date', 'session_hour', 'material', 'jp_count'])]
 class DiniyyahClassJournal extends Model
 {
     use HasFactory;
@@ -26,8 +26,26 @@ class DiniyyahClassJournal extends Model
         return $this->belongsTo(DiniyyahTeacherAssignment::class, 'diniyyah_teacher_assignment_id');
     }
 
+    /**
+     * Guru pengganti yang benar-benar mengajar (nullable). Jika null, berarti
+     * jurnal diisi oleh guru asli pemilik assignment.
+     */
+    public function substituteTeacher(): BelongsTo
+    {
+        return $this->belongsTo(Teacher::class, 'substitute_teacher_id');
+    }
+
     public function absences(): HasMany
     {
         return $this->hasMany(DiniyyahClassJournalAbsence::class);
+    }
+
+    /**
+     * Guru yang JP-nya dihitung untuk penggajian: pengganti jika ada, jika tidak
+     * maka guru pemilik assignment (guru asli).
+     */
+    public function effectiveTeacher(): ?Teacher
+    {
+        return $this->substituteTeacher ?? $this->teacherAssignment?->teacher;
     }
 }
