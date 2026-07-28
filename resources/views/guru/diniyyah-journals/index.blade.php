@@ -191,81 +191,96 @@
         <!-- Form Tambah Jurnal (Hanya untuk kelas/mapel yang diajarkan guru ini) -->
         @if($classAssignments->isNotEmpty() && $sessionSlots->isNotEmpty())
         <div class="glass-card rounded-2xl p-6 border border-slate-200">
-            <h3 class="text-lg font-black text-slate-800 mb-4 border-b border-slate-100 pb-2">Isi Jam Pelajaran Anda</h3>
+            <h3 class="text-lg font-black text-slate-800 mb-1">Isi Jam Pelajaran Anda</h3>
+            <p class="text-sm text-slate-500 mb-5">Lengkapi sesi, mata pelajaran, materi, dan presensi santri untuk satu jam pelajaran.</p>
 
             <form method="POST" action="{{ route('guru.diniyyah-journals.store') }}">
                 @csrf
                 <input type="hidden" name="classroom_term_id" value="{{ $selectedClassroomTermId }}">
                 <input type="hidden" name="date" value="{{ $selectedDate }}">
 
-                <div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
-                    <div class="sm:col-span-1 space-y-4">
-                        <div>
-                            <label class="block text-sm font-bold text-slate-700 mb-1">Sesi</label>
-                            <select name="session_hour" required class="w-full rounded-xl border-slate-300 shadow-sm text-sm">
-                                <option value="" disabled selected>Pilih Sesi</option>
-                                @foreach($sessionSlots as $slot)
-                                    <option value="{{ $slot->session_name }}">
-                                        {{ \App\Support\SessionTimetable::label($slot->session_name) }}
-                                        ({{ \Carbon\Carbon::parse($slot->starts_at)->format('H:i') }} - {{ \Carbon\Carbon::parse($slot->ends_at)->format('H:i') }})
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-bold text-slate-700 mb-1">Mata Pelajaran</label>
-                            <select name="diniyyah_teacher_assignment_id" required class="w-full rounded-xl border-slate-300 shadow-sm text-sm">
-                                @foreach($classAssignments as $assignment)
-                                    <option value="{{ $assignment->id }}">{{ $assignment->classSubject->subject->name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-bold text-slate-700 mb-1">Materi</label>
-                            <textarea name="material" rows="5" required class="w-full rounded-xl border-slate-300 shadow-sm text-sm focus:ring-emerald-500 focus:border-emerald-500" placeholder="Tuliskan materi yang diajarkan..."></textarea>
-                        </div>
+                <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                    <div>
+                        <label for="session_hour" class="block text-sm font-bold text-slate-700 mb-1.5">Sesi</label>
+                        <select id="session_hour" name="session_hour" required class="w-full rounded-xl border-slate-300 shadow-sm text-sm focus:ring-amber-500 focus:border-amber-500">
+                            <option value="" disabled selected>Pilih Sesi</option>
+                            @foreach($sessionSlots as $slot)
+                                @php
+                                    $slotStart = \Carbon\Carbon::parse($slot->starts_at)->format('H:i');
+                                    $slotEnd = \Carbon\Carbon::parse($slot->ends_at)->format('H:i');
+                                @endphp
+                                <option value="{{ $slot->session_name }}" data-start="{{ $slotStart }}" data-end="{{ $slotEnd }}">
+                                    {{ \App\Support\SessionTimetable::label($slot->session_name) }} ({{ $slotStart }} - {{ $slotEnd }})
+                                </option>
+                            @endforeach
+                        </select>
+                        <span id="session-time-hint" class="mt-1 block text-xs font-medium text-slate-500"></span>
                     </div>
-
-                    <div class="sm:col-span-2">
-                        <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
-                            <h4 class="text-sm font-bold text-slate-800 mb-3 border-b border-slate-200 pb-2">Presensi Sesi Ini</h4>
-                            <p class="text-xs text-slate-500 mb-3">Centang santri yang tidak hadir. Santri yang absen harian oleh wali kelas otomatis tercatat.</p>
-                            
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-2">
-                                @foreach($students as $enrollment)
-                                    @php
-                                        $dailyStatus = $dailyAbsences[$enrollment->id] ?? null;
-                                        $isAbsent = $dailyStatus !== null;
-                                    @endphp
-                                    <div class="flex items-center p-3 border {{ $isAbsent ? 'border-amber-200 bg-amber-50' : 'border-slate-200 bg-white hover:border-slate-300' }} rounded-xl transition-colors cursor-pointer" onclick="document.getElementById('student_{{ $enrollment->id }}').click()">
-                                        <div class="flex items-center h-5">
-                                            @if($isAbsent)
-                                                <input type="hidden" name="absences[{{ $enrollment->id }}]" value="{{ $dailyStatus }}">
-                                                <input type="checkbox" checked disabled class="h-4.5 w-4.5 text-amber-600 rounded border-slate-300 pointer-events-none">
-                                            @else
-                                                <input id="student_{{ $enrollment->id }}" type="checkbox" name="absences[{{ $enrollment->id }}]" value="skipped" class="h-4.5 w-4.5 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer" onclick="event.stopPropagation()">
-                                            @endif
-                                        </div>
-                                        <div class="ml-3 flex-1 flex justify-between items-center text-sm">
-                                            <label for="student_{{ $enrollment->id }}" class="font-bold text-slate-700 truncate cursor-pointer select-none w-full" onclick="event.stopPropagation()">{{ $enrollment->student->name }}</label>
-                                            @if($isAbsent)
-                                                <span class="text-[10px] font-bold text-amber-800 uppercase bg-amber-200 px-2 py-0.5 rounded ml-2">{{ $dailyStatus }}</span>
-                                            @endif
-                                        </div>
-                                    </div>
-                                @endforeach
-                            </div>
-                        </div>
+                    <div>
+                        <label for="diniyyah_teacher_assignment_id" class="block text-sm font-bold text-slate-700 mb-1.5">Mata Pelajaran</label>
+                        <select id="diniyyah_teacher_assignment_id" name="diniyyah_teacher_assignment_id" required class="w-full rounded-xl border-slate-300 shadow-sm text-sm focus:ring-amber-500 focus:border-amber-500">
+                            @foreach($classAssignments as $assignment)
+                                <option value="{{ $assignment->id }}">{{ $assignment->classSubject->subject->name }}</option>
+                            @endforeach
+                        </select>
                     </div>
                 </div>
 
-                <div class="mt-6 flex justify-start">
+                <div class="mt-5">
+                    <label for="material" class="block text-sm font-bold text-slate-700 mb-1.5">Materi</label>
+                    <textarea id="material" name="material" rows="3" required class="w-full rounded-xl border-slate-300 shadow-sm text-sm focus:ring-emerald-500 focus:border-emerald-500" placeholder="Tuliskan materi yang diajarkan..."></textarea>
+                </div>
+
+                <div class="mt-5 bg-slate-50 border border-slate-200 rounded-xl p-4">
+                    <h4 class="text-sm font-bold text-slate-800 mb-1">Presensi Sesi Ini</h4>
+                    <p class="text-xs text-slate-500 mb-3">Centang santri yang tidak hadir. Santri yang sudah absen harian oleh wali kelas otomatis tercatat.</p>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-2">
+                        @foreach($students as $enrollment)
+                            @php
+                                $dailyStatus = $dailyAbsences[$enrollment->id] ?? null;
+                                $isAbsent = $dailyStatus !== null;
+                            @endphp
+                            <div class="flex items-center p-3 border {{ $isAbsent ? 'border-amber-200 bg-amber-50' : 'border-slate-200 bg-white hover:border-slate-300' }} rounded-xl transition-colors cursor-pointer" onclick="document.getElementById('student_{{ $enrollment->id }}').click()">
+                                <div class="flex items-center h-5">
+                                    @if($isAbsent)
+                                        <input type="hidden" name="absences[{{ $enrollment->id }}]" value="{{ $dailyStatus }}">
+                                        <input type="checkbox" checked disabled class="h-4.5 w-4.5 text-amber-600 rounded border-slate-300 pointer-events-none">
+                                    @else
+                                        <input id="student_{{ $enrollment->id }}" type="checkbox" name="absences[{{ $enrollment->id }}]" value="skipped" class="h-4.5 w-4.5 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer" onclick="event.stopPropagation()">
+                                    @endif
+                                </div>
+                                <div class="ml-3 flex-1 flex justify-between items-center text-sm">
+                                    <label for="student_{{ $enrollment->id }}" class="font-bold text-slate-700 truncate cursor-pointer select-none w-full" onclick="event.stopPropagation()">{{ $enrollment->student->name }}</label>
+                                    @if($isAbsent)
+                                        <span class="text-[10px] font-bold text-amber-800 uppercase bg-amber-200 px-2 py-0.5 rounded ml-2">{{ $dailyStatus }}</span>
+                                    @endif
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+
+                <div class="mt-6 flex justify-end">
                     <button type="submit" class="rounded-xl bg-emerald-600 px-6 py-3 text-sm font-bold text-white hover:bg-emerald-700 shadow-sm transition-colors">
                         Simpan Jurnal Jam Ini
                     </button>
                 </div>
             </form>
         </div>
+        <script>
+            (function () {
+                const sel = document.getElementById('session_hour');
+                const hint = document.getElementById('session-time-hint');
+                if (!sel || !hint) return;
+                function update() {
+                    const o = sel.options[sel.selectedIndex];
+                    hint.textContent = (o && o.dataset.start) ? (o.dataset.start + ' - ' + o.dataset.end) : '';
+                }
+                sel.addEventListener('change', update);
+                update();
+            })();
+        </script>
         @elseif($classAssignments->isNotEmpty())
             <div class="glass-card rounded-2xl p-8 border border-slate-200 text-center text-slate-500 font-medium">
                 Tidak ada sesi diniyyah di hari ini ({{ \Carbon\Carbon::parse($selectedDate)->locale('id')->translatedFormat('l') }}) untuk kelas ini.
