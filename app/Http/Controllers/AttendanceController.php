@@ -54,7 +54,7 @@ class AttendanceController extends Controller
 
         return view('attendance.index', [
             'classroomTerms' => $classroomTerms,
-            'selectedMonth' => $request->query('month', now()->format('Y-m')),
+            'selectedMonth' => $request->query('month', $this->wibNow()->format('Y-m')),
             'schoolEvents' => $schoolEvents,
         ]);
     }
@@ -209,16 +209,28 @@ class AttendanceController extends Controller
         ]);
     }
 
+    /**
+     * Waktu sekarang dalam zona WIB (Asia/Jakarta, GMT+7).
+     *
+     * App timezone default adalah UTC, sehingga now() bisa meleset hingga 7 jam
+     * untuk logika presensi harian (mis. tanggal "hari ini" di malam hari WIB).
+     * Gunakan ini untuk semua penentuan tanggal/hari yang berbasis "sekarang".
+     */
+    private function wibNow(): CarbonImmutable
+    {
+        return CarbonImmutable::now('Asia/Jakarta');
+    }
+
     private function selectedMonth(Request $request, ClassroomTerm $classroomTerm): CarbonImmutable
     {
         $month = $request->query('month')
             ?: $classroomTerm->academicTerm?->starts_at?->format('Y-m')
-            ?: now()->format('Y-m');
+            ?: $this->wibNow()->format('Y-m');
 
         try {
             return CarbonImmutable::parse($month.'-01')->startOfMonth();
         } catch (\Throwable) {
-            return CarbonImmutable::parse(now()->format('Y-m').'-01')->startOfMonth();
+            return CarbonImmutable::parse($this->wibNow()->format('Y-m').'-01')->startOfMonth();
         }
     }
 
@@ -250,9 +262,11 @@ class AttendanceController extends Controller
         $term = $classroomTerm->academicTerm;
 
         if (! $term?->starts_at || ! $term?->ends_at) {
+            $wib = $this->wibNow();
+
             return collect([[
-                'value' => now()->format('Y-m'),
-                'label' => now()->locale('id')->translatedFormat('F Y'),
+                'value' => $wib->format('Y-m'),
+                'label' => $wib->locale('id')->translatedFormat('F Y'),
             ]]);
         }
 
@@ -311,7 +325,7 @@ class AttendanceController extends Controller
             return false;
         }
 
-        if ($date->greaterThan(now()->endOfDay())) {
+        if ($date->greaterThan($this->wibNow()->endOfDay())) {
             return false;
         }
 

@@ -131,7 +131,7 @@
         <!-- Attendance Grid -->
         @php
             $initialAttendances = [];
-            $today = now()->toDateString();
+            $today = now()->setTimezone('Asia/Jakarta')->toDateString();
             $defaultSelectedDay = $days->first(fn ($d) => $d->toDateString() === $today)?->toDateString()
                 ?? $days->filter(fn ($d) => $d->toDateString() < $today)->last()?->toDateString()
                 ?? $days->first()?->toDateString()
