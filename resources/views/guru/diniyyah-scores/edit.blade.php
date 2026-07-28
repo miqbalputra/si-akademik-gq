@@ -3,6 +3,33 @@
         <a href="{{ route('guru.diniyyah-scores.index') }}" class="btn btn-outline btn-sm hidden sm:inline-flex">Kembali ke Daftar</a>
     </x-slot>
 
+    @push('head')
+    <style>
+        @media (max-width: 767px) {
+            .score-matrix thead { display: none; }
+            .score-matrix, .score-matrix tbody { display: block; width: 100%; }
+            .score-matrix tr {
+                display: block; margin: 0 0 1rem; padding: 1rem 1.25rem;
+                border-radius: 1rem; background: #fff; border: 1px solid #f1f5f9;
+                box-shadow: 0 1px 3px rgba(0,0,0,.04);
+            }
+            .score-matrix td {
+                display: flex; align-items: center; justify-content: space-between;
+                gap: 1rem; padding: 0.5rem 0; border: none; position: static;
+            }
+            .score-matrix td::before {
+                content: attr(data-label); font-size: 11px; font-weight: 700;
+                text-transform: uppercase; letter-spacing: .04em; color: #64748b;
+            }
+            .score-matrix td[data-label="Santri"]::before { display: none; }
+            .score-matrix td[data-label="Santri"] {
+                font-size: 15px; padding-bottom: .5rem;
+                border-bottom: 1px solid #f1f5f9; margin-bottom: .25rem;
+            }
+        }
+    </style>
+    @endpush
+
     <!-- Header Info -->
     <header class="mb-6 rounded-3xl glass-card p-6 sm:p-8 animate-fade-in-up">
         <div class="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
@@ -93,11 +120,11 @@
         @csrf
         @method('PUT')
 
-        <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm whitespace-nowrap">
+        <div class="overflow-visible md:overflow-x-auto">
+            <table class="score-matrix w-full text-left text-sm whitespace-nowrap">
                 <thead>
                     <tr class="bg-slate-50 border-b border-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                        <th class="sticky left-0 z-10 bg-slate-50 px-6 py-4">Santri</th>
+                        <th class="md:sticky md:left-0 md:z-10 md:bg-slate-50 px-6 py-4">Santri</th>
                         @foreach ($assessmentSet->components as $component)
                             <th class="px-6 py-4">{{ $component->name }}</th>
                         @endforeach
@@ -111,20 +138,20 @@
                             $studentComplete = (bool) $result?->is_complete;
                         @endphp
                         <tr class="hover:bg-slate-50/50 transition-colors" data-student="{{ Str::lower($enrollment->student?->name.' '.$enrollment->student?->nis) }}">
-                            <td class="sticky left-0 z-10 bg-white px-6 py-4 font-bold">
+                            <td data-label="Santri" class="md:sticky md:left-0 md:z-10 md:bg-white px-6 py-4 font-bold">
                                 <div class="flex items-center gap-3">
-                                    <div>
-                                        <div class="text-slate-900 text-sm font-extrabold">{{ $enrollment->student?->name }}</div>
+                                    <div class="min-w-0">
+                                        <div class="text-slate-900 text-sm font-extrabold truncate">{{ $enrollment->student?->name }}</div>
                                         <div class="text-xs font-semibold text-slate-400 mt-0.5">NIS {{ $enrollment->student?->nis }}</div>
                                     </div>
-                                    <span class="rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider {{ $studentComplete ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200' }}">
+                                    <span class="rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider shrink-0 {{ $studentComplete ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200' }}">
                                         {{ $studentComplete ? 'Lengkap' : 'Belum' }}
                                     </span>
                                 </div>
                             </td>
                             @foreach ($assessmentSet->components as $component)
                                 @php($score = $scores->get($enrollment->id.'-'.$component->id)?->score)
-                                <td class="px-6 py-3">
+                                <td data-label="{{ $component->name }}" class="px-6 py-3">
                                     <input
                                         type="number"
                                         inputmode="decimal"
@@ -143,7 +170,7 @@
                                     @endif
                                 </td>
                             @endforeach
-                            <td class="px-6 py-3 font-black text-slate-800 text-base">
+                            <td data-label="Nilai Akhir" class="px-6 py-3 font-black text-slate-800 text-base">
                                 {{ $result?->final_score ?? '-' }}
                             </td>
                         </tr>

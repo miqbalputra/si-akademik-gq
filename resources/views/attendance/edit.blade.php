@@ -126,8 +126,23 @@
         </div>
 
         <!-- Attendance Grid -->
-        <div x-data="attendanceManager('{{ route('attendance.update-single', $classroomTerm) }}')" class="rounded-[2rem] glass-card shadow-sm overflow-hidden animate-fade-in-up relative" style="animation-delay: 200ms;">
-            
+        @php
+            $initialAttendances = [];
+            $defaultSelectedDay = $days->first()?->toDateString() ?? '';
+            foreach ($enrollments as $enrollment) {
+                foreach ($days as $day) {
+                    $attendance = $attendances->get($enrollment->id.'-'.$day->toDateString());
+                    $initialAttendances[$enrollment->id.'_'.$day->toDateString()] = old(
+                        'attendance.'.$enrollment->id.'.'.$day->toDateString(),
+                        \App\Models\StudentAttendance::codeFromStatus($attendance?->status)
+                    );
+                }
+            }
+        @endphp
+        <div x-data="attendanceManager('{{ route('attendance.update-single', $classroomTerm) }}')" x-init="selectedDay = '{{ $defaultSelectedDay }}'" class="rounded-[2rem] glass-card shadow-sm overflow-hidden animate-fade-in-up relative" style="animation-delay: 200ms;">
+
+            {{-- ===== Desktop matrix (hidden on mobile) ===== --}}
+            <div class="hidden md:block">
             <div class="overflow-x-auto pb-20">
                 <table class="w-full text-left text-sm whitespace-nowrap">
                     <thead>
@@ -188,6 +203,69 @@
                     </tbody>
                 </table>
             </div>
+            </div>{{-- end desktop matrix --}}
+
+            {{-- ===== Mobile view: Per Hari ===== --}}
+            <div class="md:hidden pb-20">
+                {{-- Day picker strip --}}
+                <div class="flex items-center gap-2 overflow-x-auto px-4 pt-4 pb-3 border-b border-slate-100">
+                    <span class="shrink-0 text-[10px] font-bold uppercase tracking-wider text-slate-400 mr-1">Hari</span>
+                    @foreach ($days as $day)
+                        <button
+                            type="button"
+                            @click="selectedDay = '{{ $day->toDateString() }}'"
+                            :class="selectedDay === '{{ $day->toDateString() }}' ? 'bg-amber-600 text-white border-amber-600 shadow-md' : 'bg-white text-slate-700 border-slate-200 hover:border-amber-300'"
+                            class="shrink-0 min-w-[3.25rem] rounded-2xl border-2 px-3 py-2 text-center transition-all"
+                        >
+                            <span class="block text-sm font-black leading-none">{{ $day->format('d') }}</span>
+                            <span class="block text-[8px] font-bold mt-0.5 opacity-80">{{ $day->locale('id')->translatedFormat('D') }}</span>
+                        </button>
+                    @endforeach
+                </div>
+
+                {{-- Student cards for selected day --}}
+                <div id="attendance-rows-mobile" class="divide-y divide-slate-100">
+                    @foreach ($enrollments as $enrollment)
+                        @php
+                            $totals = $studentTotals[$enrollment->id] ?? ['sick' => 0, 'permission' => 0, 'absent' => 0];
+                        @endphp
+                        <div class="p-4" data-student="{{ \Illuminate\Support\Str::lower($enrollment->student?->name.' '.$enrollment->student?->nis) }}">
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="min-w-0">
+                                    <div class="text-slate-900 text-sm font-extrabold truncate">{{ $enrollment->student?->name }}</div>
+                                    <div class="text-xs font-semibold text-slate-400 mt-0.5">NIS {{ $enrollment->student?->nis }}</div>
+                                </div>
+                                <div class="shrink-0 flex gap-1 text-[10px] font-bold text-center">
+                                    <span class="rounded-md bg-amber-50 text-amber-700 px-1.5 py-0.5">S <span x-text="studentTotals['{{ $enrollment->id }}']?.sick ?? {{ $totals['sick'] }}"></span></span>
+                                    <span class="rounded-md bg-emerald-50 text-emerald-700 px-1.5 py-0.5">I <span x-text="studentTotals['{{ $enrollment->id }}']?.permission ?? {{ $totals['permission'] }}"></span></span>
+                                    <span class="rounded-md bg-slate-100 text-slate-700 px-1.5 py-0.5">A <span x-text="studentTotals['{{ $enrollment->id }}']?.absent ?? {{ $totals['absent'] }}"></span></span>
+                                </div>
+                            </div>
+
+                            {{-- H/S/I/A segmented buttons bound to selectedDay --}}
+                            <div class="mt-3 grid grid-cols-4 gap-2">
+                                @php
+                                    $codes = [
+                                        'H' => ['Hadir', 'bg-white border-slate-200 text-slate-700'],
+                                        'S' => ['Sakit', 'bg-amber-500 border-amber-500 text-white'],
+                                        'I' => ['Izin', 'bg-emerald-500 border-emerald-500 text-white'],
+                                        'A' => ['Alpa', 'bg-red-500 border-red-500 text-white'],
+                                    ];
+                                @endphp
+                                @foreach ($codes as $code => [$label, $activeClass])
+                                    <button
+                                        type="button"
+                                        @click="attendances['{{ $enrollment->id }}_' + selectedDay] = '{{ $code }}'; updateAttendance('{{ $enrollment->id }}', selectedDay)"
+                                        :class="attendances['{{ $enrollment->id }}_' + selectedDay] === '{{ $code }}' ? '{{ $activeClass }}' : 'bg-white border-slate-200 text-slate-500'"
+                                        class="rounded-xl border-2 py-2.5 text-xs font-extrabold transition-all"
+                                        @disabled(! $canUpdate)
+                                    >{{ $label }}</button>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>{{-- end mobile view --}}
 
             <!-- Footer Action Block -->
             <div class="sticky bottom-0 flex items-center justify-between gap-3 border-t border-slate-200/60 bg-white/90 p-5 backdrop-blur-md">
@@ -215,11 +293,12 @@
         <script>
             document.addEventListener('alpine:init', () => {
                 Alpine.data('attendanceManager', (endpointUrl) => ({
-                    attendances: {},
+                    attendances: @js($initialAttendances),
+                    selectedDay: '',
                     studentTotals: {},
                     isSaving: false,
                     lastSaved: null,
-                    
+
                     init() {
                         // Initialize totals on mount
                         setTimeout(() => this.recalculateTotals(), 100);
@@ -288,7 +367,7 @@
             });
 
             const filter = document.getElementById('student-filter');
-            const rows = Array.from(document.querySelectorAll('#attendance-rows tr'));
+            const rows = Array.from(document.querySelectorAll('#attendance-rows tr, #attendance-rows-mobile [data-student]'));
 
             filter?.addEventListener('input', () => {
                 const value = filter.value.trim().toLowerCase();
