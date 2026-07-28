@@ -65,11 +65,13 @@
                         <tr class="border-b border-slate-100 {{ $journal->teacherAssignment->teacher_id === $teacher->id ? 'bg-amber-50/30' : '' }}">
                             <td class="p-3 border-r border-slate-200 text-center font-bold text-slate-700">
                                 @php
-                                    $s = $classSessions->firstWhere('session_name', $journal->session_hour);
+                                    $slot = $sessionSlots->firstWhere('session_name', $journal->session_hour);
+                                    $slotStart = $journal->session_starts_at ?: $slot?->starts_at;
+                                    $slotEnd = $journal->session_ends_at ?: $slot?->ends_at;
                                 @endphp
-                                <div class="font-bold text-slate-800 text-base">{{ $journal->session_hour }}</div>
-                                @if($s && $s->starts_at)
-                                    <div class="text-[10px] text-slate-500 whitespace-nowrap">{{ \Carbon\Carbon::parse($s->starts_at)->format('H:i') }} - {{ \Carbon\Carbon::parse($s->ends_at)->format('H:i') }}</div>
+                                <div class="font-bold text-slate-800 text-base">{{ $journal->session_hour === 'tafsir' ? 'Tafsir' : $journal->session_hour }}</div>
+                                @if($slotStart)
+                                    <div class="text-[10px] text-slate-500 whitespace-nowrap">{{ \Carbon\Carbon::parse($slotStart)->format('H:i') }} - {{ \Carbon\Carbon::parse($slotEnd)->format('H:i') }}</div>
                                 @endif
                             </td>
                             <td class="p-3 border-r border-slate-200 text-sm text-slate-700 font-semibold">
@@ -122,12 +124,14 @@
                         <div class="flex justify-between items-start mb-2">
                             <div class="flex gap-3">
                                 <div class="flex flex-col items-center justify-center bg-slate-100 rounded-lg p-2 min-w-[3.5rem] border border-slate-200">
-                                    <span class="font-bold text-slate-800 text-lg">{{ $journal->session_hour }}</span>
+                                    <span class="font-bold text-slate-800 text-lg">{{ $journal->session_hour === 'tafsir' ? 'Tafsir' : $journal->session_hour }}</span>
                                     @php
-                                        $s = $classSessions->firstWhere('session_name', $journal->session_hour);
+                                        $slot = $sessionSlots->firstWhere('session_name', $journal->session_hour);
+                                        $slotStart = $journal->session_starts_at ?: $slot?->starts_at;
+                                        $slotEnd = $journal->session_ends_at ?: $slot?->ends_at;
                                     @endphp
-                                    @if($s && $s->starts_at)
-                                        <span class="text-[9px] text-slate-500 whitespace-nowrap">{{ \Carbon\Carbon::parse($s->starts_at)->format('H:i') }} - {{ \Carbon\Carbon::parse($s->ends_at)->format('H:i') }}</span>
+                                    @if($slotStart)
+                                        <span class="text-[9px] text-slate-500 whitespace-nowrap">{{ \Carbon\Carbon::parse($slotStart)->format('H:i') }} - {{ \Carbon\Carbon::parse($slotEnd)->format('H:i') }}</span>
                                     @endif
                                 </div>
                                 <div>
@@ -185,10 +189,10 @@
         </div>
 
         <!-- Form Tambah Jurnal (Hanya untuk kelas/mapel yang diajarkan guru ini) -->
-        @if($classAssignments->isNotEmpty())
+        @if($classAssignments->isNotEmpty() && $sessionSlots->isNotEmpty())
         <div class="glass-card rounded-2xl p-6 border border-slate-200">
             <h3 class="text-lg font-black text-slate-800 mb-4 border-b border-slate-100 pb-2">Isi Jam Pelajaran Anda</h3>
-            
+
             <form method="POST" action="{{ route('guru.diniyyah-journals.store') }}">
                 @csrf
                 <input type="hidden" name="classroom_term_id" value="{{ $selectedClassroomTermId }}">
@@ -197,16 +201,13 @@
                 <div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
                     <div class="sm:col-span-1 space-y-4">
                         <div>
-                            <label class="block text-sm font-bold text-slate-700 mb-1">Jam Ke-</label>
+                            <label class="block text-sm font-bold text-slate-700 mb-1">Sesi</label>
                             <select name="session_hour" required class="w-full rounded-xl border-slate-300 shadow-sm text-sm">
-                                <option value="" disabled selected>Pilih Jam Ke-</option>
-                                @foreach($classSessions as $session)
-                                    <option value="{{ $session->session_name }}" {{ $session->is_break ? 'disabled' : '' }}>
-                                        Jam Ke-{{ $session->session_name }} 
-                                        @if($session->starts_at)
-                                            ({{ \Carbon\Carbon::parse($session->starts_at)->format('H:i') }} - {{ \Carbon\Carbon::parse($session->ends_at)->format('H:i') }})
-                                        @endif
-                                        {{ $session->is_break ? '[Istirahat]' : '' }}
+                                <option value="" disabled selected>Pilih Sesi</option>
+                                @foreach($sessionSlots as $slot)
+                                    <option value="{{ $slot->session_name }}">
+                                        {{ \App\Support\SessionTimetable::label($slot->session_name) }}
+                                        ({{ \Carbon\Carbon::parse($slot->starts_at)->format('H:i') }} - {{ \Carbon\Carbon::parse($slot->ends_at)->format('H:i') }})
                                     </option>
                                 @endforeach
                             </select>
@@ -265,6 +266,10 @@
                 </div>
             </form>
         </div>
+        @elseif($classAssignments->isNotEmpty())
+            <div class="glass-card rounded-2xl p-8 border border-slate-200 text-center text-slate-500 font-medium">
+                Tidak ada sesi diniyyah di hari ini ({{ \Carbon\Carbon::parse($selectedDate)->locale('id')->translatedFormat('l') }}) untuk kelas ini.
+            </div>
         @endif
 
     @else

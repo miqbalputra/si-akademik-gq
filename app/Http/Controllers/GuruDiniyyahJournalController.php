@@ -4,11 +4,11 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\ClassroomTerm;
-use App\Models\ClassSession;
 use App\Models\DiniyyahClassJournal;
 use App\Models\DiniyyahTeacherAssignment;
 use App\Models\StudentAttendance;
 use App\Models\ClassEnrollment;
+use App\Support\SessionTimetable;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\QueryException;
 
@@ -67,19 +67,34 @@ class GuruDiniyyahJournalController extends Controller
                 ->orderBy('session_hour', 'asc')
                 ->get();
         }
-        
-        $classSessions = ClassSession::orderBy('starts_at')->get();
+
+        // Matrix slot sesi per (gender kelas, hari tanggal terpilih) — mengakomodasi
+        // perbedaan jam Ikhwan vs Akhwat (Senin) serta Kamis (Tafsir) & Jum'at.
+        $sessionSlots = collect();
+        if ($selectedClassroomTermId) {
+            $selectedTerm = ClassroomTerm::with('classroom')->find($selectedClassroomTermId);
+            if ($selectedTerm) {
+                $group = SessionTimetable::genderFor($selectedTerm);
+                $sessionSlots = SessionTimetable::slotsFor($group, SessionTimetable::dayOfWeekIso($selectedDate));
+
+                // Urutkan jurnal yang ada by jam mulai sesi (bukan by session_hour string)
+                // supaya Tafsir di Kamis tampil pertama.
+                $existingJournals = $existingJournals->sortBy(function ($journal) use ($sessionSlots) {
+                    return $sessionSlots->firstWhere('session_name', $journal->session_hour)?->starts_at ?? '99:99';
+                })->values();
+            }
+        }
 
         return view('guru.diniyyah-journals.index', compact(
-            'classes', 
-            'selectedClassroomTermId', 
-            'selectedDate', 
-            'students', 
+            'classes',
+            'selectedClassroomTermId',
+            'selectedDate',
+            'students',
             'dailyAbsences',
             'classAssignments',
             'existingJournals',
             'teacher',
-            'classSessions'
+            'sessionSlots'
         ));
     }
 
@@ -100,7 +115,7 @@ class GuruDiniyyahJournalController extends Controller
             abort(403, 'Akses ditolak. Akun Anda tidak terhubung dengan data Guru.');
         }
 
-        $assignment = DiniyyahTeacherAssignment::with('classSubject')->findOrFail($validated['diniyyah_teacher_assignment_id']);
+        $assignment = DiniyyahTeacherAssignment::with('classSubject.classroomTerm.classroom')->findOrFail($validated['diniyyah_teacher_assignment_id']);
         if ($assignment->teacher_id !== $teacher->id) {
             abort(403);
         }
@@ -138,10 +153,20 @@ class GuruDiniyyahJournalController extends Controller
         }
 
         try {
+            // Snapshot jam mulai/selesai sesi dari matrix (gender kelas + hari tanggal).
+            // null bila matrix belum di-seed / tidak ada sesi — tidak menolak penyimpanan.
+            $time = SessionTimetable::resolve(
+                SessionTimetable::genderFor($assignment->classSubject->classroomTerm),
+                SessionTimetable::dayOfWeekIso($validated['date']),
+                $validated['session_hour'],
+            );
+
             $journal = DiniyyahClassJournal::create([
                 'diniyyah_teacher_assignment_id' => $validated['diniyyah_teacher_assignment_id'],
                 'date' => $validated['date'],
                 'session_hour' => $validated['session_hour'],
+                'session_starts_at' => $time['starts_at'] ?? null,
+                'session_ends_at' => $time['ends_at'] ?? null,
                 'material' => $validated['material'],
                 'jp_count' => 1,
             ]);
