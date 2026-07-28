@@ -164,7 +164,7 @@
                             
                             @if($journal->substitute_teacher_id === null && $journal->teacherAssignment->teacher_id === $teacher->id)
                                 <div class="flex flex-col items-end gap-2">
-                                    <a href="{{ route('guru.diniyyah-journals.edit', $journal) }}" class="text-xs font-bold text-amber-700 hover:text-amber-900">Edit</a>
+                                    <a href="{{ route('guru.diniyyah-journals.edit', $journal) }}" class="inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-bold text-amber-700 hover:bg-amber-50 transition-colors">Edit</a>
                                     <form action="{{ route('guru.diniyyah-journals.destroy', $journal) }}" method="POST" onsubmit="return confirm('Hapus jurnal jam ke-{{ $journal->session_hour }}?');">
                                         @csrf @method('DELETE')
                                         <button type="submit" class="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors" title="Hapus">
@@ -255,7 +255,7 @@
                 </div>
 
                 <div class="mt-6 flex justify-end">
-                    <button type="submit" class="rounded-xl bg-emerald-600 px-6 py-3 text-sm font-bold text-white hover:bg-emerald-700 shadow-sm transition-colors">
+                    <button type="submit" class="w-full sm:w-auto rounded-xl bg-emerald-600 px-6 py-3 text-sm font-bold text-white hover:bg-emerald-700 shadow-sm transition-colors">
                         Simpan Jurnal Jam Ini
                     </button>
                 </div>

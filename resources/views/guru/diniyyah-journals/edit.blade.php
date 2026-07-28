@@ -21,19 +21,19 @@
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5 p-4 bg-slate-50 rounded-xl border border-slate-200">
             <div>
                 <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Kelas</span>
-                <span class="text-sm font-bold text-slate-800">{{ $classroomTerm->name }}</span>
+                <span class="text-sm font-bold text-slate-800 break-words">{{ $classroomTerm->name }}</span>
             </div>
             <div>
                 <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Mata Pelajaran</span>
-                <span class="text-sm font-bold text-slate-800">{{ $journal->teacherAssignment->classSubject->subject->name }}</span>
+                <span class="text-sm font-bold text-slate-800 break-words">{{ $journal->teacherAssignment->classSubject->subject->name }}</span>
             </div>
             <div>
                 <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Tanggal</span>
-                <span class="text-sm font-bold text-slate-800">{{ $journal->date->locale('id')->translatedFormat('l, d F Y') }}</span>
+                <span class="text-sm font-bold text-slate-800 break-words">{{ $journal->date->locale('id')->translatedFormat('l, d F Y') }}</span>
             </div>
             <div>
                 <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Sesi</span>
-                <span class="text-sm font-bold text-slate-800">
+                <span class="text-sm font-bold text-slate-800 break-words">
                     {{ $sessionLabel }}
                     @if($sessionTime['starts_at'])
                         <span class="text-xs font-medium text-slate-500">({{ \Carbon\Carbon::parse($sessionTime['starts_at'])->format('H:i') }} - {{ \Carbon\Carbon::parse($sessionTime['ends_at'])->format('H:i') }})</span>

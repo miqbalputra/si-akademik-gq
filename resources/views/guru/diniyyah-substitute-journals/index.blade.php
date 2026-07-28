@@ -41,8 +41,8 @@
                 <label class="block text-sm font-bold text-slate-700 mb-1">Tanggal</label>
                 <input type="date" name="date" value="{{ $selectedDate }}" class="w-full rounded-xl border-slate-300 shadow-sm text-sm py-2" onchange="document.getElementById('filter-form').submit()">
             </div>
-            <div>
-                <button type="submit" class="bg-amber-600 text-white rounded-xl px-6 py-2 text-sm font-bold shadow-sm hover:bg-amber-700">Pilih</button>
+            <div class="w-full sm:w-auto">
+                <button type="submit" class="w-full sm:w-auto bg-amber-600 text-white rounded-xl px-6 py-2 text-sm font-bold shadow-sm hover:bg-amber-700">Pilih</button>
             </div>
         </form>
     </div>
@@ -159,7 +159,7 @@
                             @if($journal->substitute_teacher_id === $teacher->id)
                                 <form action="{{ route('guru.diniyyah-substitute-journals.destroy', $journal) }}" method="POST" onsubmit="return confirm('Hapus jurnal pengganti jam ke-{{ $journal->session_hour }}?');">
                                     @csrf @method('DELETE')
-                                    <button type="submit" class="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors" title="Hapus">
+                                    <button type="submit" class="p-2.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors" title="Hapus">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                         </svg>
@@ -242,7 +242,7 @@
                             <h4 class="text-sm font-bold text-slate-800 mb-3 border-b border-slate-200 pb-2">Presensi Sesi Ini</h4>
                             <p class="text-xs text-slate-500 mb-3">Centang santri yang tidak hadir. Santri yang absen harian oleh wali kelas otomatis tercatat.</p>
 
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-2">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[60vh] sm:max-h-60 overflow-y-auto pr-2">
                                 @foreach($students as $enrollment)
                                     @php
                                         $dailyStatus = $dailyAbsences[$enrollment->id] ?? null;
@@ -252,13 +252,13 @@
                                         <div class="flex items-center h-5">
                                             @if($isAbsent)
                                                 <input type="hidden" name="absences[{{ $enrollment->id }}]" value="{{ $dailyStatus }}">
-                                                <input type="checkbox" checked disabled class="h-4.5 w-4.5 text-amber-600 rounded border-slate-300 pointer-events-none">
+                                                <input type="checkbox" checked disabled class="h-5 w-5 text-amber-600 rounded border-slate-300 pointer-events-none">
                                             @else
-                                                <input id="sub_student_{{ $enrollment->id }}" type="checkbox" name="absences[{{ $enrollment->id }}]" value="skipped" class="h-4.5 w-4.5 text-amber-600 rounded border-slate-300 focus:ring-amber-500 cursor-pointer" onclick="event.stopPropagation()">
+                                                <input id="sub_student_{{ $enrollment->id }}" type="checkbox" name="absences[{{ $enrollment->id }}]" value="skipped" class="h-5 w-5 text-amber-600 rounded border-slate-300 focus:ring-amber-500 cursor-pointer" onclick="event.stopPropagation()">
                                             @endif
                                         </div>
                                         <div class="ml-3 flex-1 flex justify-between items-center text-sm">
-                                            <label for="sub_student_{{ $enrollment->id }}" class="font-bold text-slate-700 truncate cursor-pointer select-none w-full" onclick="event.stopPropagation()">{{ $enrollment->student->name }}</label>
+                                            <label for="sub_student_{{ $enrollment->id }}" title="{{ $enrollment->student->name }}" class="font-bold text-slate-700 truncate cursor-pointer select-none w-full" onclick="event.stopPropagation()">{{ $enrollment->student->name }}</label>
                                             @if($isAbsent)
                                                 <span class="text-[10px] font-bold text-amber-800 uppercase bg-amber-200 px-2 py-0.5 rounded ml-2">{{ $dailyStatus }}</span>
                                             @endif
@@ -271,7 +271,7 @@
                 </div>
 
                 <div class="mt-6 flex justify-start">
-                    <button type="submit" class="rounded-xl bg-amber-600 px-6 py-3 text-sm font-bold text-white hover:bg-amber-700 shadow-sm transition-colors">
+                    <button type="submit" class="w-full sm:w-auto rounded-xl bg-amber-600 px-6 py-3 text-sm font-bold text-white hover:bg-amber-700 shadow-sm transition-colors">
                         Simpan Jurnal Pengganti
                     </button>
                 </div>

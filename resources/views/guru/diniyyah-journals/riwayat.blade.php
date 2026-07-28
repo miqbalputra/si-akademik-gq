@@ -61,10 +61,10 @@
                                         </div>
                                     </div>
                                     <div class="flex items-center gap-3 shrink-0">
-                                        <a href="{{ route('guru.diniyyah-journals.edit', $journal) }}" class="text-xs font-bold text-amber-700 hover:text-amber-900">Edit</a>
+                                        <a href="{{ route('guru.diniyyah-journals.edit', $journal) }}" class="inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-bold text-amber-700 hover:bg-amber-50 transition-colors">Edit</a>
                                         <form action="{{ route('guru.diniyyah-journals.destroy', $journal) }}" method="POST" onsubmit="return confirm('Hapus jurnal jam ke-{{ $journal->session_hour }}?');">
                                             @csrf @method('DELETE')
-                                            <button type="submit" class="text-xs font-bold text-red-600 hover:text-red-800">Hapus</button>
+                                            <button type="submit" class="inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-50 transition-colors">Hapus</button>
                                         </form>
                                     </div>
                                 </div>
