@@ -19,9 +19,9 @@
     <!-- Filter Kelas dan Tanggal -->
     <div class="glass-card rounded-2xl p-6 mb-6">
         <form method="GET" action="{{ route('guru.diniyyah-journals.index') }}" class="flex flex-col sm:flex-row gap-4 items-end" id="filter-form">
-            <div class="flex-1">
-                <label class="block text-sm font-bold text-slate-700 mb-1">Kelas</label>
-                <select name="classroom_term_id" class="w-full rounded-xl border-slate-300 shadow-sm text-sm py-2" onchange="document.getElementById('filter-form').submit()">
+            <div class="flex-1 w-full">
+                <label for="classroom_term_id" class="block text-sm font-bold text-slate-700 mb-1.5">Kelas</label>
+                <select id="classroom_term_id" name="classroom_term_id" class="w-full rounded-xl border-slate-300 shadow-sm text-sm py-2.5 focus:ring-amber-500 focus:border-amber-500" onchange="document.getElementById('filter-form').submit()">
                     <option value="">-- Pilih Kelas --</option>
                     @foreach($classes as $classTerm)
                         <option value="{{ $classTerm->id }}" {{ $selectedClassroomTermId == $classTerm->id ? 'selected' : '' }}>
@@ -30,12 +30,12 @@
                     @endforeach
                 </select>
             </div>
-            <div class="flex-1">
-                <label class="block text-sm font-bold text-slate-700 mb-1">Tanggal</label>
-                <input type="date" name="date" value="{{ $selectedDate }}" class="w-full rounded-xl border-slate-300 shadow-sm text-sm py-2" onchange="document.getElementById('filter-form').submit()">
+            <div class="flex-1 w-full">
+                <label for="date" class="block text-sm font-bold text-slate-700 mb-1.5">Tanggal</label>
+                <input id="date" type="date" name="date" value="{{ $selectedDate }}" class="w-full rounded-xl border-slate-300 shadow-sm text-sm py-2.5 focus:ring-amber-500 focus:border-amber-500" onchange="document.getElementById('filter-form').submit()">
             </div>
-            <div>
-                <button type="submit" class="bg-amber-600 text-white rounded-xl px-6 py-2 text-sm font-bold shadow-sm hover:bg-amber-700">Pilih</button>
+            <div class="w-full sm:w-auto">
+                <button type="submit" class="w-full sm:w-auto bg-amber-600 text-white rounded-xl px-6 py-2.5 text-sm font-bold shadow-sm hover:bg-amber-700 transition-colors">Pilih</button>
             </div>
         </form>
     </div>
