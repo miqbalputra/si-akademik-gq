@@ -19,9 +19,9 @@ use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 /**
- * Matrix jam sesi diniyyah per gender + hari (ikhwan/akhwat, Senin-Jum'at).
+ * Matrix jam sesi diniyyah per-classroom + hari (Mustawa 1-6 Ikhwan/Akhwat).
  * Sumber: jadwal_mustawa_ikhwan.md & jadwal_mustawa_akhwat_2026_2027.md.
- * Matrix di-seed oleh migration 2026_07_28_000003 (jalan via RefreshDatabase).
+ * Matrix di-seed per test via SessionTimetable::seedForClassroom().
  */
 class SessionTimetableTest extends TestCase
 {
@@ -36,7 +36,9 @@ class SessionTimetableTest extends TestCase
 
     public function test_slots_for_ikhwan_senin_uses_early_times(): void
     {
-        $slots = SessionTimetable::slotsFor(SessionTimetable::GROUP_IKHWAN, 1);
+        $classroom = $this->createClassroom('Mustawa 1 Ikhwan');
+
+        $slots = SessionTimetable::slotsFor($classroom->id, 1);
 
         $this->assertCount(2, $slots);
         $this->assertSame('1', $slots[0]->session_name);
@@ -49,7 +51,9 @@ class SessionTimetableTest extends TestCase
 
     public function test_slots_for_akhwat_senin_uses_late_times(): void
     {
-        $slots = SessionTimetable::slotsFor(SessionTimetable::GROUP_AKHWAT, 1);
+        $classroom = $this->createClassroom('Mustawa 1 Akhwat');
+
+        $slots = SessionTimetable::slotsFor($classroom->id, 1);
 
         $this->assertCount(2, $slots);
         $this->assertSame('1', $slots[0]->session_name);
@@ -59,9 +63,23 @@ class SessionTimetableTest extends TestCase
         $this->assertSame('11:30', $this->hm($slots[1]->ends_at));
     }
 
-    public function test_slots_for_kamis_tafsir_appears_first(): void
+    public function test_m1_kamis_has_no_tafsir_slot(): void
     {
-        $slots = SessionTimetable::slotsFor(SessionTimetable::GROUP_IKHWAN, 4);
+        $classroom = $this->createClassroom('Mustawa 1 Ikhwan');
+
+        $slots = SessionTimetable::slotsFor($classroom->id, 4);
+
+        $this->assertCount(2, $slots);
+        $this->assertSame('1', $slots[0]->session_name);
+        $this->assertSame('2', $slots[1]->session_name);
+        $this->assertNull(SessionTimetable::resolve($classroom->id, 4, 'tafsir'));
+    }
+
+    public function test_m2_kamis_tafsir_appears_first(): void
+    {
+        $classroom = $this->createClassroom('Mustawa 2 Ikhwan');
+
+        $slots = SessionTimetable::slotsFor($classroom->id, 4);
 
         $this->assertCount(3, $slots);
         $this->assertSame('tafsir', $slots[0]->session_name);
@@ -72,73 +90,33 @@ class SessionTimetableTest extends TestCase
 
     public function test_slots_for_sabtu_is_empty(): void
     {
-        $this->assertTrue(SessionTimetable::slotsFor(SessionTimetable::GROUP_IKHWAN, 6)->isEmpty());
-        $this->assertTrue(SessionTimetable::slotsFor(SessionTimetable::GROUP_AKHWAT, 7)->isEmpty());
+        $classroom = $this->createClassroom('Mustawa 1 Ikhwan');
+
+        $this->assertTrue(SessionTimetable::slotsFor($classroom->id, 6)->isEmpty());
     }
 
     public function test_resolve_returns_times_or_null(): void
     {
+        $classroom = $this->createClassroom('Mustawa 1 Ikhwan');
+
         $this->assertSame(
             ['starts_at' => '07:40:00', 'ends_at' => '08:10:00'],
-            SessionTimetable::resolve(SessionTimetable::GROUP_IKHWAN, 1, '1'),
+            SessionTimetable::resolve($classroom->id, 1, '1'),
         );
-        $this->assertNull(SessionTimetable::resolve(SessionTimetable::GROUP_IKHWAN, 6, '1'));
-        $this->assertNull(SessionTimetable::resolve(SessionTimetable::GROUP_IKHWAN, 1, 'nonexistent'));
+        $this->assertNull(SessionTimetable::resolve($classroom->id, 6, '1'));
+        $this->assertNull(SessionTimetable::resolve($classroom->id, 1, 'nonexistent'));
     }
 
-    public function test_gender_for_falls_back_to_name_when_column_unset(): void
+    public function test_parse_classroom_extracts_gender_and_level(): void
     {
-        $termId = $this->academicTermId();
-
-        $ikhwanTerm = ClassroomTerm::create([
-            'academic_term_id' => $termId,
-            'name' => 'Mustawa 1 Ikhwan',
-            'classroom_id' => Classroom::create(['name' => 'Mustawa 1'])->id, // gender_group default 'mixed'
-        ]);
-
-        $akhwatTerm = ClassroomTerm::create([
-            'academic_term_id' => $termId,
-            'name' => 'Mustawa 1 Akhwat',
-            'classroom_id' => Classroom::create(['name' => 'Mustawa 1 A'])->id,
-        ]);
-
-        $this->assertSame(SessionTimetable::GROUP_IKHWAN, SessionTimetable::genderFor($ikhwanTerm));
-        $this->assertSame(SessionTimetable::GROUP_AKHWAT, SessionTimetable::genderFor($akhwatTerm));
-    }
-
-    public function test_gender_for_prefers_classroom_column_over_name(): void
-    {
-        // Kolom gender_group 'akhwat' menang meski nama mengandung 'Ikhwan'.
-        $term = ClassroomTerm::create([
-            'academic_term_id' => $this->academicTermId(),
-            'name' => 'Mustawa 1 Ikhwan',
-            'classroom_id' => Classroom::create(['name' => 'M1', 'gender_group' => 'akhwat'])->id,
-        ]);
-
-        $this->assertSame(SessionTimetable::GROUP_AKHWAT, SessionTimetable::genderFor($term));
-    }
-
-    public function test_gender_for_maps_prod_male_female_values(): void
-    {
-        // Prod memakai gender_group 'male'/'female' (bukan ikhwan/akhwat).
-        $ikhwan = ClassroomTerm::create([
-            'academic_term_id' => $this->academicTermId(),
-            'name' => 'Mustawa 1 Ikhwan',
-            'classroom_id' => Classroom::create(['name' => 'Mustawa 1 Ikhwan', 'gender_group' => 'male'])->id,
-        ]);
-        $akhwat = ClassroomTerm::create([
-            'academic_term_id' => $this->academicTermId(),
-            'name' => 'Mustawa 1 Akhwat',
-            'classroom_id' => Classroom::create(['name' => 'Mustawa 1 Akhwat', 'gender_group' => 'female'])->id,
-        ]);
-
-        $this->assertSame(SessionTimetable::GROUP_IKHWAN, SessionTimetable::genderFor($ikhwan));
-        $this->assertSame(SessionTimetable::GROUP_AKHWAT, SessionTimetable::genderFor($akhwat));
+        $this->assertSame(['ikhwan', 1], SessionTimetable::parseClassroom(new Classroom(['name' => 'Mustawa 1 Ikhwan'])));
+        $this->assertSame(['akhwat', 3], SessionTimetable::parseClassroom(new Classroom(['name' => 'Mustawa 3 Akhwat'])));
+        $this->assertNull(SessionTimetable::parseClassroom(new Classroom(['name' => 'Kelas PKBM A'])));
     }
 
     public function test_store_persists_session_time_snapshot(): void
     {
-        $ctx = $this->makeContext(SessionTimetable::GROUP_IKHWAN);
+        $ctx = $this->makeContext('ikhwan', 1);
 
         // 2026-07-13 = Senin. Ikhwan Senin Sesi 1 = 07:40-08:10.
         $this->actingAs($ctx['user'])
@@ -162,7 +140,7 @@ class SessionTimetableTest extends TestCase
 
     public function test_store_persists_akhwat_senin_snapshot(): void
     {
-        $ctx = $this->makeContext(SessionTimetable::GROUP_AKHWAT);
+        $ctx = $this->makeContext('akhwat', 1);
 
         $this->actingAs($ctx['user'])
             ->post(route('guru.diniyyah-journals.store'), [
@@ -196,24 +174,30 @@ class SessionTimetableTest extends TestCase
         return AcademicTerm::create(['academic_year_id' => $year->id, 'name' => 'Genap', 'semester' => 'genap'])->id;
     }
 
-    private function makeContext(string $genderGroup): array
+    /**
+     * Buat classroom Mustawa ber-nama prod + seed matrix sesi-nya.
+     */
+    private function createClassroom(string $name): Classroom
+    {
+        $classroom = Classroom::create(['name' => $name]);
+        SessionTimetable::seedForClassroom($classroom);
+
+        return $classroom;
+    }
+
+    private function makeContext(string $gender, int $level = 1): array
     {
         Role::firstOrCreate(['name' => 'guru', 'guard_name' => 'web']);
         $user = User::factory()->create(['name' => 'Guru Fiqih']);
         $user->assignRole('guru');
         $teacher = Teacher::create(['user_id' => $user->id, 'name' => 'Guru Fiqih']);
 
-        $school = School::create(['name' => 'Griya Quran']);
-        $year = AcademicYear::create(['school_id' => $school->id, 'name' => '2025/2026']);
-        $term = AcademicTerm::create(['academic_year_id' => $year->id, 'name' => 'Genap', 'semester' => 'genap']);
-        $classroom = Classroom::create([
-            'name' => 'Mustawa 1',
-            'gender_group' => $genderGroup,
-        ]);
+        $termId = $this->academicTermId();
+        $classroom = $this->createClassroom(sprintf('Mustawa %d %s', $level, ucfirst($gender)));
         $classroomTerm = ClassroomTerm::create([
-            'academic_term_id' => $term->id,
+            'academic_term_id' => $termId,
             'classroom_id' => $classroom->id,
-            'name' => 'Mustawa 1 '.ucfirst($genderGroup),
+            'name' => $classroom->name,
         ]);
         $subject = DiniyyahSubject::create(['code' => 'fiqih', 'name' => 'Fiqih', 'default_assessment_method' => 'weighted']);
         $classSubject = DiniyyahClassSubject::create([

@@ -1,7 +1,6 @@
 <?php
 
 use App\Models\ClassSession;
-use App\Models\ClassSessionTime;
 use Illuminate\Database\Migrations\Migration;
 
 /**
@@ -22,62 +21,22 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Pastikan identitas label sesi ada.
-        $session1 = ClassSession::firstOrCreate(
+        // Pastikan identitas label sesi ada. Matrix jam sesi per-gender yang
+        // dulu di-seed di sini sekarang di-seed per-classroom oleh migration
+        // 2026_07_28_000004 (refactor ke classroom_id). Lihat
+        // App\Support\SessionTimetable::definitionForClassroom().
+        ClassSession::firstOrCreate(
             ['session_name' => '1'],
             ['starts_at' => '10:30:00', 'ends_at' => '11:00:00', 'is_break' => false],
         );
-        $session2 = ClassSession::firstOrCreate(
+        ClassSession::firstOrCreate(
             ['session_name' => '2'],
             ['starts_at' => '11:00:00', 'ends_at' => '11:30:00', 'is_break' => false],
         );
-        $sessionTafsir = ClassSession::firstOrCreate(
+        ClassSession::firstOrCreate(
             ['session_name' => 'tafsir'],
             ['starts_at' => '09:50:00', 'ends_at' => '10:20:00', 'is_break' => false],
         );
-
-        // [group, day, session, starts_at, ends_at]
-        $matrix = [
-            // IKHWAN
-            ['ikhwan', 1, $session1, '07:40:00', '08:10:00'],
-            ['ikhwan', 1, $session2, '08:10:00', '08:40:00'],
-            ['ikhwan', 2, $session1, '10:30:00', '11:00:00'],
-            ['ikhwan', 2, $session2, '11:00:00', '11:30:00'],
-            ['ikhwan', 3, $session1, '10:30:00', '11:00:00'],
-            ['ikhwan', 3, $session2, '11:00:00', '11:30:00'],
-            ['ikhwan', 4, $sessionTafsir, '09:50:00', '10:20:00'],
-            ['ikhwan', 4, $session1, '10:30:00', '11:00:00'],
-            ['ikhwan', 4, $session2, '11:00:00', '11:30:00'],
-            ['ikhwan', 5, $session1, '08:50:00', '09:20:00'],
-            ['ikhwan', 5, $session2, '09:20:00', '09:50:00'],
-
-            // AKHWAT (Senin berbeda dari Ikhwan; hari lain identik)
-            ['akhwat', 1, $session1, '10:30:00', '11:00:00'],
-            ['akhwat', 1, $session2, '11:00:00', '11:30:00'],
-            ['akhwat', 2, $session1, '10:30:00', '11:00:00'],
-            ['akhwat', 2, $session2, '11:00:00', '11:30:00'],
-            ['akhwat', 3, $session1, '10:30:00', '11:00:00'],
-            ['akhwat', 3, $session2, '11:00:00', '11:30:00'],
-            ['akhwat', 4, $sessionTafsir, '09:50:00', '10:20:00'],
-            ['akhwat', 4, $session1, '10:30:00', '11:00:00'],
-            ['akhwat', 4, $session2, '11:00:00', '11:30:00'],
-            ['akhwat', 5, $session1, '08:50:00', '09:20:00'],
-            ['akhwat', 5, $session2, '09:20:00', '09:50:00'],
-        ];
-
-        foreach ($matrix as [$group, $day, $session, $startsAt, $endsAt]) {
-            ClassSessionTime::firstOrCreate(
-                [
-                    'classroom_group' => $group,
-                    'day_of_week' => $day,
-                    'class_session_id' => $session->id,
-                ],
-                [
-                    'starts_at' => $startsAt,
-                    'ends_at' => $endsAt,
-                ],
-            );
-        }
     }
 
     public function down(): void

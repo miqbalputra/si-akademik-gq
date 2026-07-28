@@ -16,6 +16,7 @@ class DiniyyahSubjectSeeder extends Seeder
             ['code' => 'khat', 'name' => 'Khat', 'default_assessment_method' => 'weighted', 'sort_order' => 40],
             ['code' => 'suluk', 'name' => 'Suluk', 'default_assessment_method' => 'direct_final', 'sort_order' => 50],
             ['code' => 'praktik_ibadah', 'name' => 'Praktik Ibadah', 'default_assessment_method' => 'practical', 'sort_order' => 60],
+            ['code' => 'tafsir', 'name' => 'Tafsir Al Quran', 'default_assessment_method' => 'weighted', 'sort_order' => 70],
         ];
 
         foreach ($subjects as $subject) {

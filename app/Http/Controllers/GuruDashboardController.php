@@ -103,6 +103,7 @@ class GuruDashboardController extends Controller
             
         // 3b. Data Assignments Guru Diniyyah (Untuk Jurnal)
         $diniyyahAssignments = DiniyyahTeacherAssignment::query()
+            ->with('classSubject.subject')
             ->where('teacher_id', $teacher?->id ?? 0)
             ->where(function ($query) {
                 $query->whereNull('starts_at')->orWhere('starts_at', '<=', now()->toDateString());
@@ -111,6 +112,17 @@ class GuruDashboardController extends Controller
                 $query->whereNull('ends_at')->orWhere('ends_at', '>=', now()->toDateString());
             })
             ->get();
+
+        // 3c. Apakah guru punya penugasan Tafsir → tampilkan tombol "Jurnal Tafsir".
+        $hasTafsirAssignment = $diniyyahAssignments->contains(function ($assignment): bool {
+            $subject = $assignment->classSubject?->subject;
+            if (! $subject) {
+                return false;
+            }
+
+            return strtolower($subject->code) === 'tafsir'
+                || str_contains(strtolower($subject->name), 'tafsir');
+        });
 
         // 4. Data Agenda & Libur Sekolah
         // We get classroom terms associated with this teacher (all roles) to filter events
@@ -140,6 +152,7 @@ class GuruDashboardController extends Controller
             'diniyyahAssessmentSets',
             'tahfidzHalaqahs',
             'diniyyahAssignments',
+            'hasTafsirAssignment',
             'upcomingAlerts'
         ));
     }

@@ -96,8 +96,7 @@ class GuruDiniyyahSubstituteJournalController extends Controller
         if ($selectedClassroomTermId) {
             $selectedTerm = ClassroomTerm::with('classroom')->find($selectedClassroomTermId);
             if ($selectedTerm) {
-                $group = SessionTimetable::genderFor($selectedTerm);
-                $sessionSlots = SessionTimetable::slotsFor($group, SessionTimetable::dayOfWeekIso($selectedDate));
+                $sessionSlots = SessionTimetable::slotsFor($selectedTerm->classroom_id, SessionTimetable::dayOfWeekIso($selectedDate));
 
                 $existingJournals = $existingJournals->sortBy(function ($journal) use ($sessionSlots) {
                     return $sessionSlots->firstWhere('session_name', $journal->session_hour)?->starts_at ?? '99:99';
@@ -179,7 +178,7 @@ class GuruDiniyyahSubstituteJournalController extends Controller
             // Snapshot jam mulai/selesai sesi dari matrix (gender kelas + hari tanggal).
             // null bila matrix belum di-seed / tidak ada sesi — tidak menolak penyimpanan.
             $time = SessionTimetable::resolve(
-                SessionTimetable::genderFor($assignment->classSubject->classroomTerm),
+                $assignment->classSubject->classroomTerm->classroom_id,
                 SessionTimetable::dayOfWeekIso($validated['date']),
                 $validated['session_hour'],
             );

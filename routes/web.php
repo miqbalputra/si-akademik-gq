@@ -59,6 +59,10 @@ Route::middleware('auth')->prefix('guru')->name('guru.')->group(function () {
     Route::get('/diniyyah-substitute-journals', [GuruDiniyyahSubstituteJournalController::class, 'index'])->name('diniyyah-substitute-journals.index');
     Route::post('/diniyyah-substitute-journals', [GuruDiniyyahSubstituteJournalController::class, 'store'])->name('diniyyah-substitute-journals.store');
     Route::delete('/diniyyah-substitute-journals/{diniyyah_journal}', [GuruDiniyyahSubstituteJournalController::class, 'destroy'])->name('diniyyah-substitute-journals.destroy');
+
+    // Menu "Jurnal Tafsir" — input serentak 1 materi → 1 jurnal per kelas Tafsir.
+    Route::get('/diniyyah-tafsir-journals', [\App\Http\Controllers\GuruDiniyyahTafsirJournalController::class, 'index'])->name('diniyyah-tafsir-journals.index');
+    Route::post('/diniyyah-tafsir-journals', [\App\Http\Controllers\GuruDiniyyahTafsirJournalController::class, 'store'])->name('diniyyah-tafsir-journals.store');
 });
 
 Route::middleware('auth')->prefix('attendance')->name('attendance.')->group(function () {

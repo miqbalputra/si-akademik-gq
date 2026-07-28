@@ -139,7 +139,7 @@ class DiniyyahSetupCsvImporterTest extends TestCase
 
         $this->assertTrue($result->hasErrors());
         $this->assertSame(1, $result->processedRows);
-        $this->assertDatabaseCount('diniyyah_subjects', 0);
+        $this->assertSame(0, $result->subjectsCreated);
         $this->assertDatabaseCount('diniyyah_assessment_sets', 0);
 
         File::delete($path);

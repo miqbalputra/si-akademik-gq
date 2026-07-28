@@ -88,6 +88,11 @@
                 <a href="{{ $singleJournalLink }}" class="flex-1 min-w-[30%] text-center rounded-xl bg-teal-600 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-teal-700 transition-colors">
                     Jurnal Kelas
                 </a>
+                @if($hasTafsirAssignment ?? false)
+                <a href="{{ route('guru.diniyyah-tafsir-journals.index') }}" class="flex-1 min-w-[30%] text-center rounded-xl bg-cyan-600 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-cyan-700 transition-colors">
+                    Jurnal Tafsir
+                </a>
+                @endif
             </div>
         </section>
         @endif

@@ -74,8 +74,7 @@ class GuruDiniyyahJournalController extends Controller
         if ($selectedClassroomTermId) {
             $selectedTerm = ClassroomTerm::with('classroom')->find($selectedClassroomTermId);
             if ($selectedTerm) {
-                $group = SessionTimetable::genderFor($selectedTerm);
-                $sessionSlots = SessionTimetable::slotsFor($group, SessionTimetable::dayOfWeekIso($selectedDate));
+                $sessionSlots = SessionTimetable::slotsFor($selectedTerm->classroom_id, SessionTimetable::dayOfWeekIso($selectedDate));
 
                 // Urutkan jurnal yang ada by jam mulai sesi (bukan by session_hour string)
                 // supaya Tafsir di Kamis tampil pertama.
@@ -156,7 +155,7 @@ class GuruDiniyyahJournalController extends Controller
             // Snapshot jam mulai/selesai sesi dari matrix (gender kelas + hari tanggal).
             // null bila matrix belum di-seed / tidak ada sesi — tidak menolak penyimpanan.
             $time = SessionTimetable::resolve(
-                SessionTimetable::genderFor($assignment->classSubject->classroomTerm),
+                $assignment->classSubject->classroomTerm->classroom_id,
                 SessionTimetable::dayOfWeekIso($validated['date']),
                 $validated['session_hour'],
             );
