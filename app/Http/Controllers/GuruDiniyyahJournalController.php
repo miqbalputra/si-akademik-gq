@@ -28,7 +28,20 @@ class GuruDiniyyahJournalController extends Controller
             
         // Group by classroom_term_id to get unique classes
         $classes = $assignments->pluck('classSubject.classroomTerm')->unique('id');
-            
+
+        // Riwayat seluruh jurnal yang guru ini isi sebagai guru asli (bukan pengganti),
+        // di semua kelas yang diajarnya — ditampilkan per tanggal tanpa perlu filter.
+        $myJournals = DiniyyahClassJournal::with([
+            'teacherAssignment.classSubject.subject',
+            'teacherAssignment.classSubject.classroomTerm.classroom',
+            'absences.classEnrollment.student',
+        ])
+            ->whereHas('teacherAssignment', fn ($q) => $q->where('teacher_id', $teacher->id))
+            ->whereNull('substitute_teacher_id')
+            ->orderByDesc('date')
+            ->orderBy('session_starts_at')
+            ->get();
+
         $selectedClassroomTermId = $request->query('classroom_term_id');
         $selectedDate = $request->query('date', date('Y-m-d'));
         
@@ -93,8 +106,123 @@ class GuruDiniyyahJournalController extends Controller
             'classAssignments',
             'existingJournals',
             'teacher',
-            'sessionSlots'
+            'sessionSlots',
+            'myJournals'
         ));
+    }
+
+    /**
+     * Form edit jurnal yang sudah terisi (materi + presensi santri).
+     * Hanya pemilik assignment asli (bukan jurnal pengganti) yang bisa edit.
+     */
+    public function edit(DiniyyahClassJournal $diniyyah_journal)
+    {
+        $teacher = Auth::user()->teacher;
+        if (!$teacher) {
+            abort(403, 'Akses ditolak. Akun Anda tidak terhubung dengan data Guru.');
+        }
+        abort_unless($diniyyah_journal->substitute_teacher_id === null, 403, 'Jurnal pengganti tidak dapat diedit dari menu ini.');
+        abort_unless($diniyyah_journal->teacherAssignment->teacher_id === $teacher->id, 403);
+
+        $diniyyah_journal->load([
+            'teacherAssignment.classSubject.subject',
+            'teacherAssignment.classSubject.classroomTerm.classroom',
+            'absences.classEnrollment.student',
+        ]);
+
+        $classroomTerm = $diniyyah_journal->teacherAssignment->classSubject->classroomTerm;
+        $dateString = $diniyyah_journal->date->format('Y-m-d');
+
+        $students = ClassEnrollment::with('student')
+            ->where('classroom_term_id', $classroomTerm->id)
+            ->where('status', 'active')
+            ->get();
+
+        $dailyAbsences = [];
+        $attendances = StudentAttendance::where('classroom_term_id', $classroomTerm->id)
+            ->where('attendance_date', $dateString)
+            ->get();
+        foreach ($attendances as $attendance) {
+            if (in_array($attendance->status, ['sick', 'permission', 'absent'])) {
+                $dailyAbsences[$attendance->class_enrollment_id] = $attendance->status;
+            }
+        }
+
+        $existingAbsences = $diniyyah_journal->absences->pluck('status', 'class_enrollment_id')->all();
+
+        $sessionLabel = SessionTimetable::label($diniyyah_journal->session_hour);
+        $sessionTime = SessionTimetable::resolve(
+            $classroomTerm->classroom_id,
+            SessionTimetable::dayOfWeekIso($dateString),
+            $diniyyah_journal->session_hour,
+        );
+        // Utamakan snapshot jam yang tersimpan di jurnal; fallback ke matrix.
+        $sessionTime = [
+            'starts_at' => $diniyyah_journal->session_starts_at ?? ($sessionTime['starts_at'] ?? null),
+            'ends_at' => $diniyyah_journal->session_ends_at ?? ($sessionTime['ends_at'] ?? null),
+        ];
+
+        $journal = $diniyyah_journal;
+
+        return view('guru.diniyyah-journals.edit', compact(
+            'journal',
+            'classroomTerm',
+            'students',
+            'dailyAbsences',
+            'existingAbsences',
+            'sessionLabel',
+            'sessionTime',
+            'teacher'
+        ));
+    }
+
+    /**
+     * Simpan perubahan materi + presensi jurnal. date/session/assignment immutable.
+     */
+    public function update(Request $request, DiniyyahClassJournal $diniyyah_journal)
+    {
+        $validated = $request->validate([
+            'material' => 'required|string',
+            'absences' => 'nullable|array',
+            'absences.*' => 'in:sick,permission,absent,skipped',
+        ]);
+
+        $teacher = Auth::user()->teacher;
+        if (!$teacher) {
+            abort(403, 'Akses ditolak. Akun Anda tidak terhubung dengan data Guru.');
+        }
+        abort_unless($diniyyah_journal->substitute_teacher_id === null, 403, 'Jurnal pengganti tidak dapat diedit dari menu ini.');
+        abort_unless($diniyyah_journal->teacherAssignment->teacher_id === $teacher->id, 403);
+
+        $classroomTerm = $diniyyah_journal->teacherAssignment->classSubject->classroomTerm;
+
+        $validEnrollmentIds = ClassEnrollment::query()
+            ->where('classroom_term_id', $classroomTerm->id)
+            ->where('status', 'active')
+            ->pluck('id')
+            ->all();
+
+        $absences = collect($validated['absences'] ?? [])
+            ->filter(fn ($status, $enrollmentId) => in_array((int) $enrollmentId, $validEnrollmentIds, true));
+
+        $diniyyah_journal->material = $validated['material'];
+        $diniyyah_journal->save();
+
+        // Sync presensi: hapus semua absensi jurnal lalu buat ulang sesuai state form.
+        // Form mengirim hidden input untuk daily-locked (status harian) + checkbox 'skipped'
+        // untuk manual — replikasi state form, sama seperti create.
+        $diniyyah_journal->absences()->delete();
+        foreach ($absences as $enrollmentId => $status) {
+            $diniyyah_journal->absences()->create([
+                'class_enrollment_id' => $enrollmentId,
+                'status' => $status,
+            ]);
+        }
+
+        return redirect()->route('guru.diniyyah-journals.index', [
+            'classroom_term_id' => $classroomTerm->id,
+            'date' => $diniyyah_journal->date->format('Y-m-d'),
+        ])->with('success', 'Jurnal berhasil diperbarui.');
     }
 
     public function store(Request $request)

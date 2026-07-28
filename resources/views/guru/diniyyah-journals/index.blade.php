@@ -16,6 +16,78 @@
         </div>
     @endif
 
+    <!-- Riwayat Jurnal Saya (semua kelas, per tanggal — tanpa perlu pilih tanggal) -->
+    <div class="glass-card rounded-2xl p-6 mb-6 border border-slate-200">
+        <div class="flex justify-between items-center mb-4">
+            <div>
+                <h2 class="text-lg font-black text-slate-800">Riwayat Jurnal Saya</h2>
+                <p class="text-sm text-slate-500">Seluruh jurnal yang sudah Anda isi di semua kelas.</p>
+            </div>
+            <span class="text-sm font-bold text-amber-700 bg-amber-100 px-3 py-1 rounded-full whitespace-nowrap">
+                {{ $myJournals->count() }} jurnal
+            </span>
+        </div>
+
+        @if($myJournals->isEmpty())
+            <p class="text-sm text-slate-500 italic">Belum ada jurnal yang Anda isi.</p>
+        @else
+            @php
+                $grouped = $myJournals->groupBy(fn ($j) => $j->date->format('Y-m-d'));
+            @endphp
+            <div class="space-y-5">
+                @foreach($grouped as $date => $journals)
+                    <div>
+                        <div class="flex items-baseline gap-2 mb-2 pb-1 border-b border-slate-100">
+                            <span class="text-sm font-black text-slate-800">
+                                {{ \Carbon\Carbon::parse($date)->locale('id')->translatedFormat('l, d F Y') }}
+                            </span>
+                            <span class="text-xs font-medium text-slate-400">· {{ $journals->count() }} jurnal</span>
+                        </div>
+                        <div class="space-y-2">
+                            @foreach($journals as $journal)
+                                @php
+                                    $slotStart = $journal->session_starts_at;
+                                    $slotEnd = $journal->session_ends_at;
+                                @endphp
+                                <div class="flex flex-col sm:flex-row sm:items-center gap-3 p-3 rounded-xl border border-slate-200 bg-white">
+                                    <div class="flex items-center gap-3 sm:w-40 shrink-0">
+                                        <div class="flex flex-col items-center justify-center bg-slate-100 rounded-lg px-2 py-1 min-w-[4rem] border border-slate-200">
+                                            <span class="font-bold text-slate-800 text-sm">{{ $journal->session_hour === 'tafsir' ? 'Tafsir' : 'Sesi '.$journal->session_hour }}</span>
+                                            @if($slotStart)
+                                                <span class="text-[10px] text-slate-500 whitespace-nowrap">{{ \Carbon\Carbon::parse($slotStart)->format('H:i') }} - {{ \Carbon\Carbon::parse($slotEnd)->format('H:i') }}</span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                            <span class="text-sm font-bold text-slate-800">{{ $journal->teacherAssignment->classSubject->subject->name }}</span>
+                                            <span class="text-xs font-medium text-slate-500">· {{ $journal->teacherAssignment->classSubject->classroomTerm->name }}</span>
+                                        </div>
+                                        <p class="text-sm text-slate-600 mt-0.5 line-clamp-2" title="{{ $journal->material }}">{{ $journal->material }}</p>
+                                        <div class="mt-1">
+                                            @if($journal->absences->isEmpty())
+                                                <span class="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">Hadir semua</span>
+                                            @else
+                                                <span class="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded">{{ $journal->absences->count() }} tidak hadir</span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-3 shrink-0">
+                                        <a href="{{ route('guru.diniyyah-journals.edit', $journal) }}" class="text-xs font-bold text-amber-700 hover:text-amber-900">Edit</a>
+                                        <form action="{{ route('guru.diniyyah-journals.destroy', $journal) }}" method="POST" onsubmit="return confirm('Hapus jurnal jam ke-{{ $journal->session_hour }}?');">
+                                            @csrf @method('DELETE')
+                                            <button type="submit" class="text-xs font-bold text-red-600 hover:text-red-800">Hapus</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        @endif
+    </div>
+
     <!-- Filter Kelas dan Tanggal -->
     <div class="glass-card rounded-2xl p-6 mb-6">
         <form method="GET" action="{{ route('guru.diniyyah-journals.index') }}" class="flex flex-col sm:flex-row gap-4 items-end" id="filter-form">
@@ -101,10 +173,13 @@
                             </td>
                             <td class="p-3 text-center">
                                 @if($journal->substitute_teacher_id === null && $journal->teacherAssignment->teacher_id === $teacher->id)
-                                    <form action="{{ route('guru.diniyyah-journals.destroy', $journal) }}" method="POST" onsubmit="return confirm('Hapus jurnal jam ke-{{ $journal->session_hour }}?');">
-                                        @csrf @method('DELETE')
-                                        <button type="submit" class="text-xs font-bold text-red-600 hover:text-red-800">Hapus</button>
-                                    </form>
+                                    <div class="flex items-center justify-center gap-3">
+                                        <a href="{{ route('guru.diniyyah-journals.edit', $journal) }}" class="text-xs font-bold text-amber-700 hover:text-amber-900">Edit</a>
+                                        <form action="{{ route('guru.diniyyah-journals.destroy', $journal) }}" method="POST" onsubmit="return confirm('Hapus jurnal jam ke-{{ $journal->session_hour }}?');">
+                                            @csrf @method('DELETE')
+                                            <button type="submit" class="text-xs font-bold text-red-600 hover:text-red-800">Hapus</button>
+                                        </form>
+                                    </div>
                                 @endif
                             </td>
                         </tr>
@@ -150,14 +225,17 @@
                             </div>
                             
                             @if($journal->substitute_teacher_id === null && $journal->teacherAssignment->teacher_id === $teacher->id)
-                                <form action="{{ route('guru.diniyyah-journals.destroy', $journal) }}" method="POST" onsubmit="return confirm('Hapus jurnal jam ke-{{ $journal->session_hour }}?');">
-                                    @csrf @method('DELETE')
-                                    <button type="submit" class="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors" title="Hapus">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
-                                    </button>
-                                </form>
+                                <div class="flex flex-col items-end gap-2">
+                                    <a href="{{ route('guru.diniyyah-journals.edit', $journal) }}" class="text-xs font-bold text-amber-700 hover:text-amber-900">Edit</a>
+                                    <form action="{{ route('guru.diniyyah-journals.destroy', $journal) }}" method="POST" onsubmit="return confirm('Hapus jurnal jam ke-{{ $journal->session_hour }}?');">
+                                        @csrf @method('DELETE')
+                                        <button type="submit" class="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors" title="Hapus">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                        </button>
+                                    </form>
+                                </div>
                             @endif
                         </div>
                         
@@ -235,30 +313,7 @@
                     <h4 class="text-sm font-bold text-slate-800 mb-1">Presensi Sesi Ini</h4>
                     <p class="text-xs text-slate-500 mb-3">Centang santri yang tidak hadir. Santri yang sudah absen harian oleh wali kelas otomatis tercatat.</p>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-2">
-                        @foreach($students as $enrollment)
-                            @php
-                                $dailyStatus = $dailyAbsences[$enrollment->id] ?? null;
-                                $isAbsent = $dailyStatus !== null;
-                            @endphp
-                            <div class="flex items-center p-3 border {{ $isAbsent ? 'border-amber-200 bg-amber-50' : 'border-slate-200 bg-white hover:border-slate-300' }} rounded-xl transition-colors cursor-pointer" onclick="document.getElementById('student_{{ $enrollment->id }}').click()">
-                                <div class="flex items-center h-5">
-                                    @if($isAbsent)
-                                        <input type="hidden" name="absences[{{ $enrollment->id }}]" value="{{ $dailyStatus }}">
-                                        <input type="checkbox" checked disabled class="h-4.5 w-4.5 text-amber-600 rounded border-slate-300 pointer-events-none">
-                                    @else
-                                        <input id="student_{{ $enrollment->id }}" type="checkbox" name="absences[{{ $enrollment->id }}]" value="skipped" class="h-4.5 w-4.5 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer" onclick="event.stopPropagation()">
-                                    @endif
-                                </div>
-                                <div class="ml-3 flex-1 flex justify-between items-center text-sm">
-                                    <label for="student_{{ $enrollment->id }}" class="font-bold text-slate-700 truncate cursor-pointer select-none w-full" onclick="event.stopPropagation()">{{ $enrollment->student->name }}</label>
-                                    @if($isAbsent)
-                                        <span class="text-[10px] font-bold text-amber-800 uppercase bg-amber-200 px-2 py-0.5 rounded ml-2">{{ $dailyStatus }}</span>
-                                    @endif
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
+                    @include('guru.diniyyah-journals.partials._absence-grid')
                 </div>
 
                 <div class="mt-6 flex justify-end">
