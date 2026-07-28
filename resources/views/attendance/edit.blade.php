@@ -128,7 +128,11 @@
         <!-- Attendance Grid -->
         @php
             $initialAttendances = [];
-            $defaultSelectedDay = $days->first()?->toDateString() ?? '';
+            $today = now()->toDateString();
+            $defaultSelectedDay = $days->first(fn ($d) => $d->toDateString() === $today)?->toDateString()
+                ?? $days->filter(fn ($d) => $d->toDateString() < $today)->last()?->toDateString()
+                ?? $days->first()?->toDateString()
+                ?? '';
             foreach ($enrollments as $enrollment) {
                 foreach ($days as $day) {
                     $attendance = $attendances->get($enrollment->id.'-'.$day->toDateString());
@@ -213,6 +217,7 @@
                     @foreach ($days as $day)
                         <button
                             type="button"
+                            id="day-{{ $day->toDateString() }}"
                             @click="selectedDay = '{{ $day->toDateString() }}'"
                             :class="selectedDay === '{{ $day->toDateString() }}' ? 'bg-amber-600 text-white border-amber-600 shadow-md' : 'bg-white text-slate-700 border-slate-200 hover:border-amber-300'"
                             class="shrink-0 min-w-[3.25rem] rounded-2xl border-2 px-3 py-2 text-center transition-all"
@@ -302,6 +307,11 @@
                     init() {
                         // Initialize totals on mount
                         setTimeout(() => this.recalculateTotals(), 100);
+                        // Scroll the selected day chip into view (mobile strip)
+                        this.$nextTick(() => {
+                            document.getElementById('day-' + this.selectedDay)
+                                ?.scrollIntoView({ inline: 'center', block: 'nearest' });
+                        });
                     },
 
                     async updateAttendance(enrollmentId, date) {
