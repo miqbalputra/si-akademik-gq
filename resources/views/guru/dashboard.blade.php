@@ -1,6 +1,6 @@
 <x-layouts.portal title="Dashboard Guru" portalLabel="Portal Guru">
     <x-slot name="navLinks">
-        <a href="{{ route('guru.calendar') }}" class="btn btn-ghost {{ request()->routeIs('guru.calendar') ? 'bg-slate-100 text-slate-800' : 'text-slate-500 hover:bg-slate-50' }}">Kalender</a>
+        <a href="{{ route('guru.calendar') }}" class="btn btn-outline btn-sm {{ request()->routeIs('guru.calendar') ? 'bg-slate-100 border-slate-300 text-slate-800' : 'text-slate-500 hover:bg-slate-50' }}">Kalender</a>
     </x-slot>
 
     <!-- Header -->

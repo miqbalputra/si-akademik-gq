@@ -1,7 +1,10 @@
 <x-layouts.portal title="Riwayat Jurnal Saya" portalLabel="Portal Guru" breadcrumb="Riwayat Jurnal Saya">
     <x-slot name="navLinks">
-        <a href="{{ route('guru.diniyyah-journals.index') }}" class="text-sm font-bold text-slate-500 hover:text-amber-600">
-            &larr; Kembali ke Input Jurnal
+        <a href="{{ route('guru.diniyyah-journals.index') }}" class="btn btn-outline btn-sm">
+            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Kembali<span class="hidden sm:inline"> ke Input Jurnal</span>
         </a>
     </x-slot>
 

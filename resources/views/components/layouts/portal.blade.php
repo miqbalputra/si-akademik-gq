@@ -132,7 +132,7 @@
                         <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 font-black text-white text-sm shadow-md group-hover:shadow-amber-300/40 transition-shadow">
                             GQ
                         </span>
-                        <div>
+                        <div class="hidden sm:block">
                             <span class="block text-sm font-extrabold text-slate-800 leading-none">Griya Qur'an</span>
                             <span class="block text-[9px] font-bold uppercase tracking-widest text-amber-600 mt-0.5">{{ $portalLabel ?? 'SIAKAD' }}</span>
                         </div>
@@ -147,8 +147,11 @@
 
                 {{-- Nav Links + Actions --}}
                 <div class="flex items-center gap-2">
-                    <a href="{{ route('guru.dashboard') }}" class="btn btn-sm {{ request()->routeIs('guru.dashboard') ? 'bg-slate-100 text-slate-800' : 'text-slate-500 hover:bg-slate-50' }} hidden sm:inline-flex">
-                        Dashboard
+                    <a href="{{ route('guru.dashboard') }}" class="btn btn-outline btn-sm {{ request()->routeIs('guru.dashboard') ? 'bg-slate-100 border-slate-300 text-slate-800' : 'text-slate-500 hover:bg-slate-50' }}">
+                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l9-9 9 9M5 10v10a1 1 0 001 1h12a1 1 0 001-1V10" />
+                        </svg>
+                        <span class="hidden sm:inline">Dashboard</span>
                     </a>
 
                     @isset($navLinks)

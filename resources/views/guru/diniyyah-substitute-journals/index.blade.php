@@ -1,7 +1,6 @@
 <x-layouts.portal title="Jurnal Guru Pengganti" portalLabel="Portal Guru" breadcrumb="Jurnal Pengganti">
     <x-slot name="navLinks">
-        <a href="{{ route('guru.dashboard') }}" class="btn btn-ghost text-slate-500 hover:bg-slate-50">Dashboard</a>
-        <a href="{{ route('guru.diniyyah-journals.index') }}" class="btn btn-ghost {{ request()->routeIs('guru.diniyyah-journals.index') ? 'bg-slate-100 text-slate-800' : 'text-slate-500 hover:bg-slate-50' }}">Jurnal Kelas</a>
+        <a href="{{ route('guru.diniyyah-journals.index') }}" class="btn btn-outline btn-sm {{ request()->routeIs('guru.diniyyah-journals.index') ? 'bg-slate-100 border-slate-300 text-slate-800' : 'text-slate-500 hover:bg-slate-50' }}">Jurnal Kelas</a>
     </x-slot>
 
     <div class="mb-6 flex justify-between items-center glass-card p-4 rounded-2xl">

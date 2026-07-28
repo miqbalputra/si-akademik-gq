@@ -1,13 +1,15 @@
 <x-layouts.portal title="Edit Jurnal Kelas Diniyyah" portalLabel="Portal Guru" breadcrumb="Edit Jurnal Kelas">
     <x-slot name="navLinks">
-        <a href="{{ route('guru.diniyyah-journals.index', ['classroom_term_id' => $classroomTerm->id, 'date' => $journal->date->format('Y-m-d')]) }}" class="text-sm font-bold text-slate-500 hover:text-amber-600">
-            &larr; Kembali ke Jurnal Kelas
+        <a href="{{ route('guru.diniyyah-journals.index', ['classroom_term_id' => $classroomTerm->id, 'date' => $journal->date->format('Y-m-d')]) }}" class="btn btn-outline btn-sm">
+            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Kembali<span class="hidden sm:inline"> ke Jurnal Kelas</span>
         </a>
     </x-slot>
 
     <div class="mb-6 flex justify-between items-center glass-card p-4 rounded-2xl">
         <h1 class="text-2xl font-black text-slate-900">Edit Jurnal</h1>
-        <a href="{{ route('guru.diniyyah-journals.index', ['classroom_term_id' => $classroomTerm->id, 'date' => $journal->date->format('Y-m-d')]) }}" class="text-sm font-bold text-slate-500 hover:text-amber-600 sm:hidden">&larr; Kembali</a>
     </div>
 
     @if(session('success'))

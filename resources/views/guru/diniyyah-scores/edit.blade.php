@@ -1,6 +1,11 @@
 <x-layouts.portal title="{{ $assessmentSet->title }}" portalLabel="Portal Guru" breadcrumb="Input Nilai / {{ $assessmentSet->classSubject?->classroomTerm?->name }}">
     <x-slot name="navLinks">
-        <a href="{{ route('guru.diniyyah-scores.index') }}" class="btn btn-outline btn-sm hidden sm:inline-flex">Kembali ke Daftar</a>
+        <a href="{{ route('guru.diniyyah-scores.index') }}" class="btn btn-outline btn-sm">
+            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Kembali<span class="hidden sm:inline"> ke Daftar</span>
+        </a>
     </x-slot>
 
     @push('head')
