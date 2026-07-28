@@ -15,7 +15,6 @@ use App\Models\Teacher;
 use App\Models\User;
 use App\Support\SessionTimetable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Artisan;
 use Tests\TestCase;
 
 /**
@@ -32,10 +31,10 @@ class TafsirTeachingScheduleMigrationTest extends TestCase
     {
         $this->seedProdLikeData();
 
-        // Migration 000006 sudah no-op saat RefreshDatabase setup (belum ada
-        // data). Rollback lalu jalankan ulang agar up() jalan dengan data ada.
-        Artisan::call('migrate:rollback', ['--step' => 1, '--force' => true]);
-        Artisan::call('migrate', ['--force' => true]);
+        // 000006 no-op saat RefreshDatabase setup (belum ada data). Panggil up()
+        // langsung agar jalan dengan data sudah ada — tidak bergantung urutan
+        // migration (robust terhadap penambahan migration baru setelahnya).
+        $this->tafsirMigration()->up();
 
         $this->assertSame(10, DiniyyahClassSubject::where('subject_id', $this->tafsirSubjectId())->count());
         $this->assertSame(10, DiniyyahTeacherAssignment::count());
@@ -59,11 +58,9 @@ class TafsirTeachingScheduleMigrationTest extends TestCase
     {
         $this->seedProdLikeData();
 
-        Artisan::call('migrate:rollback', ['--step' => 1, '--force' => true]);
-        Artisan::call('migrate', ['--force' => true]);
-        // Jalankan up() sekali lagi via rollback + migrate.
-        Artisan::call('migrate:rollback', ['--step' => 1, '--force' => true]);
-        Artisan::call('migrate', ['--force' => true]);
+        $migration = $this->tafsirMigration();
+        $migration->up();
+        $migration->up(); // jalankan ulang tanpa hapus → tidak ada duplikat.
 
         $this->assertSame(10, DiniyyahClassSubject::where('subject_id', $this->tafsirSubjectId())->count());
         $this->assertSame(10, DiniyyahTeacherAssignment::count());
@@ -73,12 +70,16 @@ class TafsirTeachingScheduleMigrationTest extends TestCase
     public function test_migration_is_noop_without_prerequisites(): void
     {
         // Tidak ada academic term / guru prod-like → migration tidak membuat apa-apa.
-        Artisan::call('migrate:rollback', ['--step' => 1, '--force' => true]);
-        Artisan::call('migrate', ['--force' => true]);
+        $this->tafsirMigration()->up();
 
         $this->assertSame(0, DiniyyahClassSubject::count());
         $this->assertSame(0, DiniyyahTeacherAssignment::count());
         $this->assertSame(0, DiniyyahTeachingSchedule::count());
+    }
+
+    private function tafsirMigration(): object
+    {
+        return require database_path('migrations/2026_07_28_000006_seed_tafsir_teaching_schedule.php');
     }
 
     private function tafsirSubjectId(): int
