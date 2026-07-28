@@ -25,22 +25,9 @@ class GuruDiniyyahJournalController extends Controller
         $assignments = DiniyyahTeacherAssignment::with(['classSubject.subject', 'classSubject.classroomTerm.classroom'])
             ->where('teacher_id', $teacher->id)
             ->get();
-            
+
         // Group by classroom_term_id to get unique classes
         $classes = $assignments->pluck('classSubject.classroomTerm')->unique('id');
-
-        // Riwayat seluruh jurnal yang guru ini isi sebagai guru asli (bukan pengganti),
-        // di semua kelas yang diajarnya — ditampilkan per tanggal tanpa perlu filter.
-        $myJournals = DiniyyahClassJournal::with([
-            'teacherAssignment.classSubject.subject',
-            'teacherAssignment.classSubject.classroomTerm.classroom',
-            'absences.classEnrollment.student',
-        ])
-            ->whereHas('teacherAssignment', fn ($q) => $q->where('teacher_id', $teacher->id))
-            ->whereNull('substitute_teacher_id')
-            ->orderByDesc('date')
-            ->orderBy('session_starts_at')
-            ->get();
 
         $selectedClassroomTermId = $request->query('classroom_term_id');
         $selectedDate = $request->query('date', date('Y-m-d'));
@@ -106,9 +93,34 @@ class GuruDiniyyahJournalController extends Controller
             'classAssignments',
             'existingJournals',
             'teacher',
-            'sessionSlots',
-            'myJournals'
+            'sessionSlots'
         ));
+    }
+
+    /**
+     * Halaman khusus "Riwayat Jurnal Saya" — seluruh jurnal yang guru isi sebagai
+     * guru asli (bukan pengganti), di semua kelas, tersusun per tanggal. Dipisah
+     * dari halaman input supaya guru fokus mengisi jurnal, riwayat dibuka on-demand.
+     */
+    public function riwayat()
+    {
+        $teacher = Auth::user()->teacher;
+        if (!$teacher) {
+            abort(403, 'Akses ditolak. Akun Anda tidak terhubung dengan data Guru.');
+        }
+
+        $myJournals = DiniyyahClassJournal::with([
+            'teacherAssignment.classSubject.subject',
+            'teacherAssignment.classSubject.classroomTerm.classroom',
+            'absences.classEnrollment.student',
+        ])
+            ->whereHas('teacherAssignment', fn ($q) => $q->where('teacher_id', $teacher->id))
+            ->whereNull('substitute_teacher_id')
+            ->orderByDesc('date')
+            ->orderBy('session_starts_at')
+            ->get();
+
+        return view('guru.diniyyah-journals.riwayat', compact('myJournals', 'teacher'));
     }
 
     /**

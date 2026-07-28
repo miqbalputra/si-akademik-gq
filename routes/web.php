@@ -52,6 +52,7 @@ Route::middleware('auth')->prefix('guru')->name('guru.')->group(function () {
     Route::put('/tahfidz/{halaqah}/uas', [GuruTahfidzController::class, 'uasUpdate'])->name('tahfidz.uas.update');
     Route::get('/diniyyah-journals', [\App\Http\Controllers\GuruDiniyyahJournalController::class, 'index'])->name('diniyyah-journals.index');
     Route::post('/diniyyah-journals', [\App\Http\Controllers\GuruDiniyyahJournalController::class, 'store'])->name('diniyyah-journals.store');
+    Route::get('/diniyyah-journals/riwayat', [\App\Http\Controllers\GuruDiniyyahJournalController::class, 'riwayat'])->name('diniyyah-journals.riwayat');
     Route::get('/diniyyah-journals/{diniyyah_journal}/edit', [\App\Http\Controllers\GuruDiniyyahJournalController::class, 'edit'])->name('diniyyah-journals.edit');
     Route::put('/diniyyah-journals/{diniyyah_journal}', [\App\Http\Controllers\GuruDiniyyahJournalController::class, 'update'])->name('diniyyah-journals.update');
     Route::delete('/diniyyah-journals/{diniyyah_journal}', [\App\Http\Controllers\GuruDiniyyahJournalController::class, 'destroy'])->name('diniyyah-journals.destroy');

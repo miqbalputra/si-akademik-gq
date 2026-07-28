@@ -27,7 +27,7 @@ class GuruDiniyyahJournalEditTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_index_shows_riwayat_grouped_by_date_with_count_and_excludes_substitute(): void
+    public function test_riwayat_page_shows_grouped_by_date_with_count_and_excludes_substitute(): void
     {
         $ctx = $this->makeContext();
 
@@ -46,7 +46,7 @@ class GuruDiniyyahJournalEditTest extends TestCase
         ]);
 
         $resp = $this->actingAs($ctx['teacher']->user)
-            ->get(route('guru.diniyyah-journals.index'));
+            ->get(route('guru.diniyyah-journals.riwayat'));
 
         $resp->assertOk();
         $resp->assertSee('Riwayat Jurnal Saya');
@@ -61,13 +61,28 @@ class GuruDiniyyahJournalEditTest extends TestCase
         $ctx = $this->makeContext();
         $this->createJournal($ctx, '2026-07-09', '1', 'Tanpa filter tetap tampil');
 
-        // Akses tanpa query string date/classroom sama sekali.
+        // Halaman riwayat tidak butuh query filter sama sekali.
+        $resp = $this->actingAs($ctx['teacher']->user)
+            ->get(route('guru.diniyyah-journals.riwayat'));
+
+        $resp->assertOk();
+        $resp->assertSee('Riwayat Jurnal Saya');
+        $resp->assertSee('Tanpa filter tetap tampil');
+    }
+
+    public function test_index_has_riwayat_button_and_no_inline_list(): void
+    {
+        $ctx = $this->makeContext();
+        $this->createJournal($ctx, '2026-07-09', '1', 'Materi tersembunyi dari index');
+
+        // Halaman input fokus: hanya ada tombol ke riwayat, daftar jurnal TIDAK ditampilkan inline.
         $resp = $this->actingAs($ctx['teacher']->user)
             ->get(route('guru.diniyyah-journals.index'));
 
         $resp->assertOk();
         $resp->assertSee('Riwayat Jurnal Saya');
-        $resp->assertSee('Tanpa filter tetap tampil');
+        $resp->assertSee(route('guru.diniyyah-journals.riwayat'));
+        $resp->assertDontSee('Materi tersembunyi dari index');
     }
 
     public function test_edit_page_loads_for_owner_and_prefills_material(): void
