@@ -104,6 +104,29 @@ class RegularTeachingScheduleMigrationTest extends TestCase
         $this->assertSame(10, DiniyyahTeachingSchedule::count());
     }
 
+    public function test_jumat_m1_tafsir_scheduled_in_regular_session_two(): void
+    {
+        // Jumat sesi 2 (09:20-09:50) M1 = Tafsir Al Quran (subject Tafsir di slot sesi
+        // reguler '2', bukan sesi tafsir khusus Kamis). Buat assignment M1 Ikhwan
+        // Tafsir (Farhan di prod) → harus terjadwalkan tepat 1x di Jumat (day 5).
+        $this->assign(1, 'ikhwan', 'tafsir', ['Teacher H']);
+
+        $migration = require database_path('migrations/2026_07_28_000007_seed_regular_teaching_schedules.php');
+        $migration->up();
+
+        $tafsirSession = \App\Models\ClassSession::where('session_name', 'tafsir')->first();
+        $sessionTwo = \App\Models\ClassSession::where('session_name', '2')->first();
+
+        $hSchedules = DiniyyahTeachingSchedule::query()
+            ->whereRelation('teacherAssignment.teacher', 'name', 'Teacher H')
+            ->get();
+        $this->assertCount(1, $hSchedules);
+        $this->assertSame(5, $hSchedules->first()->day_of_week); // Jumat
+        // Pakai sesi reguler '2', BUKAN sesi 'tafsir'.
+        $this->assertSame($sessionTwo->id, $hSchedules->first()->class_session_id);
+        $this->assertNotEquals($tafsirSession->id, $hSchedules->first()->class_session_id);
+    }
+
     private function scheduleCountFor(string $teacherName): int
     {
         return DiniyyahTeachingSchedule::query()

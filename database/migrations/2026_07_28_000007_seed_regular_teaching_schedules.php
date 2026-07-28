@@ -23,10 +23,12 @@ use Illuminate\Database\Migrations\Migration;
  * Aturan:
  * - "Fiqih Ibadah" di file → cocokkan subject code `fiqih_ibadah` (Ikhwan) ATAU
  *   `fiqih` (Akhwat) — prod memakai dua code berbeda per gender.
- * - Tafsir Kamis M2-M6: sudah ditangani 000006; matrix tetap memuatnya (idempoten,
- *   firstOrCreate → no-op bila sudah ada).
- * - Slot Tahfidz & Tafsir Jumat M1 di-skip (Tahfidz modul terpisah; Tafsir hanya
- *   Kamis M2-M6 sesuai scope user).
+ * - Tafsir Kamis M2-M6 (sesi 'tafsir' 09:50-10:20): ditangani 000006; matrix tetap
+ *   memuatnya (idempoten, firstOrCreate → no-op bila sudah ada).
+ * - Tafsir Jumat M1 (sesi reguler '2' 09:20-09:50): subject Tafsir di slot sesi
+ *   reguler, BUKAN sesi tafsir khusus. Ikut dijadwalkan (guru = GQ010 Farhan utk
+ *   Ikhwan; Akhwat M1 Tafsir belum punya guru di SQL → skip otomatis).
+ * - Slot Tahfidz di-skip (modul terpisah).
  * - Bila (classroom_term, subject) belum punya class_subject/assignment → slot
  *   di-skip (guru belum di-assign). Daftar skip dilaporkan via query verifikasi.
  * - Multi-teacher (satu class_subject punya >1 assignment): SEMUA assignment di-link
@@ -212,7 +214,8 @@ return new class extends Migration
             ],
             'jumat' => [
                 '1' => [1 => 'Khat', 2 => 'Khat', 3 => 'Praktek Ibadah', 4 => 'Tajwid', 5 => 'Bahasa Arab', 6 => 'Praktek Ibadah'],
-                '2' => [2 => 'Praktek Ibadah', 3 => 'Khat', 4 => 'Fiqih Ibadah', 5 => 'Praktek Ibadah', 6 => 'Tajwid'], // M1=Tafsir (skip scope)
+                // M1 Jumat sesi 2 (09:20-09.50) = Tafsir Al Quran (subject Tafsir di slot sesi reguler, bukan sesi tafsir khusus Kamis).
+                '2' => [1 => 'Tafsir Al Quran', 2 => 'Praktek Ibadah', 3 => 'Khat', 4 => 'Fiqih Ibadah', 5 => 'Praktek Ibadah', 6 => 'Tajwid'],
             ],
         ];
 
@@ -236,7 +239,8 @@ return new class extends Migration
             ],
             'jumat' => [
                 '1' => [1 => 'Khat', 2 => 'Praktek Ibadah', 3 => 'Khat', 4 => 'Aqidah Akhlaq', 5 => 'Khat', 6 => 'Bahasa Arab'],
-                '2' => [2 => 'Khat', 3 => 'Praktek Ibadah', 4 => 'Bahasa Arab', 5 => 'Bahasa Arab', 6 => 'Fiqih Ibadah'], // M1=Tafsir (skip scope)
+                // M1 Jumat sesi 2 (09:20-09.50) = Tafsir Al Quran (subject Tafsir di slot sesi reguler).
+                '2' => [1 => 'Tafsir Al Quran', 2 => 'Khat', 3 => 'Praktek Ibadah', 4 => 'Bahasa Arab', 5 => 'Bahasa Arab', 6 => 'Fiqih Ibadah'],
             ],
         ];
 
