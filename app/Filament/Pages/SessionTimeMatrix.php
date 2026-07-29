@@ -3,7 +3,6 @@
 namespace App\Filament\Pages;
 
 use App\Services\SessionTimeMatrixService;
-use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
@@ -52,31 +51,6 @@ class SessionTimeMatrix extends Page
     public function updatedClassroomId(SessionTimeMatrixService $service): void
     {
         $this->rebuild($service);
-    }
-
-    protected function getHeaderActions(): array
-    {
-        return [
-            Action::make('save')
-                ->label('Simpan')
-                ->icon('heroicon-o-check')
-                ->action(fn () => $this->save(app(SessionTimeMatrixService::class))),
-            Action::make('propIkhwan')
-                ->label('Terapkan ke Ikhwan')
-                ->icon('heroicon-o-arrow-right-circle')
-                ->action(fn () => $this->propagate(app(SessionTimeMatrixService::class), 'ikhwan')),
-            Action::make('propAkhwat')
-                ->label('Terapkan ke Akhwat')
-                ->icon('heroicon-o-arrow-right-circle')
-                ->action(fn () => $this->propagate(app(SessionTimeMatrixService::class), 'akhwat')),
-            Action::make('reset')
-                ->label('Reset ke Default')
-                ->icon('heroicon-o-arrow-path')
-                ->color('danger')
-                ->requiresConfirmation()
-                ->modalDescription('Jam sesi kelas ini akan dipulihkan ke default dari kode. Perubahan yang sudah Anda simpan akan hilang.')
-                ->action(fn () => $this->resetToDefault(app(SessionTimeMatrixService::class))),
-        ];
     }
 
     protected function getViewData(): array
