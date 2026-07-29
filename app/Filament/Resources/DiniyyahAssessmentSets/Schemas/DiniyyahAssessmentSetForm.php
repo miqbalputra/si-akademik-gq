@@ -14,7 +14,8 @@ class DiniyyahAssessmentSetForm
         return $schema
             ->components([
                 Select::make('diniyyah_class_subject_id')->label('Mapel Kelas')
-                    ->relationship('classSubject.subject', 'name')
+                    ->relationship('classSubject', 'id')
+                    ->getOptionLabelFromRecordUsing(fn (\App\Models\DiniyyahClassSubject $record) => "{$record->classroomTerm?->name} - {$record->subject?->name}")
                     ->searchable()
                     ->preload()
                     ->required(),
