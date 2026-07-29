@@ -35,7 +35,13 @@ class SignaturesRelationManager extends RelationManager
                     ->required(),
                 Select::make('teacher_id')
                     ->label('Guru Terhubung')
-                    ->relationship('teacher', 'name')
+                    ->relationship('teacher', 'name', fn (\Illuminate\Database\Eloquent\Builder $q) =>
+                        $q->whereNotNull('user_id')->orderBy('name'))
+                    ->getOptionLabelFromRecordUsing(function (\App\Models\Teacher $record) {
+                        $email = $record->user?->email ?? '(tanpa akun)';
+
+                        return "{$record->name} — {$email}";
+                    })
                     ->searchable()
                     ->preload()
                     ->helperText('Opsional: hubungkan ke data guru untuk auto-fill nama.'),

@@ -22,12 +22,24 @@ class TahfidzHalaqahForm
                     ->label('Nama Halaqah')
                     ->required(),
                 Select::make('teacher_id')
-                    ->relationship('teacher', 'name')
+                    ->relationship('teacher', 'name', fn (\Illuminate\Database\Eloquent\Builder $q) =>
+                        $q->whereNotNull('user_id')->orderBy('name'))
+                    ->getOptionLabelFromRecordUsing(function (\App\Models\Teacher $record) {
+                        $email = $record->user?->email ?? '(tanpa akun)';
+
+                        return "{$record->name} — {$email}";
+                    })
                     ->searchable()
                     ->preload()
                     ->label('Guru Pengampu'),
                 Select::make('assistant_teacher_id')
-                    ->relationship('assistantTeacher', 'name')
+                    ->relationship('assistantTeacher', 'name', fn (\Illuminate\Database\Eloquent\Builder $q) =>
+                        $q->whereNotNull('user_id')->orderBy('name'))
+                    ->getOptionLabelFromRecordUsing(function (\App\Models\Teacher $record) {
+                        $email = $record->user?->email ?? '(tanpa akun)';
+
+                        return "{$record->name} — {$email}";
+                    })
                     ->searchable()
                     ->preload()
                     ->label('Asisten Guru'),
