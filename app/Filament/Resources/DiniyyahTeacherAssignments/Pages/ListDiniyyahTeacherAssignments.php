@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\DiniyyahTeacherAssignments\Pages;
 
+use App\Filament\Pages\RingkasanPenugasanGuru;
 use App\Filament\Resources\DiniyyahTeacherAssignments\DiniyyahTeacherAssignmentResource;
 use App\Services\Imports\TeacherAssignmentCsvImporter;
 use Filament\Actions\Action;
@@ -18,6 +19,11 @@ class ListDiniyyahTeacherAssignments extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('ringkasan')
+                ->label('Ringkasan Data')
+                ->icon('heroicon-o-clipboard-document-check')
+                ->url(fn (): string => RingkasanPenugasanGuru::getUrl())
+                ->visible(fn (): bool => auth()->user()?->hasAnyRole(['admin', 'kabag_diniyyah', 'kepala_sekolah']) ?? false),
             Action::make('downloadTeacherImportTemplate')
                 ->label('Template Import')
                 ->icon('heroicon-o-document-arrow-down')
