@@ -19,7 +19,13 @@ class DiniyyahTeacherAssignmentForm
                     ->preload()
                     ->required(),
                 Select::make('teacher_id')->label('Guru Utama')
-                    ->relationship('teacher', 'name')
+                    ->relationship('teacher', 'name', fn (\Illuminate\Database\Eloquent\Builder $q) =>
+                        $q->whereNotNull('user_id')->orderBy('name'))
+                    ->getOptionLabelFromRecordUsing(function (\App\Models\Teacher $record) {
+                        $email = $record->user?->email ?? '(tanpa akun)';
+
+                        return "{$record->name} — {$email}";
+                    })
                     ->searchable()
                     ->preload()
                     ->required(),

@@ -26,10 +26,7 @@ class GuruDashboardController extends Controller
             $assignments = \App\Models\DiniyyahTeacherAssignment::with('classSubject.subject')
                 ->where('teacher_id', $teacher->id)
                 ->where(function ($query) {
-                    $query->whereNull('starts_at')->orWhere('starts_at', '<=', now()->toDateString());
-                })
-                ->where(function ($query) {
-                    $query->whereNull('ends_at')->orWhere('ends_at', '>=', now()->toDateString());
+                    $query->whereNull('ends_at')->orWhere('ends_at', '>=', $this->wibToday());
                 })
                 ->get();
                 
@@ -67,10 +64,7 @@ class GuruDashboardController extends Controller
             ->whereHas('homeroomAssignments', function (Builder $query) use ($teacher): void {
                 $query->where('teacher_id', $teacher?->id ?? 0)
                     ->where(function (Builder $query): void {
-                        $query->whereNull('starts_at')->orWhere('starts_at', '<=', now()->toDateString());
-                    })
-                    ->where(function (Builder $query): void {
-                        $query->whereNull('ends_at')->orWhere('ends_at', '>=', now()->toDateString());
+                        $query->whereNull('ends_at')->orWhere('ends_at', '>=', $this->wibToday());
                     });
             })
             ->get();
@@ -82,10 +76,7 @@ class GuruDashboardController extends Controller
             ->whereHas('classSubject.teacherAssignments', function (Builder $query) use ($teacher) {
                 $query->where('teacher_id', $teacher?->id ?? 0)
                     ->where(function ($query) {
-                        $query->whereNull('starts_at')->orWhere('starts_at', '<=', now()->toDateString());
-                    })
-                    ->where(function ($query) {
-                        $query->whereNull('ends_at')->orWhere('ends_at', '>=', now()->toDateString());
+                        $query->whereNull('ends_at')->orWhere('ends_at', '>=', $this->wibToday());
                     });
             })
             ->latest()
@@ -106,10 +97,7 @@ class GuruDashboardController extends Controller
             ->with('classSubject.subject')
             ->where('teacher_id', $teacher?->id ?? 0)
             ->where(function ($query) {
-                $query->whereNull('starts_at')->orWhere('starts_at', '<=', now()->toDateString());
-            })
-            ->where(function ($query) {
-                $query->whereNull('ends_at')->orWhere('ends_at', '>=', now()->toDateString());
+                $query->whereNull('ends_at')->orWhere('ends_at', '>=', $this->wibToday());
             })
             ->get();
 
@@ -216,5 +204,14 @@ class GuruDashboardController extends Controller
             $days === 1 => 'Besok',
             default => $days.' hari lagi',
         };
+    }
+
+    /**
+     * Tanggal "hari ini" dalam WIB (Asia/Jakarta) untuk jendela penugasan.
+     * App timezone = UTC; "hari ini" dari sudut pandang user = WIB.
+     */
+    private function wibToday(): string
+    {
+        return \Illuminate\Support\Carbon::now('Asia/Jakarta')->toDateString();
     }
 }
