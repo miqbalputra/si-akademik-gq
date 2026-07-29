@@ -22,8 +22,8 @@ class TahfidzHalaqahForm
                     ->label('Nama Halaqah')
                     ->required(),
                 Select::make('teacher_id')
-                    ->relationship('teacher', 'name', fn (\Illuminate\Database\Eloquent\Builder $q) =>
-                        $q->whereNotNull('user_id')->orderBy('name'))
+                    ->relationship('teacher', 'name', fn (\Illuminate\Database\Eloquent\Builder $query) =>
+                        $query->whereNotNull('user_id')->orderBy('name'))
                     ->getOptionLabelFromRecordUsing(function (\App\Models\Teacher $record) {
                         $email = $record->user?->email ?? '(tanpa akun)';
 
@@ -33,8 +33,8 @@ class TahfidzHalaqahForm
                     ->preload()
                     ->label('Guru Pengampu'),
                 Select::make('assistant_teacher_id')
-                    ->relationship('assistantTeacher', 'name', fn (\Illuminate\Database\Eloquent\Builder $q) =>
-                        $q->whereNotNull('user_id')->orderBy('name'))
+                    ->relationship('assistantTeacher', 'name', fn (\Illuminate\Database\Eloquent\Builder $query) =>
+                        $query->whereNotNull('user_id')->orderBy('name'))
                     ->getOptionLabelFromRecordUsing(function (\App\Models\Teacher $record) {
                         $email = $record->user?->email ?? '(tanpa akun)';
 
