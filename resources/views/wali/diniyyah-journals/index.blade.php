@@ -143,8 +143,8 @@
                                         <td class="py-4 px-4 align-top whitespace-nowrap">
                                             <div class="flex flex-col gap-1">
                                                 <span class="inline-block px-2.5 py-1 text-xs font-black bg-slate-100 text-slate-700 rounded-lg text-center w-fit">Jam {{ $item['schedule']->classSession->session_name ?? '?' }}</span>
-                                                @if($item['schedule']->classSession->starts_at)
-                                                    <span class="text-[11px] font-semibold text-slate-500">{{ \Carbon\Carbon::parse($item['schedule']->classSession->starts_at)->format('H:i') }} - {{ \Carbon\Carbon::parse($item['schedule']->classSession->ends_at)->format('H:i') }}</span>
+                                                @if($item['session_time'])
+                                                    <span class="text-[11px] font-semibold text-slate-500">{{ \Carbon\Carbon::parse($item['session_time']['starts_at'])->format('H:i') }} - {{ \Carbon\Carbon::parse($item['session_time']['ends_at'])->format('H:i') }}</span>
                                                 @endif
                                             </div>
                                         </td>

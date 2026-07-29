@@ -98,7 +98,11 @@ class WaliClassJournalMonitoringController extends Controller
         }
             
         // Get journals
-        $journals = DiniyyahClassJournal::with(['absences.classEnrollment.student'])
+        $journals = DiniyyahClassJournal::with([
+            'absences.classEnrollment.student',
+            'teacherAssignment.classSubject.subject',
+            'teacherAssignment.classSubject.classroomTerm.classroom',
+        ])
             ->whereHas('teacherAssignment.classSubject', function ($query) use ($classroomTermIds) {
                 $query->whereIn('classroom_term_id', $classroomTermIds);
             })
@@ -166,7 +170,8 @@ class WaliClassJournalMonitoringController extends Controller
                     $dayData['items'][] = [
                         'schedule' => $schedule,
                         'journal' => $journal,
-                        'status' => $journal ? 'TERISI' : ($holiday ? 'LIBUR' : 'KOSONG')
+                        'status' => $journal ? 'TERISI' : ($holiday ? 'LIBUR' : 'KOSONG'),
+                        'session_time' => $this->resolveSessionTime($schedule, $dayOfWeek),
                     ];
                 }
                 
@@ -186,15 +191,16 @@ class WaliClassJournalMonitoringController extends Controller
                         $dayData['items'][] = [
                             'schedule' => $mockSchedule,
                             'journal' => $journal,
-                            'status' => 'TERISI_TIDAK_TERJADWAL'
+                            'status' => 'TERISI_TIDAK_TERJADWAL',
+                            'session_time' => $this->resolveSessionTime($mockSchedule, $dayOfWeek),
                         ];
                     }
                 }
                 
-                // Sort items by session start time if available, otherwise by session hour name
+                // Sort items by session start time (per-classroom matrix), otherwise by session hour name
                 usort($dayData['items'], function($a, $b) {
-                    $startA = $a['schedule']->classSession->starts_at ?? '23:59:59';
-                    $startB = $b['schedule']->classSession->starts_at ?? '23:59:59';
+                    $startA = $a['session_time']['starts_at'] ?? '23:59:59';
+                    $startB = $b['session_time']['starts_at'] ?? '23:59:59';
                     if ($startA === $startB) {
                         return strcmp($a['schedule']->classSession->session_name ?? '', $b['schedule']->classSession->session_name ?? '');
                     }
@@ -226,8 +232,8 @@ class WaliClassJournalMonitoringController extends Controller
         }
         
         return compact(
-            'monitoringData', 
-            'month', 
+            'monitoringData',
+            'month',
             'year',
             'subjectOptions',
             'classOptions',
@@ -238,5 +244,36 @@ class WaliClassJournalMonitoringController extends Controller
             'filterStatus',
             'teacher'
         );
+    }
+
+    /**
+     * Resolve jam sesi [starts_at, ends_at] untuk sebuah schedule (real atau mock)
+     * memakai matrix per-classroom (`SessionTimetable::resolve`). Matrix inilah
+     * sumber kebenaran jam diniyyah — berbeda per gender (Ikhwan Senin 07:40,
+     * Akhwat 10:30). Fallback ke jam default global `ClassSession` bila matrix
+     * belum di-seed untuk classroom/hari itu (mis. classroom non-Mustawa).
+     */
+    private function resolveSessionTime($schedule, int $dayOfWeek): ?array
+    {
+        $classroom = $schedule->teacherAssignment?->classSubject?->classroomTerm?->classroom ?? null;
+        $sessionName = $schedule->classSession?->session_name ?? null;
+
+        if ($classroom && $sessionName) {
+            $resolved = \App\Support\SessionTimetable::resolve($classroom->id, $dayOfWeek, $sessionName);
+            if ($resolved) {
+                return $resolved;
+            }
+        }
+
+        // Fallback: jam default global ClassSession bila matrix per-classroom
+        // belum di-seed (mis. classroom non-Mustawa / hari tanpa matrix).
+        if ($schedule->classSession && $schedule->classSession->starts_at) {
+            return [
+                'starts_at' => $schedule->classSession->starts_at,
+                'ends_at' => $schedule->classSession->ends_at,
+            ];
+        }
+
+        return null;
     }
 }
