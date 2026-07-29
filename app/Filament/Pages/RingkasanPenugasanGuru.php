@@ -55,10 +55,15 @@ class RingkasanPenugasanGuru extends Page implements HasTable
             ->get();
 
         $this->termOptions = $terms
-            ->map(fn (AcademicTerm $term) => [
-                'id' => $term->id,
-                'label' => trim(($term->academicYear?->name ?? '-').' - '.$term->name),
-            ])
+            ->map(function (AcademicTerm $term): array {
+                $year = $term->academicYear?->name ?? '';
+                // Hindari label rangkap jika nama term sudah mengandung tahun ajaran.
+                $label = ($year !== '' && str_contains($term->name, $year))
+                    ? $term->name
+                    : trim(($year !== '' ? $year : '-').' - '.$term->name);
+
+                return ['id' => $term->id, 'label' => $label];
+            })
             ->values()
             ->all();
 

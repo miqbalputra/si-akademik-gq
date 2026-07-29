@@ -6,29 +6,20 @@
 
     <div class="space-y-6">
         {{-- ===== FILTER PERIODE ===== --}}
-        <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div class="grid gap-3 md:grid-cols-2">
-                <label class="block">
-                    <span class="text-xs font-semibold uppercase tracking-wide text-slate-500">Periode Ajaran</span>
-                    <select
-                        name="academicTermId"
-                        wire:model.live="academicTermId"
-                        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:ring-amber-200"
-                    >
-                        @foreach ($termOptions as $termOpt)
-                            <option value="{{ $termOpt['id'] }}" @selected((string) $termOpt['id'] === (string) $this->academicTermId)>{{ $termOpt['label'] }}</option>
-                        @endforeach
-                    </select>
-                </label>
-                <div class="flex items-end">
-                    <p class="text-sm text-slate-600">
-                        Periode: <span class="font-semibold">{{ $this->termLabel }}</span>
-                    </p>
-                </div>
+        <section class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div class="flex flex-wrap items-center gap-3">
+                <span class="text-xs font-semibold uppercase tracking-wide text-slate-500">Periode</span>
+                <select
+                    name="academicTermId"
+                    wire:model.live="academicTermId"
+                    class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm focus:border-amber-500 focus:ring-amber-200"
+                >
+                    @foreach ($termOptions as $termOpt)
+                        <option value="{{ $termOpt['id'] }}" @selected((string) $termOpt['id'] === (string) $this->academicTermId)>{{ $termOpt['label'] }}</option>
+                    @endforeach
+                </select>
+                <span class="text-xs text-slate-400">Status Aktif = tanggal selesai kosong atau &ge; hari ini WIB. Gunakan search / filter / sort untuk mengaudit.</span>
             </div>
-            <p class="mt-3 text-xs text-slate-500">
-                Tabel memuat semua penugasan di periode terpilih. Status Aktif = belum selesai (tanggal selesai kosong atau &ge; hari ini WIB). Gunakan kolom search, filter, dan sort untuk mengaudit.
-            </p>
         </section>
 
         {{-- ===== STAT CARDS ===== --}}
