@@ -6,6 +6,7 @@ use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\DiniyyahLedgerController;
 use App\Http\Controllers\DiniyyahMonitoringController;
 use App\Http\Controllers\DiniyyahJournalExportController;
+use App\Http\Controllers\RekapJurnalGuruExportController;
 use App\Http\Controllers\GuardianDashboardController;
 use App\Http\Controllers\GuardianTahfidzController;
 use App\Http\Controllers\GuruTahfidzController;
@@ -87,6 +88,11 @@ Route::middleware('auth')->prefix('diniyyah')->name('diniyyah.')->group(function
 // Ekspor lengkap seluruh jurnal diniyyah (reguler + pengganti) untuk admin/kabag/kepala_sekolah.
 Route::middleware('auth')->prefix('admin/diniyyah-journals')->name('admin.diniyyah-journals.')->group(function () {
     Route::get('/export', [DiniyyahJournalExportController::class, 'export'])->name('export');
+});
+
+// Export CSV rekap JP per guru diniyyah (asli/pengganti/tafsir) untuk admin/kabag/kepala_sekolah.
+Route::middleware('auth')->prefix('admin/rekap-jurnal-guru')->name('admin.rekap-jurnal-guru.')->group(function () {
+    Route::get('/export', RekapJurnalGuruExportController::class)->name('export');
 });
 
 Route::middleware('auth')->group(function () {
