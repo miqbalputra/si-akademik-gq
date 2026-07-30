@@ -19,8 +19,8 @@ use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 /**
- * Jurnal Tafsir serentak: 1 input materi → 1 jurnal per kelas Tafsir guru.
- * Kamis 09:50-10:20, 1 Ustadz ke M2-M6 Ikhwan (atau Ustadzah ke M2-M6 Akhwat).
+ * Jurnal Tafsir serentak: 1 input materi → 1 jurnal per kelas Tafsir yang
+ * DICENTANG guru. Kamis 09:50-10:20, 1 Ustadz ke M2-M6 Ikhwan.
  */
 class GuruDiniyyahTafsirJournalTest extends TestCase
 {
@@ -29,14 +29,16 @@ class GuruDiniyyahTafsirJournalTest extends TestCase
     /** 2026-07-16 = Kamis. */
     private const KAMIS = '2026-07-16';
 
-    public function test_store_creates_one_journal_per_tafsir_class(): void
+    public function test_store_creates_one_journal_per_checked_tafsir_class(): void
     {
         $ctx = $this->makeTafsirTeacher(['Mustawa 2 Ikhwan', 'Mustawa 3 Ikhwan', 'Mustawa 4 Ikhwan', 'Mustawa 5 Ikhwan', 'Mustawa 6 Ikhwan']);
+        $checkedIds = collect($ctx['assignments'])->pluck('id')->all();
 
         $response = $this->actingAs($ctx['user'])
             ->post(route('guru.diniyyah-tafsir-journals.store'), [
                 'date' => self::KAMIS,
                 'material' => 'Surat Al-Baqarah ayat 1-5',
+                'assignments' => $checkedIds,
             ]);
 
         $response->assertRedirect();
@@ -53,18 +55,76 @@ class GuruDiniyyahTafsirJournalTest extends TestCase
         }
     }
 
+    public function test_store_creates_journals_only_for_checked_classes(): void
+    {
+        $ctx = $this->makeTafsirTeacher(['Mustawa 2 Ikhwan', 'Mustawa 3 Ikhwan', 'Mustawa 4 Ikhwan']);
+        [$a2, $a3, $a4] = $ctx['assignments'];
+
+        // Hanya centang M2 & M4 — M3 tidak ikut.
+        $this->actingAs($ctx['user'])
+            ->post(route('guru.diniyyah-tafsir-journals.store'), [
+                'date' => self::KAMIS,
+                'material' => 'Materi',
+                'assignments' => [$a2->id, $a4->id],
+            ])
+            ->assertRedirect();
+
+        $this->assertSame(2, DiniyyahClassJournal::where('session_hour', 'tafsir')->count());
+        $this->assertDatabaseHas('diniyyah_class_journals', ['diniyyah_teacher_assignment_id' => $a2->id]);
+        $this->assertDatabaseHas('diniyyah_class_journals', ['diniyyah_teacher_assignment_id' => $a4->id]);
+        $this->assertDatabaseMissing('diniyyah_class_journals', ['diniyyah_teacher_assignment_id' => $a3->id]);
+    }
+
+    public function test_store_requires_at_least_one_assignment(): void
+    {
+        $ctx = $this->makeTafsirTeacher(['Mustawa 2 Ikhwan']);
+
+        $response = $this->actingAs($ctx['user'])
+            ->post(route('guru.diniyyah-tafsir-journals.store'), [
+                'date' => self::KAMIS,
+                'material' => 'Materi',
+                'assignments' => [],
+            ]);
+
+        $response->assertSessionHasErrors('assignments');
+        $this->assertSame(0, DiniyyahClassJournal::count());
+    }
+
+    public function test_store_ignores_assignments_not_owned_by_teacher(): void
+    {
+        $ctx = $this->makeTafsirTeacher(['Mustawa 2 Ikhwan']);
+        $other = $this->makeTafsirTeacher(['Mustawa 3 Ikhwan']);
+
+        // Injeksi assignment milik guru lain bersama assignment sendiri.
+        $ownId = $ctx['assignments'][0]->id;
+        $otherId = $other['assignments'][0]->id;
+
+        $this->actingAs($ctx['user'])
+            ->post(route('guru.diniyyah-tafsir-journals.store'), [
+                'date' => self::KAMIS,
+                'material' => 'Materi',
+                'assignments' => [$ownId, $otherId],
+            ])
+            ->assertRedirect();
+
+        // Hanya assignment sendiri yang dapat jurnal; milik guru lain diabaikan.
+        $this->assertDatabaseHas('diniyyah_class_journals', ['diniyyah_teacher_assignment_id' => $ownId]);
+        $this->assertDatabaseMissing('diniyyah_class_journals', ['diniyyah_teacher_assignment_id' => $otherId]);
+    }
+
     public function test_store_skips_classes_that_already_have_tafsir_journal(): void
     {
         $ctx = $this->makeTafsirTeacher(['Mustawa 2 Ikhwan', 'Mustawa 3 Ikhwan']);
+        $ids = collect($ctx['assignments'])->pluck('id')->all();
 
         // Isi pertama kali → 2 jurnal.
         $this->actingAs($ctx['user'])
-            ->post(route('guru.diniyyah-tafsir-journals.store'), ['date' => self::KAMIS, 'material' => 'Materi 1'])
+            ->post(route('guru.diniyyah-tafsir-journals.store'), ['date' => self::KAMIS, 'material' => 'Materi 1', 'assignments' => $ids])
             ->assertRedirect();
 
         // Isi ulang tanggal sama → 0 created, 2 skipped.
         $response = $this->actingAs($ctx['user'])
-            ->post(route('guru.diniyyah-tafsir-journals.store'), ['date' => self::KAMIS, 'material' => 'Materi 2']);
+            ->post(route('guru.diniyyah-tafsir-journals.store'), ['date' => self::KAMIS, 'material' => 'Materi 2', 'assignments' => $ids]);
 
         $response->assertRedirect();
         $response->assertSessionHas('error');
@@ -74,10 +134,11 @@ class GuruDiniyyahTafsirJournalTest extends TestCase
     public function test_store_rejects_non_kamis_date(): void
     {
         $ctx = $this->makeTafsirTeacher(['Mustawa 2 Ikhwan']);
+        $ids = collect($ctx['assignments'])->pluck('id')->all();
 
         // 2026-07-14 = Selasa.
         $response = $this->actingAs($ctx['user'])
-            ->post(route('guru.diniyyah-tafsir-journals.store'), ['date' => '2026-07-14', 'material' => 'Materi']);
+            ->post(route('guru.diniyyah-tafsir-journals.store'), ['date' => '2026-07-14', 'material' => 'Materi', 'assignments' => $ids]);
 
         $response->assertSessionHasErrors('date');
         $this->assertSame(0, DiniyyahClassJournal::count());
@@ -97,8 +158,10 @@ class GuruDiniyyahTafsirJournalTest extends TestCase
     {
         $ctx = $this->makeTafsirTeacher([], withFiqihAssignment: true);
 
+        // assignments terisi (lolos validasi) tapi tidak ada penugasan Tafsir
+        // milik guru → branch "belum memiliki penugasan Tafsir".
         $response = $this->actingAs($ctx['user'])
-            ->post(route('guru.diniyyah-tafsir-journals.store'), ['date' => self::KAMIS, 'material' => 'Materi']);
+            ->post(route('guru.diniyyah-tafsir-journals.store'), ['date' => self::KAMIS, 'material' => 'Materi', 'assignments' => [1]]);
 
         $response->assertRedirect();
         $response->assertSessionHas('error');
@@ -110,9 +173,10 @@ class GuruDiniyyahTafsirJournalTest extends TestCase
         // 5 assignment berbeda, tanggal sama, session_hour='tafsir' → tidak konflik
         // (unique index = assignment_id + date + session_hour).
         $ctx = $this->makeTafsirTeacher(['Mustawa 2 Ikhwan', 'Mustawa 3 Ikhwan', 'Mustawa 4 Ikhwan', 'Mustawa 5 Ikhwan', 'Mustawa 6 Ikhwan']);
+        $ids = collect($ctx['assignments'])->pluck('id')->all();
 
         $this->actingAs($ctx['user'])
-            ->post(route('guru.diniyyah-tafsir-journals.store'), ['date' => self::KAMIS, 'material' => 'Materi'])
+            ->post(route('guru.diniyyah-tafsir-journals.store'), ['date' => self::KAMIS, 'material' => 'Materi', 'assignments' => $ids])
             ->assertRedirect();
 
         // Unique index = (assignment_id, date, session_hour). 5 assignment berbeda

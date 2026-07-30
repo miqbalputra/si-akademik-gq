@@ -11,22 +11,25 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 
 /**
- * Menu "Jurnal Tafsir": input serentak 1 materi → N jurnal (satu per kelas
- * Tafsir) untuk guru yang mengajar Tafsir ke beberapa kelas sekaligus.
+ * Menu "Jurnal Pengganti Tafsir (Serentak)": pengganti menggantikan guru Tafsir
+ * asli untuk beberapa kelas sekaligus pada sesi Kamis 09:50-10:20.
  *
- * Skenario: Kamis 09:50-10:20, 1 Ustadz mengajar Tafsir ke M2-M6 Ikhwan,
- * 1 Ustadzah ke M2-M6 Akhwat. Alih-alih mengisi 5 jurnal manual, guru cukup
- * input 1 materi di sini → terbentuk 5 jurnal (session_hour='tafsir',
- * snapshot 09:50-10:20), satu per penugasan Tafsir miliknya.
+ * Skenario: Ustadz Farhan (guru Tafsir M2-M6 Ikhwan) berhalangan; seorang
+ * pengganti mengisi sesi Tafsir ke sebagian/semua kelas itu. Pengganti centang
+ * kelas yang dia gantikan, isi 1 materi → terbentuk 1 jurnal pengganti per
+ * kelas yang dicentang.
  *
- * Identifikasi penugasan Tafsir: assignment yang subject-nya ber-code 'tafsir'
- * (atau nama mengandung 'Tafsir'). Subject Tafsir ditambahkan via migration
- * 000005; DiniyyahClassSubject + assignment di-set admin via Filament.
+ * Penyimpanan (sama dengan Jurnal Guru Pengganti biasa): kolom
+ * `diniyyah_teacher_assignment_id` TETAP menunjuk assignment guru asli (yang
+ * digantikan), dan `substitute_teacher_id` menunjuk pengganti. Dengan demikian:
+ *  - mengisi slot jadwal asli (unik index assignment+date+session tetap berlaku),
+ *  - muncul di daftar jurnal guru asli dengan tanda "digantikan oleh ...",
+ *  - JP-nya dihitung ke pengganti (lihat DiniyyahClassJournal::effectiveTeacher()).
  *
- * Forward-compatible: bila guru belum punya penugasan Tafsir, halaman menampilkan
- * pesan (form disembunyikan) — tanpa error.
+ * Daftar kelas yang bisa digantikan = semua assignment Tafsir aktif milik guru
+ * LAIN (bukan milik pengganti sendiri), dikelompokkan per nama guru asli.
  */
-class GuruDiniyyahTafsirJournalController extends Controller
+class GuruDiniyyahSubstituteTafsirJournalController extends Controller
 {
     public function index(Request $request)
     {
@@ -35,11 +38,15 @@ class GuruDiniyyahTafsirJournalController extends Controller
             abort(403, 'Akses ditolak. Akun Anda tidak terhubung dengan data Guru.');
         }
 
-        $tafsirAssignments = $this->tafsirAssignmentsFor($teacher);
         $selectedDate = $request->query('date', $this->defaultThursday());
 
-        return view('guru.diniyyah-tafsir-journals.index', [
-            'tafsirAssignments' => $tafsirAssignments,
+        // Assignment Tafsir aktif milik guru lain, dikelompokkan per guru asli.
+        $grouped = $this->othersTafsirAssignmentsFor($teacher)
+            ->groupBy(fn ($a) => $a->teacher?->name ?? '-')
+            ->sortKeys();
+
+        return view('guru.diniyyah-substitute-tafsir-journals.index', [
+            'grouped' => $grouped,
             'selectedDate' => $selectedDate,
             'teacher' => $teacher,
         ]);
@@ -61,8 +68,8 @@ class GuruDiniyyahTafsirJournalController extends Controller
             'assignments' => ['required', 'array', 'min:1'],
             'assignments.*' => ['integer'],
         ], [
-            'assignments.required' => 'Pilih minimal satu kelas yang ikut sesi Tafsir.',
-            'assignments.min' => 'Pilih minimal satu kelas yang ikut sesi Tafsir.',
+            'assignments.required' => 'Pilih minimal satu kelas yang Anda gantikan.',
+            'assignments.min' => 'Pilih minimal satu kelas yang Anda gantikan.',
         ]);
 
         $teacher = Auth::user()->teacher;
@@ -70,18 +77,14 @@ class GuruDiniyyahTafsirJournalController extends Controller
             abort(403, 'Akses ditolak. Akun Anda tidak terhubung dengan data Guru.');
         }
 
-        $tafsirAssignments = $this->tafsirAssignmentsFor($teacher);
-        if ($tafsirAssignments->isEmpty()) {
-            return redirect()->route('guru.diniyyah-tafsir-journals.index')
-                ->with('error', 'Anda belum memiliki penugasan Tafsir. Minta admin menambahkannya di menu Diniyyah (subject Tafsir Al Quran + penugasan ke kelas Anda).');
-        }
-
-        // Hanya assignment Tafsir milik guru sendiri yang dicentang. Karena
-        // tafsirAssignmentsFor() sudah memfilter teacher_id, whereIn('id', ...)
-        // menjamin tidak ada assignment guru lain yang lolos walau di-injeksi.
-        $selected = $tafsirAssignments->whereIn('id', $validated['assignments'])->values();
+        // Hanya assignment Tafsir aktif milik guru LAIN yang dicentang.
+        // othersTafsirAssignmentsFor() sudah mengecualikan milik pengganti, jadi
+        // whereIn('id', ...) menjamin pengganti tidak menggantikan dirinya sendiri
+        // maupun assignment non-Tafsir.
+        $others = $this->othersTafsirAssignmentsFor($teacher);
+        $selected = $others->whereIn('id', $validated['assignments'])->values();
         if ($selected->isEmpty()) {
-            return back()->withInput()->with('error', 'Kelas yang Anda pilih tidak valid atau bukan penugasan Tafsir Anda.');
+            return back()->withInput()->with('error', 'Kelas yang Anda pilih tidak valid atau bukan penugasan Tafsir guru lain.');
         }
 
         $created = 0;
@@ -105,6 +108,7 @@ class GuruDiniyyahTafsirJournalController extends Controller
 
                 DiniyyahClassJournal::create([
                     'diniyyah_teacher_assignment_id' => $assignment->id,
+                    'substitute_teacher_id' => $teacher->id,
                     'date' => $validated['date'],
                     'session_hour' => SessionTimetable::SESSION_TAFSIR,
                     'session_starts_at' => $time['starts_at'],
@@ -125,23 +129,29 @@ class GuruDiniyyahTafsirJournalController extends Controller
             }
         }
 
-        $message = $created.' jurnal Tafsir berhasil dibuat untuk '.$created.' kelas yang dipilih.';
+        $message = $created.' jurnal pengganti Tafsir berhasil dibuat untuk '.$created.' kelas yang dipilih.';
         if ($skipped > 0) {
             $message .= ' '.$skipped.' kelas sudah ada jurnal Tafsir di tanggal ini (di-skip).';
         }
 
-        return redirect()->route('guru.diniyyah-tafsir-journals.index', ['date' => $validated['date']])
+        return redirect()->route('guru.diniyyah-substitute-tafsir-journals.index', ['date' => $validated['date']])
             ->with($created > 0 ? 'success' : 'error', $message);
     }
 
     /**
-     * Penugasan Tafsir milik guru (subject code 'tafsir' atau nama mengandung
-     * 'Tafsir'), eager-load classSubject.subject + classroomTerm.classroom.
+     * Semua assignment Tafsir aktif milik guru LAIN (bukan pengganti yang login),
+     * eager-load classSubject.subject + classroomTerm.classroom + teacher.
      */
-    private function tafsirAssignmentsFor($teacher)
+    private function othersTafsirAssignmentsFor($teacher)
     {
-        return DiniyyahTeacherAssignment::with(['classSubject.subject', 'classSubject.classroomTerm.classroom'])
-            ->where('teacher_id', $teacher->id)
+        return DiniyyahTeacherAssignment::with(['classSubject.subject', 'classSubject.classroomTerm.classroom', 'teacher'])
+            ->where('teacher_id', '!=', $teacher->id)
+            ->where(function ($query) {
+                $query->whereNull('starts_at')->orWhere('starts_at', '<=', now()->toDateString());
+            })
+            ->where(function ($query) {
+                $query->whereNull('ends_at')->orWhere('ends_at', '>=', now()->toDateString());
+            })
             ->get()
             ->filter(fn ($a) => $a->classSubject?->subject
                 && (strtolower($a->classSubject->subject->code) === SessionTimetable::SESSION_TAFSIR
