@@ -56,4 +56,27 @@ class DiniyyahClassSubject extends Model
     {
         return $this->hasMany(DiniyyahAssessmentSet::class);
     }
+
+    /**
+     * Opsi pencarian untuk Select Filament "Mapel Kelas": cocokkan nama kelas
+     * (classroomTerm) atau nama mapel (subject), atau id eksak. Kembali array
+     * [id => "Kelas - Mapel"].
+     */
+    public static function searchOptions(string $search): array
+    {
+        if (! filled($search)) {
+            return [];
+        }
+
+        return static::query()
+            ->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($search): void {
+                $q->whereHas('classroomTerm', fn ($qq) => $qq->where('name', 'like', "%{$search}%"))
+                    ->orWhereHas('subject', fn ($qq) => $qq->where('name', 'like', "%{$search}%"))
+                    ->orWhere('id', $search);
+            })
+            ->limit(50)
+            ->get()
+            ->mapWithKeys(fn (self $r) => [$r->id => "{$r->classroomTerm?->name} - {$r->subject?->name}"])
+            ->all();
+    }
 }

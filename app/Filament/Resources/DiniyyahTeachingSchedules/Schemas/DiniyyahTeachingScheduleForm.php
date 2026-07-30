@@ -16,8 +16,10 @@ class DiniyyahTeachingScheduleForm
                     ->label('Tugas Mengajar (Mapel & Guru)')
                     ->relationship('teacherAssignment', 'id')
                     ->getOptionLabelFromRecordUsing(fn (\App\Models\DiniyyahTeacherAssignment $record) => "{$record->classSubject->classroomTerm->name} - {$record->classSubject->subject->name} ({$record->teacher->name})")
+                    ->getSearchResultsUsing(fn (string $search): array => \App\Models\DiniyyahTeacherAssignment::searchOptions($search))
                     ->searchable()
                     ->preload()
+                    ->optionsLimit(200)
                     ->required(),
                 Select::make('day_of_week')
                     ->label('Hari')

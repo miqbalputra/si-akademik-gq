@@ -45,4 +45,28 @@ class DiniyyahTeacherAssignment extends Model
     {
         return $this->hasMany(DiniyyahTeachingSchedule::class, 'diniyyah_teacher_assignment_id');
     }
+
+    /**
+     * Opsi pencarian untuk Select Filament "Tugas Mengajar": cocokkan nama kelas
+     * (classSubject.classroomTerm), nama mapel (classSubject.subject), nama guru,
+     * atau id eksak. Kembali array [id => "Kelas - Mapel (Guru)"].
+     */
+    public static function searchOptions(string $search): array
+    {
+        if (! filled($search)) {
+            return [];
+        }
+
+        return static::query()
+            ->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($search): void {
+                $q->whereHas('classSubject.classroomTerm', fn ($qq) => $qq->where('name', 'like', "%{$search}%"))
+                    ->orWhereHas('classSubject.subject', fn ($qq) => $qq->where('name', 'like', "%{$search}%"))
+                    ->orWhereHas('teacher', fn ($qq) => $qq->where('name', 'like', "%{$search}%"))
+                    ->orWhere('id', $search);
+            })
+            ->limit(50)
+            ->get()
+            ->mapWithKeys(fn (self $r) => [$r->id => "{$r->classSubject->classroomTerm->name} - {$r->classSubject->subject->name} ({$r->teacher->name})"])
+            ->all();
+    }
 }

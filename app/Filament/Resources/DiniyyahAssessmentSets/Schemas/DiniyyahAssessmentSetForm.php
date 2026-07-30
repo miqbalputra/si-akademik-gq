@@ -16,8 +16,10 @@ class DiniyyahAssessmentSetForm
                 Select::make('diniyyah_class_subject_id')->label('Mapel Kelas')
                     ->relationship('classSubject', 'id')
                     ->getOptionLabelFromRecordUsing(fn (\App\Models\DiniyyahClassSubject $record) => "{$record->classroomTerm?->name} - {$record->subject?->name}")
+                    ->getSearchResultsUsing(fn (string $search): array => \App\Models\DiniyyahClassSubject::searchOptions($search))
                     ->searchable()
                     ->preload()
+                    ->optionsLimit(200)
                     ->required(),
                 TextInput::make('title')->label('Judul')
                     ->required(),
