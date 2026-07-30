@@ -217,32 +217,31 @@
                 <input type="hidden" name="classroom_term_id" value="{{ $selectedClassroomTermId }}">
                 <input type="hidden" name="date" value="{{ $selectedDate }}">
 
-                <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                    <div>
-                        <label for="session_hour" class="block text-sm font-bold text-slate-700 mb-1.5">Sesi</label>
-                        <select id="session_hour" name="session_hour" required class="w-full rounded-xl border-slate-300 shadow-sm text-sm focus:ring-amber-500 focus:border-amber-500">
-                            <option value="" disabled selected>Pilih Sesi</option>
-                            @foreach($sessionSlots as $slot)
-                                @php
-                                    $slotStart = \Carbon\Carbon::parse($slot->starts_at)->format('H:i');
-                                    $slotEnd = \Carbon\Carbon::parse($slot->ends_at)->format('H:i');
-                                @endphp
-                                <option value="{{ $slot->session_name }}" data-start="{{ $slotStart }}" data-end="{{ $slotEnd }}">
-                                    {{ \App\Support\SessionTimetable::label($slot->session_name) }} ({{ $slotStart }} - {{ $slotEnd }})
-                                </option>
-                            @endforeach
-                        </select>
-                        <span id="session-time-hint" class="mt-1 block text-xs font-medium text-slate-500"></span>
-                    </div>
-                    <div>
-                        <label for="diniyyah_teacher_assignment_id" class="block text-sm font-bold text-slate-700 mb-1.5">Mata Pelajaran</label>
-                        <select id="diniyyah_teacher_assignment_id" name="diniyyah_teacher_assignment_id" required class="w-full rounded-xl border-slate-300 shadow-sm text-sm focus:ring-amber-500 focus:border-amber-500">
-                            @foreach($classAssignments as $assignment)
-                                <option value="{{ $assignment->id }}">{{ $assignment->classSubject->subject->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
+                <div>
+                    <label for="schedule_slot" class="block text-sm font-bold text-slate-700 mb-1.5">Jadwal Mengajar (Sesi & Mapel)</label>
+                    <select id="schedule_slot" name="schedule_slot" required class="w-full rounded-xl border-slate-300 shadow-sm text-sm focus:ring-amber-500 focus:border-amber-500">
+                        <option value="" disabled selected>Pilih jadwal...</option>
+                        @foreach($scheduledSlots as $slot)
+                            @php
+                                $slotStart = $slot->starts_at ? \Carbon\Carbon::parse($slot->starts_at)->format('H:i') : '';
+                                $slotEnd = $slot->ends_at ? \Carbon\Carbon::parse($slot->ends_at)->format('H:i') : '';
+                            @endphp
+                            <option value="{{ $slot->assignment_id }}|{{ $slot->session_name }}"
+                                    data-assignment="{{ $slot->assignment_id }}"
+                                    data-session="{{ $slot->session_name }}"
+                                    data-start="{{ $slotStart }}"
+                                    data-end="{{ $slotEnd }}"
+                                    {{ $slot->filled ? 'disabled' : '' }}>
+                                {{ \App\Support\SessionTimetable::label($slot->session_name) }} — {{ $slot->subject_name }}@if($slotStart) ({{ $slotStart }} - {{ $slotEnd }}) @endif{{ $slot->filled ? ' (sudah terisi)' : '' }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <span id="session-time-hint" class="mt-1 block text-xs font-medium text-slate-500"></span>
                 </div>
+                {{-- Kontrak field lama dipertahankan: dua hidden ini diisi oleh skrip
+                     dari pilihan "Jadwal Mengajar" di atas. --}}
+                <input type="hidden" name="diniyyah_teacher_assignment_id" id="assignment_id_input">
+                <input type="hidden" name="session_hour" id="session_hour_input">
 
                 <div class="mt-5">
                     <label for="material" class="block text-sm font-bold text-slate-700 mb-1.5">Materi</label>
@@ -265,15 +264,25 @@
         </div>
         <script>
             (function () {
-                const sel = document.getElementById('session_hour');
-                const hint = document.getElementById('session-time-hint');
-                if (!sel || !hint) return;
-                function update() {
-                    const o = sel.options[sel.selectedIndex];
-                    hint.textContent = (o && o.dataset.start) ? (o.dataset.start + ' - ' + o.dataset.end) : '';
+                const s = document.getElementById('schedule_slot'),
+                    a = document.getElementById('assignment_id_input'),
+                    h = document.getElementById('session_hour_input'),
+                    t = document.getElementById('session-time-hint');
+                if (!s || !a || !h) return;
+                function apply() {
+                    const o = s.options[s.selectedIndex];
+                    if (!o || !o.dataset.assignment) {
+                        a.value = '';
+                        h.value = '';
+                        if (t) t.textContent = '';
+                        return;
+                    }
+                    a.value = o.dataset.assignment;
+                    h.value = o.dataset.session;
+                    if (t) t.textContent = o.dataset.start ? (o.dataset.start + ' - ' + o.dataset.end) : '';
                 }
-                sel.addEventListener('change', update);
-                update();
+                s.addEventListener('change', apply);
+                apply();
             })();
         </script>
         @elseif($classAssignments->isNotEmpty() && $sessionSlots->isNotEmpty())

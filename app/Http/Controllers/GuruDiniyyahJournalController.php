@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\ClassroomTerm;
 use App\Models\DiniyyahClassJournal;
 use App\Models\DiniyyahTeacherAssignment;
+use App\Models\DiniyyahTeachingSchedule;
 use App\Models\StudentAttendance;
 use App\Models\ClassEnrollment;
 use App\Support\SessionTimetable;
@@ -22,9 +23,9 @@ class GuruDiniyyahJournalController extends Controller
             abort(403, 'Akses ditolak. Akun Anda tidak terhubung dengan data Guru.');
         }
         
-        // Active assignments for this teacher. eager-load `schedules` agar pengecekan
-        // "guru dijadwalkan di hari X" di kelas terpilih tidak menambah query (N+1).
-        $assignments = DiniyyahTeacherAssignment::with(['classSubject.subject', 'classSubject.classroomTerm.classroom', 'schedules'])
+        // Active assignments for this teacher. eager-load `schedules.classSession` agar
+        // pengecekan jadwal (hari & sesi) di kelas terpilih tidak menambah query (N+1).
+        $assignments = DiniyyahTeacherAssignment::with(['classSubject.subject', 'classSubject.classroomTerm.classroom', 'schedules.classSession'])
             ->where('teacher_id', $teacher->id)
             ->get();
 
@@ -75,6 +76,7 @@ class GuruDiniyyahJournalController extends Controller
         // Matrix slot sesi per (gender kelas, hari tanggal terpilih) — mengakomodasi
         // perbedaan jam Ikhwan vs Akhwat (Senin) serta Kamis (Tafsir) & Jum'at.
         $sessionSlots = collect();
+        $scheduledSlots = collect();
         $selectedTerm = null;
         $hasScheduleOnDay = false;
         if ($selectedClassroomTermId) {
@@ -90,6 +92,38 @@ class GuruDiniyyahJournalController extends Controller
                 $hasScheduleOnDay = $classAssignments->contains(
                     fn ($assignment) => $assignment->schedules->contains('day_of_week', $dayOfWeek)
                 );
+
+                // Slot jadwal guru di kelas & hari ini: tiap baris DiniyyahTeachingSchedule
+                // (assignment guru di kelas ini, day_of_week = hari tanggal) → satu slot
+                // (assignment + sesi). Form hanya menawarkan slot ini supaya guru tak bisa
+                // isi sesi/mapel di luar jadwal (mencegah tumpang-tindih sesi dgn guru lain).
+                // `filled` = sudah ada jurnal (oleh guru sendiri/pengganti) → disabled di UI.
+                $filledKeys = $existingJournals
+                    ->map(fn ($journal) => $journal->teacherAssignment->id.'|'.$journal->session_hour)
+                    ->all();
+                foreach ($classAssignments as $assignment) {
+                    foreach ($assignment->schedules as $schedule) {
+                        if ((int) $schedule->day_of_week !== $dayOfWeek) {
+                            continue;
+                        }
+                        $sessionName = $schedule->classSession?->session_name;
+                        if (! $sessionName) {
+                            continue;
+                        }
+                        $slot = $sessionSlots->firstWhere('session_name', $sessionName);
+                        $scheduledSlots->push((object) [
+                            'assignment_id' => $assignment->id,
+                            'session_name' => $sessionName,
+                            'subject_name' => $assignment->classSubject->subject->name,
+                            'starts_at' => $slot?->starts_at,
+                            'ends_at' => $slot?->ends_at,
+                            'filled' => in_array($assignment->id.'|'.$sessionName, $filledKeys, true),
+                        ]);
+                    }
+                }
+                $scheduledSlots = $scheduledSlots
+                    ->sortBy(fn ($slot) => $slot->starts_at ?? '99:99')
+                    ->values();
 
                 // Urutkan jurnal yang ada by jam mulai sesi (bukan by session_hour string)
                 // supaya Tafsir di Kamis tampil pertama.
@@ -109,6 +143,7 @@ class GuruDiniyyahJournalController extends Controller
             'existingJournals',
             'teacher',
             'sessionSlots',
+            'scheduledSlots',
             'selectedTerm',
             'hasScheduleOnDay'
         ));
@@ -281,6 +316,30 @@ class GuruDiniyyahJournalController extends Controller
         $assignmentClassroomTermId = $assignment->classSubject->classroom_term_id;
         if ((int) $assignmentClassroomTermId !== (int) $validated['classroom_term_id']) {
             abort(403, 'Tugas mengajar tidak sesuai dengan kelas yang dipilih.');
+        }
+
+        // Penegakan jadwal (enforce-if-assignment-has-schedules): bila assignment
+        // punya ≥1 baris DiniyyahTeachingSchedule (kasus prod, data lengkap), kombinasi
+        // (assignment, hari, sesi) harus cocok salah satu baris jadwal — jika tidak,
+        // tolak. Mencegah guru mengisi sesi/mapel di luar jadwalnya (tumpang-tindih
+        // sesi dgn guru lain). Bila assignment belum punya jadwal (data legacy / test
+        // lama) → permissive, perilaku sama seperti sebelumnya.
+        $dayOfWeek = SessionTimetable::dayOfWeekIso($validated['date']);
+        $assignmentHasSchedules = DiniyyahTeachingSchedule::query()
+            ->where('diniyyah_teacher_assignment_id', $assignment->id)
+            ->exists();
+        if ($assignmentHasSchedules) {
+            $scheduled = DiniyyahTeachingSchedule::query()
+                ->where('diniyyah_teacher_assignment_id', $assignment->id)
+                ->where('day_of_week', $dayOfWeek)
+                ->whereHas('classSession', fn ($q) => $q->where('session_name', $validated['session_hour']))
+                ->exists();
+            if (! $scheduled) {
+                return redirect()->route('guru.diniyyah-journals.index', [
+                    'classroom_term_id' => $validated['classroom_term_id'],
+                    'date' => $validated['date'],
+                ])->withInput()->with('error', 'Sesi/mapel ini tidak sesuai jadwal mengajar Anda di kelas & hari ini.');
+            }
         }
 
         // Hanya terima absensi untuk enrollment yang AKTIF di classroom_term ini.

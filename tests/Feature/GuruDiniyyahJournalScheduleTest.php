@@ -7,6 +7,7 @@ use App\Models\AcademicYear;
 use App\Models\ClassSession;
 use App\Models\Classroom;
 use App\Models\ClassroomTerm;
+use App\Models\DiniyyahClassJournal;
 use App\Models\DiniyyahClassSubject;
 use App\Models\DiniyyahSubject;
 use App\Models\DiniyyahTeacherAssignment;
@@ -109,6 +110,108 @@ class GuruDiniyyahJournalScheduleTest extends TestCase
             ->get(route('guru.diniyyah-substitute-journals.index', ['date' => self::SENIN]))
             ->assertOk()
             ->assertSee('Senin');
+    }
+
+    public function test_index_shows_only_scheduled_slots_in_combined_select(): void
+    {
+        $ctx = $this->makeTeacherWithClass();
+
+        // Guru dijadwalkan hanya di sesi 1 hari Senin. Combined select harus
+        // hanya berisi slot sesi 1 — bukan sesi 2 (yg tidak dijadwalkan).
+        $this->makeSchedule($ctx['assignment'], dayOfWeek: 1);
+
+        $this->actingAs($ctx['user'])
+            ->get(route('guru.diniyyah-journals.index', [
+                'classroom_term_id' => $ctx['classroomTerm']->id,
+                'date' => self::SENIN,
+            ]))
+            ->assertOk()
+            ->assertSee('Sesi 1 — Fiqih')
+            ->assertDontSee('Sesi 2 — Fiqih');
+    }
+
+    public function test_index_marks_already_filled_slot(): void
+    {
+        $ctx = $this->makeTeacherWithClass();
+
+        $this->makeSchedule($ctx['assignment'], dayOfWeek: 1);
+
+        // Sudah ada jurnal di slot sesi 1 → option ditandai "(sudah terisi)".
+        DiniyyahClassJournal::create([
+            'diniyyah_teacher_assignment_id' => $ctx['assignment']->id,
+            'date' => self::SENIN,
+            'session_hour' => '1',
+            'material' => 'Bab 1',
+            'jp_count' => 1,
+        ]);
+
+        $this->actingAs($ctx['user'])
+            ->get(route('guru.diniyyah-journals.index', [
+                'classroom_term_id' => $ctx['classroomTerm']->id,
+                'date' => self::SENIN,
+            ]))
+            ->assertOk()
+            ->assertSee('sudah terisi');
+    }
+
+    public function test_store_rejects_session_not_in_schedule(): void
+    {
+        $ctx = $this->makeTeacherWithClass();
+
+        // Jadwal hanya sesi 1 Senin → POST sesi 2 harus ditolak.
+        $this->makeSchedule($ctx['assignment'], dayOfWeek: 1);
+
+        $this->actingAs($ctx['user'])
+            ->post(route('guru.diniyyah-journals.store'), [
+                'diniyyah_teacher_assignment_id' => $ctx['assignment']->id,
+                'classroom_term_id' => $ctx['classroomTerm']->id,
+                'date' => self::SENIN,
+                'session_hour' => '2',
+                'material' => 'Bab 1',
+                'absences' => [],
+            ])
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseCount('diniyyah_class_journals', 0);
+    }
+
+    public function test_store_accepts_scheduled_session(): void
+    {
+        $ctx = $this->makeTeacherWithClass();
+
+        $this->makeSchedule($ctx['assignment'], dayOfWeek: 1);
+
+        $this->actingAs($ctx['user'])
+            ->post(route('guru.diniyyah-journals.store'), [
+                'diniyyah_teacher_assignment_id' => $ctx['assignment']->id,
+                'classroom_term_id' => $ctx['classroomTerm']->id,
+                'date' => self::SENIN,
+                'session_hour' => '1',
+                'material' => 'Bab 1',
+                'absences' => [],
+            ])
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseCount('diniyyah_class_journals', 1);
+    }
+
+    public function test_store_allows_any_session_when_assignment_has_no_schedule(): void
+    {
+        $ctx = $this->makeTeacherWithClass();
+
+        // TANPA baris jadwal (data legacy / test lama) → permissive: sesi 2 diterima.
+        $this->actingAs($ctx['user'])
+            ->post(route('guru.diniyyah-journals.store'), [
+                'diniyyah_teacher_assignment_id' => $ctx['assignment']->id,
+                'classroom_term_id' => $ctx['classroomTerm']->id,
+                'date' => self::SENIN,
+                'session_hour' => '2',
+                'material' => 'Bab 1',
+                'absences' => [],
+            ])
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseCount('diniyyah_class_journals', 1);
     }
 
     /**

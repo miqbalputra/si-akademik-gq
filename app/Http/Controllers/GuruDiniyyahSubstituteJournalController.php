@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\ClassroomTerm;
 use App\Models\DiniyyahClassJournal;
 use App\Models\DiniyyahTeacherAssignment;
+use App\Models\DiniyyahTeachingSchedule;
 use App\Models\StudentAttendance;
 use App\Models\ClassEnrollment;
 use App\Support\SessionTimetable;
@@ -34,7 +35,7 @@ class GuruDiniyyahSubstituteJournalController extends Controller
         }
 
         // Muat SEMUA assignment diniyyah aktif (semua guru), bukan hanya milik guru ini.
-        $allAssignments = DiniyyahTeacherAssignment::with(['classSubject.subject', 'classSubject.classroomTerm.classroom', 'teacher'])
+        $allAssignments = DiniyyahTeacherAssignment::with(['classSubject.subject', 'classSubject.classroomTerm.classroom', 'teacher', 'schedules.classSession'])
             ->where(function ($query) {
                 $query->whereNull('starts_at')->orWhere('starts_at', '<=', now()->toDateString());
             })
@@ -95,10 +96,48 @@ class GuruDiniyyahSubstituteJournalController extends Controller
 
         // Matrix slot sesi per (gender kelas yang digantikan, hari tanggal terpilih).
         $sessionSlots = collect();
+        $scheduledSlots = collect();
+        $selectedTerm = null;
+        $hasScheduleOnDay = false;
         if ($selectedClassroomTermId) {
             $selectedTerm = ClassroomTerm::with('classroom')->find($selectedClassroomTermId);
             if ($selectedTerm) {
-                $sessionSlots = SessionTimetable::slotsFor($selectedTerm->classroom_id, SessionTimetable::dayOfWeekIso($selectedDate));
+                $dayOfWeek = SessionTimetable::dayOfWeekIso($selectedDate);
+                $sessionSlots = SessionTimetable::slotsFor($selectedTerm->classroom_id, $dayOfWeek);
+
+                // Slot jadwal guru ASLI (yg digantikan) di kelas & hari ini: tiap baris
+                // DiniyyahTeachingSchedule pada assignment guru lain di kelas ini, yg
+                // day_of_week = hari tanggal → satu slot (assignment + sesi). Form hanya
+                // menawarkan slot ini supaya pengganti mengisi sesi sesuai jadwal guru
+                // asli (bukan sesi sembarang). `filled` = sudah ada jurnal → disabled.
+                $filledKeys = $existingJournals
+                    ->map(fn ($journal) => $journal->teacherAssignment->id.'|'.$journal->session_hour)
+                    ->all();
+                foreach ($classAssignments as $assignment) {
+                    foreach ($assignment->schedules as $schedule) {
+                        if ((int) $schedule->day_of_week !== $dayOfWeek) {
+                            continue;
+                        }
+                        $sessionName = $schedule->classSession?->session_name;
+                        if (! $sessionName) {
+                            continue;
+                        }
+                        $slot = $sessionSlots->firstWhere('session_name', $sessionName);
+                        $scheduledSlots->push((object) [
+                            'assignment_id' => $assignment->id,
+                            'session_name' => $sessionName,
+                            'subject_name' => $assignment->classSubject->subject->name,
+                            'teacher_name' => $assignment->teacher?->name,
+                            'starts_at' => $slot?->starts_at,
+                            'ends_at' => $slot?->ends_at,
+                            'filled' => in_array($assignment->id.'|'.$sessionName, $filledKeys, true),
+                        ]);
+                    }
+                }
+                $hasScheduleOnDay = $scheduledSlots->isNotEmpty();
+                $scheduledSlots = $scheduledSlots
+                    ->sortBy(fn ($slot) => $slot->starts_at ?? '99:99')
+                    ->values();
 
                 $existingJournals = $existingJournals->sortBy(function ($journal) use ($sessionSlots) {
                     return $sessionSlots->firstWhere('session_name', $journal->session_hour)?->starts_at ?? '99:99';
@@ -115,7 +154,10 @@ class GuruDiniyyahSubstituteJournalController extends Controller
             'classAssignments',
             'existingJournals',
             'teacher',
-            'sessionSlots'
+            'sessionSlots',
+            'scheduledSlots',
+            'selectedTerm',
+            'hasScheduleOnDay'
         ));
     }
 
@@ -150,6 +192,29 @@ class GuruDiniyyahSubstituteJournalController extends Controller
                 'classroom_term_id' => $validated['classroom_term_id'],
                 'date' => $validated['date'],
             ])->withInput()->with('error', 'Anda tidak bisa menggantikan diri sendiri. Gunakan menu Jurnal Kelas biasa untuk kelas/mapel Anda sendiri.');
+        }
+
+        // Penegakan jadwal (enforce-if-assignment-has-schedules): bila guru asli
+        // punya ≥1 baris DiniyyahTeachingSchedule pada assignment ini (kasus prod),
+        // kombinasi (assignment, hari, sesi) harus cocok salah satu baris jadwal —
+        // jika tidak, tolak. Pengganti hanya boleh mengisi sesi sesuai jadwal guru
+        // asli yg digantikan. Bila assignment belum punya jadwal → permissive.
+        $dayOfWeek = SessionTimetable::dayOfWeekIso($validated['date']);
+        $assignmentHasSchedules = DiniyyahTeachingSchedule::query()
+            ->where('diniyyah_teacher_assignment_id', $assignment->id)
+            ->exists();
+        if ($assignmentHasSchedules) {
+            $scheduled = DiniyyahTeachingSchedule::query()
+                ->where('diniyyah_teacher_assignment_id', $assignment->id)
+                ->where('day_of_week', $dayOfWeek)
+                ->whereHas('classSession', fn ($q) => $q->where('session_name', $validated['session_hour']))
+                ->exists();
+            if (! $scheduled) {
+                return redirect()->route('guru.diniyyah-substitute-journals.index', [
+                    'classroom_term_id' => $validated['classroom_term_id'],
+                    'date' => $validated['date'],
+                ])->withInput()->with('error', 'Sesi/mapel ini tidak sesuai jadwal guru asli di kelas & hari ini.');
+            }
         }
 
         // Hanya terima absensi untuk enrollment aktif di classroom_term ini.

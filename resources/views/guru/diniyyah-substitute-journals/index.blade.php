@@ -197,7 +197,7 @@
         </div>
 
         <!-- Form Isi Jurnal Pengganti -->
-        @if($classAssignments->isNotEmpty() && $sessionSlots->isNotEmpty())
+        @if($classAssignments->isNotEmpty() && $sessionSlots->isNotEmpty() && $hasScheduleOnDay)
         <div class="glass-card rounded-2xl p-6 border border-slate-200">
             <h3 class="text-lg font-black text-slate-800 mb-2 border-b border-slate-100 pb-2">Isi Jurnal Pengganti</h3>
             <p class="text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
@@ -212,26 +212,30 @@
                 <div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
                     <div class="sm:col-span-1 space-y-4">
                         <div>
-                            <label class="block text-sm font-bold text-slate-700 mb-1">Sesi</label>
-                            <select name="session_hour" required class="w-full rounded-xl border-slate-300 shadow-sm text-sm">
-                                <option value="" disabled selected>Pilih Sesi</option>
-                                @foreach($sessionSlots as $slot)
-                                    <option value="{{ $slot->session_name }}">
-                                        {{ \App\Support\SessionTimetable::label($slot->session_name) }}
-                                        ({{ \Carbon\Carbon::parse($slot->starts_at)->format('H:i') }} - {{ \Carbon\Carbon::parse($slot->ends_at)->format('H:i') }})
+                            <label for="schedule_slot" class="block text-sm font-bold text-slate-700 mb-1">Jadwal Guru Asli yang Digantikan (Sesi & Mapel)</label>
+                            <select id="schedule_slot" name="schedule_slot" required class="w-full rounded-xl border-slate-300 shadow-sm text-sm focus:ring-amber-500 focus:border-amber-500">
+                                <option value="" disabled selected>Pilih jadwal...</option>
+                                @foreach($scheduledSlots as $slot)
+                                    @php
+                                        $slotStart = $slot->starts_at ? \Carbon\Carbon::parse($slot->starts_at)->format('H:i') : '';
+                                        $slotEnd = $slot->ends_at ? \Carbon\Carbon::parse($slot->ends_at)->format('H:i') : '';
+                                    @endphp
+                                    <option value="{{ $slot->assignment_id }}|{{ $slot->session_name }}"
+                                            data-assignment="{{ $slot->assignment_id }}"
+                                            data-session="{{ $slot->session_name }}"
+                                            data-start="{{ $slotStart }}"
+                                            data-end="{{ $slotEnd }}"
+                                            {{ $slot->filled ? 'disabled' : '' }}>
+                                        {{ \App\Support\SessionTimetable::label($slot->session_name) }} — {{ $slot->subject_name }} — {{ $slot->teacher_name }}@if($slotStart) ({{ $slotStart }} - {{ $slotEnd }}) @endif{{ $slot->filled ? ' (sudah terisi)' : '' }}
                                     </option>
                                 @endforeach
                             </select>
+                            <span id="session-time-hint" class="mt-1 block text-xs font-medium text-slate-500"></span>
                         </div>
-                        <div>
-                            <label class="block text-sm font-bold text-slate-700 mb-1">Guru Asli yang Digantikan (Mapel)</label>
-                            <select name="diniyyah_teacher_assignment_id" required class="w-full rounded-xl border-slate-300 shadow-sm text-sm">
-                                <option value="" disabled selected>Pilih guru asli...</option>
-                                @foreach($classAssignments as $assignment)
-                                    <option value="{{ $assignment->id }}">{{ $assignment->classSubject->subject->name }} — {{ $assignment->teacher->name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
+                        {{-- Kontrak field lama dipertahankan: dua hidden ini diisi oleh skrip
+                             dari pilihan "Jadwal Guru Asli" di atas. --}}
+                        <input type="hidden" name="diniyyah_teacher_assignment_id" id="assignment_id_input">
+                        <input type="hidden" name="session_hour" id="session_hour_input">
                         <div>
                             <label class="block text-sm font-bold text-slate-700 mb-1">Materi</label>
                             <textarea name="material" rows="5" required class="w-full rounded-xl border-slate-300 shadow-sm text-sm focus:ring-amber-500 focus:border-amber-500" placeholder="Tuliskan materi yang diajarkan..."></textarea>
@@ -278,13 +282,43 @@
                 </div>
             </form>
         </div>
+        <script>
+            (function () {
+                const s = document.getElementById('schedule_slot'),
+                    a = document.getElementById('assignment_id_input'),
+                    h = document.getElementById('session_hour_input'),
+                    t = document.getElementById('session-time-hint');
+                if (!s || !a || !h) return;
+                function apply() {
+                    const o = s.options[s.selectedIndex];
+                    if (!o || !o.dataset.assignment) {
+                        a.value = '';
+                        h.value = '';
+                        if (t) t.textContent = '';
+                        return;
+                    }
+                    a.value = o.dataset.assignment;
+                    h.value = o.dataset.session;
+                    if (t) t.textContent = o.dataset.start ? (o.dataset.start + ' - ' + o.dataset.end) : '';
+                }
+                s.addEventListener('change', apply);
+                apply();
+            })();
+        </script>
         @elseif($classAssignments->isEmpty())
             <div class="glass-card rounded-2xl p-8 border border-slate-200 text-center text-slate-500 font-medium">
                 Tidak ada guru asli yang dapat digantikan untuk kelas ini (mungkin Anda adalah satu-satunya guru diniyyah di kelas ini, atau belum ada assignment diniyyah aktif).
             </div>
-        @else
+        @elseif($sessionSlots->isEmpty())
             <div class="glass-card rounded-2xl p-8 border border-slate-200 text-center text-slate-500 font-medium">
                 Tidak ada sesi diniyyah di hari ini ({{ \Carbon\Carbon::parse($selectedDate)->locale('id')->translatedFormat('l') }}) untuk kelas ini.
+            </div>
+        @else
+            <div class="glass-card rounded-2xl p-8 border border-amber-200 bg-amber-50 text-center">
+                <p class="text-sm font-bold text-amber-800">
+                    Tidak ada jadwal mengajar guru asli di kelas {{ $selectedTerm?->name }} pada hari {{ \Carbon\Carbon::parse($selectedDate)->locale('id')->translatedFormat('l, d F Y') }}.
+                </p>
+                <p class="text-xs text-amber-700 mt-1">Pilih tanggal yang jatuh di hari mengajar guru asli pada kelas ini.</p>
             </div>
         @endif
 
