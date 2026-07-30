@@ -32,15 +32,15 @@
             <p class="text-xs text-slate-500 mt-1">Minta admin menambahkan di menu Diniyyah: subject <strong>Tafsir Al Quran</strong> + penugasan ke kelas Anda.</p>
         </div>
     @else
-        <form method="POST" action="{{ route('guru.diniyyah-tafsir-journals.store') }}" x-data="{ checked() { return [...$el.querySelectorAll('input[name=\'assignments[]\']')].filter(c => c.checked).length } }">
+        <form method="POST" action="{{ route('guru.diniyyah-tafsir-journals.store') }}" x-data="{ checked() { return [...$root.querySelectorAll('input[name=\'assignments[]\']')].filter(c => c.checked).length } }">
             @csrf
             <!-- Daftar kelas Tafsir -->
             <div class="glass-card rounded-2xl p-6 mb-6 border border-slate-200">
                 <div class="flex items-center justify-between mb-1">
                     <h2 class="text-lg font-black text-slate-800">Kelas Tafsir Anda</h2>
                     <div class="flex gap-2">
-                        <button type="button" @click="[...$el.querySelectorAll('input[name=\'assignments[]\']')].forEach(c => c.checked = true)" class="text-[11px] font-bold text-teal-700 bg-teal-50 border border-teal-200 rounded-lg px-2 py-1 hover:bg-teal-100">Centang Semua</button>
-                        <button type="button" @click="[...$el.querySelectorAll('input[name=\'assignments[]\']')].forEach(c => c.checked = false)" class="text-[11px] font-bold text-slate-600 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 hover:bg-slate-100">Kosongkan</button>
+                        <button type="button" @click="[...$root.querySelectorAll('input[name=\'assignments[]\']')].forEach(c => c.checked = true)" class="text-[11px] font-bold text-teal-700 bg-teal-50 border border-teal-200 rounded-lg px-2 py-1 hover:bg-teal-100">Centang Semua</button>
+                        <button type="button" @click="[...$root.querySelectorAll('input[name=\'assignments[]\']')].forEach(c => c.checked = false)" class="text-[11px] font-bold text-slate-600 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 hover:bg-slate-100">Kosongkan</button>
                     </div>
                 </div>
                 <p class="text-xs text-slate-500 mb-4">Centang kelas yang ikut sesi Tafsir Kamis ini (sesi 09:50-10:20). Kelas yang sudah ada jurnal Tafsir di tanggal ini akan di-skip.</p>
