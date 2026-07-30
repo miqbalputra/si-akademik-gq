@@ -40,6 +40,7 @@
             <div class="flex-1">
                 <label class="block text-sm font-bold text-slate-700 mb-1">Tanggal</label>
                 <input type="date" name="date" value="{{ $selectedDate }}" class="w-full rounded-xl border-slate-300 shadow-sm text-sm py-2" onchange="document.getElementById('filter-form').submit()">
+                <p class="mt-1.5 text-xs font-bold text-slate-600">{{ \Carbon\Carbon::parse($selectedDate)->locale('id')->translatedFormat('l, d F Y') }}</p>
             </div>
             <div class="w-full sm:w-auto">
                 <button type="submit" class="w-full sm:w-auto bg-amber-600 text-white rounded-xl px-6 py-2 text-sm font-bold shadow-sm hover:bg-amber-700">Pilih</button>

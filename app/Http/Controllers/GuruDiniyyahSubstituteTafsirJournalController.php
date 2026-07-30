@@ -161,7 +161,8 @@ class GuruDiniyyahSubstituteTafsirJournalController extends Controller
 
     private function defaultThursday(): string
     {
-        $today = Carbon::now();
+        // WIB — app tz=UTC, agar "hari Kamis?" & "Kamis depan" tidak meleset di larut malam WIB.
+        $today = Carbon::now('Asia/Jakarta');
 
         return $today->isThursday() ? $today->toDateString() : $today->next(Carbon::THURSDAY)->toDateString();
     }

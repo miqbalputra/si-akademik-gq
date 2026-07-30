@@ -9,6 +9,7 @@ use App\Models\DiniyyahTeacherAssignment;
 use App\Models\StudentAttendance;
 use App\Models\ClassEnrollment;
 use App\Support\SessionTimetable;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\QueryException;
 
@@ -46,7 +47,8 @@ class GuruDiniyyahSubstituteJournalController extends Controller
         $classes = $allAssignments->pluck('classSubject.classroomTerm')->filter()->unique('id')->values();
 
         $selectedClassroomTermId = $request->query('classroom_term_id');
-        $selectedDate = $request->query('date', date('Y-m-d'));
+        // Default "hari ini" dalam WIB — app tz=UTC. Lihat memori app-timezone-utc-vs-wib.
+        $selectedDate = $request->query('date', Carbon::now('Asia/Jakarta')->toDateString());
 
         $students = collect();
         $dailyAbsences = [];

@@ -43,6 +43,7 @@
             <div class="flex-1 w-full">
                 <label for="date" class="block text-sm font-bold text-slate-700 mb-1.5">Tanggal</label>
                 <input id="date" type="date" name="date" value="{{ $selectedDate }}" class="w-full rounded-xl border-slate-300 shadow-sm text-sm py-2.5 focus:ring-amber-500 focus:border-amber-500" onchange="document.getElementById('filter-form').submit()">
+                <p class="mt-1.5 text-xs font-bold text-slate-600">{{ \Carbon\Carbon::parse($selectedDate)->locale('id')->translatedFormat('l, d F Y') }}</p>
             </div>
             <div class="w-full sm:w-auto">
                 <button type="submit" class="w-full sm:w-auto bg-amber-600 text-white rounded-xl px-6 py-2.5 text-sm font-bold shadow-sm hover:bg-amber-700 transition-colors">Pilih</button>
@@ -204,8 +205,9 @@
             </div>
         </div>
 
-        <!-- Form Tambah Jurnal (Hanya untuk kelas/mapel yang diajarkan guru ini) -->
-        @if($classAssignments->isNotEmpty() && $sessionSlots->isNotEmpty())
+        <!-- Form Tambah Jurnal (Hanya untuk kelas/mapel yang diajarkan guru ini,
+             dan hanya di hari yang guru benar-benar dijadwalkan mengajar kelas itu) -->
+        @if($classAssignments->isNotEmpty() && $sessionSlots->isNotEmpty() && $hasScheduleOnDay)
         <div class="glass-card rounded-2xl p-6 border border-slate-200">
             <h3 class="text-lg font-black text-slate-800 mb-1">Isi Jam Pelajaran Anda</h3>
             <p class="text-sm text-slate-500 mb-5">Lengkapi sesi, mata pelajaran, materi, dan presensi santri untuk satu jam pelajaran.</p>
@@ -274,6 +276,15 @@
                 update();
             })();
         </script>
+        @elseif($classAssignments->isNotEmpty() && $sessionSlots->isNotEmpty())
+            {{-- Matrix kelas punya sesi di hari ini, tapi guru tidak dijadwalkan mengajar
+                 kelas ini di hari tsb → matikan form, beri peringatan berkonteks kelas. --}}
+            <div class="glass-card rounded-2xl p-8 border border-amber-200 bg-amber-50 text-center">
+                <p class="text-sm font-bold text-amber-800">
+                    Hari {{ \Carbon\Carbon::parse($selectedDate)->locale('id')->translatedFormat('l, d F Y') }} tidak ada jadwal mengajar untuk Anda di kelas {{ $selectedTerm?->name }}.
+                </p>
+                <p class="text-xs text-amber-700 mt-1">Pilih tanggal yang jatuh di hari mengajar Anda pada kelas ini.</p>
+            </div>
         @elseif($classAssignments->isNotEmpty())
             <div class="glass-card rounded-2xl p-8 border border-slate-200 text-center text-slate-500 font-medium">
                 Tidak ada sesi diniyyah di hari ini ({{ \Carbon\Carbon::parse($selectedDate)->locale('id')->translatedFormat('l') }}) untuk kelas ini.

@@ -9,6 +9,7 @@ use App\Models\DiniyyahTeacherAssignment;
 use App\Models\StudentAttendance;
 use App\Models\ClassEnrollment;
 use App\Support\SessionTimetable;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\QueryException;
 
@@ -21,8 +22,9 @@ class GuruDiniyyahJournalController extends Controller
             abort(403, 'Akses ditolak. Akun Anda tidak terhubung dengan data Guru.');
         }
         
-        // Active assignments for this teacher
-        $assignments = DiniyyahTeacherAssignment::with(['classSubject.subject', 'classSubject.classroomTerm.classroom'])
+        // Active assignments for this teacher. eager-load `schedules` agar pengecekan
+        // "guru dijadwalkan di hari X" di kelas terpilih tidak menambah query (N+1).
+        $assignments = DiniyyahTeacherAssignment::with(['classSubject.subject', 'classSubject.classroomTerm.classroom', 'schedules'])
             ->where('teacher_id', $teacher->id)
             ->get();
 
@@ -30,7 +32,9 @@ class GuruDiniyyahJournalController extends Controller
         $classes = $assignments->pluck('classSubject.classroomTerm')->unique('id');
 
         $selectedClassroomTermId = $request->query('classroom_term_id');
-        $selectedDate = $request->query('date', date('Y-m-d'));
+        // Default "hari ini" dalam WIB — app tz=UTC, jadi date('Y-m-d') bisa meleset
+        // ke kemarin di larut malam WIB. Lihat memori app-timezone-utc-vs-wib.
+        $selectedDate = $request->query('date', Carbon::now('Asia/Jakarta')->toDateString());
         
         $students = collect();
         $dailyAbsences = [];
@@ -71,10 +75,21 @@ class GuruDiniyyahJournalController extends Controller
         // Matrix slot sesi per (gender kelas, hari tanggal terpilih) — mengakomodasi
         // perbedaan jam Ikhwan vs Akhwat (Senin) serta Kamis (Tafsir) & Jum'at.
         $sessionSlots = collect();
+        $selectedTerm = null;
+        $hasScheduleOnDay = false;
         if ($selectedClassroomTermId) {
             $selectedTerm = ClassroomTerm::with('classroom')->find($selectedClassroomTermId);
             if ($selectedTerm) {
-                $sessionSlots = SessionTimetable::slotsFor($selectedTerm->classroom_id, SessionTimetable::dayOfWeekIso($selectedDate));
+                $dayOfWeek = SessionTimetable::dayOfWeekIso($selectedDate);
+                $sessionSlots = SessionTimetable::slotsFor($selectedTerm->classroom_id, $dayOfWeek);
+
+                // Apakah guru (asli) dijadwalkan mengajar kelas terpilih pada hari
+                // tanggal terpilih? Cek lewat relasi eager-loaded `schedules` pada
+                // assignment guru di kelas ini. Dipakai view untuk mematikan form
+                // bila tanggal terpilih bukan hari mengajar guru di kelas itu.
+                $hasScheduleOnDay = $classAssignments->contains(
+                    fn ($assignment) => $assignment->schedules->contains('day_of_week', $dayOfWeek)
+                );
 
                 // Urutkan jurnal yang ada by jam mulai sesi (bukan by session_hour string)
                 // supaya Tafsir di Kamis tampil pertama.
@@ -93,7 +108,9 @@ class GuruDiniyyahJournalController extends Controller
             'classAssignments',
             'existingJournals',
             'teacher',
-            'sessionSlots'
+            'sessionSlots',
+            'selectedTerm',
+            'hasScheduleOnDay'
         ));
     }
 
