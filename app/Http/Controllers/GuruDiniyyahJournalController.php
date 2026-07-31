@@ -102,6 +102,14 @@ class GuruDiniyyahJournalController extends Controller
                     ->map(fn ($journal) => $journal->teacherAssignment->id.'|'.$journal->session_hour)
                     ->all();
                 foreach ($classAssignments as $assignment) {
+                    // Tafsir diisi lewat menu "Jurnal Tafsir" (serentak, session_hour='tafsir'),
+                    // bukan form reguler. Skip di sini supaya form tidak menawarkan slot Tafsir
+                    // yang (karena perbedaan session_name vs 'tafsir') terlihat belum terisi dan
+                    // bisa memicu guru membuat jurnal Tafsir ganda. Tabel riwayat jurnal tetap
+                    // menampilkan jurnal Tafsir yang sudah ada (read-only).
+                    if ($this->isTafsirSubject($assignment->classSubject->subject ?? null)) {
+                        continue;
+                    }
                     foreach ($assignment->schedules as $schedule) {
                         if ((int) $schedule->day_of_week !== $dayOfWeek) {
                             continue;
@@ -447,5 +455,20 @@ class GuruDiniyyahJournalController extends Controller
         $driverCode = $e->errorInfo[1] ?? null;
 
         return $sqlstate === '23000' || $driverCode === 19;
+    }
+
+    /**
+     * Apakah subject ini Tafsir (code 'tafsir' atau nama mengandung 'Tafsir').
+     * Identifikasi sama dengan GuruDiniyyahTafsirJournalController::tafsirAssignmentsFor.
+     * Dipakai untuk mengecualikan Tafsir dari form reguler (diisi via menu serentak).
+     */
+    private function isTafsirSubject($subject): bool
+    {
+        if (! $subject) {
+            return false;
+        }
+
+        return strtolower($subject->code) === SessionTimetable::SESSION_TAFSIR
+            || str_contains(strtolower($subject->name), 'tafsir');
     }
 }

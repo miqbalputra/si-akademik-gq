@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\DiniyyahClassJournal;
 use App\Models\HomeroomAssignment;
 use App\Models\ClassSession;
+use App\Support\SessionTimetable;
 use Illuminate\Support\Facades\Auth;
 
 class WaliClassJournalMonitoringController extends Controller
@@ -157,16 +158,29 @@ class WaliClassJournalMonitoringController extends Controller
                 
                 // 1. Process all scheduled sessions
                 foreach ($daySchedules as $schedule) {
+                    $isTafsir = $this->isTafsirSchedule($schedule);
+
                     $journal = $dayJournals->where('diniyyah_teacher_assignment_id', $schedule->diniyyah_teacher_assignment_id)
-                                        ->filter(function($j) use ($schedule) {
-                                            return (string)$j->session_hour === (string)($schedule->classSession->session_name ?? '');
+                                        ->filter(function($j) use ($schedule, $isTafsir) {
+                                            // Cocokkan persis session_hour vs session_name slot jadwal.
+                                            if ((string)$j->session_hour === (string)($schedule->classSession->session_name ?? '')) {
+                                                return true;
+                                            }
+                                            // Pengecualian Tafsir: jurnal serentak menyimpan
+                                            // session_hour='tafsir' (konstanta mesin), sedangkan slot
+                                            // jadwal bisa memakai ClassSession bernama lain (mis.
+                                            // "Tafsir (M2 - M6)" via admin). Ikat berdasar assignment
+                                            // supaya jurnal mengisi slot terjadwal, bukan jadi baris
+                                            // "Ekstra" dengan label "Jam ?".
+                                            return $isTafsir
+                                                && strtolower((string)$j->session_hour) === SessionTimetable::SESSION_TAFSIR;
                                         })
                                         ->first();
-                                        
+
                     if ($journal) {
                         $matchedJournalIds[] = $journal->id;
                     }
-                                        
+
                     $dayData['items'][] = [
                         'schedule' => $schedule,
                         'journal' => $journal,
@@ -174,7 +188,7 @@ class WaliClassJournalMonitoringController extends Controller
                         'session_time' => $this->resolveSessionTime($schedule, $dayOfWeek),
                     ];
                 }
-                
+
                 // 2. Process any journals that were filled but NOT in the schedule
                 foreach ($dayJournals as $journal) {
                     if (!in_array($journal->id, $matchedJournalIds)) {
@@ -182,12 +196,23 @@ class WaliClassJournalMonitoringController extends Controller
                         $assignment = $journal->teacherAssignment;
                         // Find classSession info if it exists
                         $session = \App\Models\ClassSession::where('session_name', $journal->session_hour)->first();
-                        
+
+                        // Fallback bila tidak ada ClassSession dengan session_name == session_hour
+                        // (mis. session_hour='tafsir' tapi ClassSession prod bernama lain): sintesis
+                        // label ramah via SessionTimetable::label() + jam dari snapshot jurnal, agar
+                        // badge tidak menampilkan "Jam ?" dan jam sesi tetap tampil.
+                        if (! $session) {
+                            $session = new \stdClass();
+                            $session->session_name = SessionTimetable::label((string)$journal->session_hour);
+                            $session->starts_at = $journal->session_starts_at;
+                            $session->ends_at = $journal->session_ends_at;
+                        }
+
                         // Create a mock schedule object so the UI can still render it
                         $mockSchedule = new \stdClass();
                         $mockSchedule->teacherAssignment = $assignment;
                         $mockSchedule->classSession = $session;
-                        
+
                         $dayData['items'][] = [
                             'schedule' => $mockSchedule,
                             'journal' => $journal,
@@ -244,6 +269,23 @@ class WaliClassJournalMonitoringController extends Controller
             'filterStatus',
             'teacher'
         );
+    }
+
+    /**
+     * Apakah schedule ini milik penugasan Tafsir (subject code 'tafsir' atau nama
+     * mengandung 'Tafsir'). Dipakai untuk pencocokan jurnal serentak yang menyimpan
+     * session_hour='tafsir' ke slot jadwal yang mungkin memakai nama session lain.
+     * Identifikasi sama dengan GuruDiniyyahTafsirJournalController::tafsirAssignmentsFor.
+     */
+    private function isTafsirSchedule($schedule): bool
+    {
+        $subject = $schedule->teacherAssignment?->classSubject?->subject ?? null;
+        if (! $subject) {
+            return false;
+        }
+
+        return strtolower($subject->code) === SessionTimetable::SESSION_TAFSIR
+            || str_contains(strtolower($subject->name), 'tafsir');
     }
 
     /**
