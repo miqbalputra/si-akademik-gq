@@ -76,8 +76,17 @@ class RekapJurnalGuru extends Page
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('openFullReport')
+                ->label('Laporan Full Data')
+                ->icon('heroicon-o-table-cells')
+                ->url(fn (): string => route('admin.diniyyah-journals.report', [
+                    'academic_term_id' => $this->academicTermId,
+                    'date_from' => $this->dateFrom,
+                    'date_until' => $this->dateUntil,
+                ]))
+                ->openUrlInNewTab(),
             Action::make('downloadCsv')
-                ->label('Export CSV')
+                ->label('Export CSV Ringkasan')
                 ->icon('heroicon-o-arrow-down-tray')
                 ->url(fn (): string => route('admin.rekap-jurnal-guru.export', [
                     'academic_term_id' => $this->academicTermId,

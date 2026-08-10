@@ -79,6 +79,109 @@ class DiniyyahJournalExportTest extends TestCase
         $response->assertSee('Pengganti Bab 2');
     }
 
+    public function test_admin_can_download_a_real_xlsx_workbook(): void
+    {
+        $ctx = $this->makeContext();
+        DiniyyahClassJournal::create([
+            'diniyyah_teacher_assignment_id' => $ctx['assignmentA']->id,
+            'date' => '2026-07-16',
+            'session_hour' => '2',
+            'material' => 'Materi XLSX',
+            'jp_count' => 1,
+        ]);
+
+        $response = $this->actingAs($ctx['admin'])
+            ->get(route('admin.diniyyah-journals.export', [
+                'format' => 'xlsx',
+                'academic_term_id' => $ctx['term']->id,
+            ]));
+
+        $response->assertOk();
+        $response->assertHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+
+        $path = tempnam(sys_get_temp_dir(), 'xlsx-test-');
+        file_put_contents($path, $response->getContent());
+        $zip = new \ZipArchive;
+        $this->assertTrue($zip->open($path) === true);
+        $this->assertStringContainsString('Materi XLSX', (string) $zip->getFromName('xl/worksheets/sheet2.xml'));
+        $this->assertNotFalse($zip->getFromName('xl/workbook.xml'));
+        $zip->close();
+        @unlink($path);
+    }
+
+    public function test_management_report_can_download_pdf(): void
+    {
+        $ctx = $this->makeContext();
+        DiniyyahClassJournal::create([
+            'diniyyah_teacher_assignment_id' => $ctx['assignmentA']->id,
+            'date' => '2026-07-16',
+            'session_hour' => '2',
+            'material' => 'Materi PDF',
+            'jp_count' => 1,
+        ]);
+
+        $response = $this->actingAs($ctx['admin'])
+            ->get(route('admin.diniyyah-journals.export', [
+                'format' => 'pdf',
+                'academic_term_id' => $ctx['term']->id,
+            ]));
+
+        $response->assertOk();
+        $response->assertHeader('Content-Type', 'application/pdf');
+        $this->assertStringStartsWith('%PDF', $response->getContent());
+    }
+
+    public function test_guru_report_uses_effective_teacher_scope(): void
+    {
+        $ctx = $this->makeContext();
+        DiniyyahClassJournal::create([
+            'diniyyah_teacher_assignment_id' => $ctx['assignmentA']->id,
+            'date' => '2026-07-15',
+            'session_hour' => '1',
+            'material' => 'Materi Guru Asli',
+            'jp_count' => 1,
+        ]);
+        DiniyyahClassJournal::create([
+            'diniyyah_teacher_assignment_id' => $ctx['assignmentA']->id,
+            'substitute_teacher_id' => $ctx['teacherB']->id,
+            'date' => '2026-07-16',
+            'session_hour' => '2',
+            'material' => 'Materi Guru Pengganti',
+            'jp_count' => 1,
+        ]);
+
+        $this->actingAs($ctx['userA'])
+            ->get(route('guru.diniyyah-journals.report'))
+            ->assertOk()
+            ->assertSee('Materi Guru Asli')
+            ->assertDontSee('Materi Guru Pengganti');
+
+        $this->actingAs($ctx['userB'])
+            ->get(route('guru.diniyyah-journals.report'))
+            ->assertOk()
+            ->assertDontSee('Materi Guru Asli')
+            ->assertSee('Materi Guru Pengganti');
+    }
+
+    public function test_guru_can_download_xlsx_report(): void
+    {
+        $ctx = $this->makeContext();
+        DiniyyahClassJournal::create([
+            'diniyyah_teacher_assignment_id' => $ctx['assignmentA']->id,
+            'date' => '2026-07-16',
+            'session_hour' => '2',
+            'material' => 'Materi Laporan Guru',
+            'jp_count' => 1,
+        ]);
+
+        $response = $this->actingAs($ctx['userA'])
+            ->get(route('guru.diniyyah-journals.report.export', ['format' => 'xlsx']));
+
+        $response->assertOk();
+        $response->assertHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        $this->assertStringContainsString('PK', substr($response->getContent(), 0, 2));
+    }
+
     public function test_guru_is_forbidden_to_access_export(): void
     {
         $ctx = $this->makeContext();
@@ -193,6 +296,7 @@ class DiniyyahJournalExportTest extends TestCase
             'teacherA' => $teacherA,
             'userB' => $userB,
             'teacherB' => $teacherB,
+            'term' => $term,
             'classroomTerm' => $classroomTerm,
             'assignmentA' => $assignmentA,
         ];

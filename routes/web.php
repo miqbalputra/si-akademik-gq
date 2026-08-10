@@ -6,6 +6,7 @@ use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\DiniyyahLedgerController;
 use App\Http\Controllers\DiniyyahMonitoringController;
 use App\Http\Controllers\DiniyyahJournalExportController;
+use App\Http\Controllers\DiniyyahJournalReportController;
 use App\Http\Controllers\RekapJurnalGuruExportController;
 use App\Http\Controllers\GuardianDashboardController;
 use App\Http\Controllers\GuardianTahfidzController;
@@ -56,6 +57,10 @@ Route::middleware('auth')->prefix('guru')->name('guru.')->group(function () {
     Route::get('/diniyyah-journals', [\App\Http\Controllers\GuruDiniyyahJournalController::class, 'index'])->name('diniyyah-journals.index');
     Route::post('/diniyyah-journals', [\App\Http\Controllers\GuruDiniyyahJournalController::class, 'store'])->name('diniyyah-journals.store');
     Route::get('/diniyyah-journals/riwayat', [\App\Http\Controllers\GuruDiniyyahJournalController::class, 'riwayat'])->name('diniyyah-journals.riwayat');
+    Route::get('/diniyyah-journals/laporan', [DiniyyahJournalReportController::class, 'guru'])->name('diniyyah-journals.report');
+    Route::get('/diniyyah-journals/laporan/export/{format}', [DiniyyahJournalReportController::class, 'guruExport'])
+        ->whereIn('format', ['xlsx', 'pdf'])
+        ->name('diniyyah-journals.report.export');
     Route::get('/diniyyah-journals/{diniyyah_journal}/edit', [\App\Http\Controllers\GuruDiniyyahJournalController::class, 'edit'])->name('diniyyah-journals.edit');
     Route::put('/diniyyah-journals/{diniyyah_journal}', [\App\Http\Controllers\GuruDiniyyahJournalController::class, 'update'])->name('diniyyah-journals.update');
     Route::delete('/diniyyah-journals/{diniyyah_journal}', [\App\Http\Controllers\GuruDiniyyahJournalController::class, 'destroy'])->name('diniyyah-journals.destroy');
@@ -94,6 +99,7 @@ Route::middleware('auth')->prefix('diniyyah')->name('diniyyah.')->group(function
 
 // Ekspor lengkap seluruh jurnal diniyyah (reguler + pengganti) untuk admin/kabag/kepala_sekolah.
 Route::middleware('auth')->prefix('admin/diniyyah-journals')->name('admin.diniyyah-journals.')->group(function () {
+    Route::get('/report', [DiniyyahJournalReportController::class, 'management'])->name('report');
     Route::get('/export', [DiniyyahJournalExportController::class, 'export'])->name('export');
 });
 

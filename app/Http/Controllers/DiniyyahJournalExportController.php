@@ -4,36 +4,70 @@ namespace App\Http\Controllers;
 
 use App\Models\ClassEnrollment;
 use App\Models\DiniyyahClassJournal;
+use App\Services\DiniyyahJournalReportService;
+use App\Services\Exports\DiniyyahJournalReportXlsxExporter;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 
 /**
  * Ekspor lengkap seluruh jurnal diniyyah (reguler + pengganti) untuk admin,
- * kabag_diniyyah, dan kepala_sekolah. Output Excel (.xls, HTML-table) atau CSV.
+ * kabag_diniyyah, dan kepala_sekolah. Format legacy .xls/CSV tetap tersedia,
+ * dengan format XLSX dan PDF baru untuk laporan interaktif.
  *
  * Kolom "Guru Mengajar (untuk gaji)" = pengganti jika ada, else guru asli —
  * inilah kolom yang dipakai penghitungan gaji guru.
  */
 class DiniyyahJournalExportController extends Controller
 {
-    public function export(Request $request)
-    {
+    public function export(
+        Request $request,
+        DiniyyahJournalReportService $reportService,
+        DiniyyahJournalReportXlsxExporter $xlsxExporter,
+    ) {
         abort_unless(
             $request->user()->hasAnyRole(['admin', 'kabag_diniyyah', 'kepala_sekolah']),
             403
         );
 
-        $data = $this->buildData($request);
-        $format = $request->input('format', 'excel') === 'csv' ? 'csv' : 'excel';
+        $format = $request->input('format', 'excel');
         $rangeLabel = $this->rangeLabel($request);
 
         if ($format === 'csv') {
+            $data = $this->buildData($request);
+
             return $this->csvResponse($data['rows'], $rangeLabel);
         }
 
-        $fileName = 'Jurnal-Diniyyah-' . $rangeLabel . '.xls';
+        if ($format === 'xlsx') {
+            $report = $reportService->build($this->reportFilters($request));
+            $content = $xlsxExporter->export($report, 'management');
+            $fileName = 'Jurnal-Diniyyah-'.$rangeLabel.'.xlsx';
+
+            return response($content, 200, [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'Content-Disposition' => 'attachment; filename="'.$fileName.'"',
+                'Content-Length' => strlen($content),
+            ]);
+        }
+
+        if ($format === 'pdf') {
+            $report = $reportService->build($this->reportFilters($request));
+
+            return Pdf::loadView('reports.diniyyah-journal', [
+                'report' => $report,
+                'title' => 'Laporan Jurnal Diniyyah - Full Data',
+                'scope' => 'management',
+            ])
+                ->setPaper('a3', 'landscape')
+                ->download('Jurnal-Diniyyah-'.$rangeLabel.'.pdf');
+        }
+
+        $data = $this->buildData($request);
+        $fileName = 'Jurnal-Diniyyah-'.$rangeLabel.'.xls';
+
         return response(view('admin.diniyyah-journals.export-excel', $data))
             ->header('Content-Type', 'application/vnd.ms-excel')
-            ->header('Content-Disposition', 'attachment; filename="' . $fileName . '"');
+            ->header('Content-Disposition', 'attachment; filename="'.$fileName.'"');
     }
 
     private function buildData(Request $request): array
@@ -117,20 +151,36 @@ class DiniyyahJournalExportController extends Controller
         $from = $request->input('date_from');
         $until = $request->input('date_until');
         if ($from && $until) {
-            return str_replace('-', '', $from) . '_' . str_replace('-', '', $until);
+            return str_replace('-', '', $from).'_'.str_replace('-', '', $until);
         }
         if ($from) {
-            return 'dari_' . str_replace('-', '', $from);
+            return 'dari_'.str_replace('-', '', $from);
         }
         if ($until) {
-            return 'sd_' . str_replace('-', '', $until);
+            return 'sd_'.str_replace('-', '', $until);
         }
+
         return 'semua';
+    }
+
+    /** @return array<string, mixed> */
+    private function reportFilters(Request $request): array
+    {
+        return [
+            'academic_term_id' => $request->input('academic_term_id'),
+            'date_from' => $request->input('date_from'),
+            'date_until' => $request->input('date_until'),
+            'teacher_id' => $request->input('teacher_id', $request->input('guru')),
+            'classroom_term_id' => $request->input('classroom_term_id'),
+            'subject_id' => $request->input('subject_id'),
+            'type' => $request->input('type', $request->input('tipe')),
+            'search' => $request->input('search'),
+        ];
     }
 
     private function csvResponse($rows, string $rangeLabel)
     {
-        $fileName = 'Jurnal-Diniyyah-' . $rangeLabel . '.csv';
+        $fileName = 'Jurnal-Diniyyah-'.$rangeLabel.'.csv';
         $headers = [
             'Guru Asli',
             'Pengganti',
@@ -178,7 +228,7 @@ class DiniyyahJournalExportController extends Controller
 
         return response($content, 200, [
             'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+            'Content-Disposition' => 'attachment; filename="'.$fileName.'"',
         ]);
     }
 }
