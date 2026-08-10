@@ -31,7 +31,8 @@ class GuruPerformaXlsxExporter
         $zip->addFromString('xl/_rels/workbook.xml.rels', $this->workbookRelsXml());
         $zip->addFromString('xl/styles.xml', $this->stylesXml());
         $zip->addFromString('xl/worksheets/sheet1.xml', $this->summarySheetXml($performa, $teacher));
-        $zip->addFromString('xl/worksheets/sheet2.xml', $this->emptySlotsSheetXml($performa));
+        $zip->addFromString('xl/worksheets/sheet2.xml', $this->journalSheetXml($performa));
+        $zip->addFromString('xl/worksheets/sheet3.xml', $this->emptySlotsSheetXml($performa));
         $zip->close();
 
         $content = file_get_contents($temporaryPath);
@@ -59,12 +60,62 @@ class GuruPerformaXlsxExporter
             [['Kosong', 0], [$stats['kosong'] ?? 0, 6]],
             [['Digantikan', 0], [$stats['digantikan'] ?? 0, 6]],
             [['Total slot tercatat', 0], [$stats['total'] ?? 0, 6]],
+            [['Total data jurnal', 0], [$stats['total_jurnal'] ?? 0, 6]],
             [['', 0]],
             [['CATATAN', 3]],
             [['Slot kosong berarti jadwal yang sudah lewat tetapi belum memiliki jurnal.', 2]],
         ];
 
-        return $this->worksheetXml($rows, [34, 24], null, ['A1:B1', 'A6:B6', 'A13:B13']);
+        return $this->worksheetXml($rows, [34, 24], null, ['A1:B1', 'A6:B6', 'A14:B14']);
+    }
+
+    private function journalSheetXml(array $performa): string
+    {
+        $headers = [
+            'No', 'Tanggal', 'Sesi', 'Jam', 'Kelas', 'Mapel', 'Materi', 'JP',
+            'Guru Asli', 'Pengganti', 'Guru Mengajar', 'Status', 'Hadir',
+            'Sakit', 'Izin', 'Alpa', 'Bolos',
+        ];
+        $rows = [
+            [['DETAIL SEMUA DATA JURNAL', 1]],
+            [['Seluruh jurnal guru pada periode terpilih, termasuk jurnal yang diisi guru pengganti.', 2]],
+            [['', 0]],
+            array_map(fn (string $header): array => [$header, 4], $headers),
+        ];
+
+        foreach (collect($performa['journal_rows'] ?? []) as $index => $row) {
+            $rows[] = [
+                [$index + 1, 6],
+                [$row['date_label'] ?? ($row['date'] ?? '-'), 0],
+                [$row['session_label'] ?? '-', 0],
+                [$row['session_time'] ?? '-', 0],
+                [$row['kelas'] ?? '-', 0],
+                [$row['mapel'] ?? '-', 0],
+                [$row['material'] ?? '-', 0],
+                [$row['jp'] ?? 0, 6],
+                [$row['guru_asli'] ?? '-', 0],
+                [$row['pengganti'] ?? '-', 0],
+                [$row['guru_mengajar'] ?? '-', 0],
+                [$row['type_label'] ?? '-', 0],
+                [$row['hadir'] ?? 0, 6],
+                [$row['sakit'] ?? 0, 6],
+                [$row['izin'] ?? 0, 6],
+                [$row['alpa'] ?? 0, 6],
+                [$row['bolos'] ?? 0, 6],
+            ];
+        }
+
+        if (count($rows) === 4) {
+            $rows[] = [['Tidak ada data jurnal pada periode ini.', 0]];
+        }
+
+        return $this->worksheetXml(
+            $rows,
+            [8, 25, 20, 14, 26, 24, 42, 8, 24, 24, 24, 16, 9, 9, 9, 9, 9],
+            4,
+            ['A1:Q1', 'A2:Q2'],
+            4,
+        );
     }
 
     private function emptySlotsSheetXml(array $performa): string
@@ -90,7 +141,7 @@ class GuruPerformaXlsxExporter
                 [$time ?: '-', 0],
                 [$slot['subject_name'] ?? '-', 0],
                 [$slot['classroom_names'] ?? '-', 0],
-                [$slot['is_tafsir'] ?? false ? 'Tafsir serentak' : 'Jurnal reguler', 0],
+                [(($slot['is_tafsir'] ?? false) ? 'Tafsir serentak' : 'Jurnal reguler'), 0],
             ];
         }
 
@@ -185,6 +236,7 @@ class GuruPerformaXlsxExporter
             .'<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
             .'<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
             .'<Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
+            .'<Override PartName="/xl/worksheets/sheet3.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
             .'<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'
             .'</Types>';
     }
@@ -201,7 +253,7 @@ class GuruPerformaXlsxExporter
     {
         return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
             .'<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
-            .'<sheets><sheet name="Ringkasan" sheetId="1" r:id="rId1"/><sheet name="Slot Kosong" sheetId="2" r:id="rId2"/></sheets>'
+            .'<sheets><sheet name="Ringkasan" sheetId="1" r:id="rId1"/><sheet name="Detail Jurnal" sheetId="2" r:id="rId2"/><sheet name="Slot Kosong" sheetId="3" r:id="rId3"/></sheets>'
             .'</workbook>';
     }
 
@@ -211,7 +263,8 @@ class GuruPerformaXlsxExporter
             .'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
             .'<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>'
             .'<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/>'
-            .'<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
+            .'<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet3.xml"/>'
+            .'<Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
             .'</Relationships>';
     }
 

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\ClassEnrollment;
 use App\Models\DiniyyahClassJournal;
 use App\Models\DiniyyahTeachingSchedule;
 use App\Models\SchoolHoliday;
@@ -40,7 +41,8 @@ class GuruPerformaService
      *   year: int,
      *   is_current_month: bool,
      *   month_label: string,
-     *   stats: array{sudah_diisi: int, kosong: int, digantikan: int, total: int},
+     *   stats: array{sudah_diisi: int, kosong: int, digantikan: int, total: int, total_jurnal: int},
+     *   journal_rows: Collection<int, array<string, mixed>>,
      *   empty_slots: list<array<string, mixed>>,
      * }
      */
@@ -72,11 +74,18 @@ class GuruPerformaService
             ->whereHas('teacherAssignment', fn ($q) => $q->where('teacher_id', $teacher->id))
             ->get();
 
-        $journals = DiniyyahClassJournal::with(['substituteTeacher'])
+        $journals = DiniyyahClassJournal::with([
+            'substituteTeacher',
+            'teacherAssignment.teacher',
+            'teacherAssignment.classSubject.subject',
+            'teacherAssignment.classSubject.classroomTerm.classroom',
+            'absences',
+        ])
             ->whereHas('teacherAssignment', fn ($q) => $q->where('teacher_id', $teacher->id))
             ->whereDate('date', '>=', $startDate->toDateString())
             ->whereDate('date', '<=', $endDate->toDateString())
             ->get();
+        $journalRows = $this->journalRows($journals);
 
         $holidays = SchoolHoliday::whereDate('holiday_date', '>=', $startDate->toDateString())
             ->whereDate('holiday_date', '<=', $endDate->toDateString())
@@ -95,6 +104,7 @@ class GuruPerformaService
             // Slot tanggal setelah hari ini belum lewat — tidak masuk hitungan.
             if ($dateStr > $today) {
                 $date->addDay();
+
                 continue;
             }
 
@@ -106,6 +116,7 @@ class GuruPerformaService
             // Hari libur: exclude dari semua hitungan (bukan "kosong").
             if ($holidays->has($dateStr)) {
                 $date->addDay();
+
                 continue;
             }
 
@@ -115,6 +126,7 @@ class GuruPerformaService
 
             if ($daySchedules->isEmpty()) {
                 $date->addDay();
+
                 continue;
             }
 
@@ -193,9 +205,85 @@ class GuruPerformaService
                 'kosong' => $kosong,
                 'digantikan' => $digantikan,
                 'total' => $sudah + $kosong + $digantikan,
+                'total_jurnal' => $journalRows->count(),
             ],
+            'journal_rows' => $journalRows,
             'empty_slots' => $emptySlots,
         ];
+    }
+
+    /** @param Collection<int, DiniyyahClassJournal> $journals */
+    private function journalRows(Collection $journals): Collection
+    {
+        $classroomTermIds = $journals
+            ->map(fn (DiniyyahClassJournal $journal) => $journal->teacherAssignment?->classSubject?->classroom_term_id)
+            ->filter()
+            ->unique()
+            ->values();
+        $activeEnrollmentCounts = $classroomTermIds->isEmpty()
+            ? collect()
+            : ClassEnrollment::query()
+                ->whereIn('classroom_term_id', $classroomTermIds)
+                ->where('status', 'active')
+                ->selectRaw('classroom_term_id, count(*) as aggregate')
+                ->groupBy('classroom_term_id')
+                ->pluck('aggregate', 'classroom_term_id');
+
+        return $journals->map(function (DiniyyahClassJournal $journal) use ($activeEnrollmentCounts): array {
+            $assignment = $journal->teacherAssignment;
+            $classSubject = $assignment?->classSubject;
+            $classroomTerm = $classSubject?->classroomTerm;
+            $subject = $classSubject?->subject;
+            $absenceCounts = [
+                'sick' => 0,
+                'permission' => 0,
+                'absent' => 0,
+                'skipped' => 0,
+            ];
+
+            foreach ($journal->absences as $absence) {
+                if (array_key_exists($absence->status, $absenceCounts)) {
+                    $absenceCounts[$absence->status]++;
+                }
+            }
+
+            $absenceTotal = array_sum($absenceCounts);
+            $activeEnrollmentCount = (int) ($activeEnrollmentCounts[$classroomTerm?->id] ?? 0);
+            $isSubstitute = $journal->substitute_teacher_id !== null;
+            $date = $journal->date;
+
+            return [
+                'id' => $journal->id,
+                'date' => $date?->toDateString(),
+                'date_label' => $date?->locale('id')->translatedFormat('l, d M Y') ?? '-',
+                'session_hour' => (string) $journal->session_hour,
+                'session_label' => SessionTimetable::label((string) $journal->session_hour),
+                'session_time' => $this->journalTime($journal),
+                'kelas' => $classroomTerm?->name ?? '-',
+                'mapel' => $subject?->name ?? '-',
+                'material' => (string) ($journal->material ?? '-'),
+                'jp' => (int) ($journal->jp_count ?? 0),
+                'guru_asli' => $assignment?->teacher?->name ?? '-',
+                'pengganti' => $journal->substituteTeacher?->name,
+                'guru_mengajar' => $journal->effectiveTeacher()?->name ?? '-',
+                'type' => $isSubstitute ? 'substitute' : 'regular',
+                'type_label' => $isSubstitute ? 'Digantikan' : 'Diisi sendiri',
+                'hadir' => max(0, $activeEnrollmentCount - $absenceTotal),
+                'sakit' => $absenceCounts['sick'],
+                'izin' => $absenceCounts['permission'],
+                'alpa' => $absenceCounts['absent'],
+                'bolos' => $absenceCounts['skipped'],
+            ];
+        })->values();
+    }
+
+    private function journalTime(DiniyyahClassJournal $journal): ?string
+    {
+        $times = collect([$journal->session_starts_at, $journal->session_ends_at])
+            ->filter()
+            ->map(fn ($time): string => Carbon::parse($time)->format('H:i'));
+
+        return $times->isEmpty() ? null : $times->implode(' - ');
     }
 
     /**

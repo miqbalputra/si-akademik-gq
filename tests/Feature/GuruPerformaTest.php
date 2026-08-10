@@ -330,7 +330,16 @@ class GuruPerformaTest extends TestCase
     {
         $this->setNow(self::TODAY);
         $guru = $this->makeGuru('Guru A');
-        $this->makeRegularAssignment($guru['teacher'], 'Fiqih', 2, '1');
+        [$assignment] = $this->makeRegularAssignment($guru['teacher'], 'Fiqih', 2, '1');
+        DiniyyahClassJournal::create([
+            'diniyyah_teacher_assignment_id' => $assignment->id,
+            'date' => self::SELASA_LEWAT,
+            'session_hour' => '1',
+            'session_starts_at' => '10:30:00',
+            'session_ends_at' => '11:00:00',
+            'material' => 'Bab Thaharah',
+            'jp_count' => 1,
+        ]);
 
         $page = $this->actingAs($guru['user'])
             ->get(route('guru.performa', ['month' => 8, 'year' => 2026]));
@@ -348,8 +357,13 @@ class GuruPerformaTest extends TestCase
         file_put_contents($path, $xlsx->getContent());
         $zip = new \ZipArchive;
         $this->assertTrue($zip->open($path) === true);
-        $this->assertStringContainsString('Slot Kosong', (string) $zip->getFromName('xl/workbook.xml'));
-        $this->assertNotFalse($zip->getFromName('xl/worksheets/sheet2.xml'));
+        $workbookXml = (string) $zip->getFromName('xl/workbook.xml');
+        $this->assertStringContainsString('Detail Jurnal', $workbookXml);
+        $this->assertStringContainsString('Slot Kosong', $workbookXml);
+        $detailXml = (string) $zip->getFromName('xl/worksheets/sheet2.xml');
+        $this->assertStringContainsString('Bab Thaharah', $detailXml);
+        $this->assertStringContainsString('Mustawa 2 Ikhwan', $detailXml);
+        $this->assertNotFalse($zip->getFromName('xl/worksheets/sheet3.xml'));
         $zip->close();
         @unlink($path);
 

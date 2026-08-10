@@ -210,7 +210,7 @@ class GuruDashboardController extends Controller
         }
 
         return Pdf::loadView('reports.guru-performa', compact('teacher', 'performa'))
-            ->setPaper('a4', 'landscape')
+            ->setPaper('a3', 'landscape')
             ->download($fileStem.'.pdf');
     }
 
