@@ -18,4 +18,16 @@ class EditDiniyyahClassJournal extends EditRecord
             DeleteAction::make(),
         ];
     }
+
+    /**
+     * Re-resolve snapshot jam sesi bila date/session_hour diubah saat edit, agar
+     * tetap konsisten dengan matrix (kelas + hari tanggal).
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        return DiniyyahClassJournalResource::resolveSessionTimes($data);
+    }
 }

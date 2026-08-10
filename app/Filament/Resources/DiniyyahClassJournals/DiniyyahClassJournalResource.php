@@ -3,8 +3,11 @@
 namespace App\Filament\Resources\DiniyyahClassJournals;
 
 use App\Filament\Resources\DiniyyahClassJournals\Pages;
+use App\Filament\Resources\DiniyyahClassJournals\Schemas\DiniyyahClassJournalForm;
 use App\Filament\Concerns\HasRoleBasedResourceAccess;
 use App\Models\DiniyyahClassJournal;
+use App\Models\DiniyyahTeacherAssignment;
+use App\Support\SessionTimetable;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -37,29 +40,37 @@ class DiniyyahClassJournalResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        return $schema
-            ->components([
-                Forms\Components\Select::make('diniyyah_teacher_assignment_id')
-                    ->relationship('teacherAssignment', 'id')
-                    ->required(),
-                Forms\Components\Select::make('substitute_teacher_id')
-                    ->relationship('substituteTeacher', 'name')
-                    ->label('Guru Pengganti')
-                    ->nullable()
-                    ->helperText('Kosongkan jika jurnal diisi guru asli. Diisi = guru pengganti yang mengajar (JP ke pengganti).'),
-                Forms\Components\DatePicker::make('date')
-                    ->required(),
-                Forms\Components\TextInput::make('session_hour')
-                    ->required()
-                    ->maxLength(255),
-                Forms\Components\Textarea::make('material')
-                    ->maxLength(65535)
-                    ->columnSpanFull(),
-                Forms\Components\TextInput::make('jp_count')
-                    ->required()
-                    ->numeric()
-                    ->default(1),
-            ]);
+        return DiniyyahClassJournalForm::configure($schema);
+    }
+
+    /**
+     * Resolve snapshot jam mulai/selesai sesi dari matrix (kelas + hari tanggal)
+     * untuk data form jurnal. Mencerminkan logika portal guru
+     * {@see \App\Http\Controllers\GuruDiniyyahJournalController::store} — null bila
+     * matrix tak ada, tidak menolak penyimpanan. Dipakai hook Create/Edit page.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    public static function resolveSessionTimes(array $data): array
+    {
+        $assignmentId = $data['diniyyah_teacher_assignment_id'] ?? null;
+        $date = $data['date'] ?? null;
+        $sessionHour = $data['session_hour'] ?? null;
+
+        $time = null;
+        if ($assignmentId && $date && $sessionHour) {
+            $assignment = DiniyyahTeacherAssignment::with('classSubject.classroomTerm')->find($assignmentId);
+            $classroomId = $assignment?->classSubject?->classroomTerm?->classroom_id;
+            if ($classroomId) {
+                $time = SessionTimetable::resolve($classroomId, SessionTimetable::dayOfWeekIso($date), (string) $sessionHour);
+            }
+        }
+
+        $data['session_starts_at'] = $time['starts_at'] ?? null;
+        $data['session_ends_at'] = $time['ends_at'] ?? null;
+
+        return $data;
     }
 
     public static function table(Table $table): Table
