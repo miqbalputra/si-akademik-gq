@@ -9,6 +9,7 @@ use Filament\Panel;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -31,22 +32,22 @@ class User extends Authenticatable implements FilamentUser
         return $this->hasOne(Teacher::class);
     }
 
-    public function savedFilters(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function savedFilters(): HasMany
     {
         return $this->hasMany(PanelSavedFilter::class);
     }
 
-    public function preferences(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function preferences(): HasMany
     {
         return $this->hasMany(PanelUserPreference::class);
     }
 
-    public function notifications(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function notifications(): HasMany
     {
         return $this->hasMany(PanelNotification::class);
     }
 
-    public function exportRequests(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function exportRequests(): HasMany
     {
         return $this->hasMany(ReportExportRequest::class, 'requested_by');
     }
@@ -54,6 +55,32 @@ class User extends Authenticatable implements FilamentUser
     public function canAccessPanel(Panel $panel): bool
     {
         return $this->hasAnyRole(['admin', 'kabag_diniyyah', 'kabag_tahfidz', 'kepala_sekolah']);
+    }
+
+    /**
+     * Presensi kelas hanya tersedia untuk manajemen atau guru yang sedang
+     * mendapat penugasan wali kelas aktif.
+     */
+    public function canAccessAttendance(): bool
+    {
+        if ($this->hasAnyRole(['admin', 'kabag_diniyyah', 'kepala_sekolah'])) {
+            return true;
+        }
+
+        $teacherId = $this->teacher?->id;
+        if (! $teacherId) {
+            return false;
+        }
+
+        return HomeroomAssignment::query()
+            ->where('teacher_id', $teacherId)
+            ->where(function ($query): void {
+                $query->whereNull('starts_at')->orWhere('starts_at', '<=', now()->toDateString());
+            })
+            ->where(function ($query): void {
+                $query->whereNull('ends_at')->orWhere('ends_at', '>=', now()->toDateString());
+            })
+            ->exists();
     }
 
     /**

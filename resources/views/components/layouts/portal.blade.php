@@ -1,8 +1,8 @@
 @php
     $isGuruPortal = ($portalLabel ?? null) === 'Portal Guru';
+    $canAccessAttendance = $isGuruPortal && (auth()->user()?->canAccessAttendance() ?? false);
     $guruNavItems = [
         ['label' => 'Beranda', 'href' => route('guru.dashboard'), 'match' => ['guru.dashboard']],
-        ['label' => 'Presensi', 'href' => route('attendance.index'), 'match' => ['attendance.*']],
         ['label' => 'Input Nilai', 'href' => route('guru.diniyyah-scores.index'), 'match' => ['guru.diniyyah-scores.*']],
         [
             'label' => 'Jurnal',
@@ -17,6 +17,13 @@
         ['label' => 'Tahfidz', 'href' => route('guru.tahfidz.index'), 'match' => ['guru.tahfidz.*']],
         ['label' => 'Kalender', 'href' => route('guru.calendar'), 'match' => ['guru.calendar']],
     ];
+    if ($canAccessAttendance) {
+        array_splice($guruNavItems, 1, 0, [[
+            'label' => 'Presensi',
+            'href' => route('attendance.index'),
+            'match' => ['attendance.*'],
+        ]]);
+    }
 @endphp
 
 {{--

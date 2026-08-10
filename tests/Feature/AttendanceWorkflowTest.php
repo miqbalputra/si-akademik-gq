@@ -69,6 +69,11 @@ class AttendanceWorkflowTest extends TestCase
             ->whereDate('attendance_date', '2025-07-17')
             ->where('status', StudentAttendance::STATUS_HOLIDAY)
             ->exists());
+
+        $this->actingAs($teacherUser)
+            ->get(route('guru.dashboard'))
+            ->assertOk()
+            ->assertSee('Presensi');
     }
 
     public function test_weekend_days_are_not_rendered_in_attendance_grid(): void
@@ -117,6 +122,28 @@ class AttendanceWorkflowTest extends TestCase
             ->get(route('attendance.edit', ['classroomTerm' => $classroomTerm, 'month' => '2025-07']))
             ->assertOk()
             ->assertSee('Santri 1');
+    }
+
+    public function test_unassigned_teacher_cannot_open_attendance_index_or_see_nav_item(): void
+    {
+        [$classroomTerm] = $this->makeAttendanceClass();
+        $otherUser = User::factory()->create(['name' => 'Guru Mapel']);
+        $otherUser->assignRole($this->role('guru'));
+        Teacher::create([
+            'user_id' => $otherUser->id,
+            'name' => 'Guru Mapel',
+            'gender' => 'male',
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($otherUser)
+            ->get(route('attendance.index'))
+            ->assertForbidden();
+
+        $this->actingAs($otherUser)
+            ->get(route('guru.dashboard'))
+            ->assertOk()
+            ->assertDontSee('Presensi');
     }
 
     /** @return array{ClassroomTerm, User, ClassEnrollment} */

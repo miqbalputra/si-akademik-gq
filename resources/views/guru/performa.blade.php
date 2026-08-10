@@ -14,20 +14,29 @@
             <h1 class="text-2xl font-black text-slate-900">Performa Mengajar Saya</h1>
             <p class="text-sm text-slate-500">Rekap jurnal mengajar Diniyyah Anda bulan {{ $performa['month_label'] }}.</p>
         </div>
-        <form method="GET" action="{{ route('guru.performa') }}" class="flex items-end gap-2">
-            <div class="flex flex-col">
-                <label class="text-[10px] font-bold uppercase text-slate-400 mb-1">Bulan</label>
-                <select name="month" class="form-input py-1.5 text-sm" onchange="var o=this.options[this.selectedIndex]; this.form.year.value=o.dataset.year; this.form.submit()">
-                    @foreach($monthOptions as $opt)
-                        <option value="{{ $opt['value']['month'] }}" data-year="{{ $opt['value']['year'] }}" @if((int) $performa['month'] === $opt['value']['month'] && (int) $performa['year'] === $opt['value']['year']) selected @endif>{{ $opt['label'] }}</option>
-                    @endforeach
-                </select>
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <form method="GET" action="{{ route('guru.performa') }}" class="flex items-end gap-2">
+                <div class="flex flex-col">
+                    <label class="text-[10px] font-bold uppercase text-slate-400 mb-1">Bulan</label>
+                    <select name="month" class="form-input py-1.5 text-sm" onchange="var o=this.options[this.selectedIndex]; this.form.year.value=o.dataset.year; this.form.submit()">
+                        @foreach($monthOptions as $opt)
+                            <option value="{{ $opt['value']['month'] }}" data-year="{{ $opt['value']['year'] }}" @if((int) $performa['month'] === $opt['value']['month'] && (int) $performa['year'] === $opt['value']['year']) selected @endif>{{ $opt['label'] }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <input type="hidden" name="year" value="{{ $performa['year'] }}">
+                <noscript>
+                    <button type="submit" class="btn btn-sm">Tampilkan</button>
+                </noscript>
+            </form>
+            <div class="rounded-xl border border-slate-200 bg-slate-50 p-2">
+                <p class="px-1 pb-1 text-[10px] font-black uppercase tracking-wider text-slate-400">Download laporan</p>
+                <div class="flex gap-2">
+                    <a href="{{ route('guru.performa.export', ['format' => 'xlsx', 'month' => $performa['month'], 'year' => $performa['year']]) }}" class="btn btn-sm border border-emerald-200 bg-white text-emerald-700 hover:bg-emerald-50" aria-label="Download Excel performa {{ $performa['month_label'] }}">Excel</a>
+                    <a href="{{ route('guru.performa.export', ['format' => 'pdf', 'month' => $performa['month'], 'year' => $performa['year']]) }}" class="btn btn-sm border border-rose-200 bg-white text-rose-700 hover:bg-rose-50" aria-label="Download PDF performa {{ $performa['month_label'] }}">PDF</a>
+                </div>
             </div>
-            <input type="hidden" name="year" value="{{ $performa['year'] }}">
-            <noscript>
-                <button type="submit" class="btn btn-sm">Tampilkan</button>
-            </noscript>
-        </form>
+        </div>
     </div>
 
     @php

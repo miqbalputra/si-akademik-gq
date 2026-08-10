@@ -5,8 +5,8 @@ namespace Tests\Feature;
 use App\Models\AcademicTerm;
 use App\Models\AcademicYear;
 use App\Models\Classroom;
-use App\Models\ClassSession;
 use App\Models\ClassroomTerm;
+use App\Models\ClassSession;
 use App\Models\DiniyyahClassJournal;
 use App\Models\DiniyyahClassSubject;
 use App\Models\DiniyyahSubject;
@@ -324,6 +324,39 @@ class GuruPerformaTest extends TestCase
             ->assertSee('Slot Jurnal Kosong')
             ->assertSee('Fiqih')
             ->assertSee('Isi Jurnal');
+    }
+
+    public function test_performa_detail_offers_excel_and_pdf_downloads(): void
+    {
+        $this->setNow(self::TODAY);
+        $guru = $this->makeGuru('Guru A');
+        $this->makeRegularAssignment($guru['teacher'], 'Fiqih', 2, '1');
+
+        $page = $this->actingAs($guru['user'])
+            ->get(route('guru.performa', ['month' => 8, 'year' => 2026]));
+
+        $page->assertOk()
+            ->assertSee(route('guru.performa.export', ['format' => 'xlsx', 'month' => 8, 'year' => 2026], false))
+            ->assertSee(route('guru.performa.export', ['format' => 'pdf', 'month' => 8, 'year' => 2026], false));
+
+        $xlsx = $this->actingAs($guru['user'])
+            ->get(route('guru.performa.export', ['format' => 'xlsx', 'month' => 8, 'year' => 2026]));
+        $xlsx->assertOk()
+            ->assertHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        $this->assertSame('PK', substr($xlsx->getContent(), 0, 2));
+        $path = tempnam(sys_get_temp_dir(), 'performa-xlsx-test-');
+        file_put_contents($path, $xlsx->getContent());
+        $zip = new \ZipArchive;
+        $this->assertTrue($zip->open($path) === true);
+        $this->assertStringContainsString('Slot Kosong', (string) $zip->getFromName('xl/workbook.xml'));
+        $this->assertNotFalse($zip->getFromName('xl/worksheets/sheet2.xml'));
+        $zip->close();
+        @unlink($path);
+
+        $pdf = $this->actingAs($guru['user'])
+            ->get(route('guru.performa.export', ['format' => 'pdf', 'month' => 8, 'year' => 2026]));
+        $pdf->assertOk()->assertHeader('Content-Type', 'application/pdf');
+        $this->assertStringStartsWith('%PDF', $pdf->getContent());
     }
 
     public function test_dashboard_performa_card_links_to_detail(): void

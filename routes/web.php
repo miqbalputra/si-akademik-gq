@@ -42,6 +42,9 @@ Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
 Route::middleware('auth')->prefix('guru')->name('guru.')->group(function () {
     Route::get('/', [\App\Http\Controllers\GuruDashboardController::class, 'index'])->name('dashboard');
     Route::get('/performa', [\App\Http\Controllers\GuruDashboardController::class, 'performa'])->name('performa');
+    Route::get('/performa/export/{format}', [\App\Http\Controllers\GuruDashboardController::class, 'performaExport'])
+        ->whereIn('format', ['xlsx', 'pdf'])
+        ->name('performa.export');
     Route::get('/jadwal/riwayat', [\App\Http\Controllers\GuruJadwalController::class, 'riwayat'])->name('jadwal.riwayat');
     Route::get('/diniyyah-scores', [GuruDiniyyahScoreController::class, 'index'])->name('diniyyah-scores.index');
     Route::get('/diniyyah-scores/{assessmentSet}', [GuruDiniyyahScoreController::class, 'edit'])->name('diniyyah-scores.edit');

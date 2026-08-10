@@ -12,9 +12,9 @@ use App\Models\User;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonPeriod;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -23,6 +23,8 @@ class AttendanceController extends Controller
 {
     public function index(Request $request): View
     {
+        abort_unless($request->user()->canAccessAttendance(), 403);
+
         $classroomTerms = ClassroomTerm::query()
             ->with(['academicTerm.academicYear', 'homeroomAssignments.teacher'])
             ->withCount(['enrollments'])
@@ -205,7 +207,7 @@ class AttendanceController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Tersimpan otomatis'
+            'message' => 'Tersimpan otomatis',
         ]);
     }
 

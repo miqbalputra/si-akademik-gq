@@ -44,6 +44,33 @@
             </div>
         </header>
 
+        <section aria-labelledby="quick-actions-heading">
+            <div class="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                    <p class="text-[11px] font-black uppercase tracking-[.16em] text-slate-400">Mulai dari sini</p>
+                    <h2 id="quick-actions-heading" class="mt-1 text-xl font-black text-slate-900">Aksi cepat</h2>
+                </div>
+                <p class="text-sm font-medium text-slate-500">Pilih pekerjaan yang ingin Anda selesaikan.</p>
+            </div>
+            <div class="grid gap-3 sm:grid-cols-3">
+                <a href="{{ $singleJournalLink }}" class="group rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600">
+                    <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700" aria-hidden="true">✎</span>
+                    <span class="mt-3 block text-sm font-black text-slate-900">Isi jurnal Diniyyah</span>
+                    <span class="mt-1 block text-xs font-medium text-slate-500">Catat materi dan kehadiran kelas.</span>
+                </a>
+                <a href="{{ route('guru.performa', ['month' => $performaMonth, 'year' => $performaYear]) }}" class="group rounded-2xl border border-amber-100 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-amber-200 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600">
+                    <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-700" aria-hidden="true">▥</span>
+                    <span class="mt-3 block text-sm font-black text-slate-900">Lihat performa</span>
+                    <span class="mt-1 block text-xs font-medium text-slate-500">Cek jurnal kosong dan download laporan.</span>
+                </a>
+                <a href="{{ route('guru.calendar') }}" class="group rounded-2xl border border-indigo-100 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+                    <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-700" aria-hidden="true">◷</span>
+                    <span class="mt-3 block text-sm font-black text-slate-900">Buka kalender</span>
+                    <span class="mt-1 block text-xs font-medium text-slate-500">Lihat jadwal dan agenda terdekat.</span>
+                </a>
+            </div>
+        </section>
+
         {{-- Highest-priority task --}}
         @if($performa !== null)
             <section class="rounded-[1.75rem] border {{ $performa['stats']['kosong'] > 0 ? 'border-rose-200 bg-rose-50/70' : 'border-emerald-200 bg-emerald-50/70' }} p-5 shadow-sm sm:p-6" aria-labelledby="performa-heading">
@@ -56,7 +83,7 @@
                         </div>
                         <div>
                             <p class="text-[11px] font-black uppercase tracking-[.16em] {{ $performa['stats']['kosong'] > 0 ? 'text-rose-700' : 'text-emerald-700' }}">Performa mengajar</p>
-                            <h2 id="performa-heading" class="mt-1 text-lg font-black text-slate-900">Jurnal {{ $performa['month_label'] }}</h2>
+                            <h2 id="performa-heading" class="mt-1 text-lg font-black text-slate-900">Performa Mengajar Saya <span class="font-semibold text-slate-500">— Jurnal {{ $performa['month_label'] }}</span></h2>
                             <p class="mt-1 text-sm text-slate-600">
                                 @if($performa['stats']['kosong'] > 0)
                                     Ada jurnal yang perlu dilengkapi agar rekap mengajar tetap rapi.

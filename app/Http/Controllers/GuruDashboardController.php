@@ -8,12 +8,17 @@ use App\Models\DiniyyahTeacherAssignment;
 use App\Models\SchoolEvent;
 use App\Models\SchoolHoliday;
 use App\Models\TahfidzHalaqah;
+use App\Services\DiniyyahAssessmentComponentBuilder;
+use App\Services\Exports\GuruPerformaXlsxExporter;
 use App\Services\GuruPerformaService;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\CarbonInterface;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 
 class GuruDashboardController extends Controller
 {
@@ -25,23 +30,23 @@ class GuruDashboardController extends Controller
 
         // Auto-create assessment sets for assignments that don't have one yet
         if ($teacher) {
-            $assignments = \App\Models\DiniyyahTeacherAssignment::with('classSubject.subject')
+            $assignments = DiniyyahTeacherAssignment::with('classSubject.subject')
                 ->where('teacher_id', $teacher->id)
                 ->where(function ($query) {
                     $query->whereNull('ends_at')->orWhere('ends_at', '>=', $this->wibToday());
                 })
                 ->get();
-                
-            $builder = new \App\Services\DiniyyahAssessmentComponentBuilder();
-            
+
+            $builder = new DiniyyahAssessmentComponentBuilder;
+
             foreach ($assignments as $assignment) {
                 $classSubject = $assignment->classSubject;
                 if ($classSubject) {
                     $exists = DiniyyahAssessmentSet::where('diniyyah_class_subject_id', $classSubject->id)->exists();
-                    if (!$exists) {
+                    if (! $exists) {
                         $newSet = DiniyyahAssessmentSet::create([
                             'diniyyah_class_subject_id' => $classSubject->id,
-                            'title' => 'Penilaian ' . $classSubject->subject?->name,
+                            'title' => 'Penilaian '.$classSubject->subject?->name,
                             'tested_material' => '-',
                             'assessment_method' => $classSubject->assessment_method ?? 'weighted',
                             'kkm' => $classSubject->kkm ?? 70,
@@ -89,11 +94,11 @@ class GuruDashboardController extends Controller
             ->with(['academicTerm.academicYear', 'activeMembers.student'])
             ->where(function ($q) use ($teacher) {
                 $q->where('teacher_id', $teacher?->id ?? 0)
-                  ->orWhere('assistant_teacher_id', $teacher?->id ?? 0);
+                    ->orWhere('assistant_teacher_id', $teacher?->id ?? 0);
             })
             ->latest()
             ->get();
-            
+
         // 3b. Data Assignments Guru Diniyyah (Untuk Jurnal)
         $diniyyahAssignments = DiniyyahTeacherAssignment::query()
             ->with('classSubject.subject')
@@ -179,6 +184,36 @@ class GuruDashboardController extends Controller
         return view('guru.performa', compact('teacher', 'performa', 'month', 'year', 'monthOptions'));
     }
 
+    public function performaExport(
+        Request $request,
+        string $format,
+        GuruPerformaXlsxExporter $xlsxExporter,
+    ) {
+        abort_unless($request->user()->hasRole('guru'), 403);
+        $teacher = $request->user()->teacher;
+        abort_unless($teacher, 403, 'Akses ditolak. Akun Anda tidak terhubung dengan data Guru.');
+        abort_unless(in_array($format, ['xlsx', 'pdf'], true), 404);
+
+        $month = (int) $request->input('month', (int) Carbon::now('Asia/Jakarta')->format('n'));
+        $year = (int) $request->input('year', (int) Carbon::now('Asia/Jakarta')->format('Y'));
+        $performa = app(GuruPerformaService::class)->calculate($teacher, $month, $year);
+        $fileStem = Str::slug('performa-'.$teacher->name.'-'.$performa['month_label']);
+
+        if ($format === 'xlsx') {
+            $content = $xlsxExporter->export($performa, $teacher);
+
+            return response($content, 200, [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'Content-Disposition' => 'attachment; filename="'.$fileStem.'.xlsx"',
+                'Content-Length' => strlen($content),
+            ]);
+        }
+
+        return Pdf::loadView('reports.guru-performa', compact('teacher', 'performa'))
+            ->setPaper('a4', 'landscape')
+            ->download($fileStem.'.pdf');
+    }
+
     /**
      * Daftar 12 bulan terakhir (current & past, tanpa future) untuk dropdown
      * pilih bulan. Dipakai dashboard & halaman performa.
@@ -201,8 +236,8 @@ class GuruDashboardController extends Controller
     }
 
     /** @param Collection<int, SchoolEvent> $events
-     *  @param Collection<int, SchoolHoliday> $holidays
-     *  @return Collection<int, array<string, mixed>>
+     * @param  Collection<int, SchoolHoliday>  $holidays
+     * @return Collection<int, array<string, mixed>>
      */
     private function buildUpcomingAlerts(Collection $events, Collection $holidays): Collection
     {
@@ -240,7 +275,7 @@ class GuruDashboardController extends Controller
                     'countdown_label' => $this->countdownLabel($holiday->holiday_date),
                     'sort_date' => $holiday->holiday_date->toDateString(),
                 ];
-        });
+            });
 
         return $eventAlerts
             ->concat($holidayAlerts)
@@ -249,7 +284,7 @@ class GuruDashboardController extends Controller
             ->take(5);
     }
 
-    private function countdownLabel(\Carbon\CarbonInterface $date): string
+    private function countdownLabel(CarbonInterface $date): string
     {
         $days = today()->diffInDays($date, false);
 
@@ -267,6 +302,6 @@ class GuruDashboardController extends Controller
      */
     private function wibToday(): string
     {
-        return \Illuminate\Support\Carbon::now('Asia/Jakarta')->toDateString();
+        return Carbon::now('Asia/Jakarta')->toDateString();
     }
 }
