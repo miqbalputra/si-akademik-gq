@@ -8,9 +8,11 @@ use App\Models\DiniyyahTeacherAssignment;
 use App\Models\SchoolEvent;
 use App\Models\SchoolHoliday;
 use App\Models\TahfidzHalaqah;
+use App\Services\GuruPerformaService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 class GuruDashboardController extends Controller
@@ -112,6 +114,15 @@ class GuruDashboardController extends Controller
                 || str_contains(strtolower($subject->name), 'tafsir');
         });
 
+        // 3d. Kartu performa jurnal mengajar bulan ini (atau bulan dari query).
+        // Default "bulan berjalan" memakai WIB — app tz=UTC.
+        $performaMonth = (int) $request->input('month', (int) Carbon::now('Asia/Jakarta')->format('n'));
+        $performaYear = (int) $request->input('year', (int) Carbon::now('Asia/Jakarta')->format('Y'));
+        $performa = ($teacher && $diniyyahAssignments->isNotEmpty())
+            ? app(GuruPerformaService::class)->calculate($teacher, $performaMonth, $performaYear)
+            : null;
+        $performaMonthOptions = $this->buildMonthOptions();
+
         // 4. Data Agenda & Libur Sekolah
         // We get classroom terms associated with this teacher (all roles) to filter events
         $allTeacherClassroomTerms = $homeroomClassroomTerms->concat(
@@ -141,8 +152,52 @@ class GuruDashboardController extends Controller
             'tahfidzHalaqahs',
             'diniyyahAssignments',
             'hasTafsirAssignment',
-            'upcomingAlerts'
+            'upcomingAlerts',
+            'performa',
+            'performaMonth',
+            'performaYear',
+            'performaMonthOptions'
         ));
+    }
+
+    /**
+     * Halaman detail "Performa Saya": 3 angka + daftar slot kosong yang bisa
+     * langsung diklik untuk mengisi jurnal.
+     */
+    public function performa(Request $request): View
+    {
+        abort_unless($request->user()->hasRole('guru'), 403);
+        $teacher = $request->user()->teacher;
+        abort_unless($teacher, 403, 'Akses ditolak. Akun Anda tidak terhubung dengan data Guru.');
+
+        $month = (int) $request->input('month', (int) Carbon::now('Asia/Jakarta')->format('n'));
+        $year = (int) $request->input('year', (int) Carbon::now('Asia/Jakarta')->format('Y'));
+
+        $performa = app(GuruPerformaService::class)->calculate($teacher, $month, $year);
+        $monthOptions = $this->buildMonthOptions();
+
+        return view('guru.performa', compact('teacher', 'performa', 'month', 'year', 'monthOptions'));
+    }
+
+    /**
+     * Daftar 12 bulan terakhir (current & past, tanpa future) untuk dropdown
+     * pilih bulan. Dipakai dashboard & halaman performa.
+     *
+     * @return Collection<int, array{value: array{month: int, year: int}, label: string}>
+     */
+    private function buildMonthOptions(): Collection
+    {
+        $now = Carbon::now('Asia/Jakarta');
+        $options = collect();
+        for ($i = 0; $i < 12; $i++) {
+            $date = $now->copy()->subMonths($i);
+            $options->push([
+                'value' => ['month' => (int) $date->format('n'), 'year' => (int) $date->format('Y')],
+                'label' => $date->locale('id')->translatedFormat('F Y'),
+            ]);
+        }
+
+        return $options;
     }
 
     /** @param Collection<int, SchoolEvent> $events

@@ -40,6 +40,7 @@ Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
 
 Route::middleware('auth')->prefix('guru')->name('guru.')->group(function () {
     Route::get('/', [\App\Http\Controllers\GuruDashboardController::class, 'index'])->name('dashboard');
+    Route::get('/performa', [\App\Http\Controllers\GuruDashboardController::class, 'performa'])->name('performa');
     Route::get('/diniyyah-scores', [GuruDiniyyahScoreController::class, 'index'])->name('diniyyah-scores.index');
     Route::get('/diniyyah-scores/{assessmentSet}', [GuruDiniyyahScoreController::class, 'edit'])->name('diniyyah-scores.edit');
     Route::put('/diniyyah-scores/{assessmentSet}', [GuruDiniyyahScoreController::class, 'update'])->name('diniyyah-scores.update');

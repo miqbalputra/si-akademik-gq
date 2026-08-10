@@ -97,6 +97,78 @@
         </section>
         @endif
 
+        <!-- 2b. KARTU PERFORMA MENGAJAR -->
+        @if($performa !== null)
+        <section class="rounded-3xl glass-card p-6 animate-fade-in-up lg:col-span-3" style="animation-delay: 112ms;">
+            <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-5">
+                <div class="flex items-center gap-3">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-100 text-teal-600">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-black text-slate-800">Performa Mengajar Saya</h2>
+                        <p class="text-sm text-slate-500">Rekap jurnal Diniyyah bulan {{ $performa['month_label'] }}.</p>
+                    </div>
+                </div>
+                <form method="GET" action="{{ route('guru.dashboard') }}" class="flex items-end gap-2">
+                    <div class="flex flex-col">
+                        <label class="text-[10px] font-bold uppercase text-slate-400 mb-1">Bulan</label>
+                        <select name="month" class="form-input py-1.5 text-sm" onchange="var o=this.options[this.selectedIndex]; this.form.year.value=o.dataset.year; this.form.submit()">
+                            @foreach($performaMonthOptions as $opt)
+                                <option value="{{ $opt['value']['month'] }}" data-year="{{ $opt['value']['year'] }}" @if((int) $performaMonth === $opt['value']['month'] && (int) $performaYear === $opt['value']['year']) selected @endif>{{ $opt['label'] }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <input type="hidden" name="year" value="{{ $performaYear }}">
+                    <noscript>
+                        <button type="submit" class="btn btn-sm">Tampilkan</button>
+                    </noscript>
+                </form>
+            </div>
+
+            <div class="grid gap-3 sm:grid-cols-3">
+                <div class="rounded-xl border border-emerald-100 bg-emerald-50/50 p-4 transition-transform hover:scale-[1.02]">
+                    <div class="mb-1 flex items-center justify-between">
+                        <div>
+                            <p class="font-bold text-slate-800">Sudah Diisi</p>
+                            <p class="text-xs font-semibold text-emerald-600">jam diisi jurnal Anda</p>
+                        </div>
+                        <span class="text-xl font-black text-emerald-700">{{ $performa['stats']['sudah_diisi'] }}</span>
+                    </div>
+                </div>
+                <a href="{{ route('guru.performa', ['month' => $performaMonth, 'year' => $performaYear]) }}" class="rounded-xl border border-rose-100 bg-rose-50/50 p-4 transition-transform hover:scale-[1.02] {{ $performa['stats']['kosong'] > 0 ? 'ring-2 ring-rose-200' : '' }}">
+                    <div class="mb-1 flex items-center justify-between">
+                        <div>
+                            <p class="font-bold text-slate-800">Kosong</p>
+                            <p class="text-xs font-semibold text-rose-600">belum diisi (tanggal lewat)</p>
+                        </div>
+                        <span class="text-xl font-black text-rose-700">{{ $performa['stats']['kosong'] }}</span>
+                    </div>
+                </a>
+                <div class="rounded-xl border border-indigo-100 bg-indigo-50/50 p-4 transition-transform hover:scale-[1.02]">
+                    <div class="mb-1 flex items-center justify-between">
+                        <div>
+                            <p class="font-bold text-slate-800">Digantikan</p>
+                            <p class="text-xs font-semibold text-indigo-600">diisi guru pengganti</p>
+                        </div>
+                        <span class="text-xl font-black text-indigo-700">{{ $performa['stats']['digantikan'] }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 text-right">
+                <a href="{{ route('guru.performa', ['month' => $performaMonth, 'year' => $performaYear]) }}" class="inline-flex items-center gap-1 text-xs font-bold text-teal-600 hover:text-teal-700">
+                    Lihat detail &amp; isi jurnal yang kosong
+                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                    </svg>
+                </a>
+            </div>
+        </section>
+        @endif
+
         <!-- 3. JURNAL GURU PENGGANTI WIDGET -->
         @if($teacher)
         <section class="rounded-3xl glass-card p-6 animate-fade-in-up" style="animation-delay: 125ms;">
