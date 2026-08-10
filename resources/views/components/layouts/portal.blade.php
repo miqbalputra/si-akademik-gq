@@ -1,3 +1,24 @@
+@php
+    $isGuruPortal = ($portalLabel ?? null) === 'Portal Guru';
+    $guruNavItems = [
+        ['label' => 'Beranda', 'href' => route('guru.dashboard'), 'match' => ['guru.dashboard']],
+        ['label' => 'Presensi', 'href' => route('attendance.index'), 'match' => ['attendance.*']],
+        ['label' => 'Input Nilai', 'href' => route('guru.diniyyah-scores.index'), 'match' => ['guru.diniyyah-scores.*']],
+        [
+            'label' => 'Jurnal',
+            'href' => route('guru.diniyyah-journals.index'),
+            'match' => [
+                'guru.diniyyah-journals.*',
+                'guru.diniyyah-tafsir-journals.*',
+                'guru.diniyyah-substitute-journals.*',
+                'guru.diniyyah-substitute-tafsir-journals.*',
+            ],
+        ],
+        ['label' => 'Tahfidz', 'href' => route('guru.tahfidz.index'), 'match' => ['guru.tahfidz.*']],
+        ['label' => 'Kalender', 'href' => route('guru.calendar'), 'match' => ['guru.calendar']],
+    ];
+@endphp
+
 {{--
     Layout: portal.blade.php
     Shared portal layout for Guru and Wali Santri pages.
@@ -105,6 +126,14 @@
         .empty-state p { color: #94a3b8; font-weight: 600; font-size: 13px; margin-top: 8px; }
         .form-input { width: 100%; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 8px 13px; font-size: 14px; font-weight: 500; color: #1e293b; background: #f8fafc; outline: none; transition: border-color .2s, background .2s; font-family: 'Outfit', sans-serif; }
         .form-input:focus { border-color: #f59e0b; background: #fff; box-shadow: 0 0 0 3px rgba(245,158,11,.1); }
+        .portal-menu-summary::-webkit-details-marker { display: none; }
+        .portal-nav-link { border: 1px solid transparent; transition: color .2s, background-color .2s, border-color .2s; }
+        .portal-nav-link:hover { background: #f8fafc; color: #0f172a; }
+        .portal-nav-link:focus-visible, .portal-menu-summary:focus-visible { outline: 3px solid rgba(245,158,11,.3); outline-offset: 2px; }
+        @media (prefers-reduced-motion: reduce) {
+            .animate-fade-in-up { animation: none; opacity: 1; }
+            .hover-card, .btn { transition: none; }
+        }
         @keyframes fadeInUp { 0% { opacity: 0; transform: translateY(16px); } 100% { opacity: 1; transform: translateY(0); } }
         .animate-fade-in-up { animation: fadeInUp .6s cubic-bezier(.16,1,.3,1) forwards; opacity: 0; }
         .delay-100 { animation-delay: 100ms; }
@@ -122,13 +151,13 @@
     <div class="fixed inset-0 z-[-1] pointer-events-none bg-grid opacity-60"></div>
 
     {{-- ===== TOP NAVIGATION ===== --}}
-    <nav class="portal-nav">
-        <div class="mx-auto max-w-5xl px-4 sm:px-6">
-            <div class="flex h-15 items-center justify-between py-3">
+    <nav class="portal-nav" aria-label="Navigasi utama">
+        <div class="mx-auto max-w-6xl px-4 sm:px-6">
+            <div class="flex min-h-16 items-center justify-between gap-4 py-3">
 
                 {{-- Logo + School Name --}}
                 <div class="flex items-center gap-3">
-                    <a href="{{ url('/') }}" class="flex items-center gap-3 group">
+                    <a href="{{ $isGuruPortal ? route('guru.dashboard') : url('/') }}" class="group flex shrink-0 items-center gap-3 rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-500">
                         <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 font-black text-white text-sm shadow-md group-hover:shadow-amber-300/40 transition-shadow">
                             GQ
                         </span>
@@ -139,32 +168,86 @@
                     </a>
                     
                     @isset($breadcrumb)
-                    <div class="hidden sm:flex items-center gap-2 pl-3 ml-3 border-l-2 border-slate-200">
-                        <span class="text-xs font-bold text-slate-500">{{ $breadcrumb }}</span>
+                    <div class="ml-1 hidden items-center gap-2 border-l-2 border-slate-200 pl-3 sm:flex">
+                        <span class="max-w-48 truncate text-xs font-bold text-slate-500">{{ $breadcrumb }}</span>
                     </div>
                     @endisset
                 </div>
 
-                {{-- Nav Links + Actions --}}
-                <div class="flex items-center gap-2">
-                    <a href="{{ route('guru.dashboard') }}" class="btn btn-outline btn-sm {{ request()->routeIs('guru.dashboard') ? 'bg-slate-100 border-slate-300 text-slate-800' : 'text-slate-500 hover:bg-slate-50' }}">
-                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l9-9 9 9M5 10v10a1 1 0 001 1h12a1 1 0 001-1V10" />
-                        </svg>
-                        <span class="hidden sm:inline">Dashboard</span>
-                    </a>
+                {{-- Desktop navigation --}}
+                <div class="hidden min-w-0 flex-1 items-center justify-end gap-1 lg:flex">
+                    @if($isGuruPortal)
+                        <div class="flex items-center gap-1 rounded-2xl bg-slate-50 p-1" aria-label="Menu guru">
+                            @foreach($guruNavItems as $item)
+                                @php($isActive = collect($item['match'])->contains(fn ($pattern) => request()->routeIs($pattern)))
+                                <a href="{{ $item['href'] }}" class="portal-nav-link rounded-xl px-3 py-2 text-xs font-bold {{ $isActive ? 'border-slate-200 bg-white text-slate-900 shadow-sm' : 'text-slate-500' }}" @if($isActive) aria-current="page" @endif>
+                                    {{ $item['label'] }}
+                                </a>
+                            @endforeach
+                        </div>
+                    @else
+                        @isset($navLinks)
+                            {{ $navLinks }}
+                        @endisset
+                    @endif
 
-                    @isset($navLinks)
-                        {{ $navLinks }}
-                    @endisset
+                    @if($isGuruPortal)
+                        @isset($navLinks)
+                            {{ $navLinks }}
+                        @endisset
+                    @endif
 
-                    <form method="POST" action="{{ route('logout') }}">
+                    <form method="POST" action="{{ route('logout') }}" class="ml-2">
                         @csrf
-                        <button type="submit" class="btn btn-outline btn-sm">
-                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <button type="submit" class="btn btn-outline btn-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-500">
+                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
                             </svg>
                             Keluar
+                        </button>
+                    </form>
+                </div>
+
+                {{-- Mobile navigation --}}
+                <div class="flex items-center gap-2 lg:hidden">
+                    @if($isGuruPortal)
+                        <details class="relative">
+                            <summary class="portal-menu-summary flex cursor-pointer list-none items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-sm">
+                                Menu
+                                <svg class="h-3.5 w-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6" />
+                                </svg>
+                            </summary>
+                            <div class="absolute right-0 top-12 z-50 w-64 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl shadow-slate-900/10">
+                                <p class="px-3 pb-2 pt-1 text-[10px] font-black uppercase tracking-[.16em] text-slate-400">Menu utama</p>
+                                @foreach($guruNavItems as $item)
+                                    @php($isActive = collect($item['match'])->contains(fn ($pattern) => request()->routeIs($pattern)))
+                                    <a href="{{ $item['href'] }}" class="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-bold {{ $isActive ? 'bg-amber-50 text-amber-800' : 'text-slate-600 hover:bg-slate-50' }}" @if($isActive) aria-current="page" @endif>
+                                        {{ $item['label'] }}
+                                        @if($isActive)
+                                            <span class="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden="true"></span>
+                                        @endif
+                                    </a>
+                                @endforeach
+                                @isset($navLinks)
+                                    <div class="mt-2 border-t border-slate-100 pt-2">
+                                        {{ $navLinks }}
+                                    </div>
+                                @endisset
+                            </div>
+                        </details>
+                    @else
+                        @isset($navLinks)
+                            {{ $navLinks }}
+                        @endisset
+                    @endif
+
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <button type="submit" class="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-500" aria-label="Keluar">
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
+                            </svg>
                         </button>
                     </form>
                 </div>
@@ -173,7 +256,7 @@
     </nav>
 
     {{-- ===== MAIN CONTENT ===== --}}
-    <main class="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+    <main class="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:py-10">
         {{ $slot }}
     </main>
 
