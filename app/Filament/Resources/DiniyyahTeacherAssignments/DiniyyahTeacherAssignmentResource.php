@@ -6,6 +6,7 @@ use App\Filament\Concerns\HasRoleBasedResourceAccess;
 use App\Filament\Resources\DiniyyahTeacherAssignments\Pages\CreateDiniyyahTeacherAssignment;
 use App\Filament\Resources\DiniyyahTeacherAssignments\Pages\EditDiniyyahTeacherAssignment;
 use App\Filament\Resources\DiniyyahTeacherAssignments\Pages\ListDiniyyahTeacherAssignments;
+use App\Filament\Resources\DiniyyahTeacherAssignments\RelationManagers\DiniyyahScheduleChangeLogsRelationManager;
 use App\Filament\Resources\DiniyyahTeacherAssignments\Schemas\DiniyyahTeacherAssignmentForm;
 use App\Filament\Resources\DiniyyahTeacherAssignments\Tables\DiniyyahTeacherAssignmentsTable;
 use App\Models\DiniyyahTeacherAssignment;
@@ -52,7 +53,7 @@ class DiniyyahTeacherAssignmentResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            DiniyyahScheduleChangeLogsRelationManager::class,
         ];
     }
 

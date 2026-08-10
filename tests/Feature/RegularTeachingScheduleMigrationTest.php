@@ -16,6 +16,7 @@ use App\Models\User;
 use App\Support\SessionTimetable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
@@ -96,8 +97,14 @@ class RegularTeachingScheduleMigrationTest extends TestCase
 
     public function test_migrate_command_integration_runs_without_error(): void
     {
-        // Rollback 000007 lalu migrate ulang via Artisan → 12 jadwal terbentuk.
-        Artisan::call('migrate:rollback', ['--step' => 1, '--force' => true]);
+        // Simulasikan rollback migration 000007 dengan menghapus entry-nya di
+        // tabel `migrations` beserta data jadwal yang dibuatnya, lalu migrate
+        // ulang via Artisan → 10 jadwal terbentuk kembali. Dilakukan eksplisit
+        // per-migration (bukan `migrate:rollback --step=1`) supaya tetap robust
+        // bila ada migration baru muncul setelah 000007 — `--step=1` hanya
+        // merollback migration paling akhir, yang bisa bukan 000007.
+        DB::table('migrations')->where('migration', '2026_07_28_000007_seed_regular_teaching_schedules')->delete();
+        DiniyyahTeachingSchedule::query()->delete();
         $this->assertSame(0, DiniyyahTeachingSchedule::count());
 
         Artisan::call('migrate', ['--force' => true]);

@@ -13,7 +13,11 @@ class EditDiniyyahTeachingSchedule extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            DeleteAction::make(),
+            // Menghapus baris jadwal AMAN bagi jurnal kelas: jurnal terhubung
+            // ke penugasan (assignment), bukan ke jadwal. Beri reassurance
+            // eksplisit agar admin tidak ragu saat menyesuaikan jadwal.
+            DeleteAction::make()
+                ->successNotificationTitle('Jadwal dihapus. Jurnal kelas tidak terpengaruh.'),
         ];
     }
 }

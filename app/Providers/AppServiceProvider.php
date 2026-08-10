@@ -5,9 +5,13 @@ namespace App\Providers;
 use App\Models\DiniyyahClassJournal;
 use App\Models\DiniyyahClassJournalAbsence;
 use App\Models\DiniyyahScore;
+use App\Models\DiniyyahTeacherAssignment;
+use App\Models\DiniyyahTeachingSchedule;
 use App\Observers\DiniyyahClassJournalAbsenceObserver;
 use App\Observers\DiniyyahClassJournalObserver;
 use App\Observers\DiniyyahScoreObserver;
+use App\Observers\DiniyyahTeacherAssignmentObserver;
+use App\Observers\DiniyyahTeachingScheduleObserver;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -28,6 +32,8 @@ class AppServiceProvider extends ServiceProvider
         DiniyyahScore::observe(DiniyyahScoreObserver::class);
         DiniyyahClassJournal::observe(DiniyyahClassJournalObserver::class);
         DiniyyahClassJournalAbsence::observe(DiniyyahClassJournalAbsenceObserver::class);
+        DiniyyahTeachingSchedule::observe(DiniyyahTeachingScheduleObserver::class);
+        DiniyyahTeacherAssignment::observe(DiniyyahTeacherAssignmentObserver::class);
 
         \Filament\Forms\Components\Field::configureUsing(function (\Filament\Forms\Components\Field $field): void {
             $field->translateLabel();

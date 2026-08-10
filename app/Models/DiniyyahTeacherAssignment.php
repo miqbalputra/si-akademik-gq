@@ -46,6 +46,23 @@ class DiniyyahTeacherAssignment extends Model
         return $this->hasMany(DiniyyahTeachingSchedule::class, 'diniyyah_teacher_assignment_id');
     }
 
+    public function scheduleChangeLogs(): HasMany
+    {
+        return $this->hasMany(DiniyyahScheduleChangeLog::class, 'diniyyah_teacher_assignment_id');
+    }
+
+    /**
+     * Apakah penugasan ini boleh dihapus. Penugasan yang sudah memiliki jurnal
+     * kelas TIDAK boleh dihapus, karena FK jurnal→assignment cascadeOnDelete
+     * (hard delete, tanpa soft delete) akan menghapus seluruh jurnal secara
+     * permanen — satu-satunya jalur hilangnya data jurnal. Lihat policy
+     * {@see \App\Policies\DiniyyahTeacherAssignmentPolicy::delete()}.
+     */
+    public function isDeletable(): bool
+    {
+        return ! $this->journals()->exists();
+    }
+
     /**
      * Opsi pencarian untuk Select Filament "Tugas Mengajar": cocokkan nama kelas
      * (classSubject.classroomTerm), nama mapel (classSubject.subject), nama guru,

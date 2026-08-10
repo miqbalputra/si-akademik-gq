@@ -93,6 +93,9 @@
                     Jurnal Tafsir
                 </a>
                 @endif
+                <a href="{{ route('guru.jadwal.riwayat') }}" class="flex-1 min-w-[30%] text-center rounded-xl bg-slate-600 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-slate-700 transition-colors">
+                    Riwayat Jadwal
+                </a>
             </div>
         </section>
         @endif
