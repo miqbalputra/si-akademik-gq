@@ -206,8 +206,34 @@ class DiniyyahLedgerGenerator
                 ],
             ]);
 
+            $this->notifyGenerated($snapshot);
+
             return $snapshot->fresh(['rows.cells']);
         });
+    }
+
+    private function notifyGenerated(DiniyyahLedgerSnapshot $snapshot): void
+    {
+        $kelas = $snapshot->classroomTerm?->name ?? 'kelas';
+        $dispatcher = app(\App\Services\NotificationDispatcher::class);
+        $linkUrl = route('diniyyah.ledger.show', $snapshot);
+        $body = "Leger kelas {$kelas} berhasil di-generate, menunggu validasi.";
+
+        // Kabag diniyyah + kepala sekolah.
+        $dispatcher->dispatchToRole('kabag_diniyyah', "Leger {$kelas} di-generate", $body, 'ledger_generated', $linkUrl, 'success');
+        $dispatcher->dispatchToRole('kepala_sekolah', "Leger {$kelas} di-generate", $body, 'ledger_generated', $linkUrl, 'info');
+
+        // Wali kelas kelas tsb.
+        if ($snapshot->classroom_term_id) {
+            $dispatcher->dispatchToHomeroomTeacher(
+                $snapshot->classroom_term_id,
+                "Leger {$kelas} di-generate",
+                $body,
+                'ledger_generated',
+                $linkUrl,
+                'info',
+            );
+        }
     }
 
     private function columnKey(DiniyyahAssessmentSet $assessmentSet): string

@@ -283,6 +283,43 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
-            ]);
+            ])
+            // ── Notification bell icon di pojok kanan atas panel admin ───
+            ->renderHook(
+                PanelsRenderHook::TOPBAR_END,
+                fn (): string => Blade::render('
+                    <div id="fi-notif-bell" class="relative" x-data="{ open:false, unread:0, items:[], loading:false }" x-init="setInterval(function(){ fetch(\''.route('notifications.feed').'\', {headers:{\'Accept\':\'application/json\'}}).then(r=>r.json()).then(d=>{unread=d.unread_count||0; items=d.notifications||[]}).catch(()=>{}); }, 30000); fetch(\''.route('notifications.feed').'\', {headers:{\'Accept\':\'application/json\'}}).then(r=>r.json()).then(d=>{unread=d.unread_count||0; items=d.notifications||[]}).catch(()=>{}); ">
+                        <button type="button" @click="open=!open; if(open){ $nextTick(() => { $refs.dropdown.focus(); }); }" class="relative flex items-center justify-center rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 p-2 transition-colors" aria-label="Notifikasi">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" /></svg>
+                            <span x-show="unread > 0" x-text="unread > 99 ? \'99+\' : unread" style="position:absolute;top:-2px;right:-2px;min-width:16px;height:16px;padding:0 4px;background:#dc2626;color:#fff;font-size:10px;font-weight:800;border-radius:999px;display:flex;align-items:center;justify-content:center;line-height:1;"></span>
+                        </button>
+                        <div x-show="open" x-ref="dropdown" @click.outside="open=false" @keydown.escape.window="open=false" style="position:absolute;right:0;top:44px;z-index:60;width:360px;max-width:calc(100vw - 24px);background:#fff;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 12px 40px -8px rgba(0,0,0,.15);overflow:hidden;" tabindex="-1">
+                            <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+                                <strong class="text-sm text-slate-900">Notifikasi</strong>
+                                <button type="button" @click="fetch(\''.route('notifications.read-all').'\', {method:\'POST\',headers:{\'X-CSRF-TOKEN\':\''.csrf_token().'\',\'Accept\':\'application/json\'}}).then(()=>{ unread=0; items=[]; })" class="text-[11px] font-bold text-purple-700">Tandai semua dibaca</button>
+                            </div>
+                            <div style="max-height:380px;overflow-y:auto;">
+                                <template x-if="items.length === 0">
+                                    <div class="px-6 py-8 text-center text-slate-400 text-xs font-semibold">Tidak ada notifikasi baru.</div>
+                                </template>
+                                <template x-for="n in items" :key="n.id">
+                                    <a :href="n.link_url || \'#\'" @click="fetch(\''.route('notifications.read', '__ID__').'\'.replace(\'__ID__\', n.id), {method:\'POST\',headers:{\'X-CSRF-TOKEN\':\''.csrf_token().'\',\'Accept\':\'application/json\'}}).catch(()=>{})" class="flex items-start gap-3 px-4 py-3 border-b border-slate-100 hover:bg-purple-50" :style="n.status===\'unread\' ? \'background:#fdfbff;\' : \'\'">
+                                        <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold" :class="n.severity===\'success\' ? \'bg-emerald-50 text-emerald-700\' : (n.severity===\'warning\' ? \'bg-amber-50 text-amber-700\' : (n.severity===\'danger\' ? \'bg-rose-50 text-rose-700\' : \'bg-blue-50 text-blue-700\'))" x-text="n.severity===\'success\' ? \'✓\' : \'!\'"></span>
+                                        <span class="flex-1 min-w-0">
+                                            <span class="block text-xs font-bold text-slate-900" x-text="n.title"></span>
+                                            <span class="block text-[11px] text-slate-500 mt-0.5 line-clamp-2" x-text="n.body"></span>
+                                            <span class="block text-[10px] text-slate-300 mt-1" x-text="n.created_at"></span>
+                                        </span>
+                                        <span x-show="n.status===\'unread\'" class="w-1.5 h-1.5 rounded-full bg-rose-600 mt-1.5 shrink-0"></span>
+                                    </a>
+                                </template>
+                            </div>
+                            <div class="px-4 py-2.5 border-t border-slate-100 text-center">
+                                <a href="'.route('notifications.index').'" class="text-xs font-bold text-purple-700">Lihat semua notifikasi →</a>
+                            </div>
+                        </div>
+                    </div>
+                ')
+            );
     }
 }

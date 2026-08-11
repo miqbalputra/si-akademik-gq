@@ -4,6 +4,7 @@ namespace App\Observers;
 
 use App\Models\ScoreChangeLog;
 use App\Models\TasmiRecord;
+use App\Services\NotificationDispatcher;
 use Illuminate\Support\Facades\Auth;
 
 class TasmiRecordObserver
@@ -19,6 +20,8 @@ class TasmiRecordObserver
             'changed_at' => now(),
             'reason' => 'created_tasmi',
         ]);
+
+        $this->dispatchCreatedNotifications($record);
     }
 
     public function updated(TasmiRecord $record): void
@@ -57,6 +60,8 @@ class TasmiRecordObserver
             ->causedBy(Auth::user())
             ->withProperties(['changes' => $changes])
             ->log('updated_tasmi_record');
+
+        $this->dispatchUpdatedNotifications($record, $changes);
     }
 
     public function deleted(TasmiRecord $record): void
@@ -71,5 +76,140 @@ class TasmiRecordObserver
                 'predicate' => $record->predicate,
             ])
             ->log('deleted_tasmi_record');
+
+        $this->dispatchDeletedNotifications($record);
+    }
+
+    // ── Notifikasi ────────────────────────────────────────────────────────
+
+    /**
+     * Saat PJ Tasmi' input record baru:
+     * - wali kelas santri tsb dapat notif (detail hasil tasmi')
+     * - PJ sendiri dapat receipt konfirmasi
+     * - kabag_tahfidz dapat notif (monitoring)
+     */
+    private function dispatchCreatedNotifications(TasmiRecord $record): void
+    {
+        $student = $record->student;
+        $studentName = $student?->name ?? 'santri';
+        $examType = \App\Models\TasmiRecord::examTypeOptions()[$record->exam_type] ?? $record->exam_type;
+        $predicate = \App\Models\TasmiRecord::predicateLabel($record->predicate);
+        $dateLabel = $record->exam_date?->locale('id')->translatedFormat('d M Y') ?? '-';
+        $juzLabel = $record->juz_range_label;
+
+        $body = "Hasil Tasmi' {$examType} santri {$studentName} ({$juzLabel}) tanggal {$dateLabel}: predikat {$predicate}.";
+
+        $dispatcher = app(NotificationDispatcher::class);
+
+        // Wali kelas santri (read-only lihat data).
+        if ($record->classroom_term_id) {
+            $dispatcher->dispatchToHomeroomTeacher(
+                $record->classroom_term_id,
+                "Nilai Tasmi' baru: {$studentName}",
+                $body,
+                'tasmi_created',
+                route('guru.tasmi-wali.show', $record),
+                'success',
+            );
+        }
+
+        // PJ Tasmi' sendiri (receipt).
+        if ($record->examiner_teacher_id) {
+            $dispatcher->dispatchToExaminer(
+                $record->examiner_teacher_id,
+                'Tasmi\' berhasil disimpan',
+                $body,
+                'tasmi_created',
+                route('guru.tasmi.edit', $record),
+                'success',
+            );
+        }
+
+        // Kabag tahfidz (broadcast).
+        $dispatcher->dispatchToRole(
+            'kabag_tahfidz',
+            'Input tasmi\' baru',
+            $body,
+            'tasmi_created',
+            route('guru.tasmi-wali.show', $record),
+            'info',
+        );
+    }
+
+    private function dispatchUpdatedNotifications(TasmiRecord $record, array $changes): void
+    {
+        $student = $record->student;
+        $studentName = $student?->name ?? 'santri';
+        $dateLabel = $record->exam_date?->locale('id')->translatedFormat('d M Y') ?? '-';
+
+        // Bangun body berdasarkan field yang berubah.
+        $parts = [];
+        if (isset($changes['predicate'])) {
+            $old = \App\Models\TasmiRecord::predicateLabel($changes['predicate']['from']);
+            $new = \App\Models\TasmiRecord::predicateLabel($changes['predicate']['to']);
+            $parts[] = "predikat {$old} → {$new}";
+        }
+        if (isset($changes['juz_start']) || isset($changes['juz_end'])) {
+            $parts[] = 'juz diuji diubah';
+        }
+        if (isset($changes['exam_date'])) {
+            $parts[] = 'tanggal diubah';
+        }
+        if (empty($parts)) {
+            $parts[] = 'data diperbarui';
+        }
+        $body = "Hasil Tasmi' santri {$studentName} ({$dateLabel}) diperbarui: ".implode(', ', $parts).'.';
+
+        $dispatcher = app(NotificationDispatcher::class);
+
+        if ($record->classroom_term_id) {
+            $dispatcher->dispatchToHomeroomTeacher(
+                $record->classroom_term_id,
+                "Tasmi' diperbarui: {$studentName}",
+                $body,
+                'tasmi_updated',
+                route('guru.tasmi-wali.show', $record),
+                'info',
+            );
+        }
+
+        $dispatcher->dispatchToRole(
+            'kabag_tahfidz',
+            'Tasmi\' diperbarui',
+            $body,
+            'tasmi_updated',
+            route('guru.tasmi-wali.show', $record),
+            'info',
+        );
+    }
+
+    private function dispatchDeletedNotifications(TasmiRecord $record): void
+    {
+        $student = $record->student;
+        $studentName = $student?->name ?? 'santri';
+        $dateLabel = $record->exam_date?->locale('id')->translatedFormat('d M Y') ?? '-';
+        $body = "Record Tasmi' santri {$studentName} tanggal {$dateLabel} dihapus.";
+
+        $dispatcher = app(NotificationDispatcher::class);
+
+        if ($record->classroom_term_id) {
+            $dispatcher->dispatchToHomeroomTeacher(
+                $record->classroom_term_id,
+                "Tasmi' dihapus: {$studentName}",
+                $body,
+                'tasmi_deleted',
+                route('guru.tasmi-wali.index'),
+                'warning',
+            );
+        }
+
+        $dispatcher->dispatchToRole(
+            'kabag_tahfidz',
+            'Tasmi\' dihapus',
+            $body,
+            'tasmi_deleted',
+            route('guru.tasmi-wali.index'),
+            'warning',
+        );
     }
 }

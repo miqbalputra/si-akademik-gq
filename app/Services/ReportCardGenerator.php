@@ -26,6 +26,9 @@ class ReportCardGenerator
                 $count++;
             }
 
+            // Notifikasi: rapor di-generate → kabag_diniyyah + wali kelas.
+            $this->notifyGenerated($snapshot, $count, $generatedBy);
+
             return $count;
         });
     }
@@ -144,6 +147,39 @@ class ReportCardGenerator
 
         if ($snapshot->rows->whereNotNull('rank_in_class')->isEmpty()) {
             throw new DomainException('Rapor tidak bisa dibuat karena belum ada baris leger yang lengkap.');
+        }
+    }
+
+    private function notifyGenerated(DiniyyahLedgerSnapshot $snapshot, int $count, ?int $generatedBy): void
+    {
+        if ($count <= 0) {
+            return;
+        }
+        $kelas = $snapshot->classroomTerm?->name ?? 'kelas';
+        $dispatcher = app(\App\Services\NotificationDispatcher::class);
+        $linkUrl = route('diniyyah.ledger.show', $snapshot);
+        $body = "{$count} rapor kelas {$kelas} berhasil di-generate dari leger.";
+
+        // Kabag diniyyah.
+        $dispatcher->dispatchToRole(
+            'kabag_diniyyah',
+            "Rapor kelas {$kelas} di-generate",
+            $body,
+            'rapor_generated',
+            $linkUrl,
+            'success',
+        );
+
+        // Wali kelas kelas tsb.
+        if ($snapshot->classroom_term_id) {
+            $dispatcher->dispatchToHomeroomTeacher(
+                $snapshot->classroom_term_id,
+                "Rapor kelas {$kelas} di-generate",
+                $body.' Silakan tinjau sebelum dikunci.',
+                'rapor_generated',
+                $linkUrl,
+                'info',
+            );
         }
     }
 

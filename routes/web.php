@@ -39,6 +39,15 @@ Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
     ->middleware('auth')
     ->name('logout');
 
+// Notifikasi pusat — bell icon di pojok kanan atas (semua role).
+Route::middleware('auth')->prefix('notifications')->name('notifications.')->group(function () {
+    Route::get('/', [\App\Http\Controllers\NotificationController::class, 'index'])->name('index');
+    Route::get('/feed', [\App\Http\Controllers\NotificationController::class, 'feed'])->name('feed');
+    Route::post('/{notification}/read', [\App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('read');
+    Route::post('/read-all', [\App\Http\Controllers\NotificationController::class, 'markAllRead'])->name('read-all');
+    Route::delete('/{notification}', [\App\Http\Controllers\NotificationController::class, 'archive'])->name('archive');
+});
+
 Route::middleware('auth')->prefix('guru')->name('guru.')->group(function () {
     Route::get('/', [\App\Http\Controllers\GuruDashboardController::class, 'index'])->name('dashboard');
     Route::get('/performa', [\App\Http\Controllers\GuruDashboardController::class, 'performa'])->name('performa');
