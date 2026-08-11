@@ -58,6 +58,22 @@ class User extends Authenticatable implements FilamentUser
     }
 
     /**
+     * Apakah user ini adalah guru yang ditugaskan sebagai PJ Tasmi' pada
+     * periode akademik aktif. Dipakai untuk menampilkan menu "Tasmi'" di
+     * dashboard guru.
+     */
+    public function isTasmiExaminer(): bool
+    {
+        $teacher = $this->teacher;
+
+        if (! $teacher) {
+            return false;
+        }
+
+        return $teacher->isTasmiExaminer();
+    }
+
+    /**
      * Presensi kelas hanya tersedia untuk manajemen atau guru yang sedang
      * mendapat penugasan wali kelas aktif.
      */

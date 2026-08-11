@@ -82,6 +82,20 @@ Route::middleware('auth')->prefix('guru')->name('guru.')->group(function () {
     // Menu "Jurnal Tafsir" — input serentak 1 materi → 1 jurnal per kelas Tafsir.
     Route::get('/diniyyah-tafsir-journals', [\App\Http\Controllers\GuruDiniyyahTafsirJournalController::class, 'index'])->name('diniyyah-tafsir-journals.index');
     Route::post('/diniyyah-tafsir-journals', [\App\Http\Controllers\GuruDiniyyahTafsirJournalController::class, 'store'])->name('diniyyah-tafsir-journals.store');
+
+    // Menu "Tasmi'" — khusus guru yang ditugaskan sebagai PJ Tasmi' (tasmi_examiner_assignments).
+    // Ustadz hanya melihat kelas ikhwan, ustadzah hanya melihat kelas akhwat.
+    Route::get('/tasmi', [\App\Http\Controllers\GuruTasmiController::class, 'index'])->name('tasmi.index');
+    Route::get('/tasmi/create', [\App\Http\Controllers\GuruTasmiController::class, 'create'])->name('tasmi.create');
+    Route::post('/tasmi', [\App\Http\Controllers\GuruTasmiController::class, 'store'])->name('tasmi.store');
+    Route::get('/tasmi/records', [\App\Http\Controllers\GuruTasmiController::class, 'records'])->name('tasmi.records');
+    Route::get('/tasmi/{tasmi_record}/edit', [\App\Http\Controllers\GuruTasmiController::class, 'edit'])->name('tasmi.edit');
+    Route::put('/tasmi/{tasmi_record}', [\App\Http\Controllers\GuruTasmiController::class, 'update'])->name('tasmi.update');
+    Route::delete('/tasmi/{tasmi_record}', [\App\Http\Controllers\GuruTasmiController::class, 'destroy'])->name('tasmi.destroy');
+
+    // Menu "Tasmi' Kelas Saya" — wali kelas (homeroom teacher) lihat data tasmi' santri di kelasnya (read-only).
+    Route::get('/tasmi-wali', [\App\Http\Controllers\WaliKelasTasmiController::class, 'index'])->name('tasmi-wali.index');
+    Route::get('/tasmi-wali/{tasmi_record}', [\App\Http\Controllers\WaliKelasTasmiController::class, 'show'])->name('tasmi-wali.show');
 });
 
 Route::middleware('auth')->prefix('attendance')->name('attendance.')->group(function () {

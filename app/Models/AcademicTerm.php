@@ -56,4 +56,14 @@ class AcademicTerm extends Model
     {
         return $this->hasMany(SchoolEvent::class);
     }
+
+    public function tasmiExaminerAssignments(): HasMany
+    {
+        return $this->hasMany(TasmiExaminerAssignment::class);
+    }
+
+    public function tasmiRecords(): HasMany
+    {
+        return $this->hasMany(TasmiRecord::class);
+    }
 }

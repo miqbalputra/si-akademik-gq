@@ -1,6 +1,8 @@
 @php
     $isGuruPortal = ($portalLabel ?? null) === 'Portal Guru';
     $canAccessAttendance = $isGuruPortal && (auth()->user()?->canAccessAttendance() ?? false);
+    $isTasmiExaminer = $isGuruPortal && (auth()->user()?->isTasmiExaminer() ?? false);
+    $isHomeroomTeacher = $isGuruPortal && (auth()->user()?->canAccessAttendance() ?? false);
     $guruNavItems = [
         ['label' => 'Beranda', 'href' => route('guru.dashboard'), 'match' => ['guru.dashboard']],
         ['label' => 'Input Nilai', 'href' => route('guru.diniyyah-scores.index'), 'match' => ['guru.diniyyah-scores.*']],
@@ -17,6 +19,14 @@
         ['label' => 'Tahfidz', 'href' => route('guru.tahfidz.index'), 'match' => ['guru.tahfidz.*']],
         ['label' => 'Kalender', 'href' => route('guru.calendar'), 'match' => ['guru.calendar']],
     ];
+    // Menu Tasmi' (PJ Tasmi') — muncul bila guru ditugaskan sebagai PJ Tasmi'.
+    if ($isTasmiExaminer) {
+        $guruNavItems[] = ['label' => 'Tasmi\'', 'href' => route('guru.tasmi.index'), 'match' => ['guru.tasmi.index', 'guru.tasmi.create', 'guru.tasmi.store', 'guru.tasmi.records', 'guru.tasmi.edit', 'guru.tasmi.update', 'guru.tasmi.destroy']];
+    }
+    // Menu "Tasmi' Kelas Saya" (read-only) — muncul bila guru adalah wali kelas.
+    if ($isHomeroomTeacher) {
+        $guruNavItems[] = ['label' => 'Tasmi\' Kelas Saya', 'href' => route('guru.tasmi-wali.index'), 'match' => ['guru.tasmi-wali.*']];
+    }
     if ($canAccessAttendance) {
         array_splice($guruNavItems, 1, 0, [[
             'label' => 'Presensi',

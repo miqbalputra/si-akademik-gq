@@ -52,4 +52,9 @@ class ClassEnrollment extends Model
     {
         return $this->hasMany(DiniyyahClassJournalAbsence::class);
     }
+
+    public function tasmiRecords(): HasMany
+    {
+        return $this->hasMany(TasmiRecord::class);
+    }
 }

@@ -31,6 +31,9 @@ class RolePermissionSeeder extends Seeder
             'publish_report_cards',
             'view_school_reports',
             'view_own_children',
+            'manage_tasmi_examiners',
+            'input_tasmi_records',
+            'view_all_tasmi_records',
         ];
 
         $permissionModels = collect($permissions)->mapWithKeys(fn (string $permission) => [
@@ -55,11 +58,14 @@ class RolePermissionSeeder extends Seeder
             $permissionModels['manage_report_cards'],
         ]);
 
-        Role::firstOrCreate(['name' => 'kabag_tahfidz', 'guard_name' => 'web'])->syncPermissions([]);
+        Role::firstOrCreate(['name' => 'kabag_tahfidz', 'guard_name' => 'web'])->syncPermissions([
+            $permissionModels['view_all_tasmi_records'],
+        ]);
 
         Role::firstOrCreate(['name' => 'guru', 'guard_name' => 'web'])->syncPermissions([
             $permissionModels['input_diniyyah_scores'],
             $permissionModels['update_own_diniyyah_scores'],
+            $permissionModels['input_tasmi_records'],
         ]);
 
         Role::firstOrCreate(['name' => 'wali_santri', 'guard_name' => 'web'])->syncPermissions([

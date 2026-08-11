@@ -48,4 +48,30 @@ class Teacher extends Model
     {
         return $this->hasMany(TahfidzHalaqah::class, "assistant_teacher_id");
     }
+
+    public function tasmiExaminerAssignments(): HasMany
+    {
+        return $this->hasMany(TasmiExaminerAssignment::class);
+    }
+
+    public function tasmiRecordsAsExaminer(): HasMany
+    {
+        return $this->hasMany(TasmiRecord::class, 'examiner_teacher_id');
+    }
+
+    /**
+     * Cek apakah guru ditugaskan sebagai PJ Tasmi' pada periode tertentu (atau periode aktif).
+     */
+    public function isTasmiExaminer(?int $academicTermId = null): bool
+    {
+        $query = $this->tasmiExaminerAssignments()->where('status', 'active');
+
+        if ($academicTermId !== null) {
+            $query->where('academic_term_id', $academicTermId);
+        } else {
+            $query->whereHas('academicTerm', fn ($q) => $q->where('is_active', true));
+        }
+
+        return $query->exists();
+    }
 }

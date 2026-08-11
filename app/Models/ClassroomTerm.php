@@ -54,4 +54,9 @@ class ClassroomTerm extends Model
         return $this->belongsToMany(SchoolEvent::class, 'school_event_targets')
             ->withTimestamps();
     }
+
+    public function tasmiRecords(): HasMany
+    {
+        return $this->hasMany(TasmiRecord::class);
+    }
 }

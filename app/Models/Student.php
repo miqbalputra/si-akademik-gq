@@ -51,4 +51,9 @@ class Student extends Model
     {
         return $this->hasOne(TahfidzUasResult::class);
     }
+
+    public function tasmiRecords(): HasMany
+    {
+        return $this->hasMany(TasmiRecord::class);
+    }
 }
