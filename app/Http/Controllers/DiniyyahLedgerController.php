@@ -69,12 +69,12 @@ class DiniyyahLedgerController extends Controller
 
         // Synchronous export for normal sizes
         $content = $exporter->export($snapshot->id);
-        $filename = 'Leger-Diniyyah-' . str()->slug($snapshot->classroomTerm?->name ?? 'export') . '.xls';
+        $filename = 'Leger-Diniyyah-' . str()->slug($snapshot->classroomTerm?->name ?? 'export') . '.xlsx';
 
         return response()->streamDownload(function () use ($content) {
             echo $content;
         }, $filename, [
-            'Content-Type' => 'application/vnd.ms-excel; charset=UTF-8',
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             'Content-Disposition' => 'attachment; filename="' . $filename . '"',
         ]);
     }

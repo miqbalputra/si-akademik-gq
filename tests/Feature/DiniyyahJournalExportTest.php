@@ -13,7 +13,10 @@ use App\Models\DiniyyahTeacherAssignment;
 use App\Models\School;
 use App\Models\Teacher;
 use App\Models\User;
+use App\Services\Exports\SpreadsheetTheme;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -51,11 +54,18 @@ class DiniyyahJournalExportTest extends TestCase
             ->get(route('admin.diniyyah-journals.export', ['format' => 'excel']));
 
         $response->assertOk();
-        $response->assertHeader('Content-Type', 'application/vnd.ms-excel');
-        $response->assertSee('Guru Mengajar (untuk gaji)');
-        $response->assertSee($ctx['teacherB']->name, false); // nama pengganti tampil
-        $response->assertSee('Reguler Bab 1');
-        $response->assertSee('Pengganti Bab 2');
+        $response->assertHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        $this->assertSame('PK', substr($response->getContent(), 0, 2));
+
+        $workbook = $this->readWorkbook($response->getContent());
+        $detail = $workbook->getSheetByName('Detail Jurnal');
+        $this->assertNotNull($detail);
+        $this->assertSame('Guru Mengajar (untuk gaji)', $detail->getCell('H5')->getValue());
+        $text = $this->worksheetText($detail);
+        $this->assertStringContainsString($ctx['teacherB']->name, $text);
+        $this->assertStringContainsString('Reguler Bab 1', $text);
+        $this->assertStringContainsString('Pengganti Bab 2', $text);
+        $workbook->disconnectWorksheets();
     }
 
     public function test_csv_export_works_and_contains_substitute(): void
@@ -99,14 +109,13 @@ class DiniyyahJournalExportTest extends TestCase
         $response->assertOk();
         $response->assertHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 
-        $path = tempnam(sys_get_temp_dir(), 'xlsx-test-');
-        file_put_contents($path, $response->getContent());
-        $zip = new \ZipArchive;
-        $this->assertTrue($zip->open($path) === true);
-        $this->assertStringContainsString('Materi XLSX', (string) $zip->getFromName('xl/worksheets/sheet2.xml'));
-        $this->assertNotFalse($zip->getFromName('xl/workbook.xml'));
-        $zip->close();
-        @unlink($path);
+        $workbook = $this->readWorkbook($response->getContent());
+        $this->assertSame('Ringkasan', $workbook->getSheet(0)->getTitle());
+        $detail = $workbook->getSheetByName('Detail Jurnal');
+        $this->assertNotNull($detail);
+        $this->assertSame('Materi XLSX', $detail->getCell('J6')->getValue());
+        $this->assertSame(SpreadsheetTheme::NEON_GREEN, $workbook->getSheet(0)->getStyle('A1')->getFill()->getStartColor()->getARGB());
+        $workbook->disconnectWorksheets();
     }
 
     public function test_management_report_can_download_pdf(): void
@@ -214,8 +223,11 @@ class DiniyyahJournalExportTest extends TestCase
             ->get(route('admin.diniyyah-journals.export', ['format' => 'excel', 'tipe' => 'substitute']));
 
         $response->assertOk();
-        $response->assertSee('Pengganti Bab 2');
-        $response->assertDontSee('Reguler Bab 1');
+        $workbook = $this->readWorkbook($response->getContent());
+        $text = $this->workbookText($workbook);
+        $this->assertStringContainsString('Pengganti Bab 2', $text);
+        $this->assertStringNotContainsString('Reguler Bab 1', $text);
+        $workbook->disconnectWorksheets();
     }
 
     public function test_date_range_filter_limits_rows(): void
@@ -243,12 +255,47 @@ class DiniyyahJournalExportTest extends TestCase
                 'format' => 'excel',
                 'date_from' => '2026-07-15',
                 'date_until' => '2026-07-31',
-            ]));
+        ]));
 
         $response->assertOk();
-        $response->assertSee('Akhir Bulan');
-        $response->assertDontSee('Awal Bulan');
+        $workbook = $this->readWorkbook($response->getContent());
+        $text = $this->workbookText($workbook);
+        $this->assertStringContainsString('Akhir Bulan', $text);
+        $this->assertStringNotContainsString('Awal Bulan', $text);
+        $workbook->disconnectWorksheets();
     }
+
+    private function readWorkbook(string $content): Spreadsheet
+    {
+        $path = tempnam(sys_get_temp_dir(), 'xlsx-test-');
+        if ($path === false) {
+            $this->fail('Tidak dapat menyiapkan file XLSX sementara.');
+        }
+
+        file_put_contents($path, $content);
+
+        try {
+            return IOFactory::load($path);
+        } finally {
+            @unlink($path);
+        }
+    }
+
+    private function workbookText(Spreadsheet $workbook): string
+    {
+        return collect($workbook->getAllSheets())
+            ->map(fn ($sheet) => $this->worksheetText($sheet))
+            ->implode("\n");
+    }
+
+    private function worksheetText($sheet): string
+    {
+        return collect($sheet->toArray())
+            ->flatten()
+            ->filter(fn ($value) => $value !== null)
+            ->implode("\n");
+    }
+
 
     private function makeContext(): array
     {

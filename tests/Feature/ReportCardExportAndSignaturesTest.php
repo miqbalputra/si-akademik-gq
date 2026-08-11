@@ -29,11 +29,8 @@ class ReportCardExportAndSignaturesTest extends TestCase
             ->get(route('report-cards.download-pdf', $reportCard));
 
         $response->assertOk();
-        $contentType = $response->headers->get('content-type');
-        $this->assertTrue(
-            str_contains($contentType, 'pdf') || str_contains($contentType, 'application/pdf') || str_contains($contentType, 'text/html'),
-            "Expected PDF or HTML content-type, got: $contentType"
-        );
+        $response->assertHeader('Content-Type', 'application/pdf');
+        $this->assertStringStartsWith('%PDF', $response->getContent());
     }
 
     public function test_guardian_can_download_own_published_report_card_pdf(): void

@@ -18,6 +18,7 @@ use App\Models\Teacher;
 use App\Models\User;
 use App\Support\SessionTimetable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -84,6 +85,43 @@ class WaliMonitoringTafsirMatchTest extends TestCase
             ->assertOk()
             ->assertSee('Sesi 1')
             ->assertDontSee('Tafsir Al Quran');
+    }
+
+    public function test_wali_monitoring_export_is_a_valid_styled_xlsx_workbook(): void
+    {
+        $ctx = $this->makeContext();
+        DiniyyahClassJournal::create([
+            'diniyyah_teacher_assignment_id' => $ctx['tafsirAssignment']->id,
+            'date' => self::KAMIS,
+            'session_hour' => SessionTimetable::SESSION_TAFSIR,
+            'session_starts_at' => '09:50:00',
+            'session_ends_at' => '10:20:00',
+            'material' => 'Materi ekspor wali',
+            'jp_count' => 1,
+        ]);
+
+        $response = $this->actingAs($ctx['waliUser'])
+            ->get(route('wali.diniyyah-journals.export-excel', ['month' => 3, 'year' => 2025]));
+
+        $response->assertOk()
+            ->assertHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        $this->assertStringContainsString('.xlsx', (string) $response->headers->get('content-disposition'));
+        $this->assertSame('PK', substr($response->getContent(), 0, 2));
+
+        $path = tempnam(sys_get_temp_dir(), 'wali-monitoring-xlsx-test-');
+        $this->assertNotFalse($path);
+        file_put_contents($path, $response->getContent());
+        try {
+            $workbook = IOFactory::load($path);
+        } finally {
+            @unlink($path);
+        }
+        $sheet = $workbook->getSheetByName('Rekap Jurnal');
+        $this->assertNotNull($sheet);
+        $this->assertSame('REKAPITULASI JURNAL MENGAJAR DINIYYAH', $sheet->getCell('A1')->getValue());
+        $sheetText = collect($sheet->toArray())->flatten()->implode("\n");
+        $this->assertStringContainsString('Materi ekspor wali', $sheetText);
+        $workbook->disconnectWorksheets();
     }
 
     private function makeContext(): array

@@ -14,154 +14,160 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>SIAKAD — Griya Qur'an Tunas Ilmu</title>
-    <meta name="description" content="Sistem Informasi Akademik Griya Qur'an. Portal rapor digital, pantauan tahfidz, dan aktivitas sekolah.">
-
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <title>SIAKAD - Griya Qur'an Tunas Ilmu</title>
+    <meta name="description" content="Sistem Informasi Akademik Griya Qur'an untuk guru, wali santri, dan manajemen sekolah.">
+    <link rel="preconnect" href="https://fonts.bunny.net">
+    <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700,800" rel="stylesheet" />
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @include('partials.pwa-head')
 </head>
-<body class="min-h-screen overflow-x-hidden bg-canvas font-sans text-slate-800 antialiased">
-    <div class="fixed inset-0 -z-10 bg-grid opacity-70"></div>
+<body class="v-shell overflow-x-hidden">
+    <div class="v-announcement" role="status">
+        <span class="rounded bg-ink px-1.5 py-0.5 text-[10px] text-neon">SIAKAD</span>
+        Satu alur akademik untuk seluruh peran sekolah.
+    </div>
 
-    <aside class="fixed inset-y-0 left-0 z-40 hidden w-56 flex-col border-r border-slate-200 bg-white/90 px-4 py-6 backdrop-blur-xl lg:flex">
-        <a href="{{ url('/') }}" class="flex items-center gap-3 px-2 text-ink">
-            <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-amber-700 text-sm font-black text-white shadow-lg shadow-amber-500/20">GQ</span>
+    <aside class="v-rail" aria-label="Jelajahi sistem">
+        <a href="{{ url('/') }}" class="v-rail-brand">
+            <span class="v-mark">GQ</span>
             <span>
-                <strong class="block text-sm font-black leading-tight">Griya Qur'an</strong>
-                <span class="mt-0.5 block text-[9px] font-black uppercase tracking-[.18em] text-amber-600">Product line</span>
+                <strong class="block text-sm leading-none tracking-tight">Griya Qur'an</strong>
+                <span class="mt-1 block font-mono text-[9px] font-bold tracking-[.14em] text-slate-500">SIAKAD</span>
             </span>
         </a>
 
-        <p class="mt-10 px-2 text-[10px] font-black uppercase tracking-[.16em] text-slate-400">Portal akademik</p>
-        <nav class="mt-3 space-y-1" aria-label="Portal akademik">
-            <a href="#portal" class="flex min-h-11 items-center gap-3 rounded-xl bg-amber-50 px-3 text-xs font-black text-amber-800">
-                <span class="h-2 w-2 rounded-full bg-amber-500"></span>
-                Product line
-            </a>
-            <a href="#cara-kerja" class="flex min-h-11 items-center gap-3 rounded-xl px-3 text-xs font-bold text-slate-500 transition hover:bg-slate-50 hover:text-slate-900">
-                <span class="h-2 w-2 rounded-full bg-slate-300"></span>
-                Cara kerja
-            </a>
-            <a href="#fitur" class="flex min-h-11 items-center gap-3 rounded-xl px-3 text-xs font-bold text-slate-500 transition hover:bg-slate-50 hover:text-slate-900">
-                <span class="h-2 w-2 rounded-full bg-slate-300"></span>
-                Fitur utama
-            </a>
+        <p class="v-rail-heading">Product line</p>
+        <nav aria-label="Bagian landing page">
+            <a href="#alur" class="v-rail-card" data-scroll-link><span class="v-rail-dot"></span><span>Alur Akademik</span></a>
+            <a href="#peran" class="v-rail-card" data-scroll-link><span class="v-rail-dot"></span><span>Portal Peran</span></a>
+            <a href="#modul" class="v-rail-card" data-scroll-link><span class="v-rail-dot"></span><span>Modul Utama</span></a>
+            <a href="#cara-kerja" class="v-rail-card" data-scroll-link><span class="v-rail-dot"></span><span>Cara Kerja</span></a>
         </nav>
 
-        <div class="mt-auto rounded-2xl bg-slate-950 p-4 text-white shadow-xl shadow-slate-900/10">
-            <p class="text-[10px] font-black uppercase tracking-[.16em] text-amber-300">SIAKAD GQ</p>
-            <p class="mt-2 text-xs font-medium leading-5 text-slate-300">Satu tempat untuk mengawal nilai, hafalan, dan agenda santri.</p>
+        <div class="v-rail-foot">
+            <p class="m-0 font-mono text-[10px] font-bold tracking-[.12em] text-neon">DEMO AMAN</p>
+            <p class="mb-0 mt-2 text-xs leading-5 text-slate-300">Preview ini tidak menampilkan data akademik atau data santri nyata.</p>
         </div>
     </aside>
 
-    <div class="lg:pl-56">
-        <nav class="sticky top-0 z-30 border-b border-slate-200/80 bg-white/85 backdrop-blur-xl" aria-label="Navigasi utama">
-            <div class="mx-auto flex min-h-16 max-w-7xl items-center justify-between gap-3 px-4 sm:px-6 lg:px-10">
-                <a href="{{ url('/') }}" class="flex items-center gap-3 lg:hidden">
-                    <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-amber-700 text-xs font-black text-white shadow-md">GQ</span>
-                    <span>
-                        <strong class="block text-sm font-black leading-tight text-ink">Griya Qur'an</strong>
-                        <span class="block text-[9px] font-black uppercase tracking-[.14em] text-amber-600">SIAKAD</span>
-                    </span>
+    <div class="v-stage">
+        <nav class="v-topnav" aria-label="Navigasi utama">
+            <div class="v-topnav-inner">
+                <a href="{{ url('/') }}" class="flex items-center gap-2 font-mono text-xs font-black tracking-tight lg:hidden">
+                    <span class="v-mark !h-7 !w-7 !text-[10px]">GQ</span> SIAKAD
                 </a>
-                <span class="hidden text-xs font-bold text-slate-500 lg:block">Sistem Informasi Akademik Terpadu</span>
-
-                <div class="flex items-center gap-2 sm:gap-3">
+                <div class="hidden items-center gap-5 md:flex">
+                    <a href="#alur" class="v-toplink" data-scroll-link>Alur</a>
+                    <a href="#peran" class="v-toplink" data-scroll-link>Peran</a>
+                    <a href="#modul" class="v-toplink" data-scroll-link>Modul</a>
+                    <a href="#cara-kerja" class="v-toplink" data-scroll-link>Panduan</a>
+                </div>
+                <div class="ml-auto flex items-center gap-2">
                     @auth
-                        <a href="{{ $dashboardUrl }}" class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 text-xs font-black text-white shadow-lg shadow-slate-900/10 transition hover:-translate-y-0.5 hover:bg-slate-800">
-                            Dashboard
-                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" /></svg>
-                        </a>
-                        <form method="POST" action="{{ route('logout') }}">
-                            @csrf
-                            <button type="submit" class="hidden min-h-11 items-center justify-center rounded-xl border border-slate-200 px-4 text-xs font-bold text-slate-600 transition hover:bg-slate-50 sm:inline-flex">Keluar</button>
-                        </form>
+                        <a href="{{ $dashboardUrl }}" class="btn btn-primary btn-sm">Buka dashboard <span aria-hidden="true">↗</span></a>
+                        <form method="POST" action="{{ route('logout') }}" class="hidden sm:block">@csrf<button type="submit" class="btn btn-outline btn-sm">Keluar</button></form>
                     @else
-                        <a href="{{ route('auth.google') }}" class="hidden min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 sm:inline-flex">
-                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/></svg>
-                            Masuk Google
-                        </a>
-                        <a href="{{ route('login') }}" class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 text-xs font-black text-white shadow-lg shadow-slate-900/10 transition hover:-translate-y-0.5 hover:bg-slate-800">Masuk Portal <span aria-hidden="true">→</span></a>
+                        <a href="{{ route('auth.google') }}" class="hidden sm:inline-flex v-toplink rounded-md border border-line px-3 py-2">Masuk Google</a>
+                        <a href="{{ route('login') }}" class="btn btn-primary btn-sm">Masuk portal <span aria-hidden="true">→</span></a>
                     @endauth
                 </div>
             </div>
         </nav>
 
         <main>
-            <section class="mx-auto grid max-w-7xl gap-10 px-4 pb-20 pt-14 sm:px-6 sm:pt-20 lg:grid-cols-[.9fr_1.1fr] lg:items-center lg:px-10 lg:pb-28 lg:pt-24">
-                <div class="max-w-2xl">
-                    <span class="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-[.14em] text-amber-800">
-                        <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-                        Sistem aktif untuk sekolah
-                    </span>
-                    <h1 class="mt-6 text-5xl font-black leading-[.98] tracking-[-.045em] text-ink sm:text-6xl lg:text-7xl">
-                        Semua progres santri,
-                        <span class="relative mt-2 inline-block text-amber-600">
-                            satu alur kerja.
-                            <span class="absolute -bottom-1 left-0 h-2 w-full -rotate-1 rounded-full bg-amber-200/80" aria-hidden="true"></span>
-                        </span>
-                    </h1>
-                    <p class="mt-7 max-w-xl text-base font-medium leading-7 text-slate-500 sm:text-lg">
-                        Portal akademik yang menghubungkan wali santri, guru, dan manajemen untuk memantau rapor, presensi, jurnal, serta hafalan secara lebih sederhana.
-                    </p>
-                    <div class="mt-8 flex flex-col gap-3 sm:flex-row">
-                        <a href="{{ route('login') }}" class="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 text-sm font-black text-white shadow-xl shadow-slate-900/15 transition hover:-translate-y-0.5 hover:bg-slate-800">Masuk ke Portal <span aria-hidden="true">→</span></a>
-                        <a href="#portal" class="inline-flex min-h-12 items-center justify-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50">Lihat modul</a>
+            <section id="alur" class="v-hero" data-factory>
+                <div>
+                    <p class="eyebrow"><span class="mr-2 inline-block h-2 w-2 rounded-full bg-neon"></span> Sistem informasi akademik</p>
+                    <h1 class="v-hero-title">Progres santri,<br>terhubung dalam <span class="v-highlight">satu alur kerja.</span></h1>
+                    <p class="v-hero-copy">SIAKAD Griya Qur'an membantu guru mencatat kegiatan, manajemen memvalidasi proses, dan wali santri memantau perkembangan dengan konteks yang sama.</p>
+                    <div class="mt-7 flex flex-wrap gap-3">
+                        <a href="{{ route('login') }}" class="btn btn-primary btn-lg">Masuk ke portal <span aria-hidden="true">→</span></a>
+                        <a href="#cara-kerja" class="btn btn-outline btn-lg" data-scroll-link>Lihat alurnya</a>
                     </div>
-                    <div class="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3 text-xs font-bold text-slate-400">
-                        <span class="inline-flex items-center gap-2"><span class="h-2 w-2 rounded-full bg-emerald-500"></span>Rapor digital</span>
-                        <span class="inline-flex items-center gap-2"><span class="h-2 w-2 rounded-full bg-amber-500"></span>Tahfidz terpantau</span>
-                        <span class="inline-flex items-center gap-2"><span class="h-2 w-2 rounded-full bg-indigo-500"></span>Agenda sekolah</span>
-                    </div>
+                    <p class="mt-6 font-mono text-[11px] font-semibold text-slate-500">Rapor digital · Tahfidz · Diniyyah · Presensi · Agenda</p>
                 </div>
 
-                <div class="relative min-h-[420px] lg:min-h-[540px]" aria-label="Ilustrasi alur aplikasi">
-                    <div class="absolute inset-x-5 top-8 rounded-[28px] border border-slate-200 bg-white/75 p-4 shadow-2xl shadow-slate-900/10 backdrop-blur sm:inset-x-12 sm:top-12 sm:p-6">
-                        <div class="flex items-center justify-between border-b border-slate-100 pb-4">
-                            <div><p class="text-[10px] font-black uppercase tracking-[.16em] text-slate-400">Ringkasan hari ini</p><p class="mt-1 text-sm font-black text-ink">Portal akademik</p></div>
-                            <span class="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-black text-emerald-700">Live</span>
-                        </div>
-                        <div class="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                            <div class="rounded-2xl bg-slate-950 p-4 text-white"><p class="text-[10px] font-bold text-slate-400">Santri aktif</p><p class="mt-2 text-2xl font-black">248</p></div>
-                            <div class="rounded-2xl bg-amber-50 p-4 text-amber-950"><p class="text-[10px] font-bold text-amber-700">Rapor terbit</p><p class="mt-2 text-2xl font-black">92%</p></div>
-                            <div class="col-span-2 rounded-2xl bg-emerald-50 p-4 text-emerald-950 sm:col-span-1"><p class="text-[10px] font-bold text-emerald-700">Presensi</p><p class="mt-2 text-2xl font-black">98%</p></div>
-                        </div>
-                        <div class="mt-5 rounded-2xl border border-slate-100 bg-slate-50 p-4">
-                            <div class="flex items-center justify-between"><p class="text-xs font-black text-ink">Progres hafalan</p><span class="text-[10px] font-bold text-slate-400">Minggu ini</span></div>
-                            <div class="mt-4 space-y-3"><div><div class="mb-1 flex justify-between text-[10px] font-bold text-slate-500"><span>Halaqah A</span><span>82%</span></div><div class="h-2 rounded-full bg-slate-200"><div class="h-2 w-[82%] rounded-full bg-amber-500"></div></div></div><div><div class="mb-1 flex justify-between text-[10px] font-bold text-slate-500"><span>Halaqah B</span><span>68%</span></div><div class="h-2 rounded-full bg-slate-200"><div class="h-2 w-[68%] rounded-full bg-emerald-500"></div></div></div></div>
-                        </div>
+                <div class="v-factory" aria-label="Demo alur akademik">
+                    <div class="v-stack" role="group" aria-label="Pilih tahap alur akademik">
+                        <button type="button" class="v-stack-button" aria-pressed="true" data-factory-stage data-label="TAHAP 01 - PORTAL GURU" data-title="Input Guru" data-copy="Guru mencatat nilai, presensi, jurnal, dan hafalan dari halaman kerja yang sesuai dengan penugasannya." data-cta="Masuk sebagai guru" data-href="{{ route('guru.dashboard') }}" data-metrics="Jurnal|Nilai|Tahfidz">
+                            <span>INPUT GURU</span><span aria-hidden="true">01</span>
+                        </button>
+                        <button type="button" class="v-stack-button" aria-pressed="false" data-factory-stage data-label="TAHAP 02 - PORTAL MANAJEMEN" data-title="Validasi Manajemen" data-copy="Kepala bagian dan admin memeriksa kelengkapan, melakukan koreksi, lalu menjaga alur akademik tetap siap diterbitkan." data-cta="Buka manajemen" data-href="{{ url('/admin') }}" data-metrics="Tinjau|Validasi|Rekap">
+                            <span>VALIDASI MANAJEMEN</span><span aria-hidden="true">02</span>
+                        </button>
+                        <button type="button" class="v-stack-button" aria-pressed="false" data-factory-stage data-label="TAHAP 03 - PORTAL WALI" data-title="Ringkasan Wali" data-copy="Wali santri membaca progres anak, agenda, rapor yang telah dibuka, dan informasi sekolah dalam bahasa yang jelas." data-cta="Masuk sebagai wali" data-href="{{ route('wali.dashboard') }}" data-metrics="Rapor|Agenda|Progres">
+                            <span>RINGKASAN WALI</span><span aria-hidden="true">03</span>
+                        </button>
+                        <button type="button" class="v-stack-button" aria-pressed="false" data-factory-stage data-label="TAHAP 04 - ARSIP AKADEMIK" data-title="Arsip Rapor" data-copy="Rapor yang disahkan disimpan sebagai snapshot yang dapat ditinjau, diunduh, dan dijadikan arsip resmi sekolah." data-cta="Lihat pengelolaan rapor" data-href="{{ url('/admin') }}" data-metrics="Snapshot|PDF|Excel">
+                            <span>ARSIP RAPOR</span><span aria-hidden="true">04</span>
+                        </button>
                     </div>
-                    <div class="absolute -bottom-2 left-0 w-56 rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl shadow-slate-900/10 sm:left-4 sm:w-64">
-                        <div class="flex items-center gap-3"><span class="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">↗</span><div><p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Aksi cepat</p><p class="mt-1 text-xs font-black text-ink">Input jurnal hari ini</p></div></div>
-                    </div>
-                    <div class="absolute -right-1 bottom-16 hidden w-48 rounded-2xl bg-amber-500 p-4 text-amber-950 shadow-2xl shadow-amber-500/25 sm:block lg:right-0">
-                        <p class="text-[10px] font-black uppercase tracking-[.14em] text-amber-900/70">Prioritas</p><p class="mt-2 text-sm font-black leading-5">3 tugas perlu diselesaikan hari ini.</p>
+                    <article class="v-preview" aria-live="polite">
+                        <p class="v-preview-label" data-factory-label>TAHAP 01 - PORTAL GURU</p>
+                        <h2 class="v-preview-title" data-factory-title>Input Guru</h2>
+                        <p class="v-preview-copy" data-factory-copy>Guru mencatat nilai, presensi, jurnal, dan hafalan dari halaman kerja yang sesuai dengan penugasannya.</p>
+                        <div class="v-preview-metrics" aria-label="Contoh modul">
+                            <div class="v-preview-metric" data-factory-metric><span>Modul</span><strong>Jurnal</strong></div>
+                            <div class="v-preview-metric" data-factory-metric><span>Modul</span><strong>Nilai</strong></div>
+                            <div class="v-preview-metric" data-factory-metric><span>Modul</span><strong>Tahfidz</strong></div>
+                        </div>
+                        <a href="{{ route('guru.dashboard') }}" class="mt-5 inline-flex font-mono text-xs font-black underline decoration-neon decoration-4 underline-offset-4" data-factory-cta>Masuk sebagai guru</a>
+                    </article>
+                </div>
+            </section>
+
+            <section id="peran" class="v-section">
+                <div class="v-section-inner">
+                    <p class="eyebrow">Portal peran</p>
+                    <h2 class="v-section-title">Setiap pekerjaan memiliki ruang kerja yang tepat.</h2>
+                    <div class="v-role-grid">
+                        <a href="{{ route('wali.dashboard') }}" class="v-role-card">
+                            <span class="v-role-index">01 / KELUARGA</span>
+                            <div><h3>Wali Santri</h3><p>Rapor, tahfidz, presensi, agenda, dan informasi perkembangan anak.</p></div>
+                            <span class="font-mono text-xs font-black">BUKA PORTAL →</span>
+                        </a>
+                        <a href="{{ route('guru.dashboard') }}" class="v-role-card">
+                            <span class="v-role-index">02 / PENGAJAR</span>
+                            <div><h3>Guru</h3><p>Input terarah untuk jurnal, nilai, presensi, tahfidz, dan tasmi'.</p></div>
+                            <span class="font-mono text-xs font-black">BUKA PORTAL →</span>
+                        </a>
+                        <a href="{{ url('/admin') }}" class="v-role-card">
+                            <span class="v-role-index">03 / MANAJEMEN</span>
+                            <div><h3>Manajemen</h3><p>Kelola master data, validasi akademik, laporan, dan penerbitan rapor.</p></div>
+                            <span class="font-mono text-xs font-black">BUKA PORTAL →</span>
+                        </a>
                     </div>
                 </div>
             </section>
 
-            <section id="portal" class="border-y border-slate-200/80 bg-white/70 py-20 sm:py-24">
-                <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
-                    <div class="max-w-2xl"><p class="text-[10px] font-black uppercase tracking-[.16em] text-amber-600">Product line</p><h2 class="mt-3 text-3xl font-black tracking-tight text-ink sm:text-4xl">Masuk dari peran Anda.</h2><p class="mt-3 text-sm font-medium leading-6 text-slate-500">Setiap portal dirancang untuk pekerjaan yang berbeda, tetapi memakai data akademik yang sama.</p></div>
-                    <div class="mt-10 grid gap-4 md:grid-cols-3">
-                        <a href="{{ route('wali.dashboard') }}" class="group rounded-[22px] border border-emerald-100 bg-emerald-50/70 p-6 transition hover:-translate-y-1 hover:border-emerald-200 hover:bg-white hover:shadow-xl hover:shadow-emerald-900/10"><div class="flex items-center justify-between"><span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500 text-xl text-white shadow-lg shadow-emerald-500/20">⌂</span><span class="text-xl text-emerald-500 transition group-hover:translate-x-1">→</span></div><p class="mt-8 text-[10px] font-black uppercase tracking-[.14em] text-emerald-700">Portal keluarga</p><h3 class="mt-2 text-xl font-black text-ink">Wali Santri</h3><p class="mt-2 text-sm font-medium leading-6 text-slate-500">Pantau rapor, hafalan, presensi, dan agenda sekolah anak.</p></a>
-                        <a href="{{ route('guru.diniyyah-scores.index') }}" class="group rounded-[22px] border border-indigo-100 bg-indigo-50/70 p-6 transition hover:-translate-y-1 hover:border-indigo-200 hover:bg-white hover:shadow-xl hover:shadow-indigo-900/10"><div class="flex items-center justify-between"><span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-500 text-xl text-white shadow-lg shadow-indigo-500/20">▣</span><span class="text-xl text-indigo-500 transition group-hover:translate-x-1">→</span></div><p class="mt-8 text-[10px] font-black uppercase tracking-[.14em] text-indigo-700">Portal pengajar</p><h3 class="mt-2 text-xl font-black text-ink">Guru Pengajar</h3><p class="mt-2 text-sm font-medium leading-6 text-slate-500">Input nilai, presensi, jurnal, dan setoran hafalan lebih cepat.</p></a>
-                        <a href="{{ url('/admin') }}" class="group rounded-[22px] border border-slate-200 bg-slate-950 p-6 text-white transition hover:-translate-y-1 hover:bg-slate-900 hover:shadow-xl hover:shadow-slate-900/20"><div class="flex items-center justify-between"><span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-xl text-amber-300">⌘</span><span class="text-xl text-amber-300 transition group-hover:translate-x-1">→</span></div><p class="mt-8 text-[10px] font-black uppercase tracking-[.14em] text-amber-300">Pusat kendali</p><h3 class="mt-2 text-xl font-black">Manajemen</h3><p class="mt-2 text-sm font-medium leading-6 text-slate-300">Kelola data sekolah, validasi rapor, dan monitor aktivitas.</p></a>
+            <section id="modul" class="v-section bg-[#f4f6f3]">
+                <div class="v-section-inner">
+                    <p class="eyebrow">Modul akademik</p>
+                    <h2 class="v-section-title">Informasi penting tetap dapat ditemukan tanpa mencari jauh.</h2>
+                    <div class="v-module-grid">
+                        <article class="v-module-card"><span class="v-role-index">01</span><div><h3>Presensi</h3><p>Status harian dan rekap keterisian untuk kelas yang diampu.</p></div></article>
+                        <article class="v-module-card"><span class="v-role-index">02</span><div><h3>Diniyyah</h3><p>Nilai, jurnal mengajar, monitoring, dan leger terhubung.</p></div></article>
+                        <article class="v-module-card"><span class="v-role-index">03</span><div><h3>Tahfidz</h3><p>Progres hafalan, setoran pekanan, UAS, dan tasmi'.</p></div></article>
+                        <article class="v-module-card"><span class="v-role-index">04</span><div><h3>Rapor</h3><p>Snapshot yang siap dibaca, diunduh, serta diarsipkan.</p></div></article>
                     </div>
                 </div>
             </section>
 
-            <section id="cara-kerja" class="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-24 lg:px-10">
-                <div class="grid gap-10 lg:grid-cols-[.8fr_1.2fr] lg:items-start"><div><p class="text-[10px] font-black uppercase tracking-[.16em] text-amber-600">Cara kerja</p><h2 class="mt-3 text-3xl font-black tracking-tight text-ink sm:text-4xl">Dari input harian menjadi gambaran utuh.</h2></div><div class="grid gap-4 sm:grid-cols-3"><div class="rounded-2xl border border-slate-200 bg-white p-5"><span class="text-xs font-black text-amber-600">01</span><h3 class="mt-10 text-base font-black text-ink">Catat</h3><p class="mt-2 text-sm leading-6 text-slate-500">Guru mengisi nilai, presensi, jurnal, dan hafalan dari satu portal.</p></div><div class="rounded-2xl border border-slate-200 bg-white p-5"><span class="text-xs font-black text-amber-600">02</span><h3 class="mt-10 text-base font-black text-ink">Validasi</h3><p class="mt-2 text-sm leading-6 text-slate-500">Manajemen memantau kelengkapan dan memvalidasi alur akademik.</p></div><div class="rounded-2xl border border-slate-200 bg-white p-5"><span class="text-xs font-black text-amber-600">03</span><h3 class="mt-10 text-base font-black text-ink">Pantau</h3><p class="mt-2 text-sm leading-6 text-slate-500">Wali melihat perkembangan anak dengan bahasa yang mudah dipahami.</p></div></div></div>
+            <section id="cara-kerja" class="v-section">
+                <div class="v-section-inner" data-flow-explorer>
+                    <p class="eyebrow">Cara kerja</p>
+                    <h2 class="v-section-title">Pilih sebuah tahap untuk melihat perannya dalam proses.</h2>
+                    <div class="v-flow" role="group" aria-label="Tahapan proses akademik">
+                        <button type="button" class="v-flow-button" aria-pressed="true" data-flow-step data-detail="Guru memasukkan aktivitas dan nilai sesuai kelas, mapel, atau halaqah yang menjadi penugasannya."><span class="v-flow-number">01</span><span><strong>Catat kegiatan</strong><br><small class="text-slate-500">Data dicatat dekat dengan aktivitas belajar.</small></span><span aria-hidden="true">↗</span></button>
+                        <button type="button" class="v-flow-button" aria-pressed="false" data-flow-step data-detail="Manajemen melihat keterisian, memeriksa ketidaksesuaian, dan menjalankan validasi sebelum informasi diterbitkan."><span class="v-flow-number">02</span><span><strong>Periksa dan validasi</strong><br><small class="text-slate-500">Status proses terlihat tanpa membuka banyak halaman.</small></span><span aria-hidden="true">↗</span></button>
+                        <button type="button" class="v-flow-button" aria-pressed="false" data-flow-step data-detail="Wali santri membaca hasil yang relevan untuk anaknya sendiri, setelah sekolah membuka informasi tersebut."><span class="v-flow-number">03</span><span><strong>Pantau perkembangan</strong><br><small class="text-slate-500">Informasi disajikan dengan konteks keluarga.</small></span><span aria-hidden="true">↗</span></button>
+                    </div>
+                    <p class="v-flow-detail" data-flow-detail aria-live="polite">Guru memasukkan aktivitas dan nilai sesuai kelas, mapel, atau halaqah yang menjadi penugasannya.</p>
+                </div>
             </section>
-
-            <section id="fitur" class="bg-slate-950 py-20 text-white sm:py-24"><div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10"><div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p class="text-[10px] font-black uppercase tracking-[.16em] text-amber-300">Dibangun untuk aktivitas sekolah</p><h2 class="mt-3 text-3xl font-black tracking-tight sm:text-4xl">Kerja yang penting tetap terlihat.</h2></div><a href="{{ route('login') }}" class="inline-flex min-h-11 items-center justify-center rounded-xl bg-amber-500 px-4 text-xs font-black text-amber-950 transition hover:bg-amber-400">Mulai sekarang →</a></div><div class="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><div class="rounded-2xl border border-white/10 bg-white/5 p-5"><p class="text-2xl">◌</p><p class="mt-8 text-sm font-black">Presensi harian</p><p class="mt-2 text-xs leading-5 text-slate-400">Input cepat dengan status yang jelas.</p></div><div class="rounded-2xl border border-white/10 bg-white/5 p-5"><p class="text-2xl">▤</p><p class="mt-8 text-sm font-black">Rapor digital</p><p class="mt-2 text-xs leading-5 text-slate-400">Hasil belajar siap dibaca dan diunduh.</p></div><div class="rounded-2xl border border-white/10 bg-white/5 p-5"><p class="text-2xl">⌁</p><p class="mt-8 text-sm font-black">Tahfidz</p><p class="mt-2 text-xs leading-5 text-slate-400">Progres hafalan terlihat dari waktu ke waktu.</p></div><div class="rounded-2xl border border-white/10 bg-white/5 p-5"><p class="text-2xl">◫</p><p class="mt-8 text-sm font-black">Agenda sekolah</p><p class="mt-2 text-xs leading-5 text-slate-400">Semua peran mendapat konteks yang sama.</p></div></div></div></section>
         </main>
 
-        <footer class="border-t border-slate-200 bg-white px-4 py-7 text-center text-xs font-medium text-slate-400 sm:px-6 lg:px-10">&copy; {{ date('Y') }} Griya Qur'an Tunas Ilmu. Hak Cipta Dilindungi.</footer>
+        <footer class="border-t border-line px-4 py-8 text-center font-mono text-[10px] font-bold tracking-[.08em] text-slate-500">© {{ date('Y') }} GRIYA QUR'AN TUNAS ILMU - SIAKAD</footer>
     </div>
 </body>
 </html>

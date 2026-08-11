@@ -6,31 +6,31 @@
     <style>
         @page { margin: 12mm 10mm 14mm; }
         * { box-sizing: border-box; }
-        body { color: #1f2937; font-family: DejaVu Sans, sans-serif; font-size: 8px; margin: 0; }
+        body { color: #111512; font-family: DejaVu Sans, sans-serif; font-size: 8px; margin: 0; }
         h1, h2, p { margin: 0; }
-        .header { border-bottom: 2px solid #12304a; margin-bottom: 10px; padding-bottom: 8px; }
-        .eyebrow { color: #1f6b8f; font-size: 8px; font-weight: bold; letter-spacing: 1.5px; text-transform: uppercase; }
-        h1 { color: #12304a; font-size: 17px; margin-top: 3px; }
-        .subtitle { color: #64748b; font-size: 8px; margin-top: 3px; }
+        .header { border-bottom: 3px solid #111512; margin-bottom: 10px; padding-bottom: 8px; }
+        .eyebrow { color: #0b6e37; font-size: 8px; font-weight: bold; letter-spacing: 1.5px; text-transform: uppercase; }
+        h1 { color: #111512; font-size: 17px; margin-top: 3px; }
+        .subtitle { color: #58625c; font-size: 8px; margin-top: 3px; }
         .meta { border-collapse: collapse; margin: 7px 0 10px; width: 100%; }
         .meta td { padding: 2px 5px 2px 0; vertical-align: top; }
-        .meta .label { color: #64748b; font-weight: bold; width: 62px; }
+        .meta .label { color: #58625c; font-weight: bold; width: 62px; }
         .stats { border-collapse: separate; border-spacing: 4px; margin: 0 -4px 9px; width: calc(100% + 8px); }
-        .stat { background: #f1f6f8; border: 1px solid #d6e0e8; padding: 5px 7px; }
-        .stat .label { color: #64748b; font-size: 7px; font-weight: bold; text-transform: uppercase; }
-        .stat .value { color: #12304a; font-size: 13px; font-weight: bold; margin-top: 2px; }
-        .section-title { background: #1f6b8f; color: #fff; font-size: 8px; font-weight: bold; padding: 5px 7px; }
+        .stat { background: #f4f6f3; border: 1px solid #c8d0ca; padding: 5px 7px; }
+        .stat .label { color: #58625c; font-size: 7px; font-weight: bold; text-transform: uppercase; }
+        .stat .value { color: #111512; font-size: 13px; font-weight: bold; margin-top: 2px; }
+        .section-title { border-left: 4px solid #00df66; background: #111512; color: #fff; font-size: 8px; font-weight: bold; padding: 5px 7px; }
         table.data { border-collapse: collapse; table-layout: fixed; width: 100%; }
-        table.data th, table.data td { border: 0.5px solid #cbd5e1; padding: 4px 3px; vertical-align: top; }
-        table.data th { background: #eaf3f7; color: #12304a; font-size: 7px; font-weight: bold; text-align: left; }
+        table.data th, table.data td { border: 0.5px solid #c8d0ca; padding: 4px 3px; vertical-align: top; }
+        table.data th { background: #f0f4f0; color: #111512; font-size: 7px; font-weight: bold; text-align: left; }
         table.data td { font-size: 7.5px; line-height: 1.25; }
         .center { text-align: center; }
-        .muted { color: #64748b; }
+        .muted { color: #58625c; }
         .type-regular { color: #166534; font-weight: bold; }
         .type-substitute { color: #3730a3; font-weight: bold; }
         .material { white-space: normal; word-wrap: break-word; }
-        .empty { color: #64748b; padding: 16px !important; text-align: center; }
-        .footer { border-top: 1px solid #d6e0e8; color: #64748b; font-size: 7px; margin-top: 9px; padding-top: 5px; }
+        .empty { color: #58625c; padding: 16px !important; text-align: center; }
+        .footer { border-top: 1px solid #c8d0ca; color: #58625c; font-size: 7px; margin-top: 9px; padding-top: 5px; }
     </style>
 </head>
 <body>

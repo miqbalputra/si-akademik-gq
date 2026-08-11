@@ -103,7 +103,10 @@ class ReportCardController extends Controller
             );
         }
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('report-cards.print', compact('reportCard'))
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('report-cards.print', [
+            'reportCard' => $reportCard,
+            'isPdf' => true,
+        ])
             ->setPaper('a4');
 
         $filename = "Rapor-{$reportCard->student?->nis}-{$reportCard->student?->name}.pdf";

@@ -29,15 +29,18 @@ class WaliClassJournalMonitoringController extends Controller
         return $pdf->download($fileName);
     }
     
-    public function exportExcel(Request $request)
+    public function exportExcel(Request $request, \App\Services\Exports\WaliClassJournalMonitoringXlsxExporter $exporter)
     {
         $data = $this->getMonitoringData($request);
         $monthName = \Carbon\Carbon::create()->month($data['month'])->translatedFormat('F');
-        $fileName = 'Rekap_Jurnal_Diniyyah_' . $monthName . '_' . $data['year'] . '.xls';
-        
-        return response(view('wali.diniyyah-journals.export-excel', $data))
-            ->header('Content-Type', 'application/vnd.ms-excel')
-            ->header('Content-Disposition', 'attachment; filename="' . $fileName . '"');
+        $fileName = 'Rekap_Jurnal_Diniyyah_' . $monthName . '_' . $data['year'] . '.xlsx';
+        $content = $exporter->export($data);
+
+        return response($content, 200, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+            'Content-Length' => strlen($content),
+        ]);
     }
 
     private function getMonitoringData(Request $request)

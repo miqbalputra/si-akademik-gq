@@ -11,8 +11,8 @@ use Illuminate\Http\Request;
 
 /**
  * Ekspor lengkap seluruh jurnal diniyyah (reguler + pengganti) untuk admin,
- * kabag_diniyyah, dan kepala_sekolah. Format legacy .xls/CSV tetap tersedia,
- * dengan format XLSX dan PDF baru untuk laporan interaktif.
+ * kabag_diniyyah, dan kepala_sekolah. Semua ekspor tabel berformat dikirim
+ * sebagai XLSX; CSV tetap disediakan untuk kebutuhan data-only.
  *
  * Kolom "Guru Mengajar (untuk gaji)" = pengganti jika ada, else guru asli —
  * inilah kolom yang dipakai penghitungan gaji guru.
@@ -38,7 +38,7 @@ class DiniyyahJournalExportController extends Controller
             return $this->csvResponse($data['rows'], $rangeLabel);
         }
 
-        if ($format === 'xlsx') {
+        if (in_array($format, ['excel', 'xlsx'], true)) {
             $report = $reportService->build($this->reportFilters($request));
             $content = $xlsxExporter->export($report, 'management');
             $fileName = 'Jurnal-Diniyyah-'.$rangeLabel.'.xlsx';
@@ -62,12 +62,7 @@ class DiniyyahJournalExportController extends Controller
                 ->download('Jurnal-Diniyyah-'.$rangeLabel.'.pdf');
         }
 
-        $data = $this->buildData($request);
-        $fileName = 'Jurnal-Diniyyah-'.$rangeLabel.'.xls';
-
-        return response(view('admin.diniyyah-journals.export-excel', $data))
-            ->header('Content-Type', 'application/vnd.ms-excel')
-            ->header('Content-Disposition', 'attachment; filename="'.$fileName.'"');
+        abort(404);
     }
 
     private function buildData(Request $request): array

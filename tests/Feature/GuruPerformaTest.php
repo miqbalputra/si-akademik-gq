@@ -20,6 +20,7 @@ use App\Services\GuruPerformaService;
 use App\Support\SessionTimetable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -354,18 +355,19 @@ class GuruPerformaTest extends TestCase
             ->assertHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         $this->assertSame('PK', substr($xlsx->getContent(), 0, 2));
         $path = tempnam(sys_get_temp_dir(), 'performa-xlsx-test-');
+        $this->assertNotFalse($path);
         file_put_contents($path, $xlsx->getContent());
-        $zip = new \ZipArchive;
-        $this->assertTrue($zip->open($path) === true);
-        $workbookXml = (string) $zip->getFromName('xl/workbook.xml');
-        $this->assertStringContainsString('Detail Jurnal', $workbookXml);
-        $this->assertStringContainsString('Slot Kosong', $workbookXml);
-        $detailXml = (string) $zip->getFromName('xl/worksheets/sheet2.xml');
-        $this->assertStringContainsString('Bab Thaharah', $detailXml);
-        $this->assertStringContainsString('Mustawa 2 Ikhwan', $detailXml);
-        $this->assertNotFalse($zip->getFromName('xl/worksheets/sheet3.xml'));
-        $zip->close();
-        @unlink($path);
+        try {
+            $workbook = IOFactory::load($path);
+        } finally {
+            @unlink($path);
+        }
+        $this->assertNotNull($workbook->getSheetByName('Detail Jurnal'));
+        $this->assertNotNull($workbook->getSheetByName('Slot Kosong'));
+        $detailText = collect($workbook->getSheetByName('Detail Jurnal')->toArray())->flatten()->implode("\n");
+        $this->assertStringContainsString('Bab Thaharah', $detailText);
+        $this->assertStringContainsString('Mustawa 2 Ikhwan', $detailText);
+        $workbook->disconnectWorksheets();
 
         $pdf = $this->actingAs($guru['user'])
             ->get(route('guru.performa.export', ['format' => 'pdf', 'month' => 8, 'year' => 2026]));
@@ -492,4 +494,5 @@ class GuruPerformaTest extends TestCase
             ['semester' => 'ganjil'],
         )->id;
     }
+
 }

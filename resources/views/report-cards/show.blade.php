@@ -1,25 +1,3 @@
-@push('head')
-    <style>
-        body { font-family: 'Outfit', sans-serif; background-color: #fafafa; }
-        .bg-grid {
-            background-size: 40px 40px;
-            background-image: linear-gradient(to right, rgba(0, 0, 0, 0.03) 1px, transparent 1px),
-                              linear-gradient(to bottom, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
-        }
-        .glass-card {
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.6);
-            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
-        }
-        .print-sheet {
-            background: #ffffff;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
-        }
-    </style>
-@endpush
-
 <x-layouts.portal title="Rapor {{ $reportCard->student?->name }}" portalLabel="Portal Wali Santri" breadcrumb="Rapor">
     <div class="animate-fade-in-up">
         <div class="mb-4 flex flex-wrap items-center justify-between gap-3">

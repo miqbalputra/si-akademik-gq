@@ -5,79 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Cetak Rapor {{ $reportCard->student?->name }}</title>
     <style>
-        @page {
-            size: A4;
-            margin: 14mm 12mm;
-        }
-
-        * {
-            box-sizing: border-box;
-        }
-
-        body {
-            margin: 0;
-            background: #e5e7eb;
-            color: #111827;
-            font-family: Arial, Helvetica, sans-serif;
-            font-size: 12px;
-            line-height: 1.35;
-        }
-
-        .toolbar {
-            display: flex;
-            justify-content: center;
-            gap: 8px;
-            padding: 16px;
-        }
-
-        .toolbar a,
-        .toolbar button {
-            border: 0;
-            border-radius: 8px;
-            background: #d97706;
-            color: white;
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: 700;
-            padding: 10px 14px;
-            text-decoration: none;
-        }
-
-        .toolbar a {
-            background: #475569;
-        }
-
-        .page {
-            width: 210mm;
-            min-height: 297mm;
-            margin: 0 auto 18px;
-            background: white;
-            padding: 14mm 12mm;
-            box-shadow: 0 10px 30px rgb(15 23 42 / 0.18);
-        }
-
-        .school-header {
-            border-bottom: 2px solid #111827;
-            padding-bottom: 12px;
-            text-align: center;
-        }
-
-        .school-header .eyebrow {
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-        }
-
-        .school-header h1 {
-            font-size: 22px;
-            margin: 5px 0 2px;
-        }
-
-        .school-header h2 {
-            font-size: 16px;
-            margin: 0;
-        }
+        @page { size: A4; margin: 13mm 11mm; }
+        * { box-sizing: border-box; }
+        body { margin: 0; background: #e8ece8; color: #111512; font-family: Arial, Helvetica, sans-serif; font-size: 11px; line-height: 1.4; }
+        .toolbar { display: flex; justify-content: center; gap: 8px; padding: 16px; }
+        .toolbar a, .toolbar button { border: 1px solid #111512; border-radius: 6px; background: #00df66; color: #111512; cursor: pointer; font-size: 12px; font-weight: 700; padding: 10px 14px; text-decoration: none; }
+        .toolbar a { background: #fff; }
+        .page { width: 210mm; min-height: 297mm; margin: 0 auto 18px; background: white; padding: 13mm 11mm; box-shadow: 12px 12px 0 #cfd6cf; }
+        .school-header { border-bottom: 3px solid #111512; padding: 0 0 11px; text-align: left; }
+        .school-header .eyebrow { color: #0b6e37; font-size: 9px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; }
+        .school-header h1 { font-size: 23px; letter-spacing: -.6px; margin: 4px 0 2px; }
+        .school-header h2 { color: #4e5751; font-size: 12px; font-weight: normal; margin: 0; }
 
         .meta-grid {
             display: grid;
@@ -94,7 +32,7 @@
         }
 
         dt {
-            color: #4b5563;
+            color: #5e6961;
         }
 
         dd {
@@ -116,7 +54,7 @@
         }
 
         th {
-            background: #f3f4f6;
+            background: #f0f4f0;
             font-size: 11px;
             text-align: center;
             text-transform: uppercase;
@@ -153,7 +91,7 @@
         }
 
         .box {
-            border: 1px solid #111827;
+            border: 1px solid #aeb9b0;
             padding: 10px;
         }
 
@@ -193,6 +131,8 @@
         .signature-grid {
             grid-template-columns: repeat(3, 1fr);
             text-align: center;
+            break-inside: avoid;
+            page-break-inside: avoid;
         }
 
         .signature-space {
@@ -208,11 +148,25 @@
         }
 
         .footer-note {
-            color: #6b7280;
+            color: #5e6961;
             font-size: 10px;
             margin-top: 18px;
             text-align: center;
         }
+
+        @if($isPdf ?? false)
+            body { background: white; }
+            .page { box-shadow: none; margin: 0; min-height: auto; padding: 0; width: auto; }
+            .meta-grid, .summary-grid, .notes-grid, .signature-grid, .attendance { display: table; width: 100%; }
+            .meta-grid > *, .summary-grid > *, .notes-grid > *, .signature-grid > *, .attendance > * { display: table-cell; vertical-align: top; }
+            .meta-grid > * { width: 50%; }
+            .summary-grid > * { width: 33.333%; }
+            .notes-grid > :first-child { width: 42%; }
+            .notes-grid > :last-child { width: 58%; }
+            .signature-grid > * { width: 33.333%; }
+            .attendance > * { width: 33.333%; }
+            .meta-grid > *:not(:last-child), .summary-grid > *:not(:last-child), .notes-grid > *:not(:last-child), .signature-grid > *:not(:last-child) { border-right: 8px solid transparent; }
+        @endif
 
         @media print {
             body {
@@ -239,10 +193,12 @@
     </style>
 </head>
 <body>
-    <div class="toolbar">
-        <a href="{{ route('report-cards.show', $reportCard) }}">Kembali</a>
-        <button type="button" onclick="window.print()">Cetak / Simpan PDF</button>
-    </div>
+    @unless($isPdf ?? false)
+        <div class="toolbar">
+            <a href="{{ route('report-cards.show', $reportCard) }}">Kembali</a>
+            <button type="button" onclick="window.print()">Cetak / Simpan PDF</button>
+        </div>
+    @endunless
 
     <main class="page">
         <header class="school-header">

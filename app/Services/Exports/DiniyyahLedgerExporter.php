@@ -3,126 +3,89 @@
 namespace App\Services\Exports;
 
 use App\Models\DiniyyahLedgerSnapshot;
-use Illuminate\Support\Collection;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
 
 class DiniyyahLedgerExporter
 {
-    /**
-     * Generate an HTML-based Excel file for a ledger snapshot.
-     *
-     * This produces a .xls file that opens correctly in Microsoft Excel,
-     * LibreOffice Calc, and Google Sheets without requiring external packages.
-     */
+    public function __construct(private readonly SpreadsheetTheme $theme) {}
+
     public function export(?int $snapshotId): string
     {
-        $snapshot = DiniyyahLedgerSnapshot::with(['rows.cells', 'classroomTerm', 'academicTerm.academicYear'])
-            ->findOrFail($snapshotId);
-
+        $snapshot = DiniyyahLedgerSnapshot::with(['rows.cells', 'classroomTerm', 'academicTerm.academicYear'])->findOrFail($snapshotId);
         $columns = collect($snapshot->snapshot_data['columns'] ?? []);
-        $rows = $snapshot->rows->sortBy('row_number');
         $summary = $snapshot->snapshot_data['summary'] ?? [];
+        $headers = array_merge(['No', 'Nama', 'NIS'], $columns->pluck('label')->all(), ['Total', 'Rata-rata', 'Peringkat']);
 
-        $html = $this->buildHtml($snapshot, $columns, $rows, $summary);
+        $workbook = $this->theme->workbook();
+        $sheet = $workbook->getActiveSheet();
+        $sheet->setTitle('Leger');
+        $subtitle = collect([
+            $snapshot->title,
+            $snapshot->classroomTerm?->name,
+            $snapshot->academicTerm?->name,
+            $snapshot->academicTerm?->academicYear?->name,
+        ])->filter()->join(' - ');
+        $this->theme->title($sheet, 'LEGER NILAI DINIYYAH', $subtitle ?: 'Rekap nilai diniyyah.', count($headers));
+        $sheet->setCellValue('A5', 'Status');
+        $sheet->setCellValue('B5', strtoupper((string) $snapshot->status));
+        $sheet->setCellValue('A6', 'Dibuat');
+        $sheet->setCellValue('B6', $snapshot->generated_at?->translatedFormat('d F Y, H:i') ?? '-');
+        $headerRow = 8;
+        $this->theme->tableHeader($sheet, $headerRow, $headers);
 
-        return $html;
+        $lastRow = $headerRow;
+        foreach ($snapshot->rows->sortBy('row_number') as $row) {
+            $lastRow++;
+            $cells = $row->cells->keyBy('column_key');
+            $values = [$row->row_number, $row->student_name, $row->student_nis ?? ''];
+            foreach ($columns as $column) {
+                $value = $cells->get($column['key'] ?? '')?->value_numeric;
+                $values[] = $value === null ? '-' : (float) $value;
+            }
+            $values[] = $row->total_diniyyah_score === null ? '-' : (float) $row->total_diniyyah_score;
+            $values[] = $row->average_diniyyah_score === null ? '-' : (float) $row->average_diniyyah_score;
+            $values[] = $row->rank_in_class ?? '-';
+            $sheet->fromArray([$values], null, "A{$lastRow}");
+        }
+        if ($lastRow === $headerRow) {
+            $lastRow++;
+            $sheet->setCellValue("A{$lastRow}", 'Belum ada data leger untuk snapshot ini.');
+        }
+        $this->theme->finaliseTable($sheet, $headerRow, $lastRow, count($headers));
+        $sheet->getStyle('A'.($headerRow + 1).':A'.$lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('C'.($headerRow + 1).':'.$this->lastColumn(count($headers)).$lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+        $summaryRow = $lastRow + 2;
+        $sheet->mergeCells("A{$summaryRow}:C{$summaryRow}");
+        $sheet->setCellValue("A{$summaryRow}", 'RINGKASAN KELENGKAPAN');
+        $sheet->getStyle("A{$summaryRow}:C{$summaryRow}")->applyFromArray(['font' => ['bold' => true], 'fill' => ['fillType' => 'solid', 'startColor' => ['argb' => SpreadsheetTheme::NEON_GREEN]]]);
+        $summaryRow++;
+        $sheet->setCellValue("A{$summaryRow}", 'Total santri');
+        $sheet->setCellValue("B{$summaryRow}", $summary['total_students'] ?? 0);
+        $sheet->setCellValue("A".($summaryRow + 1), 'Data lengkap');
+        $sheet->setCellValue("B".($summaryRow + 1), $summary['complete_rows'] ?? 0);
+        $sheet->setCellValue("A".($summaryRow + 2), 'Belum lengkap');
+        $sheet->setCellValue("B".($summaryRow + 2), $summary['incomplete_rows'] ?? 0);
+        if (! empty($summary['blocking_issues'])) {
+            $sheet->setCellValue("D{$summaryRow}", 'Peringatan');
+            $sheet->setCellValue("E{$summaryRow}", $summary['blocking_issues'].' masalah kelengkapan perlu diperiksa.');
+        }
+
+        $widths = array_merge([8, 30, 16], array_fill(0, $columns->count(), 13), [13, 13, 12]);
+        $this->theme->widths($sheet, $widths);
+
+        return $this->theme->save($workbook);
     }
 
-    /**
-     * @param  Collection  $columns
-     * @param  Collection  $rows
-     * @param  array<string, mixed>  $summary
-     */
-    private function buildHtml(DiniyyahLedgerSnapshot $snapshot, Collection $columns, Collection $rows, array $summary): string
+    private function lastColumn(int $number): string
     {
-        $title = $snapshot->title;
-        $termName = $snapshot->academicTerm?->name ?? '-';
-        $yearName = $snapshot->academicTerm?->academicYear?->name ?? '-';
-        $className = $snapshot->classroomTerm?->name ?? '-';
-
-        $html = "<!DOCTYPE html>\n<html xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:x=\"urn:schemas-microsoft-com:office:excel\" xmlns=\"http://www.w3.org/TR/REC-html40\">\n";
-        $html .= "<head>\n<meta charset=\"utf-8\">\n<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Leger</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->\n";
-        $html .= "<style>\n";
-        $html .= "table { border-collapse: collapse; font-family: Arial, sans-serif; font-size: 11px; }\n";
-        $html .= "th, td { border: 1px solid #333; padding: 4px 6px; }\n";
-        $html .= "th { background: #f0f0f0; font-weight: bold; text-align: center; }\n";
-        $html .= ".title { font-size: 16px; font-weight: bold; text-align: center; }\n";
-        $html .= ".subtitle { font-size: 12px; text-align: center; }\n";
-        $html .= ".meta { font-size: 11px; margin: 8px 0; }\n";
-        $html .= ".center { text-align: center; }\n";
-        $html .= ".right { text-align: right; }\n";
-        $html .= ".header-row { background: #d9e2f3; }\n";
-        $html .= ".total-row { font-weight: bold; background: #fff2cc; }\n";
-        $html .= "</style>\n</head>\n<body>\n";
-
-        $html .= "<div class=\"title\">LEGER NILAI DINIYYAH</div>\n";
-        $html .= "<div class=\"subtitle\">{$title}</div>\n";
-        $html .= "<div class=\"subtitle\">{$className} - {$termName} - {$yearName}</div>\n";
-
-        $html .= "<div class=\"meta\">Status: " . strtoupper($snapshot->status) . " | Generated: " . ($snapshot->generated_at?->format('d M Y H:i') ?? '-') . "</div>\n";
-
-        $html .= "<table>\n";
-
-        // Header row
-        $html .= "<tr class=\"header-row\">\n";
-        $html .= "<th>No</th>\n";
-        $html .= "<th>Nama</th>\n";
-        $html .= "<th>NIS</th>\n";
-        foreach ($columns as $column) {
-            $label = e($column['label'] ?? '');
-            $html .= "<th>{$label}</th>\n";
-        }
-        $html .= "<th>Total</th>\n";
-        $html .= "<th>Rata-rata</th>\n";
-        $html .= "<th>Peringkat</th>\n";
-        $html .= "</tr>\n";
-
-        // Data rows
-        foreach ($rows as $row) {
-            $html .= "<tr>\n";
-            $html .= "<td class=\"center\">{$row->row_number}</td>\n";
-            $html .= "<td>" . e($row->student_name) . "</td>\n";
-            $html .= "<td class=\"center\">" . e($row->student_nis ?? '') . "</td>\n";
-
-            $cells = $row->cells->keyBy('column_key');
-            foreach ($columns as $column) {
-                $cell = $cells->get($column['key'] ?? '');
-                $value = $cell?->value_numeric;
-                if ($value !== null) {
-                    $html .= "<td class=\"center\">" . number_format((float) $value, 2) . "</td>\n";
-                } else {
-                    $html .= "<td class=\"center\">-</td>\n";
-                }
-            }
-
-            $total = $row->total_diniyyah_score !== null ? number_format((float) $row->total_diniyyah_score, 2) : '-';
-            $average = $row->average_diniyyah_score !== null ? number_format((float) $row->average_diniyyah_score, 2) : '-';
-            $rank = $row->rank_in_class ?? '-';
-
-            $html .= "<td class=\"center\">{$total}</td>\n";
-            $html .= "<td class=\"center\">{$average}</td>\n";
-            $html .= "<td class=\"center\">{$rank}</td>\n";
-            $html .= "</tr>\n";
+        $column = '';
+        while ($number > 0) {
+            $remainder = ($number - 1) % 26;
+            $column = chr(65 + $remainder).$column;
+            $number = intdiv($number - 1, 26);
         }
 
-        // Summary row
-        $html .= "<tr class=\"total-row\">\n";
-        $html .= "<td colspan=\"3\">RINGKASAN</td>\n";
-        foreach ($columns as $column) {
-            $html .= "<td></td>\n";
-        }
-        $html .= "<td class=\"center\">Total Siswa: " . ($summary['total_students'] ?? 0) . "</td>\n";
-        $html .= "<td class=\"center\">Lengkap: " . ($summary['complete_rows'] ?? 0) . "</td>\n";
-        $html .= "<td class=\"center\">Belum: " . ($summary['incomplete_rows'] ?? 0) . "</td>\n";
-        $html .= "</tr>\n";
-
-        $html .= "</table>\n";
-
-        if (! empty($summary['blocking_issues'])) {
-            $html .= "<div class=\"meta\" style=\"color: #cc0000; font-weight: bold;\">Peringatan: Masih ada {$summary['blocking_issues']} masalah kelengkapan.</div>\n";
-        }
-
-        $html .= "</body>\n</html>";
-
-        return $html;
+        return $column;
     }
 }

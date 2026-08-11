@@ -18,6 +18,7 @@ use App\Models\School;
 use App\Models\Student;
 use App\Services\DiniyyahLedgerGenerator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 use Tests\TestCase;
 
 class DiniyyahLedgerExportTest extends TestCase
@@ -41,11 +42,24 @@ class DiniyyahLedgerExportTest extends TestCase
             ->get(route('diniyyah.ledger.export-excel', $snapshot));
 
         $response->assertOk();
-        $contentType = $response->headers->get('content-type');
-        $this->assertTrue(
-            str_contains($contentType, 'excel') || str_contains($contentType, 'application/vnd'),
-            "Expected Excel content-type, got: $contentType"
-        );
+        $response->assertHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        $this->assertStringContainsString('.xlsx', (string) $response->headers->get('content-disposition'));
+        $content = $response->streamedContent();
+        $this->assertSame('PK', substr($content, 0, 2));
+
+        $path = tempnam(sys_get_temp_dir(), 'ledger-xlsx-test-');
+        $this->assertNotFalse($path);
+        file_put_contents($path, $content);
+        try {
+            $workbook = IOFactory::load($path);
+        } finally {
+            @unlink($path);
+        }
+        $sheet = $workbook->getSheetByName('Leger');
+        $this->assertNotNull($sheet);
+        $this->assertSame('LEGER NILAI DINIYYAH', $sheet->getCell('A1')->getValue());
+        $this->assertSame('Santri Export', $sheet->getCell('B9')->getValue());
+        $workbook->disconnectWorksheets();
     }
 
     public function test_kepala_sekolah_can_export_ledger(): void

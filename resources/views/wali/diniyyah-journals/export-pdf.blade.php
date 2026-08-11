@@ -4,26 +4,27 @@
     <meta charset="UTF-8">
     <title>Rekap Jurnal Diniyyah</title>
     <style>
-        body { font-family: sans-serif; font-size: 11px; margin: 0; padding: 20px; }
-        .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px; }
-        .header h1 { font-size: 16px; margin: 0; text-transform: uppercase; }
-        .header p { font-size: 12px; margin: 5px 0 0; }
+        @page { margin: 11mm 10mm; }
+        body { color: #111512; font-family: DejaVu Sans, sans-serif; font-size: 10px; margin: 0; padding: 0; }
+        .header { text-align: left; margin-bottom: 16px; border-bottom: 3px solid #111512; padding-bottom: 9px; }
+        .header h1 { font-size: 16px; letter-spacing: -.3px; margin: 0; text-transform: uppercase; }
+        .header p { color: #0b6e37; font-size: 9px; font-weight: bold; letter-spacing: 1px; margin: 5px 0 0; text-transform: uppercase; }
         
         .info { margin-bottom: 15px; }
         .info table { width: 50%; }
         .info td { padding: 2px; }
         
         table.data-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-        table.data-table th, table.data-table td { border: 1px solid #333; padding: 6px; text-align: left; vertical-align: top; }
-        table.data-table th { background-color: #f0f0f0; font-weight: bold; }
+        table.data-table th, table.data-table td { border: 1px solid #c8d0ca; padding: 6px; text-align: left; vertical-align: top; }
+        table.data-table th { background-color: #f0f4f0; font-weight: bold; }
         
-        .status-terisi { color: #166534; }
-        .status-libur { color: #475569; }
-        .status-kosong { color: #991b1b; font-weight: bold; }
+        .status-terisi { color: #087a3c; font-weight: bold; }
+        .status-libur { color: #58625c; }
+        .status-kosong { color: #9b1d13; font-weight: bold; }
         
         .signature-area { width: 100%; margin-top: 50px; }
         .signature-box { float: right; width: 250px; text-align: center; }
-        .signature-box .name { margin-top: 70px; font-weight: bold; text-decoration: underline; }
+        .signature-box .name { border-top: 1px solid #111512; margin-top: 70px; font-weight: bold; padding-top: 4px; }
     </style>
 </head>
 <body>
