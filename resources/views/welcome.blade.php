@@ -18,6 +18,7 @@
     <meta name="description" content="Aktivitas akademik Griya Qur'an untuk guru, wali santri, dan manajemen sekolah.">
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700,800" rel="stylesheet" />
+    <link href="https://fonts.bunny.net/css?family=plus-jakarta-sans:500,600,700,800" rel="stylesheet" />
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @include('partials.pwa-head')
 </head>
@@ -51,7 +52,7 @@
         <section class="school-campus" aria-labelledby="campus-title">
             <div>
                 <p class="school-index">Ruang Akademik Griya Qur'an</p>
-                <h1 id="campus-title" class="school-campus-title">Setiap kegiatan belajar punya <em>tempat untuk bertumbuh.</em></h1>
+                <h1 id="campus-title" class="school-campus-title"><span>Setiap kegiatan belajar</span><span>punya tempat untuk</span><span class="school-campus-title-accent">bertumbuh.</span></h1>
                 <p class="school-campus-copy">Ruang GQ menghubungkan kegiatan kelas, catatan guru, tinjauan sekolah, dan informasi perkembangan santri dalam satu ruang akademik yang dekat dengan keseharian sekolah.</p>
                 <div class="mt-7 flex flex-wrap gap-3">
                     <a href="{{ route('login') }}" class="btn btn-primary btn-lg">Masuk ke ruang akademik <span aria-hidden="true">&rarr;</span></a>

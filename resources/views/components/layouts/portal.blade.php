@@ -102,8 +102,7 @@
 
             <div class="school-nav" aria-label="Menu kegiatan">
                 @foreach($portalNavGroups as $group)
-                    <div class="school-nav-group">
-                        <span class="school-nav-group-label">{{ $group['label'] }}</span>
+                    <div class="school-nav-group" aria-label="{{ $group['label'] }}">
                         @foreach($group['items'] as $item)
                             @php($isActive = collect($item['match'])->contains(fn ($pattern) => request()->routeIs($pattern)))
                             <a href="{{ $item['href'] }}" class="school-nav-link" @if($isActive) aria-current="page" @endif>{{ $item['label'] }}</a>

@@ -99,9 +99,10 @@
     .school-home-links a:hover { color: var(--color-ink); text-decoration: underline; text-decoration-color: var(--color-neon); text-decoration-thickness: 3px; text-underline-offset: 5px; }
 
     .school-campus { display: grid; max-width: 80rem; gap: 1.25rem; margin: 0 auto; padding: clamp(2.5rem, 6vw, 5.5rem) 1rem 3.5rem; }
-    .school-campus-title { max-width: 45rem; margin: .85rem 0 0; font-size: clamp(2.8rem, 6.5vw, 5.85rem); font-weight: 550; letter-spacing: -.07em; line-height: .93; }
-    .school-campus-title em { border-radius: .2em; background: var(--color-neon); padding: 0 .1em; color: var(--color-neon-ink); font-style: normal; }
-    .school-campus-copy { max-width: 39rem; color: #5e6b61; font-size: 1rem; line-height: 1.7; }
+    .school-campus-title { max-width: 50rem; margin: .9rem 0 0; font-family: 'Plus Jakarta Sans', var(--font-sans); font-size: clamp(2.65rem, 5vw, 4.6rem); font-weight: 700; letter-spacing: -.065em; line-height: .99; }
+    .school-campus-title > span { display: block; }
+    .school-campus-title-accent { width: fit-content; color: var(--color-ink); text-decoration: underline; text-decoration-color: var(--color-neon); text-decoration-thickness: .15em; text-decoration-skip-ink: none; text-underline-offset: .09em; }
+    .school-campus-copy { max-width: 39rem; margin: 1.65rem 0 0; color: #5e6b61; font-size: 1rem; line-height: 1.7; }
     .school-board { overflow: hidden; border: 1px solid #b9c8ba; border-radius: 1.35rem; background: #fff; box-shadow: 10px 10px 0 #dce5dc; }
     .school-board-head { display: flex; align-items: center; justify-content: space-between; gap: .75rem; border-bottom: 1px solid var(--color-line); padding: 1rem 1.15rem; background: #f0f5ef; }
     .school-board-head h2 { margin: 0; font-size: .92rem; font-weight: 850; }
@@ -144,11 +145,9 @@
     .school-context { min-width: 0; border-left: 1px solid var(--color-line); padding-left: .8rem; }
     .school-context strong { display: block; overflow: hidden; font-size: .78rem; text-overflow: ellipsis; white-space: nowrap; }
     .school-context span { display: block; overflow: hidden; margin-top: .1rem; color: #6c776f; font-size: .67rem; text-overflow: ellipsis; white-space: nowrap; }
-    .school-nav { display: none; align-items: stretch; gap: .7rem; min-width: 0; margin-left: auto; overflow-x: auto; }
-    .school-nav-group { display: flex; align-items: center; gap: .15rem; border-left: 1px solid var(--color-line); padding-left: .7rem; }
-    .school-nav-group:first-child { border-left: 0; }
-    .school-nav-group-label { color: #788278; font-family: var(--font-mono); font-size: .53rem; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; writing-mode: vertical-rl; transform: rotate(180deg); }
-    .school-nav-link { border-radius: .55rem; padding: .48rem .58rem; color: #4e5d52; font-size: .7rem; font-weight: 750; text-decoration: none; white-space: nowrap; }
+    .school-nav { display: none; align-items: center; gap: .2rem; min-width: 0; margin-left: auto; overflow-x: auto; }
+    .school-nav-group { display: flex; align-items: center; gap: .2rem; }
+    .school-nav-link { border-radius: .55rem; padding: .55rem .62rem; color: #4e5d52; font-size: .76rem; font-weight: 750; text-decoration: none; white-space: nowrap; }
     .school-nav-link:hover, .school-nav-link[aria-current='page'] { background: #eaffef; color: #145d33; }
     .school-header-actions { display: flex; flex: 0 0 auto; align-items: center; gap: .4rem; margin-left: auto; }
     .school-main { max-width: 82rem; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
@@ -189,7 +188,7 @@
 
 @media (min-width: 768px) {
     .school-home-links { display: flex; }
-    .school-campus { grid-template-columns: minmax(0, 1.04fr) minmax(20rem, .96fr); align-items: center; gap: 2rem; }
+    .school-campus { grid-template-columns: minmax(0, 1.2fr) minmax(20rem, .8fr); align-items: center; gap: 2rem; }
     .learning-map { grid-template-columns: minmax(0, 1fr) minmax(20rem, .92fr); align-items: start; }
     .learning-book { margin-top: 0; }
     .school-door-grid { grid-template-columns: repeat(3, 1fr); }
