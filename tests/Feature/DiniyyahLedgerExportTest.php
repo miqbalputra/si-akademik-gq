@@ -59,6 +59,20 @@ class DiniyyahLedgerExportTest extends TestCase
         $response->assertOk();
     }
 
+    public function test_kepala_sekolah_can_open_ledger_in_management_portal(): void
+    {
+        $kepala = $this->kepalaSekolahUser();
+        $snapshot = $this->createLedgerSnapshot();
+
+        $this->actingAs($kepala)
+            ->get(route('diniyyah.ledger.show', $snapshot))
+            ->assertOk()
+            ->assertSee('Portal Manajemen')
+            ->assertSee('Data leger santri')
+            ->assertSee('aria-label="Menu portal"', false)
+            ->assertSee('scope="col"', false);
+    }
+
     public function test_guru_cannot_export_ledger(): void
     {
         $guru = $this->guruUser();

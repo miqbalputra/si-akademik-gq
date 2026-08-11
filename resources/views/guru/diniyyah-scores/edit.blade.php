@@ -76,7 +76,7 @@
         <div class="mt-6 flex flex-col gap-4 rounded-2xl bg-slate-50/80 border border-slate-200/50 p-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
                 <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Status Validasi</p>
-                <p class="mt-1 text-sm font-black text-slate-800 uppercase tracking-wide">{{ $assessmentSet->status }}</p>
+                <p class="mt-1 text-sm font-black text-slate-800 tracking-wide">{{ \App\Support\UiLabel::statusLabel($assessmentSet->status) }}</p>
             </div>
             @if (in_array($assessmentSet->status, ['active', 'needs_revision'], true))
                 <form method="POST" action="{{ route('guru.diniyyah-scores.submit', $assessmentSet) }}" class="w-full sm:w-auto">

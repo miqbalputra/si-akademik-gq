@@ -26,7 +26,9 @@ class DiniyyahScoresTable
                 TextColumn::make('component.name')->label('Komponen')->searchable(),
                 TextColumn::make('classEnrollment.student.name')->label('Santri')->searchable(),
                 TextColumn::make('score')->label('Nilai')->numeric()->sortable(),
-                TextColumn::make('status')->label('Status')->badge(),
+                TextColumn::make('status')->label('Status')->badge()
+                    ->formatStateUsing(fn ($state): string => \App\Support\UiLabel::statusLabel($state))
+                    ->color(fn ($state): string => \App\Support\UiLabel::statusColor($state)),
                 TextColumn::make('input_at')->label('Diinput Pada')->dateTime()->sortable(),
             ])
             ->filters([

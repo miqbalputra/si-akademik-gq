@@ -40,6 +40,8 @@ class WaliMonitoringSessionTimeTest extends TestCase
         $this->actingAs($ctx['user'])
             ->get(route('wali.diniyyah-journals.index', ['month' => 3, 'year' => 2025]))
             ->assertOk()
+            ->assertSee('Portal Guru')
+            ->assertSee('Monitoring Jurnal Kelas')
             ->assertSee('07:40')
             ->assertSee('08:10')
             ->assertDontSee('10:30');

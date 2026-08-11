@@ -105,7 +105,7 @@
                                 @else
                                     <div class="flex flex-wrap gap-1">
                                         @foreach($journal->absences as $abs)
-                                            <span class="bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-bold">{{ $abs->classEnrollment->student->name }} ({{ $abs->status === 'skipped' ? 'Bolos Sesi' : ucfirst($abs->status) }})</span>
+                                            <span class="bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-bold">{{ $abs->classEnrollment->student->name }} ({{ $abs->status === 'skipped' ? 'Bolos Sesi' : \App\Support\UiLabel::absenceLabel($abs->status) }})</span>
                                         @endforeach
                                     </div>
                                 @endif
@@ -192,7 +192,7 @@
                                     @foreach($journal->absences as $abs)
                                         <span class="bg-amber-100 border border-amber-200 text-amber-800 px-2 py-1 rounded-md text-xs font-bold shadow-sm">
                                             {{ $abs->classEnrollment->student->name }} 
-                                            <span class="text-[10px] font-normal opacity-80">({{ $abs->status === 'skipped' ? 'Bolos' : ucfirst($abs->status) }})</span>
+                                            <span class="text-[10px] font-normal opacity-80">({{ $abs->status === 'skipped' ? 'Bolos' : \App\Support\UiLabel::absenceLabel($abs->status) }})</span>
                                         </span>
                                     @endforeach
                                 </div>

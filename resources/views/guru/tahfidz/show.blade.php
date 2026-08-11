@@ -37,10 +37,6 @@
         </div>
     @endif
 
-    <form method="POST" action="{{ route('guru.tahfidz.update', $halaqah) }}">
-        @csrf
-        @method('PUT')
-
         {{-- Month Selector (Modern Pills) --}}
         <div class="flex flex-wrap gap-2 mb-6 animate-fade-in-up" style="animation-delay: 50ms;">
             @foreach ($availableMonths as $month)
@@ -97,13 +93,21 @@
                                     </td>
                                     @foreach ($monthWeeks as $week)
                                         @php $score = $scores->get($member->id.'-'.$week->id); @endphp
-                                        <td class="p-2 border-r border-slate-50 last:border-r-0" x-data="tahfidzCell('{{ addslashes($score?->surah_ayat) }}', '{{ addslashes($score?->sabaq_amount) }}', '{{ $score?->score }}', '{{ addslashes($score?->notes) }}', '{{ $member->id }}', '{{ $week->id }}', '{{ route('guru.tahfidz.update-single', $halaqah) }}')">
+                                        <td class="p-2 border-r border-slate-50 last:border-r-0" x-data="tahfidzCell('{{ addslashes($score?->surah_ayat) }}', '{{ addslashes($score?->sabaq_amount) }}', '{{ $score?->score }}', '{{ addslashes($score?->notes) }}', '{{ $score?->category ?? 'sabaq' }}', '{{ $member->id }}', '{{ $week->id }}', '{{ route('guru.tahfidz.update-single', $halaqah) }}')">
                                             
                                             <!-- Clickable Summary Box -->
                                             <div @click="showModal = true" class="relative group/box cursor-pointer h-full min-h-[70px] w-full rounded-2xl border-2 flex flex-col items-center justify-center p-2 text-center transition-all duration-300"
                                                  :class="hasData ? 'border-amber-200 bg-amber-50/40 hover:bg-amber-100/60 hover:border-amber-400 hover:shadow-md' : 'border-dashed border-slate-200 bg-slate-50/50 hover:border-amber-300 hover:bg-amber-50/30 text-slate-400'">
                                                 
                                                 <div x-html="summaryHtml" class="w-full flex flex-col items-center justify-center gap-1"></div>
+                                                <div class="mt-2 flex items-center gap-1" @click.stop>
+                                                    <select x-model="category" class="h-8 min-w-0 rounded-lg border border-slate-200 bg-white px-1 text-[10px] font-bold text-slate-600" aria-label="Jenis setoran">
+                                                        <option value="sabaq">Sabaq</option>
+                                                        <option value="murojaah">Murojaah</option>
+                                                    </select>
+                                                    <input x-model="score" type="number" min="0" max="100" inputmode="numeric" placeholder="Nilai" :disabled="category === 'murojaah'" class="h-8 w-14 rounded-lg border border-slate-200 bg-white px-1 text-center text-[10px] font-black text-slate-700 disabled:bg-slate-100" aria-label="Nilai cepat">
+                                                    <button type="button" @click="quickSave()" class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-950 text-xs font-black text-white" aria-label="Simpan input cepat">✓</button>
+                                                </div>
                                                 
                                                 <!-- Loading Indicator -->
                                                 <div x-show="isSaving" class="absolute top-2 right-2 text-amber-500 bg-amber-100 p-1 rounded-full shadow-sm">
@@ -120,13 +124,6 @@
                                                     </svg>
                                                 </div>
                                             </div>
-                                            
-                                            <!-- Hidden Inputs for Form Submission -->
-                                            <input type="hidden" name="scores[{{ $member->id }}][{{ $week->id }}][surah_ayat]" :value="combinedSurahAyat">
-                                            <input type="hidden" name="scores[{{ $member->id }}][{{ $week->id }}][sabaq_amount]" :value="formattedSabaq">
-                                            <input type="hidden" name="scores[{{ $member->id }}][{{ $week->id }}][score]" :value="(score === '-' || baris.toLowerCase() === 'murojaah') ? '' : score">
-                                            <input type="hidden" name="scores[{{ $member->id }}][{{ $week->id }}][notes]" :value="notes">
-                                            <input type="hidden" name="scores[{{ $member->id }}][{{ $week->id }}][category]" value="sabaq">
                                             
                                             <!-- Modern Modal -->
                                             <template x-teleport="body">
@@ -155,6 +152,14 @@
                                                         </div>
                                                         
                                                         <div class="p-6 space-y-6 overflow-y-auto">
+                                                            <div x-show="validationError" x-text="validationError" class="inline-feedback inline-feedback-error" role="alert"></div>
+                                                            <div class="space-y-1.5">
+                                                                <label class="text-[10px] font-black text-slate-500 uppercase tracking-wider">Jenis Setoran</label>
+                                                                <select x-model="category" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20">
+                                                                    <option value="sabaq">Sabaq — Hafalan baru</option>
+                                                                    <option value="murojaah">Murojaah — Pengulangan</option>
+                                                                </select>
+                                                            </div>
                                                             <!-- Dari -->
                                                             <div class="grid grid-cols-3 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
                                                                 <div class="col-span-2 space-y-1.5">
@@ -196,16 +201,13 @@
                                                                 <div class="space-y-1.5">
                                                                     <label class="text-[10px] font-black text-slate-500 uppercase tracking-wider">Jml Sabaq (Baris) <span class="text-red-500">*</span></label>
                                                                     <div class="relative">
-                                                                        <input type="text" list="sabaqOptions-{{ $member->id }}-{{ $week->id }}" class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all shadow-sm" x-model="baris" placeholder="Mis: 18 / Murojaah">
-                                                                        <datalist id="sabaqOptions-{{ $member->id }}-{{ $week->id }}">
-                                                                            <option value="Murojaah">
-                                                                        </datalist>
+                                                                        <input type="number" min="1" inputmode="numeric" class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all shadow-sm disabled:opacity-50 disabled:bg-slate-100" x-model="baris" placeholder="Mis: 18" :disabled="category === 'murojaah'">
                                                                         <div class="absolute -bottom-5 left-2 text-[10px] font-black text-amber-600" x-text="formattedSabaq"></div>
                                                                     </div>
                                                                 </div>
                                                                     <div class="space-y-1.5">
                                                                         <label class="text-[10px] font-black text-slate-500 uppercase tracking-wider">Nilai (1-100) <span class="text-red-500">*</span></label>
-                                                                        <input type="text" class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all shadow-sm disabled:opacity-50 disabled:bg-slate-100" x-model="score" x-on:input="score = score.replace(/[^0-9]/g, '')" :disabled="baris && baris.toLowerCase() === 'murojaah'" placeholder="Mis: 85">
+                                                                        <input type="text" class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all shadow-sm disabled:opacity-50 disabled:bg-slate-100" x-model="score" x-on:input="score = score.replace(/[^0-9]/g, '')" :disabled="category === 'murojaah'" placeholder="Mis: 85">
                                                                     </div>
                                                             </div>
                                                             
@@ -249,14 +251,11 @@
                 </div>
             </div>
 
-            <div class="flex items-center justify-end gap-3 mb-10 animate-fade-in-up" style="animation-delay: 150ms;">
-                <button type="submit" class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-bold text-sm hover:from-amber-600 hover:to-orange-600 transition-all shadow-lg shadow-amber-500/30 transform hover:-translate-y-0.5">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
-                    Simpan Semua Perubahan
-                </button>
+            <div class="sticky-action-bar mb-10 flex items-center justify-between gap-3 p-4 sm:p-5">
+                <div><p class="text-sm font-black text-slate-900">Simpan otomatis aktif</p><p class="mt-1 text-xs font-medium text-slate-500">Perubahan tersimpan setelah Anda menekan tombol simpan pada tiap kotak.</p></div>
+                <span class="status-badge status-badge-success">Tersinkron</span>
             </div>
         @endif
-    </form>
 
     @push('scripts')
     <script>
@@ -265,8 +264,12 @@
         ];
 
         document.addEventListener('alpine:init', () => {
-            Alpine.data('tahfidzCell', (initialSurahAyat, initialSabaqAmount, initialScore, initialNotes, memberId, weekId, updateUrl) => {
+            Alpine.data('tahfidzCell', (initialSurahAyat, initialSabaqAmount, initialScore, initialNotes, initialCategory, memberId, weekId, updateUrl) => {
                 let sSurah = '', sAyat = '', eSurah = '', eAyat = '';
+                let normalizedCategory = (initialCategory || '').toLowerCase();
+                if (!['sabaq', 'murojaah'].includes(normalizedCategory)) {
+                    normalizedCategory = initialSabaqAmount && initialSabaqAmount.toLowerCase() === 'murojaah' ? 'murojaah' : 'sabaq';
+                }
                 
                 // Parser
                 if (initialSurahAyat) {
@@ -291,7 +294,7 @@
                 if (eSurah && eSurah !== '-' && !quranSurahs.includes(eSurah)) eSurah = '';
 
                 let parsedScore = initialScore ? Math.round(parseFloat(initialScore)).toString() : '';
-                if (initialSabaqAmount && initialSabaqAmount.toLowerCase() === 'murojaah') {
+                if (normalizedCategory === 'murojaah' || (initialSabaqAmount && initialSabaqAmount.toLowerCase() === 'murojaah')) {
                     parsedScore = '-';
                 }
 
@@ -299,6 +302,7 @@
                     showModal: false,
                     isSaving: false,
                     saveSuccess: false,
+                    validationError: '',
                     startSurah: sSurah,
                     startAyat: sAyat,
                     endSurah: eSurah,
@@ -306,6 +310,7 @@
                     baris: initialSabaqAmount ? initialSabaqAmount.replace(/[^0-9]/g, '') : '',
                     score: parsedScore,
                     notes: initialNotes || '',
+                    category: normalizedCategory,
                     memberId: memberId,
                     weekId: weekId,
                     updateUrl: updateUrl,
@@ -320,13 +325,18 @@
                         this.$watch('endSurah', value => {
                             if (value === '-') this.endAyat = '';
                         });
-                        this.$watch('baris', value => {
-                            if (value && value.toLowerCase() === 'murojaah') this.score = '-';
-                            else if (this.score === '-') this.score = '';
+                        this.$watch('category', value => {
+                            if (value === 'murojaah') {
+                                this.baris = '';
+                                this.score = '-';
+                            } else if (this.score === '-') {
+                                this.score = '';
+                            }
                         });
                     },
                     
                     cancelAndClose() {
+                        this.validationError = '';
                         this.revertToOriginal();
                         this.showModal = false;
                     },
@@ -361,18 +371,18 @@
                         if (this.startSurah && this.startSurah !== '-' && !quranSurahs.includes(this.startSurah)) this.startSurah = '';
                         if (this.endSurah && this.endSurah !== '-' && !quranSurahs.includes(this.endSurah)) this.endSurah = '';
 
+                        this.category = (orig.category || (orig.sabaq_amount && orig.sabaq_amount.toLowerCase() === 'murojaah' ? 'murojaah' : 'sabaq')).toLowerCase();
                         this.baris = orig.sabaq_amount ? orig.sabaq_amount.replace(/[^0-9]/g, '') : '';
-                        if (orig.sabaq_amount && orig.sabaq_amount.toLowerCase() === 'murojaah') {
-                            this.baris = 'Murojaah';
-                        }
+                        if (this.category === 'murojaah') this.baris = '';
                         
                         this.score = orig.score ? Math.round(parseFloat(orig.score)).toString() : '';
-                        if (this.baris.toLowerCase() === 'murojaah') this.score = '-';
+                        if (this.category === 'murojaah') this.score = '-';
                         
                         this.notes = orig.notes || '';
                     },
 
                     closeAndSave() {
+                        this.validationError = '';
                         if (this.currentDataString() === this._originalData) {
                             this.showModal = false;
                             return;
@@ -381,14 +391,19 @@
                         const isEmpty = !this.startSurah && !this.startAyat && !this.endSurah && !this.endAyat && !this.baris && (this.score === '' || this.score === null) && !this.notes;
                         
                         if (!isEmpty) {
-                            if (!this.startSurah) { alert("Nama Surat Dari wajib diisi!"); return; }
-                            if (this.startSurah !== '-' && !this.startAyat) { alert("Dari Ayat wajib diisi dengan angka!"); return; }
-                            if (!this.endSurah) { alert("Nama Surat Sampai wajib diisi (Pilih '-' jika kosong)!"); return; }
-                            if (this.endSurah !== '-' && !this.endAyat) { alert("Sampai Ayat wajib diisi dengan angka!"); return; }
-                            if (!this.baris) { alert("Jumlah Sabaq wajib diisi!"); return; }
-                            if (this.score === '' || this.score === null) { alert("Nilai wajib diisi!"); return; }
+                            if (!this.startSurah) { this.validationError = 'Nama Surat Dari wajib diisi.'; return; }
+                            if (this.startSurah !== '-' && !this.startAyat) { this.validationError = 'Dari Ayat wajib diisi dengan angka.'; return; }
+                            if (!this.endSurah) { this.validationError = "Nama Surat Sampai wajib diisi (pilih '-' jika kosong)."; return; }
+                            if (this.endSurah !== '-' && !this.endAyat) { this.validationError = 'Sampai Ayat wajib diisi dengan angka.'; return; }
+                            if (this.category === 'sabaq' && !this.baris) { this.validationError = 'Jumlah Sabaq wajib diisi.'; return; }
+                            if (this.category === 'sabaq' && (this.score === '' || this.score === null)) { this.validationError = 'Nilai wajib diisi.'; return; }
                         }
                         
+                        this.autoSave();
+                    },
+
+                    quickSave() {
+                        this.validationError = '';
                         this.autoSave();
                     },
                     
@@ -397,22 +412,24 @@
                             surah_ayat: this.combinedSurahAyat,
                             sabaq_amount: this.formattedSabaq,
                             score: this.score,
-                            notes: this.notes
+                            notes: this.notes,
+                            category: this.category
                         });
                     },
                     
                     clearForm() {
                         this.startSurah = ''; this.startAyat = '';
                         this.endSurah = ''; this.endAyat = '';
-                        this.baris = ''; this.score = ''; this.notes = '';
+                        this.baris = ''; this.score = ''; this.notes = ''; this.category = 'sabaq';
                     },
                     
                     async autoSave() {
                         this.isSaving = true;
                         this.saveSuccess = false;
+                        this.validationError = '';
                         
                         try {
-                            const submitScore = (this.score === '-' || this.baris.toLowerCase() === 'murojaah') ? null : this.score;
+                            const submitScore = this.category === 'murojaah' ? null : this.score;
                             
                             const response = await fetch(this.updateUrl, {
                                 method: 'PUT',
@@ -429,7 +446,7 @@
                                     sabaq_amount: this.formattedSabaq,
                                     score: submitScore,
                                     notes: this.notes,
-                                    category: 'sabaq'
+                                    category: this.category
                                 })
                             });
                             
@@ -439,13 +456,13 @@
                                 setTimeout(() => this.saveSuccess = false, 3000);
                             } else {
                                 console.error(await response.text());
-                                alert('Gagal menyimpan data otomatis. Silakan periksa isian atau gunakan tombol Simpan Data Pekanan.');
+                                this.validationError = 'Gagal menyimpan. Periksa isian lalu coba lagi.';
                             }
                         } catch (error) {
                             console.error(error);
+                            this.validationError = 'Koneksi bermasalah. Coba lagi.';
                         } finally {
                             this.isSaving = false;
-                            this.showModal = false;
                         }
                     },
                     
@@ -466,8 +483,8 @@
                     },
 
                     get formattedSabaq() {
+                        if (this.category === 'murojaah') return 'Murojaah';
                         if (!this.baris) return '';
-                        if (this.baris.toLowerCase() === 'murojaah') return 'Murojaah';
                         let b = parseInt(this.baris);
                         if (isNaN(b) || b <= 0) return this.baris;
                         let hal = Math.floor(b / 15);

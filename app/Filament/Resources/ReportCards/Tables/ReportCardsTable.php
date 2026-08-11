@@ -24,7 +24,9 @@ class ReportCardsTable
                 TextColumn::make('student.name')->label('Santri')->searchable()->sortable(),
                 TextColumn::make('classroomTerm.name')->label('Kelas')->searchable(),
                 TextColumn::make('academicTerm.name')->label('Periode')->searchable(),
-                TextColumn::make('status')->label('Status')->badge(),
+                TextColumn::make('status')->label('Status')->badge()
+                    ->formatStateUsing(fn ($state): string => \App\Support\UiLabel::statusLabel($state))
+                    ->color(fn ($state): string => \App\Support\UiLabel::statusColor($state)),
                 TextColumn::make('total_score')->label('Total Nilai')->numeric(),
                 TextColumn::make('average_score')->label('Nilai Rata-rata')->numeric(),
                 TextColumn::make('rank_in_class')->label('Peringkat Kelas')->numeric(),

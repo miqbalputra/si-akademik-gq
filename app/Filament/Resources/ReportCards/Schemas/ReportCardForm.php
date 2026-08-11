@@ -23,9 +23,9 @@ class ReportCardForm
                     ->default('diniyyah')
                     ->required(),
                 Select::make('status')->label('Status')
-                    ->options(['draft' => 'Draft', 'locked' => 'Locked', 'published' => 'Published'])
+                    ->options(['draft' => 'Draf', 'locked' => 'Dikunci', 'published' => 'Sudah terbit'])
                     ->default('draft')
-                    ->required(),
+                    ->disabled(),
                 DatePicker::make('issue_date')->label('Tanggal Terbit'),
                 TextInput::make('total_score')->label('Total Nilai')->disabled(),
                 TextInput::make('average_score')->label('Nilai Rata-rata')->disabled(),

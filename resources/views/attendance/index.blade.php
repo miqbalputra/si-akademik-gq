@@ -74,7 +74,7 @@
                                         Aktif
                                     </p>
                                 @else
-                                    <p class="text-xs font-bold text-slate-600 leading-tight capitalize">{{ $classroomTerm->status }}</p>
+                                    <p class="text-xs font-bold text-slate-600 leading-tight">{{ \App\Support\UiLabel::statusLabel($classroomTerm->status) }}</p>
                                 @endif
                             </div>
                         </div>

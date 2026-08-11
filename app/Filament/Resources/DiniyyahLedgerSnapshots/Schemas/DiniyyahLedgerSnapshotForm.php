@@ -27,12 +27,12 @@ class DiniyyahLedgerSnapshotForm
                     ->required(),
                 Select::make('status')->label('Status')
                     ->options([
-                        'draft' => 'Draft',
+                        'draft' => 'Draf',
                         'validated' => 'Tervalidasi',
                         'locked' => 'Terkunci',
-                        'published' => 'Published',
+                        'published' => 'Sudah terbit',
                     ])
-                    ->required()
+                    ->disabled()
                     ->default('draft'),
                 DateTimePicker::make('generated_at')->label('Dibuat Pada')->disabled(),
                 DateTimePicker::make('locked_at')->disabled(),

@@ -205,6 +205,9 @@
                                     <div class="flex flex-wrap items-center gap-2">
                                         <h3 id="diniyyah-heading" class="text-lg font-black text-slate-900">Guru Diniyyah</h3>
                                         <span class="badge badge-green">{{ $diniyyahAssignments->count() }} penugasan</span>
+                                        @if($diniyyahAssignments->isNotEmpty())
+                                            <span class="badge badge-indigo">Jadwal Mengajar</span>
+                                        @endif
                                     </div>
                                     <p class="mt-1 text-sm leading-5 text-slate-500">Input nilai dan jurnal untuk mapel Diniyyah yang Anda ampu.</p>
                                 </div>

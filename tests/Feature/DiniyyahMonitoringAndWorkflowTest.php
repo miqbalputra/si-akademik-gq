@@ -53,7 +53,10 @@ class DiniyyahMonitoringAndWorkflowTest extends TestCase
         $this->actingAs($user)
             ->get(route('diniyyah.monitoring.index'))
             ->assertOk()
-            ->assertSee('Monitoring Input Nilai');
+            ->assertSee('Monitoring Input Nilai')
+            ->assertSee('Portal Manajemen')
+            ->assertSee('Monitoring Diniyyah')
+            ->assertSee('aria-label="Menu portal"', false);
     }
 
     public function test_guru_cannot_open_monitoring_page(): void

@@ -1,19 +1,5 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+@push('head')
     <title>Rekap Hafalan Tahfidz — SIAKAD Griya Qur'an</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
-    @else
-        <script src="https://cdn.tailwindcss.com"></script>
-        <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Outfit','sans-serif']},colors:{brand:{50:'#fffbeb',100:'#fef3c7',500:'#f59e0b',600:'#d97706',700:'#b45309'}}}}}</script>
-    @endif
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
     <style>
         * { box-sizing: border-box; }
         body { font-family: 'Outfit', sans-serif; background: #f8fafc; color: #1e293b; margin: 0; -webkit-font-smoothing: antialiased; }
@@ -47,36 +33,12 @@
         .delay-1 { animation-delay: .1s; }
         .delay-2 { animation-delay: .2s; }
     </style>
-    @include('partials.pwa-head')
-</head>
-<body>
+    @endpush
+
+<x-layouts.portal title="Rekap Hafalan Tahfidz" portalLabel="Portal Wali Santri" breadcrumb="Tahfidz">
     <div class="fixed inset-0 z-[-1] bg-grid opacity-50"></div>
 
-    {{-- Nav --}}
-    <nav class="portal-nav">
-        <div style="max-width:960px;margin:0 auto;padding:0 24px;height:60px;display:flex;align-items:center;justify-content:space-between;">
-            <a href="{{ url('/') }}" style="display:flex;align-items:center;gap:10px;text-decoration:none;">
-                <span style="width:36px;height:36px;background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;color:#fff;">GQ</span>
-                <div>
-                    <span style="display:block;font-size:14px;font-weight:800;color:#0f172a;line-height:1.2;">Griya Qur'an</span>
-                    <span style="display:block;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#d97706;">Portal Wali Santri</span>
-                </div>
-            </a>
-            <div style="display:flex;align-items:center;gap:8px;">
-                <a href="{{ route('wali.dashboard') }}" class="btn-ghost">
-                    <svg style="width:13px;height:13px;" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" /></svg>
-                    Dashboard
-                </a>
-                <a href="{{ route('wali.calendar') }}" class="btn-ghost">Kalender</a>
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <button type="submit" class="btn-ghost">Keluar</button>
-                </form>
-            </div>
-        </div>
-    </nav>
-
-    <main style="max-width:960px;margin:0 auto;padding:28px 24px;">
+    <div class="mx-auto max-w-5xl">
 
         {{-- Header --}}
         <header class="fade-up" style="margin-bottom:28px;">
@@ -267,7 +229,7 @@
                 </section>
             @endif
         @endif
-    </main>
+    </div>
 
     @if ($selectedStudent && $chartData)
     <script>
@@ -306,5 +268,4 @@
         }
     </script>
     @endif
-</body>
-</html>
+</x-layouts.portal>

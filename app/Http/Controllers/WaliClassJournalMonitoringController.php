@@ -43,6 +43,7 @@ class WaliClassJournalMonitoringController extends Controller
     private function getMonitoringData(Request $request)
     {
         $teacher = Auth::user()->teacher;
+        abort_unless($teacher && Auth::user()->canAccessAttendance(), 403);
         
         $month = (int) $request->input('month', date('n')); // 1-12
         $year = (int) $request->input('year', date('Y'));

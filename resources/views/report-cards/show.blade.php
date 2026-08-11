@@ -1,33 +1,4 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Rapor {{ $reportCard->student?->name }} - SIAKAD Griya Qur'an</title>
-
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-
-    <!-- Tailwind CSS -->
-    @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
-    @else
-        <script src="https://cdn.tailwindcss.com"></script>
-        <script>
-            tailwind.config = {
-                theme: {
-                    extend: {
-                        fontFamily: {
-                            sans: ['Outfit', 'sans-serif'],
-                        }
-                    }
-                }
-            }
-        </script>
-    @endif
-
+@push('head')
     <style>
         body { font-family: 'Outfit', sans-serif; background-color: #fafafa; }
         .bg-grid {
@@ -47,44 +18,14 @@
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
         }
     </style>
-    @include("partials.pwa-head")
-</head>
-<body class="min-h-screen text-slate-800 antialiased overflow-x-hidden selection:bg-amber-200 selection:text-amber-900 pb-12">
+@endpush
 
-    <!-- Background Elements -->
-    <div class="fixed inset-0 z-[-1] pointer-events-none">
-        <div class="absolute inset-0 bg-grid"></div>
-        <div class="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-amber-400/10 rounded-full mix-blend-multiply filter blur-[80px]"></div>
-        <div class="absolute bottom-[-10%] right-[-10%] w-[400px] h-[400px] bg-brand-500/10 rounded-full mix-blend-multiply filter blur-[80px]"></div>
-    </div>
-
-    <!-- Top Navigation -->
-    <nav class="sticky top-0 z-50 glass-card border-b-0 border-white/40">
-        <div class="mx-auto max-w-5xl px-4 sm:px-6">
-            <div class="flex h-16 items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 font-bold text-white shadow-md">
-                        GQ
-                    </span>
-                    <div>
-                        <span class="block text-sm font-bold text-slate-800 leading-tight">Griya Qur'an</span>
-                        <span class="block text-[9px] font-semibold uppercase tracking-wider text-slate-500">Hasil Belajar</span>
-                    </div>
-                </div>
-                <div class="flex items-center gap-2">
-                    <a href="{{ route('report-cards.print', $reportCard) }}" class="rounded-xl bg-amber-600 px-4 py-1.5 text-xs font-bold text-white hover:bg-amber-700 transition-colors shadow-md">
-                        Cetak PDF
-                    </a>
-                    <a href="{{ route('report-cards.download-pdf', $reportCard) }}" class="rounded-xl bg-emerald-600 px-4 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 transition-colors shadow-md">
-                        Download PDF
-                    </a>
-                </div>
-            </div>
+<x-layouts.portal title="Rapor {{ $reportCard->student?->name }}" portalLabel="Portal Wali Santri" breadcrumb="Rapor">
+    <div class="animate-fade-in-up">
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <a href="{{ route('wali.dashboard') }}" class="btn btn-outline min-h-11">Kembali ke Dashboard</a>
+            <a href="{{ route('report-cards.download-pdf', $reportCard) }}" class="btn btn-primary min-h-11">Unduh PDF</a>
         </div>
-    </nav>
-
-    <!-- Main Content -->
-    <main class="mx-auto max-w-5xl px-4 py-8 sm:px-6 animate-fade-in-up">
         
         <section class="rounded-[2.5rem] print-sheet p-6 sm:p-10 border border-slate-100">
             
@@ -93,7 +34,7 @@
                 <p class="text-xs font-extrabold uppercase tracking-widest text-amber-700">Rapor Hasil Belajar Diniyyah</p>
                 <h1 class="mt-2 text-3xl font-black text-slate-900 tracking-tight">GRIYA QUR'AN</h1>
                 <span class="mt-4 inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-800 border border-emerald-200">
-                    Status: {{ $reportCard->status }}
+                    Status: {{ \App\Support\UiLabel::statusLabel($reportCard->status) }}
                 </span>
             </header>
 
@@ -222,6 +163,5 @@
                 @endforelse
             </section>
         </section>
-    </main>
-</body>
-</html>
+    </div>
+</x-layouts.portal>

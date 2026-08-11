@@ -28,7 +28,9 @@ class DiniyyahAssessmentSetsTable
                 TextColumn::make('title')->label('Judul')->searchable()->sortable(),
                 TextColumn::make('assessment_method')->label('Metode Penilaian')->badge(),
                 TextColumn::make('kkm')->label('KKM')->numeric(),
-                TextColumn::make('status')->label('Status')->badge(),
+                TextColumn::make('status')->label('Status')->badge()
+                    ->formatStateUsing(fn ($state): string => \App\Support\UiLabel::statusLabel($state))
+                    ->color(fn ($state): string => \App\Support\UiLabel::statusColor($state)),
                 IconColumn::make('appears_on_report')->label('Tampil di Rapor')->boolean(),
             ])
             ->filters([

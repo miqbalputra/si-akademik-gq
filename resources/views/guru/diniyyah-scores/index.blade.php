@@ -64,7 +64,7 @@
                 
                 if ($isReadOnly) {
                     $badgeClass = 'bg-indigo-100 text-indigo-800';
-                    $badgeText = $assessmentSet->status === 'validated' ? 'Tervalidasi' : ucfirst($assessmentSet->status);
+                    $badgeText = \App\Support\UiLabel::statusLabel($assessmentSet->status);
                 } elseif ($isComplete) {
                     $badgeClass = 'bg-emerald-100 text-emerald-800';
                     $badgeText = 'Lengkap';

@@ -264,7 +264,7 @@
                 <dt>Jenis Rapor</dt>
                 <dd>{{ strtoupper($reportCard->report_type) }}</dd>
                 <dt>Status</dt>
-                <dd>{{ strtoupper($reportCard->status) }}</dd>
+                <dd>{{ \App\Support\UiLabel::statusLabel($reportCard->status) }}</dd>
                 <dt>Tanggal</dt>
                 <dd>{{ $reportCard->issue_date?->format('d M Y') ?? $reportCard->published_at?->format('d M Y') ?? '-' }}</dd>
             </dl>

@@ -254,12 +254,12 @@ class AdminPanelProvider extends PanelProvider
                 ')
             )
             ->navigationGroups([
-                NavigationGroup::make('Data Sekolah'),
-                NavigationGroup::make('Struktur Kelas'),
-                NavigationGroup::make('Diniyyah'),
-                NavigationGroup::make('Tahfidz'),
-                NavigationGroup::make('Leger & Rapor'),
-                NavigationGroup::make('Pengaturan'),
+                NavigationGroup::make('Data Sekolah')->collapsible(),
+                NavigationGroup::make('Struktur Kelas')->collapsible(),
+                NavigationGroup::make('Diniyyah')->collapsible(),
+                NavigationGroup::make('Tahfidz')->collapsible(),
+                NavigationGroup::make('Leger & Rapor')->collapsible(),
+                NavigationGroup::make('Pengaturan')->collapsible(),
             ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')

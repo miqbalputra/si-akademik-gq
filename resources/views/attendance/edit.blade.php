@@ -197,7 +197,7 @@
                                             @disabled(! $canUpdate)
                                         >
                                             @foreach (\App\Models\StudentAttendance::codeOptions() as $optionCode => $label)
-                                                <option value="{{ $optionCode }}">{{ $optionCode }}</option>
+                                                <option value="{{ $optionCode }}">{{ $optionCode }} — {{ $label }}</option>
                                             @endforeach
                                         </select>
                                     </td>
@@ -231,6 +231,11 @@
                     @endforeach
                 </div>
 
+                <div class="flex flex-col gap-3 border-b border-slate-100 bg-slate-50/70 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div><p class="text-xs font-black text-slate-800">Input cepat</p><p class="mt-0.5 text-[11px] font-medium text-slate-500">Tandai semua santri pada tanggal yang dipilih.</p></div>
+                    <button type="button" @click="markSelectedDay('H')" class="inline-flex min-h-11 items-center justify-center rounded-xl bg-emerald-600 px-4 text-xs font-black text-white shadow-sm transition hover:bg-emerald-700" @disabled(! $canUpdate)>Tandai semua hadir</button>
+                </div>
+
                 {{-- Student cards for selected day --}}
                 <div id="attendance-rows-mobile" class="divide-y divide-slate-100">
                     @foreach ($enrollments as $enrollment)
@@ -251,13 +256,14 @@
                             </div>
 
                             {{-- H/S/I/A segmented buttons bound to selectedDay --}}
-                            <div class="mt-3 grid grid-cols-4 gap-2">
+                            <div class="mt-3 grid grid-cols-5 gap-2">
                                 @php
                                     $codes = [
                                         'H' => ['Hadir', 'bg-white border-slate-200 text-slate-700'],
                                         'S' => ['Sakit', 'bg-amber-500 border-amber-500 text-white'],
                                         'I' => ['Izin', 'bg-emerald-500 border-emerald-500 text-white'],
                                         'A' => ['Alpa', 'bg-red-500 border-red-500 text-white'],
+                                        'L' => ['Libur', 'bg-blue-500 border-blue-500 text-white'],
                                     ];
                                 @endphp
                                 @foreach ($codes as $code => [$label, $activeClass])
@@ -276,9 +282,11 @@
             </div>{{-- end mobile view --}}
 
             <!-- Footer Action Block -->
-            <div class="sticky bottom-0 flex items-center justify-between gap-3 border-t border-slate-200/60 bg-white/90 p-5 backdrop-blur-md">
+            <div class="sticky-action-bar flex flex-col items-stretch justify-between gap-3 border-t border-slate-200/60 p-4 backdrop-blur-md sm:flex-row sm:items-center sm:p-5">
                 <p class="text-xs font-semibold text-slate-500">Rekap ketidakhadiran (S/I/A) akan terakumulasi otomatis ke cetakan rapor santri.</p>
                 <div class="flex items-center gap-2">
+                    <span x-show="saveError" x-text="saveError" class="inline-feedback inline-feedback-error"></span>
+                    <button x-show="saveError" type="button" @click="retryLastSave()" class="inline-flex min-h-11 items-center rounded-xl border border-rose-200 bg-white px-3 text-xs font-black text-rose-700">Coba lagi</button>
                     <span x-show="isSaving" x-transition class="flex items-center gap-1.5 text-xs font-bold text-amber-600">
                         <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                         Menyimpan...
@@ -302,10 +310,13 @@
             document.addEventListener('alpine:init', () => {
                 Alpine.data('attendanceManager', (endpointUrl) => ({
                     attendances: @js($initialAttendances),
+                    enrollmentIds: @js($enrollments->pluck('id')->values()->all()),
                     selectedDay: '',
                     studentTotals: {},
                     isSaving: false,
                     lastSaved: null,
+                    saveError: null,
+                    retryPayload: null,
 
                     init() {
                         // Initialize totals on mount
@@ -320,6 +331,8 @@
                     async updateAttendance(enrollmentId, date) {
                         const code = this.attendances[`${enrollmentId}_${date}`];
                         this.isSaving = true;
+                        this.saveError = null;
+                        this.retryPayload = { enrollmentId, date };
                         
                         try {
                             const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') 
@@ -343,12 +356,27 @@
                             
                             this.lastSaved = new Date();
                             this.recalculateTotals();
+                            this.retryPayload = null;
                             
                         } catch (error) {
                             console.error('Error saving attendance:', error);
-                            alert('Gagal menyimpan data ke server. Silakan periksa koneksi internet Anda.');
+                            this.saveError = 'Gagal menyimpan. Periksa koneksi lalu coba lagi.';
                         } finally {
                             this.isSaving = false;
+                        }
+                    },
+
+                    async retryLastSave() {
+                        if (this.retryPayload) {
+                            await this.updateAttendance(this.retryPayload.enrollmentId, this.retryPayload.date);
+                        }
+                    },
+
+                    async markSelectedDay(code) {
+                        if (!this.selectedDay) return;
+                        for (const enrollmentId of this.enrollmentIds) {
+                            this.attendances[`${enrollmentId}_${this.selectedDay}`] = code;
+                            await this.updateAttendance(enrollmentId, this.selectedDay);
                         }
                     },
 
