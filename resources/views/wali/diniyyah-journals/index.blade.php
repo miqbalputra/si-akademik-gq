@@ -1,6 +1,6 @@
 <x-layouts.portal title="Pantau Jurnal Kelas" portalLabel="Portal Guru" breadcrumb="Monitoring Jurnal Kelas">
     <div class="space-y-6">
-        <header class="vantis-hero p-6 sm:p-8">
+        <header class="school-dashboard-hero p-6 sm:p-8">
             <div class="relative z-10 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
                 <div>
                     <span class="badge badge-amber">Pemantauan Akademik</span>

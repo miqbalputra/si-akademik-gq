@@ -1,6 +1,6 @@
 <x-layouts.portal :title="$snapshot->title" portalLabel="Portal Manajemen" breadcrumb="Leger Diniyyah">
     <div class="space-y-6">
-        <header class="vantis-hero p-6 sm:p-8">
+        <header class="school-dashboard-hero p-6 sm:p-8">
             <div class="relative z-10 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
                 <div>
                     <span class="badge badge-amber">Leger Diniyyah</span>

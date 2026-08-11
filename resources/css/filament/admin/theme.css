@@ -19,27 +19,28 @@
     --color-primary-900: #084a29;
 }
 
-.fi-body { background: #f8f8f5; color: #0b0d0c; font-family: var(--font-sans); }
-.fi-main { background-image: linear-gradient(to right, rgb(11 13 12 / .045) 1px, transparent 1px), linear-gradient(to bottom, rgb(11 13 12 / .045) 1px, transparent 1px); background-size: 36px 36px; }
-.fi-sidebar { border-right: 1px solid #dde1dc; background: #f1f3f0; }
-.fi-sidebar-header { border-bottom: 1px solid #dde1dc; }
+.fi-body { background: #f7f7f2; color: #17231a; font-family: var(--font-sans); }
+.fi-main { background: #f7f7f2; }
+.fi-sidebar { border-right: 1px solid #d8dfd7; background: #edf3ed; }
+.fi-sidebar-header { border-bottom: 1px solid #d8dfd7; }
+.fi-sidebar-header::after { display: block; padding: 0 1rem .75rem; color: #627065; font-family: var(--font-mono); font-size: .58rem; font-weight: 800; letter-spacing: .1em; content: 'KENDALI AKADEMIK'; }
 .fi-sidebar-group-label { color: #6a736d; font-family: var(--font-mono); font-size: .64rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
 .fi-sidebar-item-button { border: 1px solid transparent; border-radius: .7rem; color: #39423c; font-weight: 700; transition: background-color .18s, border-color .18s, transform .18s; }
 .fi-sidebar-item-button:hover { border-color: #dde1dc; background: #fff; color: #0b0d0c; transform: translateX(2px); }
 .fi-sidebar-item-active > .fi-sidebar-item-button { border-color: #c7d1c9; background: #fff; color: #0b0d0c; box-shadow: inset 3px 0 0 #00ef76; }
 .fi-sidebar-item-active .fi-sidebar-item-icon { color: #087a3c; }
-.fi-topbar { border-bottom: 1px solid #dde1dc; background: rgb(255 255 255 / .9); backdrop-filter: blur(14px); }
-.fi-page-header-heading { letter-spacing: -.045em; }
-.fi-section, .fi-ta, .fi-wi-stats-overview-stat, .fi-modal-window { border-color: #dde1dc; border-radius: 1rem; box-shadow: 0 12px 35px -28px rgb(11 13 12 / .44); }
+.fi-topbar { border-bottom: 1px solid #d8dfd7; background: rgb(247 247 242 / .92); backdrop-filter: blur(14px); }
+.fi-page-header-heading { color: #17231a; letter-spacing: -.055em; }
+.fi-section, .fi-ta, .fi-wi-stats-overview-stat, .fi-modal-window { border-color: #d8dfd7; border-radius: .85rem; background: #fff; box-shadow: 0 12px 35px -28px rgb(23 35 26 / .44); }
 .fi-section-header-heading, .fi-ta-header-heading { letter-spacing: -.025em; }
 .fi-btn { border-radius: .65rem; font-weight: 800; }
 .fi-btn-color-primary { color: #0b0d0c; }
 .fi-input-wrp, .fi-select-input, .fi-fo-textarea { border-color: #cdd4ce; border-radius: .65rem; }
 .fi-input-wrp:focus-within, .fi-select-input:focus, .fi-fo-textarea:focus { box-shadow: 0 0 0 3px rgb(0 239 118 / .3); }
 .fi-fo-field-wrp-label { font-family: var(--font-mono); font-size: .68rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
-.fi-ta-header-cell { background: #f4f6f3; font-family: var(--font-mono); font-size: .66rem; letter-spacing: .04em; text-transform: uppercase; }
+.fi-ta-header-cell { border-bottom: 1px solid #cbd7cc; background: #edf3ed; color: #4d5d50; font-family: var(--font-mono); font-size: .66rem; letter-spacing: .04em; text-transform: uppercase; }
 .fi-ta-row:hover { background: #f3fff7; }
-.fi-simple-layout { min-height: 100vh; background: #f8f8f5; background-image: linear-gradient(to right, rgb(11 13 12 / .055) 1px, transparent 1px), linear-gradient(to bottom, rgb(11 13 12 / .055) 1px, transparent 1px); background-size: 36px 36px; }
+.fi-simple-layout { min-height: 100vh; background: #f7f7f2; }
 .fi-simple-main { border: 1px solid #dde1dc; border-radius: 1.25rem; box-shadow: 14px 14px 0 #e9eee9; }
 .fi-gq-auth-divider { display: flex; align-items: center; gap: .75rem; margin: 1.25rem 0; color: #6a736d; font-family: var(--font-mono); font-size: .62rem; font-weight: 800; letter-spacing: .08em; }
 .fi-gq-auth-divider::before, .fi-gq-auth-divider::after { height: 1px; flex: 1; background: #dde1dc; content: ''; }
@@ -52,8 +53,7 @@
 .fi-gq-notification-item { display: flex; gap: .75rem; border-bottom: 1px solid #edf0ec; padding: .85rem 1rem; text-decoration: none; }
 .fi-gq-notification-item:hover { background: #f3fff7; }
 
-.dark .fi-body, .dark .fi-main { background: #0b0d0c; color: #f4f8f4; }
-.dark .fi-main { background-image: linear-gradient(to right, rgb(255 255 255 / .055) 1px, transparent 1px), linear-gradient(to bottom, rgb(255 255 255 / .055) 1px, transparent 1px); }
+.dark .fi-body, .dark .fi-main { background: #111812; color: #f4f8f4; }
 .dark .fi-sidebar { border-color: #29312b; background: #111512; }
 .dark .fi-sidebar-header, .dark .fi-topbar { border-color: #29312b; background: rgb(17 21 18 / .9); }
 .dark .fi-sidebar-item-button:hover, .dark .fi-sidebar-item-active > .fi-sidebar-item-button { border-color: #334036; background: #1a211c; color: #f4f8f4; }

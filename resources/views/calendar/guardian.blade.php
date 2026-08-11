@@ -1,6 +1,6 @@
 <x-layouts.portal :title="$title" portalLabel="Portal Wali Santri" breadcrumb="Kalender">
     <div class="space-y-6">
-        <header class="vantis-hero p-6 sm:p-8">
+        <header class="school-dashboard-hero p-6 sm:p-8">
             <div class="relative z-10">
                 <span class="badge badge-amber">Portal Wali Santri</span>
                 <h1 class="mt-3 text-3xl font-black leading-tight text-white sm:text-4xl">{{ $title }}</h1>

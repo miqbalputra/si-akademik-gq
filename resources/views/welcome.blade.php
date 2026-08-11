@@ -15,159 +15,114 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>SIAKAD - Griya Qur'an Tunas Ilmu</title>
-    <meta name="description" content="Sistem Informasi Akademik Griya Qur'an untuk guru, wali santri, dan manajemen sekolah.">
+    <meta name="description" content="Ruang akademik Griya Qur'an untuk guru, wali santri, dan manajemen sekolah.">
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700,800" rel="stylesheet" />
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @include('partials.pwa-head')
 </head>
-<body class="v-shell overflow-x-hidden">
-    <div class="v-announcement" role="status">
-        <span class="rounded bg-ink px-1.5 py-0.5 text-[10px] text-neon">SIAKAD</span>
-        Satu alur akademik untuk seluruh peran sekolah.
-    </div>
+<body class="school-home overflow-x-hidden">
+    <div class="school-announcement" role="status"><strong>SIAKAD GQ</strong> Ruang akademik untuk kegiatan belajar, catatan guru, dan perkembangan santri.</div>
 
-    <aside class="v-rail" aria-label="Jelajahi sistem">
-        <a href="{{ url('/') }}" class="v-rail-brand">
-            <span class="v-mark">GQ</span>
-            <span>
-                <strong class="block text-sm leading-none tracking-tight">Griya Qur'an</strong>
-                <span class="mt-1 block font-mono text-[9px] font-bold tracking-[.14em] text-slate-500">SIAKAD</span>
-            </span>
-        </a>
-
-        <p class="v-rail-heading">Product line</p>
-        <nav aria-label="Bagian landing page">
-            <a href="#alur" class="v-rail-card" data-scroll-link><span class="v-rail-dot"></span><span>Alur Akademik</span></a>
-            <a href="#peran" class="v-rail-card" data-scroll-link><span class="v-rail-dot"></span><span>Portal Peran</span></a>
-            <a href="#modul" class="v-rail-card" data-scroll-link><span class="v-rail-dot"></span><span>Modul Utama</span></a>
-            <a href="#cara-kerja" class="v-rail-card" data-scroll-link><span class="v-rail-dot"></span><span>Cara Kerja</span></a>
-        </nav>
-
-        <div class="v-rail-foot">
-            <p class="m-0 font-mono text-[10px] font-bold tracking-[.12em] text-neon">DEMO AMAN</p>
-            <p class="mb-0 mt-2 text-xs leading-5 text-slate-300">Preview ini tidak menampilkan data akademik atau data santri nyata.</p>
-        </div>
-    </aside>
-
-    <div class="v-stage">
-        <nav class="v-topnav" aria-label="Navigasi utama">
-            <div class="v-topnav-inner">
-                <a href="{{ url('/') }}" class="flex items-center gap-2 font-mono text-xs font-black tracking-tight lg:hidden">
-                    <span class="v-mark !h-7 !w-7 !text-[10px]">GQ</span> SIAKAD
-                </a>
-                <div class="hidden items-center gap-5 md:flex">
-                    <a href="#alur" class="v-toplink" data-scroll-link>Alur</a>
-                    <a href="#peran" class="v-toplink" data-scroll-link>Peran</a>
-                    <a href="#modul" class="v-toplink" data-scroll-link>Modul</a>
-                    <a href="#cara-kerja" class="v-toplink" data-scroll-link>Panduan</a>
-                </div>
-                <div class="ml-auto flex items-center gap-2">
-                    @auth
-                        <a href="{{ $dashboardUrl }}" class="btn btn-primary btn-sm">Buka dashboard <span aria-hidden="true">↗</span></a>
-                        <form method="POST" action="{{ route('logout') }}" class="hidden sm:block">@csrf<button type="submit" class="btn btn-outline btn-sm">Keluar</button></form>
-                    @else
-                        <a href="{{ route('auth.google') }}" class="hidden sm:inline-flex v-toplink rounded-md border border-line px-3 py-2">Masuk Google</a>
-                        <a href="{{ route('login') }}" class="btn btn-primary btn-sm">Masuk portal <span aria-hidden="true">→</span></a>
-                    @endauth
-                </div>
+    <header class="school-home-header">
+        <nav class="school-home-header-inner" aria-label="Navigasi halaman depan">
+            <a href="{{ url('/') }}" class="school-brand">
+                <span class="school-mark">GQ</span>
+                <span><strong>Griya Qur'an</strong><small>Tunas Ilmu · SIAKAD</small></span>
+            </a>
+            <div class="school-home-links">
+                <a href="#peta" data-scroll-link>Peta Belajar</a>
+                <a href="#ruang" data-scroll-link>Ruang Portal</a>
+                <a href="#kegiatan" data-scroll-link>Kegiatan Akademik</a>
+            </div>
+            <div class="ml-auto flex items-center gap-2 sm:ml-0">
+                @auth
+                    <a href="{{ $dashboardUrl }}" class="btn btn-primary btn-sm">Buka ruang saya <span aria-hidden="true">&rarr;</span></a>
+                    <form method="POST" action="{{ route('logout') }}" class="hidden sm:block">@csrf<button type="submit" class="btn btn-outline btn-sm">Keluar</button></form>
+                @else
+                    <a href="{{ route('auth.google') }}" class="hidden text-xs font-bold text-slate-600 sm:inline">Masuk Google</a>
+                    <a href="{{ route('login') }}" class="btn btn-primary btn-sm">Masuk portal <span aria-hidden="true">&rarr;</span></a>
+                @endauth
             </div>
         </nav>
+    </header>
 
-        <main>
-            <section id="alur" class="v-hero" data-factory>
-                <div>
-                    <p class="eyebrow"><span class="mr-2 inline-block h-2 w-2 rounded-full bg-neon"></span> Sistem informasi akademik</p>
-                    <h1 class="v-hero-title">Progres santri,<br>terhubung dalam <span class="v-highlight">satu alur kerja.</span></h1>
-                    <p class="v-hero-copy">SIAKAD Griya Qur'an membantu guru mencatat kegiatan, manajemen memvalidasi proses, dan wali santri memantau perkembangan dengan konteks yang sama.</p>
-                    <div class="mt-7 flex flex-wrap gap-3">
-                        <a href="{{ route('login') }}" class="btn btn-primary btn-lg">Masuk ke portal <span aria-hidden="true">→</span></a>
-                        <a href="#cara-kerja" class="btn btn-outline btn-lg" data-scroll-link>Lihat alurnya</a>
-                    </div>
-                    <p class="mt-6 font-mono text-[11px] font-semibold text-slate-500">Rapor digital · Tahfidz · Diniyyah · Presensi · Agenda</p>
+    <main>
+        <section class="school-campus" aria-labelledby="campus-title">
+            <div>
+                <p class="school-index">Ruang Akademik Griya Qur'an</p>
+                <h1 id="campus-title" class="school-campus-title">Setiap kegiatan belajar punya <em>tempat untuk bertumbuh.</em></h1>
+                <p class="school-campus-copy">SIAKAD menghubungkan kegiatan kelas, catatan guru, tinjauan sekolah, dan informasi perkembangan santri dalam satu ruang akademik yang dekat dengan keseharian sekolah.</p>
+                <div class="mt-7 flex flex-wrap gap-3">
+                    <a href="{{ route('login') }}" class="btn btn-primary btn-lg">Masuk ke ruang akademik <span aria-hidden="true">&rarr;</span></a>
+                    <a href="#peta" class="btn btn-outline btn-lg" data-scroll-link>Lihat perjalanan belajar</a>
                 </div>
+                <p class="mt-6 font-mono text-[10px] font-bold tracking-[.08em] text-slate-500">KELAS · HALAQAH · JURNAL · RAPOR · AGENDA</p>
+            </div>
 
-                <div class="v-factory" aria-label="Demo alur akademik">
-                    <div class="v-stack" role="group" aria-label="Pilih tahap alur akademik">
-                        <button type="button" class="v-stack-button" aria-pressed="true" data-factory-stage data-label="TAHAP 01 - PORTAL GURU" data-title="Input Guru" data-copy="Guru mencatat nilai, presensi, jurnal, dan hafalan dari halaman kerja yang sesuai dengan penugasannya." data-cta="Masuk sebagai guru" data-href="{{ route('guru.dashboard') }}" data-metrics="Jurnal|Nilai|Tahfidz">
-                            <span>INPUT GURU</span><span aria-hidden="true">01</span>
-                        </button>
-                        <button type="button" class="v-stack-button" aria-pressed="false" data-factory-stage data-label="TAHAP 02 - PORTAL MANAJEMEN" data-title="Validasi Manajemen" data-copy="Kepala bagian dan admin memeriksa kelengkapan, melakukan koreksi, lalu menjaga alur akademik tetap siap diterbitkan." data-cta="Buka manajemen" data-href="{{ url('/admin') }}" data-metrics="Tinjau|Validasi|Rekap">
-                            <span>VALIDASI MANAJEMEN</span><span aria-hidden="true">02</span>
-                        </button>
-                        <button type="button" class="v-stack-button" aria-pressed="false" data-factory-stage data-label="TAHAP 03 - PORTAL WALI" data-title="Ringkasan Wali" data-copy="Wali santri membaca progres anak, agenda, rapor yang telah dibuka, dan informasi sekolah dalam bahasa yang jelas." data-cta="Masuk sebagai wali" data-href="{{ route('wali.dashboard') }}" data-metrics="Rapor|Agenda|Progres">
-                            <span>RINGKASAN WALI</span><span aria-hidden="true">03</span>
-                        </button>
-                        <button type="button" class="v-stack-button" aria-pressed="false" data-factory-stage data-label="TAHAP 04 - ARSIP AKADEMIK" data-title="Arsip Rapor" data-copy="Rapor yang disahkan disimpan sebagai snapshot yang dapat ditinjau, diunduh, dan dijadikan arsip resmi sekolah." data-cta="Lihat pengelolaan rapor" data-href="{{ url('/admin') }}" data-metrics="Snapshot|PDF|Excel">
-                            <span>ARSIP RAPOR</span><span aria-hidden="true">04</span>
-                        </button>
+            <aside class="school-board" aria-label="Ilustrasi papan kegiatan sekolah">
+                <div class="school-board-head"><h2>Papan Kegiatan Sekolah</h2><span>ILUSTRASI</span></div>
+                <div class="school-board-list">
+                    <div class="school-board-row"><time>07.30</time><div><strong>Kegiatan Kelas</strong><small>Materi dan kehadiran dicatat oleh guru.</small></div><span class="school-board-status">TERCATAT</span></div>
+                    <div class="school-board-row"><time>10.00</time><div><strong>Halaqah Tahfidz</strong><small>Progres hafalan dibaca sesuai pendampingan.</small></div><span class="school-board-status">BERJALAN</span></div>
+                    <div class="school-board-row"><time>SELESAI</time><div><strong>Rapor &amp; Arsip</strong><small>Informasi terbit setelah proses sekolah selesai.</small></div><span class="school-board-status">SIAP BACA</span></div>
+                </div>
+            </aside>
+        </section>
+
+        <section id="peta" class="school-section" data-learning-map aria-labelledby="map-title">
+            <div class="school-section-inner">
+                <p class="school-index">Peta perjalanan belajar</p>
+                <h2 id="map-title" class="school-section-title">Satu kegiatan belajar, dipahami sesuai peran masing-masing.</h2>
+                <div class="learning-map" role="group" aria-label="Tahap perjalanan belajar">
+                    <div class="grid gap-2">
+                        <button type="button" class="learning-map-step" aria-pressed="true" data-learning-map-step data-label="TAHAP 01 · KEGIATAN KELAS" data-title="Kegiatan Kelas" data-copy="Guru mencatat materi, kehadiran, nilai, dan setoran hafalan dari ruang kerja yang sesuai penugasannya." data-cta="Masuk ke Ruang Guru" data-href="{{ route('guru.dashboard') }}" data-notes="Jurnal|Presensi|Tahfidz"><span>01</span><span><strong>Kegiatan Kelas</strong><small>Belajar berlangsung dan guru mencatat prosesnya.</small></span><span aria-hidden="true">&rarr;</span></button>
+                        <button type="button" class="learning-map-step" aria-pressed="false" data-learning-map-step data-label="TAHAP 02 · CATATAN GURU" data-title="Catatan Guru" data-copy="Catatan pembelajaran tersusun per kelas, mata pelajaran, halaqah, dan periode agar pekerjaan berikutnya jelas." data-cta="Buka Jurnal Guru" data-href="{{ route('guru.diniyyah-journals.index') }}" data-notes="Materi|Nilai|Kehadiran"><span>02</span><span><strong>Catatan Guru</strong><small>Jurnal dan penilaian menjadi rekam belajar yang rapi.</small></span><span aria-hidden="true">&rarr;</span></button>
+                        <button type="button" class="learning-map-step" aria-pressed="false" data-learning-map-step data-label="TAHAP 03 · TINJAUAN SEKOLAH" data-title="Tinjauan Sekolah" data-copy="Manajemen melihat keterisian, melakukan validasi, dan menjaga arsip akademik siap diterbitkan." data-cta="Masuk ke Kendali Akademik" data-href="{{ url('/admin') }}" data-notes="Validasi|Leger|Arsip"><span>03</span><span><strong>Tinjauan Sekolah</strong><small>Proses akademik diperiksa sebelum informasi dibagikan.</small></span><span aria-hidden="true">&rarr;</span></button>
+                        <button type="button" class="learning-map-step" aria-pressed="false" data-learning-map-step data-label="TAHAP 04 · PERKEMBANGAN SANTRI" data-title="Perkembangan Santri" data-copy="Wali membaca perkembangan anak, agenda sekolah, dan rapor yang telah dibuka dalam bahasa yang mudah dipahami." data-cta="Masuk ke Ruang Wali" data-href="{{ route('wali.dashboard') }}" data-notes="Rapor|Agenda|Progres"><span>04</span><span><strong>Perkembangan Santri</strong><small>Informasi yang tepat hadir untuk keluarga.</small></span><span aria-hidden="true">&rarr;</span></button>
                     </div>
-                    <article class="v-preview" aria-live="polite">
-                        <p class="v-preview-label" data-factory-label>TAHAP 01 - PORTAL GURU</p>
-                        <h2 class="v-preview-title" data-factory-title>Input Guru</h2>
-                        <p class="v-preview-copy" data-factory-copy>Guru mencatat nilai, presensi, jurnal, dan hafalan dari halaman kerja yang sesuai dengan penugasannya.</p>
-                        <div class="v-preview-metrics" aria-label="Contoh modul">
-                            <div class="v-preview-metric" data-factory-metric><span>Modul</span><strong>Jurnal</strong></div>
-                            <div class="v-preview-metric" data-factory-metric><span>Modul</span><strong>Nilai</strong></div>
-                            <div class="v-preview-metric" data-factory-metric><span>Modul</span><strong>Tahfidz</strong></div>
+                    <article class="learning-book" aria-live="polite" data-learning-preview>
+                        <p class="learning-book-label" data-learning-label>TAHAP 01 · KEGIATAN KELAS</p>
+                        <h3 data-learning-title>Kegiatan Kelas</h3>
+                        <p data-learning-copy>Guru mencatat materi, kehadiran, nilai, dan setoran hafalan dari ruang kerja yang sesuai penugasannya.</p>
+                        <div class="learning-book-notes" aria-label="Contoh catatan akademik">
+                            <div data-learning-note><span>CATATAN</span><strong>Jurnal</strong></div>
+                            <div data-learning-note><span>CATATAN</span><strong>Presensi</strong></div>
+                            <div data-learning-note><span>CATATAN</span><strong>Tahfidz</strong></div>
                         </div>
-                        <a href="{{ route('guru.dashboard') }}" class="mt-5 inline-flex font-mono text-xs font-black underline decoration-neon decoration-4 underline-offset-4" data-factory-cta>Masuk sebagai guru</a>
+                        <a href="{{ route('guru.dashboard') }}" class="mt-5 inline-flex font-mono text-xs font-black text-school-600 underline decoration-neon decoration-4 underline-offset-4" data-learning-cta>Masuk ke Ruang Guru</a>
+                        <p class="mt-5 font-mono text-[9px] font-bold tracking-[.08em] text-slate-400">SIMULASI ALUR · TANPA DATA AKADEMIK NYATA</p>
                     </article>
                 </div>
-            </section>
+            </div>
+        </section>
 
-            <section id="peran" class="v-section">
-                <div class="v-section-inner">
-                    <p class="eyebrow">Portal peran</p>
-                    <h2 class="v-section-title">Setiap pekerjaan memiliki ruang kerja yang tepat.</h2>
-                    <div class="v-role-grid">
-                        <a href="{{ route('wali.dashboard') }}" class="v-role-card">
-                            <span class="v-role-index">01 / KELUARGA</span>
-                            <div><h3>Wali Santri</h3><p>Rapor, tahfidz, presensi, agenda, dan informasi perkembangan anak.</p></div>
-                            <span class="font-mono text-xs font-black">BUKA PORTAL →</span>
-                        </a>
-                        <a href="{{ route('guru.dashboard') }}" class="v-role-card">
-                            <span class="v-role-index">02 / PENGAJAR</span>
-                            <div><h3>Guru</h3><p>Input terarah untuk jurnal, nilai, presensi, tahfidz, dan tasmi'.</p></div>
-                            <span class="font-mono text-xs font-black">BUKA PORTAL →</span>
-                        </a>
-                        <a href="{{ url('/admin') }}" class="v-role-card">
-                            <span class="v-role-index">03 / MANAJEMEN</span>
-                            <div><h3>Manajemen</h3><p>Kelola master data, validasi akademik, laporan, dan penerbitan rapor.</p></div>
-                            <span class="font-mono text-xs font-black">BUKA PORTAL →</span>
-                        </a>
-                    </div>
+        <section id="ruang" class="school-section bg-[#f0f3ed]" aria-labelledby="room-title">
+            <div class="school-section-inner">
+                <p class="school-index">Pintu ruang</p>
+                <h2 id="room-title" class="school-section-title">Setiap warga sekolah memulai dari ruang yang tepat.</h2>
+                <div class="school-door-grid">
+                    <a href="{{ route('guru.dashboard') }}" class="school-door"><span class="school-index">Ruang 01</span><div><h3>Ruang Guru</h3><p>Kelas, jurnal, penilaian, presensi, tahfidz, dan tasmi' dalam ritme kerja mengajar.</p></div><span class="school-door-foot">BUKA RUANG GURU &rarr;</span></a>
+                    <a href="{{ route('wali.dashboard') }}" class="school-door"><span class="school-index">Ruang 02</span><div><h3>Ruang Wali</h3><p>Perkembangan anak, agenda sekolah, tahfidz, serta rapor yang sudah diterbitkan.</p></div><span class="school-door-foot">BUKA RUANG WALI &rarr;</span></a>
+                    <a href="{{ url('/admin') }}" class="school-door"><span class="school-index">Ruang 03</span><div><h3>Kendali Akademik</h3><p>Validasi, kalender, leger, arsip, dan pengelolaan proses akademik sekolah.</p></div><span class="school-door-foot">BUKA KENDALI AKADEMIK &rarr;</span></a>
                 </div>
-            </section>
+            </div>
+        </section>
 
-            <section id="modul" class="v-section bg-[#f4f6f3]">
-                <div class="v-section-inner">
-                    <p class="eyebrow">Modul akademik</p>
-                    <h2 class="v-section-title">Informasi penting tetap dapat ditemukan tanpa mencari jauh.</h2>
-                    <div class="v-module-grid">
-                        <article class="v-module-card"><span class="v-role-index">01</span><div><h3>Presensi</h3><p>Status harian dan rekap keterisian untuk kelas yang diampu.</p></div></article>
-                        <article class="v-module-card"><span class="v-role-index">02</span><div><h3>Diniyyah</h3><p>Nilai, jurnal mengajar, monitoring, dan leger terhubung.</p></div></article>
-                        <article class="v-module-card"><span class="v-role-index">03</span><div><h3>Tahfidz</h3><p>Progres hafalan, setoran pekanan, UAS, dan tasmi'.</p></div></article>
-                        <article class="v-module-card"><span class="v-role-index">04</span><div><h3>Rapor</h3><p>Snapshot yang siap dibaca, diunduh, serta diarsipkan.</p></div></article>
-                    </div>
+        <section id="kegiatan" class="school-section" aria-labelledby="activity-title">
+            <div class="school-section-inner">
+                <p class="school-index">Kegiatan akademik</p>
+                <h2 id="activity-title" class="school-section-title">Dibangun dari aktivitas sekolah yang benar-benar berjalan setiap hari.</h2>
+                <div class="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <article class="school-work-card"><p class="school-index">01</p><h3 class="mt-4 text-lg font-black">Kelas &amp; Presensi</h3><p class="mt-2 text-sm leading-6 text-slate-600">Kehadiran dan kegiatan harian dekat dengan ruang kelas.</p></article>
+                    <article class="school-work-card"><p class="school-index">02</p><h3 class="mt-4 text-lg font-black">Jurnal Diniyyah</h3><p class="mt-2 text-sm leading-6 text-slate-600">Materi pembelajaran tercatat per sesi dan guru.</p></article>
+                    <article class="school-work-card"><p class="school-index">03</p><h3 class="mt-4 text-lg font-black">Halaqah Tahfidz</h3><p class="mt-2 text-sm leading-6 text-slate-600">Progres hafalan dan tasmi' terhubung dengan pendampingan.</p></article>
+                    <article class="school-work-card"><p class="school-index">04</p><h3 class="mt-4 text-lg font-black">Rapor &amp; Arsip</h3><p class="mt-2 text-sm leading-6 text-slate-600">Ringkasan belajar diterbitkan dan disimpan dengan tertib.</p></article>
                 </div>
-            </section>
+            </div>
+        </section>
+    </main>
 
-            <section id="cara-kerja" class="v-section">
-                <div class="v-section-inner" data-flow-explorer>
-                    <p class="eyebrow">Cara kerja</p>
-                    <h2 class="v-section-title">Pilih sebuah tahap untuk melihat perannya dalam proses.</h2>
-                    <div class="v-flow" role="group" aria-label="Tahapan proses akademik">
-                        <button type="button" class="v-flow-button" aria-pressed="true" data-flow-step data-detail="Guru memasukkan aktivitas dan nilai sesuai kelas, mapel, atau halaqah yang menjadi penugasannya."><span class="v-flow-number">01</span><span><strong>Catat kegiatan</strong><br><small class="text-slate-500">Data dicatat dekat dengan aktivitas belajar.</small></span><span aria-hidden="true">↗</span></button>
-                        <button type="button" class="v-flow-button" aria-pressed="false" data-flow-step data-detail="Manajemen melihat keterisian, memeriksa ketidaksesuaian, dan menjalankan validasi sebelum informasi diterbitkan."><span class="v-flow-number">02</span><span><strong>Periksa dan validasi</strong><br><small class="text-slate-500">Status proses terlihat tanpa membuka banyak halaman.</small></span><span aria-hidden="true">↗</span></button>
-                        <button type="button" class="v-flow-button" aria-pressed="false" data-flow-step data-detail="Wali santri membaca hasil yang relevan untuk anaknya sendiri, setelah sekolah membuka informasi tersebut."><span class="v-flow-number">03</span><span><strong>Pantau perkembangan</strong><br><small class="text-slate-500">Informasi disajikan dengan konteks keluarga.</small></span><span aria-hidden="true">↗</span></button>
-                    </div>
-                    <p class="v-flow-detail" data-flow-detail aria-live="polite">Guru memasukkan aktivitas dan nilai sesuai kelas, mapel, atau halaqah yang menjadi penugasannya.</p>
-                </div>
-            </section>
-        </main>
-
-        <footer class="border-t border-line px-4 py-8 text-center font-mono text-[10px] font-bold tracking-[.08em] text-slate-500">© {{ date('Y') }} GRIYA QUR'AN TUNAS ILMU - SIAKAD</footer>
-    </div>
+    <footer class="school-footer">&copy; {{ date('Y') }} GRIYA QUR'AN TUNAS ILMU · SISTEM INFORMASI AKADEMIK</footer>
 </body>
 </html>

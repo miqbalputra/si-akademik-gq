@@ -14,26 +14,23 @@
 
     <div class="space-y-8">
         {{-- Welcome / orientation --}}
-        <header class="relative isolate overflow-hidden rounded-[2rem] bg-slate-950 p-6 text-white shadow-xl shadow-slate-900/10 sm:p-8 lg:p-10">
-            <div class="pointer-events-none absolute -right-24 -top-24 -z-10 h-72 w-72 rounded-full bg-amber-500/20 blur-3xl"></div>
-            <div class="pointer-events-none absolute -bottom-36 left-1/3 -z-10 h-80 w-80 rounded-full bg-indigo-500/20 blur-3xl"></div>
-
+        <header class="school-dashboard-hero p-6 sm:p-8 lg:p-10">
             <div class="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
                 <div class="max-w-2xl">
-                    <span class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-[11px] font-black uppercase tracking-[.16em] text-amber-200">
-                        <span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
-                        Portal Guru
+                    <span class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 font-mono text-[11px] font-black uppercase tracking-[.16em] text-neon">
+                        <span class="h-1.5 w-1.5 rounded-full bg-neon"></span>
+                        Papan Kegiatan Guru
                     </span>
                     <h1 class="mt-4 text-3xl font-black leading-tight tracking-tight sm:text-4xl">
-                        Selamat datang, {{ $teacher->name ?? auth()->user()->name }}
+                        Kelas hari ini, {{ $teacher->name ?? auth()->user()->name }}
                     </h1>
                     <p class="mt-3 max-w-xl text-sm leading-6 text-slate-300 sm:text-base">
-                        Semua tugas mengajar dan akses kelas Anda ada di satu tempat. Mulai dari pekerjaan yang perlu diselesaikan hari ini.
+                        Mulai dari kegiatan yang perlu diselesaikan: catatan kelas, presensi, penilaian, dan agenda mengajar.
                     </p>
                 </div>
 
-                <div class="w-full rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur sm:w-auto sm:min-w-64">
-                    <p class="text-[10px] font-black uppercase tracking-[.16em] text-slate-400">Hari ini</p>
+                <div class="school-today-note w-full sm:w-auto sm:min-w-64">
+                    <p class="font-mono text-[10px] font-black uppercase tracking-[.16em] text-slate-200">Hari ini</p>
                     <p class="mt-1 text-sm font-bold text-white">{{ $today->locale('id')->translatedFormat('l, d F Y') }}</p>
                     <a href="{{ route('guru.calendar') }}" class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 text-xs font-black text-slate-900 transition-colors hover:bg-amber-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
                         Lihat kalender mengajar
@@ -48,10 +45,10 @@
         <section aria-labelledby="quick-actions-heading">
             <div class="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                    <p class="text-[11px] font-black uppercase tracking-[.16em] text-slate-400">Mulai dari sini</p>
-                    <h2 id="quick-actions-heading" class="mt-1 text-xl font-black text-slate-900">Aksi cepat</h2>
+                    <p class="school-index">Kegiatan Hari Ini</p>
+                    <h2 id="quick-actions-heading" class="mt-2 text-xl font-black text-slate-900">Papan Kegiatan</h2>
                 </div>
-                <p class="text-sm font-medium text-slate-500">Pilih pekerjaan yang ingin Anda selesaikan.</p>
+                <p class="text-sm font-medium text-slate-500">Pilih catatan atau agenda yang ingin Anda selesaikan.</p>
             </div>
             <div class="grid gap-3 sm:grid-cols-3">
                 <a href="{{ $singleJournalLink }}" class="group rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600">

@@ -1,6 +1,6 @@
 <x-layouts.portal title="Monitoring Input Diniyyah" portalLabel="Portal Manajemen" breadcrumb="Monitoring Diniyyah">
     <div class="space-y-6">
-        <header class="vantis-hero p-6 sm:p-8">
+        <header class="school-dashboard-hero p-6 sm:p-8">
             <div class="relative z-10">
                 <span class="badge badge-amber">Monitoring &amp; Validasi</span>
                 <h1 class="mt-3 text-3xl font-black leading-tight text-white sm:text-4xl">Monitoring Input Nilai Diniyyah</h1>

@@ -15,7 +15,7 @@ class AuthenticationTest extends TestCase
     {
         $this->get(route('login'))
             ->assertOk()
-            ->assertSee('Masuk ke akun');
+            ->assertSee('Pintu Masuk SIAKAD');
     }
 
     public function test_wali_santri_is_redirected_to_guardian_dashboard_after_login(): void

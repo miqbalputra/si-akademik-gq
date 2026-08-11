@@ -17,13 +17,18 @@ class PublicLandingTest extends TestCase
 
         $this->get('/')
             ->assertOk()
-            ->assertSee('DEMO AMAN')
-            ->assertSee('data-factory-stage', false)
+            ->assertSee('Papan Kegiatan Sekolah')
+            ->assertSee('SIMULASI ALUR')
+            ->assertSee('data-learning-map-step', false)
             ->assertSee('aria-pressed="true"', false)
-            ->assertSee('INPUT GURU')
-            ->assertSee('VALIDASI MANAJEMEN')
-            ->assertSee('RINGKASAN WALI')
-            ->assertSee('ARSIP RAPOR')
+            ->assertSee('Kegiatan Kelas')
+            ->assertSee('Catatan Guru')
+            ->assertSee('Tinjauan Sekolah')
+            ->assertSee('Perkembangan Santri')
+            ->assertSee('Ruang Guru')
+            ->assertSee('Ruang Wali')
+            ->assertSee('Kendali Akademik')
+            ->assertDontSee('Product line')
             ->assertSee('href="'.route('login').'"', false)
             ->assertSee('href="'.route('guru.dashboard').'"', false)
             ->assertSee('href="'.route('wali.dashboard').'"', false)
@@ -44,7 +49,7 @@ class PublicLandingTest extends TestCase
             $this->actingAs($user)
                 ->get('/')
                 ->assertOk()
-                ->assertSee('Buka dashboard')
+                ->assertSee('Buka ruang saya')
                 ->assertSee('href="'.$dashboardUrl.'"', false);
         }
     }

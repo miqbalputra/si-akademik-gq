@@ -4,16 +4,16 @@ window.Chart = Chart;
 
 const getCsrfToken = () => document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
 
-function initLandingFactory() {
-    const root = document.querySelector('[data-factory]');
+function initLearningMap() {
+    const root = document.querySelector('[data-learning-map]');
     if (!root) return;
 
-    const buttons = [...root.querySelectorAll('[data-factory-stage]')];
-    const title = root.querySelector('[data-factory-title]');
-    const copy = root.querySelector('[data-factory-copy]');
-    const label = root.querySelector('[data-factory-label]');
-    const cta = root.querySelector('[data-factory-cta]');
-    const metrics = root.querySelectorAll('[data-factory-metric]');
+    const buttons = [...root.querySelectorAll('[data-learning-map-step]')];
+    const title = root.querySelector('[data-learning-title]');
+    const copy = root.querySelector('[data-learning-copy]');
+    const label = root.querySelector('[data-learning-label]');
+    const cta = root.querySelector('[data-learning-cta]');
+    const notes = root.querySelectorAll('[data-learning-note]');
 
     const selectStage = (button, moveFocus = false) => {
         buttons.forEach((candidate) => candidate.setAttribute('aria-pressed', String(candidate === button)));
@@ -26,9 +26,9 @@ function initLandingFactory() {
             cta.href = button.dataset.href ?? '/login';
         }
 
-        const values = (button.dataset.metrics ?? '').split('|');
-        metrics.forEach((metric, index) => {
-            const value = metric.querySelector('strong');
+        const values = (button.dataset.notes ?? '').split('|');
+        notes.forEach((note, index) => {
+            const value = note.querySelector('strong');
             if (value && values[index]) value.textContent = values[index];
         });
 
@@ -51,20 +51,6 @@ function initLandingFactory() {
 
     const selected = buttons.find((button) => button.getAttribute('aria-pressed') === 'true') ?? buttons[0];
     if (selected) selectStage(selected);
-}
-
-function initFlowExplorer() {
-    const root = document.querySelector('[data-flow-explorer]');
-    if (!root) return;
-
-    const detail = root.querySelector('[data-flow-detail]');
-    const buttons = [...root.querySelectorAll('[data-flow-step]')];
-    buttons.forEach((button) => {
-        button.addEventListener('click', () => {
-            buttons.forEach((candidate) => candidate.setAttribute('aria-pressed', String(candidate === button)));
-            if (detail) detail.textContent = button.dataset.detail ?? '';
-        });
-    });
 }
 
 function initScrollSpy() {
@@ -93,6 +79,17 @@ function initScrollSpy() {
 function initPortalMenu() {
     document.querySelectorAll('[data-portal-menu]').forEach((menu) => {
         const summary = menu.querySelector('summary');
+        const panel = menu.querySelector('[role="dialog"]');
+
+        menu.addEventListener('toggle', () => {
+            summary?.setAttribute('aria-expanded', String(menu.open));
+            if (!menu.open) return;
+
+            window.requestAnimationFrame(() => {
+                panel?.querySelector('a, button, input, select, textarea, [tabindex]:not([tabindex="-1"])')?.focus();
+            });
+        });
+
         menu.addEventListener('keydown', (event) => {
             if (event.key !== 'Escape' || !menu.open) return;
             event.preventDefault();
@@ -233,8 +230,7 @@ function initNotifications() {
 }
 
 function init() {
-    initLandingFactory();
-    initFlowExplorer();
+    initLearningMap();
     initScrollSpy();
     initPortalMenu();
     initNotifications();
