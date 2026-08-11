@@ -8,9 +8,11 @@ use App\Models\DiniyyahTeacherAssignment;
 use App\Models\SchoolEvent;
 use App\Models\SchoolHoliday;
 use App\Models\TahfidzHalaqah;
+use App\Models\TasmiRecord;
 use App\Services\DiniyyahAssessmentComponentBuilder;
 use App\Services\Exports\GuruPerformaXlsxExporter;
 use App\Services\GuruPerformaService;
+use App\Services\TasmiService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\CarbonInterface;
 use Illuminate\Contracts\View\View;
@@ -128,6 +130,19 @@ class GuruDashboardController extends Controller
             : null;
         $performaMonthOptions = $this->buildMonthOptions();
 
+        // 3e. Data PJ Tasmi' — guru yang ditugaskan sebagai penguji ujian tasmi'.
+        // Ustadz (gender=male) hanya melihat kelas ikhwan, ustadzah (female) hanya akhwat.
+        $tasmiService = app(TasmiService::class);
+        $tasmiExaminerAssignment = $teacher ? $tasmiService->activeExaminerAssignment($teacher) : null;
+        $tasmiEligibleClassrooms = $teacher ? $tasmiService->eligibleClassroomTerms($teacher) : collect();
+        $tasmiGenderScope = $teacher ? $tasmiService->expectedGenderScope($teacher) : null;
+        // Jumlah record tasmi' yang sudah diinput guru ini pada periode aktif (untuk badge statistik).
+        $tasmiRecordsCount = $tasmiExaminerAssignment
+            ? TasmiRecord::where('examiner_teacher_id', $teacher?->id)
+                ->where('academic_term_id', $tasmiExaminerAssignment->academic_term_id)
+                ->count()
+            : 0;
+
         // 4. Data Agenda & Libur Sekolah
         // We get classroom terms associated with this teacher (all roles) to filter events
         $allTeacherClassroomTerms = $homeroomClassroomTerms->concat(
@@ -161,7 +176,11 @@ class GuruDashboardController extends Controller
             'performa',
             'performaMonth',
             'performaYear',
-            'performaMonthOptions'
+            'performaMonthOptions',
+            'tasmiExaminerAssignment',
+            'tasmiEligibleClassrooms',
+            'tasmiGenderScope',
+            'tasmiRecordsCount'
         ));
     }
 

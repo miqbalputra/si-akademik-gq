@@ -8,7 +8,8 @@
         $hasTeachingTasks = $homeroomClassroomTerms->isNotEmpty()
             || $diniyyahAssessmentSets->isNotEmpty()
             || $diniyyahAssignments->isNotEmpty()
-            || $tahfidzHalaqahs->isNotEmpty();
+            || $tahfidzHalaqahs->isNotEmpty()
+            || ($tasmiExaminerAssignment ?? null) !== null;
     @endphp
 
     <div class="space-y-8">
@@ -180,6 +181,15 @@
                                     Pantau jurnal kelas
                                 </a>
                             </div>
+                            <div class="mt-2">
+                                <a href="{{ route('guru.tasmi-wali.index') }}" class="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700 transition-colors hover:border-fuchsia-200 hover:bg-fuchsia-50 hover:text-fuchsia-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fuchsia-700">
+                                    <span class="flex items-center gap-2">
+                                        <svg class="h-4 w-4 text-fuchsia-600" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>
+                                        Tasmi&#039; Kelas Saya <span class="text-[10px] font-bold text-slate-400">(read-only)</span>
+                                    </span>
+                                    <span class="text-slate-400">→</span>
+                                </a>
+                            </div>
                         </section>
                     @endif
 
@@ -265,6 +275,69 @@
                                 Buka jurnal Tahfidz
                                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" /></svg>
                             </a>
+                        </section>
+                    @endif
+
+                    @if($tasmiExaminerAssignment ?? null)
+                        <section class="rounded-[1.75rem] border border-fuchsia-100 bg-white p-5 shadow-sm sm:p-6 {{ $tahfidzHalaqahs->isNotEmpty() ? 'lg:col-span-7' : 'lg:col-span-12' }}" aria-labelledby="tasmi-heading">
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="flex items-start gap-3">
+                                    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-fuchsia-50 text-fuchsia-700">
+                                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <div class="flex flex-wrap items-center gap-2">
+                                            <h3 id="tasmi-heading" class="text-lg font-black text-slate-900">PJ Tasmi&#039;</h3>
+                                            <span class="badge badge-purple">{{ $tasmiEligibleClassrooms->count() }} kelas</span>
+                                            @if($tasmiGenderScope === 'male')
+                                                <span class="badge badge-blue">Ikhwan</span>
+                                            @elseif($tasmiGenderScope === 'female')
+                                                <span class="badge badge-pink" style="background:#fce7f3;color:#9f1239;">Akwat</span>
+                                            @endif
+                                        </div>
+                                        <p class="mt-1 text-sm leading-5 text-slate-500">Catat setoran ujian tasmi&#039; santri (1 juz / 5 juz).</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mt-5 grid grid-cols-2 gap-2">
+                                <div class="rounded-xl border border-fuchsia-100 bg-fuchsia-50/60 p-3">
+                                    <p class="text-2xl font-black text-fuchsia-700">{{ $tasmiRecordsCount }}</p>
+                                    <p class="mt-0.5 text-[11px] font-bold text-fuchsia-800">record tasmi&#039;</p>
+                                </div>
+                                <div class="rounded-xl border border-slate-100 bg-slate-50 p-3">
+                                    <p class="text-2xl font-black text-slate-800">{{ $tasmiEligibleClassrooms->count() }}</p>
+                                    <p class="mt-0.5 text-[11px] font-bold text-slate-500">kelas bisa diuji</p>
+                                </div>
+                            </div>
+
+                            @if($tasmiEligibleClassrooms->isNotEmpty())
+                                <div class="mt-5 space-y-2">
+                                    <div class="flex flex-wrap gap-1.5">
+                                        @foreach($tasmiEligibleClassrooms->take(5) as $ct)
+                                            <a href="{{ route('guru.tasmi.create', ['classroom_term_id' => $ct->id]) }}" class="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-bold text-slate-700 transition-colors hover:border-fuchsia-200 hover:bg-fuchsia-50 hover:text-fuchsia-800">
+                                                {{ $ct->classroom->name ?? $ct->name }}
+                                            </a>
+                                        @endforeach
+                                        @if($tasmiEligibleClassrooms->count() > 5)
+                                            <span class="self-center px-1 text-xs font-bold text-slate-400">+ {{ $tasmiEligibleClassrooms->count() - 5 }} kelas</span>
+                                        @endif
+                                    </div>
+                                </div>
+                            @endif
+
+                            <div class="mt-5 space-y-2">
+                                <a href="{{ route('guru.tasmi.create') }}" class="group flex items-center justify-between rounded-xl bg-fuchsia-700 px-4 py-3 text-sm font-black text-white transition-colors hover:bg-fuchsia-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fuchsia-700">
+                                    Input tasmi&#039; baru
+                                    <svg class="h-4 w-4 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                                </a>
+                                <a href="{{ route('guru.tasmi.records') }}" class="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 transition-colors hover:border-fuchsia-200 hover:bg-fuchsia-50 hover:text-fuchsia-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fuchsia-700">
+                                    Riwayat &amp; laporan tasmi&#039;
+                                    <span class="text-slate-400">→</span>
+                                </a>
+                            </div>
                         </section>
                     @endif
 
