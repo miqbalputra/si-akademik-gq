@@ -29,7 +29,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login(\App\Filament\Pages\Auth\Login::class)
-            ->brandName('SIAKAD Griya Qur\'an')
+            ->brandName('Ruang GQ')
             ->brandLogo(fn () => view('filament.brand-logo'))
             ->brandLogoHeight('2.25rem')
             ->favicon(null)

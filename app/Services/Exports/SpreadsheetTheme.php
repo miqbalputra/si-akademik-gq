@@ -25,8 +25,8 @@ class SpreadsheetTheme
     {
         $workbook = new Spreadsheet;
         $workbook->getProperties()
-            ->setCreator("SIAKAD Griya Qur'an")
-            ->setTitle('Ekspor SIAKAD Griya Qur\'an')
+            ->setCreator("Ruang GQ · Griya Qur'an")
+            ->setTitle("Ekspor Ruang GQ")
             ->setSubject('Laporan akademik');
         $workbook->getDefaultStyle()->getFont()->setName('Arial')->setSize(10);
 
@@ -97,7 +97,7 @@ class SpreadsheetTheme
 
     public function save(Spreadsheet $workbook): string
     {
-        $path = tempnam(sys_get_temp_dir(), 'siakad-xlsx-');
+        $path = tempnam(sys_get_temp_dir(), 'ruang-gq-xlsx-');
         if ($path === false) {
             throw new \RuntimeException('Tidak dapat membuat file sementara untuk ekspor Excel.');
         }

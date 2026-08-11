@@ -321,7 +321,7 @@
             @endforelse
         </section>
 
-        <p class="footer-note">Dokumen ini dicetak dari Sistem Nilai Sekolah.</p>
+        <p class="footer-note">Dokumen ini dicetak dari Ruang GQ.</p>
     </main>
 </body>
 </html>

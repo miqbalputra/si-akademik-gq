@@ -41,7 +41,7 @@
     @endphp
 
     <div class="header">
-        <p class="eyebrow">SIAKAD Griya Qur'an Tunas Ilmu</p>
+        <p class="eyebrow">Ruang GQ · Griya Qur'an Tunas Ilmu</p>
         <h1>{{ $title }}</h1>
         <p class="subtitle">Ringkasan pengisian jurnal KBM Diniyyah dan detail kehadiran santri.</p>
     </div>

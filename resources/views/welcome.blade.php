@@ -14,21 +14,21 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>SIAKAD - Griya Qur'an Tunas Ilmu</title>
-    <meta name="description" content="Ruang akademik Griya Qur'an untuk guru, wali santri, dan manajemen sekolah.">
+    <title>Ruang GQ - Griya Qur'an Tunas Ilmu</title>
+    <meta name="description" content="Aktivitas akademik Griya Qur'an untuk guru, wali santri, dan manajemen sekolah.">
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700,800" rel="stylesheet" />
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @include('partials.pwa-head')
 </head>
 <body class="school-home overflow-x-hidden">
-    <div class="school-announcement" role="status"><strong>SIAKAD GQ</strong> Ruang akademik untuk kegiatan belajar, catatan guru, dan perkembangan santri.</div>
+    <div class="school-announcement" role="status"><strong>RUANG GQ</strong> Aktivitas akademik untuk kegiatan belajar, catatan guru, dan perkembangan santri.</div>
 
     <header class="school-home-header">
         <nav class="school-home-header-inner" aria-label="Navigasi halaman depan">
             <a href="{{ url('/') }}" class="school-brand">
                 <span class="school-mark">GQ</span>
-                <span><strong>Griya Qur'an</strong><small>Tunas Ilmu · SIAKAD</small></span>
+                <span><strong>Ruang GQ</strong><small>Griya Qur'an Tunas Ilmu</small></span>
             </a>
             <div class="school-home-links">
                 <a href="#peta" data-scroll-link>Peta Belajar</a>
@@ -52,7 +52,7 @@
             <div>
                 <p class="school-index">Ruang Akademik Griya Qur'an</p>
                 <h1 id="campus-title" class="school-campus-title">Setiap kegiatan belajar punya <em>tempat untuk bertumbuh.</em></h1>
-                <p class="school-campus-copy">SIAKAD menghubungkan kegiatan kelas, catatan guru, tinjauan sekolah, dan informasi perkembangan santri dalam satu ruang akademik yang dekat dengan keseharian sekolah.</p>
+                <p class="school-campus-copy">Ruang GQ menghubungkan kegiatan kelas, catatan guru, tinjauan sekolah, dan informasi perkembangan santri dalam satu ruang akademik yang dekat dengan keseharian sekolah.</p>
                 <div class="mt-7 flex flex-wrap gap-3">
                     <a href="{{ route('login') }}" class="btn btn-primary btn-lg">Masuk ke ruang akademik <span aria-hidden="true">&rarr;</span></a>
                     <a href="#peta" class="btn btn-outline btn-lg" data-scroll-link>Lihat perjalanan belajar</a>
@@ -123,6 +123,6 @@
         </section>
     </main>
 
-    <footer class="school-footer">&copy; {{ date('Y') }} GRIYA QUR'AN TUNAS ILMU · SISTEM INFORMASI AKADEMIK</footer>
+    <footer class="school-footer">&copy; {{ date('Y') }} RUANG GQ · GRIYA QUR'AN TUNAS ILMU</footer>
 </body>
 </html>

@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Masuk - SIAKAD Griya Qur'an</title>
+    <title>Masuk - Ruang GQ</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700,800" rel="stylesheet" />
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -15,11 +15,11 @@
         <section class="hidden border-r border-line p-10 lg:flex lg:flex-col">
             <a href="{{ url('/') }}" class="school-brand w-fit">
                 <span class="school-mark">GQ</span>
-                <span><strong>Griya Qur'an</strong><small>SIAKAD · RUANG BELAJAR</small></span>
+                <span><strong>Ruang GQ</strong><small>AKTIVITAS AKADEMIK</small></span>
             </a>
 
             <div class="my-auto max-w-xl">
-                <p class="school-index">PINTU MASUK SIAKAD</p>
+                <p class="school-index">PINTU MASUK RUANG GQ</p>
                 <h1 class="mt-5 text-6xl font-medium leading-[.94] tracking-[-.065em]">Masuk ke <span class="rounded bg-neon px-2 text-neon-ink">ruang</span> belajar Anda.</h1>
                 <p class="mt-7 max-w-md text-base leading-7 text-slate-600">Setiap akun membuka kegiatan sekolah yang sesuai: mengajar, mendampingi perkembangan anak, atau mengelola akademik.</p>
             </div>
@@ -36,9 +36,9 @@
 
         <section class="flex items-center justify-center px-4 py-10 sm:px-7">
             <div class="w-full max-w-md">
-                <a href="{{ url('/') }}" class="mb-10 flex lg:hidden"><span class="school-brand"><span class="school-mark !h-8 !w-8 !text-[10px]">GQ</span><span><strong>SIAKAD Griya Qur'an</strong><small>PINTU MASUK</small></span></span></a>
+                <a href="{{ url('/') }}" class="mb-10 flex lg:hidden"><span class="school-brand"><span class="school-mark !h-8 !w-8 !text-[10px]">GQ</span><span><strong>Ruang GQ</strong><small>Griya Qur'an Tunas Ilmu</small></span></span></a>
                 <p class="school-index">AKSES AKUN</p>
-                <h2 class="mt-4 text-4xl font-medium tracking-[-.06em]">Pintu Masuk SIAKAD</h2>
+                <h2 class="mt-4 text-4xl font-medium tracking-[-.06em]">Pintu Masuk Ruang GQ</h2>
                 <p class="mt-3 text-sm leading-6 text-slate-600">Gunakan email atau username yang diberikan oleh admin sekolah.</p>
 
                 @if ($errors->any())

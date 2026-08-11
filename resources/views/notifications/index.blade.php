@@ -1,4 +1,4 @@
-<x-layouts.portal title="Notifikasi" portalLabel="{{ auth()->user()->hasRole('guru') ? 'Portal Guru' : (auth()->user()->hasRole('wali_santri') ? 'Portal Wali Santri' : 'SIAKAD') }}" breadcrumb="Notifikasi">
+<x-layouts.portal title="Notifikasi" portalLabel="{{ auth()->user()->hasRole('guru') ? 'Portal Guru' : (auth()->user()->hasRole('wali_santri') ? 'Portal Wali Santri' : 'Ruang GQ') }}" breadcrumb="Notifikasi">
     @push('styles')
     <style>
         .card { background: #fff; border: 1px solid #f1f5f9; border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.04); }

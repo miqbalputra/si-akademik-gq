@@ -1,5 +1,5 @@
 @push('head')
-    <title>Rekap Hafalan Tahfidz — SIAKAD Griya Qur'an</title>
+    <title>Rekap Hafalan Tahfidz — Ruang GQ</title>
     <style>
         * { box-sizing: border-box; }
         body { font-family: 'Outfit', sans-serif; background: #f8fafc; color: #1e293b; margin: 0; -webkit-font-smoothing: antialiased; }

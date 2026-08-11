@@ -76,8 +76,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ $title ?? 'Portal' }} - SIAKAD Griya Qur'an</title>
-    <meta name="description" content="Sistem Informasi Akademik Griya Qur'an Tunas Ilmu">
+    <title>{{ $title ?? 'Portal' }} - Ruang GQ</title>
+    <meta name="description" content="Aktivitas Akademik Griya Qur'an Tunas Ilmu">
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700,800" rel="stylesheet" />
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -90,13 +90,13 @@
             <a href="{{ $portalHomeUrl }}" class="school-brand">
                 <span class="school-mark">GQ</span>
                 <span>
-                    <strong>Griya Qur'an</strong>
-                    <small>SIAKAD · RUANG BELAJAR</small>
+                    <strong>Ruang GQ</strong>
+                    <small>Griya Qur'an Tunas Ilmu</small>
                 </span>
             </a>
 
             <div class="school-context">
-                <strong>{{ $portalLabel ?? 'SIAKAD' }}</strong>
+                <strong>{{ $portalLabel ?? 'Ruang GQ' }}</strong>
                 <span>{{ $breadcrumb ?? 'Kegiatan akademik' }}</span>
             </div>
 
@@ -131,7 +131,7 @@
                 <details class="school-mobile-menu relative" data-portal-menu>
                     <summary class="school-menu-summary flex h-10 cursor-pointer items-center gap-2 rounded-lg border border-line bg-white px-3 text-xs font-extrabold text-ink" aria-expanded="false">Menu <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6" /></svg></summary>
                     <div class="absolute right-0 top-12 z-50 w-72 rounded-xl border border-line bg-white p-2 shadow-2xl shadow-slate-950/10" role="dialog" aria-label="Menu portal">
-                        <p class="px-3 pb-2 pt-1 font-mono text-[10px] font-bold tracking-[.1em] text-slate-500">{{ $portalLabel ?? 'SIAKAD' }}</p>
+                        <p class="px-3 pb-2 pt-1 font-mono text-[10px] font-bold tracking-[.1em] text-slate-500">{{ $portalLabel ?? 'Ruang GQ' }}</p>
                         @foreach($portalNavGroups as $group)
                             <section class="school-mobile-group" aria-label="{{ $group['label'] }}">
                                 <p>{{ $group['label'] }}</p>
@@ -150,7 +150,7 @@
     </header>
 
     <main class="school-main">{{ $slot }}</main>
-    <footer class="school-footer">&copy; {{ date('Y') }} GRIYA QUR'AN TUNAS ILMU · RUANG BELAJAR HARIAN</footer>
+    <footer class="school-footer">&copy; {{ date('Y') }} RUANG GQ · GRIYA QUR'AN TUNAS ILMU</footer>
     @stack('scripts')
 </body>
 </html>

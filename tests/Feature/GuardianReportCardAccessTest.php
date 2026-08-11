@@ -54,7 +54,7 @@ class GuardianReportCardAccessTest extends TestCase
             ->get(route('report-cards.print', $ownPublished))
             ->assertOk()
             ->assertSee('Cetak / Simpan PDF')
-            ->assertSee('Dokumen ini dicetak dari Sistem Nilai Sekolah.')
+            ->assertSee('Dokumen ini dicetak dari Ruang GQ.')
             ->assertSee($ownPublished->student->name);
     }
 

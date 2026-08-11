@@ -41,7 +41,7 @@
     @endphp
 
     <div class="header">
-        <p class="eyebrow">SIAKAD Griya Qur'an Tunas Ilmu</p>
+        <p class="eyebrow">Ruang GQ · Griya Qur'an Tunas Ilmu</p>
         <h1>Laporan Performa Mengajar - Detail Lengkap</h1>
         <p class="subtitle">Seluruh data jurnal, status pengisian, materi, JP, guru pengganti, dan ringkasan kehadiran periode {{ $performa['month_label'] ?? '-' }}.</p>
     </div>

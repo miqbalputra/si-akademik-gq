@@ -29,12 +29,12 @@ class GeneratePwaIcons extends Command
             $path = "{$iconDir}/icon-{$size}.png";
             $img = imagecreatetruecolor($size, $size);
 
-            // Background: amber-600 (#d97706)
-            $bg = imagecolorallocate($img, 217, 119, 6);
+            // Background: Ruang GQ ink (#17231a)
+            $bg = imagecolorallocate($img, 23, 35, 26);
             imagefill($img, 0, 0, $bg);
 
             // Draw "GQ" text
-            $white = imagecolorallocate($img, 255, 255, 255);
+            $neon = imagecolorallocate($img, 0, 223, 102);
             $fontSize = (int) ($size * 0.35);
             $text = 'GQ';
             $textBox = imagettfbbox($fontSize, 0, $this->fontPath(), $text);
@@ -45,13 +45,13 @@ class GeneratePwaIcons extends Command
                 $textHeight = imagefontheight($builtInSize);
                 $x = (int) (($size - $textWidth) / 2);
                 $y = (int) (($size - $textHeight) / 2);
-                imagestring($img, $builtInSize, $x, $y, $text, $white);
+                imagestring($img, $builtInSize, $x, $y, $text, $neon);
             } else {
                 $textWidth = $textBox[2] - $textBox[0];
                 $textHeight = $textBox[1] - $textBox[7];
                 $x = (int) (($size - $textWidth) / 2 - $textBox[0]);
                 $y = (int) (($size - $textHeight) / 2 - $textBox[7]);
-                imagettftext($img, $fontSize, 0, $x, $y, $white, $this->fontPath(), $text);
+                imagettftext($img, $fontSize, 0, $x, $y, $neon, $this->fontPath(), $text);
             }
 
             imagepng($img, $path);
