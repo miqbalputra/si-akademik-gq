@@ -5,8 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\DiniyyahClassJournal;
 use App\Models\DiniyyahTeacherAssignment;
 use App\Support\SessionTimetable;
-use Illuminate\Http\Request;
 use Illuminate\Database\QueryException;
+use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 
@@ -37,10 +37,15 @@ class GuruDiniyyahTafsirJournalController extends Controller
 
         $tafsirAssignments = $this->tafsirAssignmentsFor($teacher);
         $selectedDate = $request->query('date', $this->defaultThursday());
+        $preselectedAssignmentIds = $tafsirAssignments
+            ->whereIn('id', collect($request->query('assignment_ids', []))->map(fn ($id) => (int) $id))
+            ->pluck('id')
+            ->all();
 
         return view('guru.diniyyah-tafsir-journals.index', [
             'tafsirAssignments' => $tafsirAssignments,
             'selectedDate' => $selectedDate,
+            'preselectedAssignmentIds' => $preselectedAssignmentIds,
             'teacher' => $teacher,
         ]);
     }
@@ -95,6 +100,7 @@ class GuruDiniyyahTafsirJournalController extends Controller
 
             if ($alreadyExists) {
                 $skipped++;
+
                 continue;
             }
 
@@ -118,6 +124,7 @@ class GuruDiniyyahTafsirJournalController extends Controller
                 // Backstop race kondisi: unique index (assignment_id, date, session_hour).
                 if ($this->isDuplicateKeyException($e)) {
                     $skipped++;
+
                     continue;
                 }
 

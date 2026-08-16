@@ -229,11 +229,58 @@ function initNotifications() {
     });
 }
 
+function initJournalOverdueReminder() {
+    document.querySelectorAll('[data-journal-overdue-reminder]').forEach((root) => {
+        const dialog = root.querySelector('[data-journal-overdue-dialog]');
+        if (!dialog) return;
+
+        document.body.classList.add('overflow-hidden');
+        [...document.body.children]
+            .filter((element) => element !== root)
+            .forEach((element) => element.setAttribute('inert', ''));
+
+        const focusable = () => [...dialog.querySelectorAll(
+            'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        )];
+
+        window.requestAnimationFrame(() => {
+            (focusable()[0] ?? dialog).focus();
+        });
+
+        dialog.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                return;
+            }
+
+            if (event.key !== 'Tab') return;
+
+            const elements = focusable();
+            if (!elements.length) {
+                event.preventDefault();
+                dialog.focus();
+                return;
+            }
+
+            const first = elements[0];
+            const last = elements[elements.length - 1];
+            if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault();
+                last.focus();
+            } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault();
+                first.focus();
+            }
+        });
+    });
+}
+
 function init() {
     initLearningMap();
     initScrollSpy();
     initPortalMenu();
     initNotifications();
+    initJournalOverdueReminder();
 }
 
 if (document.readyState === 'loading') {

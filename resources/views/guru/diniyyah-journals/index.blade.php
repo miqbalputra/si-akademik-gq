@@ -220,7 +220,7 @@
                 <div>
                     <label for="schedule_slot" class="block text-sm font-bold text-slate-700 mb-1.5">Jadwal Mengajar (Sesi & Mapel)</label>
                     <select id="schedule_slot" name="schedule_slot" required class="w-full rounded-xl border-slate-300 shadow-sm text-sm focus:ring-amber-500 focus:border-amber-500">
-                        <option value="" disabled selected>Pilih jadwal...</option>
+                        <option value="" disabled @selected(! $selectedScheduleSlot)>Pilih jadwal...</option>
                         @foreach($scheduledSlots as $slot)
                             @php
                                 $slotStart = $slot->starts_at ? \Carbon\Carbon::parse($slot->starts_at)->format('H:i') : '';
@@ -231,7 +231,8 @@
                                     data-session="{{ $slot->session_name }}"
                                     data-start="{{ $slotStart }}"
                                     data-end="{{ $slotEnd }}"
-                                    {{ $slot->filled ? 'disabled' : '' }}>
+                                    @disabled($slot->filled)
+                                    @selected($selectedScheduleSlot && $selectedScheduleSlot->assignment_id === $slot->assignment_id && $selectedScheduleSlot->session_name === $slot->session_name)>
                                 {{ \App\Support\SessionTimetable::label($slot->session_name) }} — {{ $slot->subject_name }}@if($slotStart) ({{ $slotStart }} - {{ $slotEnd }}) @endif{{ $slot->filled ? ' (sudah terisi)' : '' }}
                             </option>
                         @endforeach

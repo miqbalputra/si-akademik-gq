@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\AcademicTerm;
 use App\Models\ClassEnrollment;
 use App\Models\DiniyyahClassJournal;
 use App\Models\DiniyyahTeachingSchedule;
@@ -66,12 +67,122 @@ class GuruPerformaService
             ? Carbon::parse($today, 'Asia/Jakarta')->endOfDay()
             : $startDate->copy()->endOfMonth();
 
+        $summary = $this->summaryForRange($teacher, $startDate, $endDate);
+        $journalRows = $this->journalRows($summary['journals']);
+
+        return [
+            'month' => $month,
+            'year' => $year,
+            'is_current_month' => $isCurrentMonth,
+            'month_label' => $this->monthLabel($month, $year),
+            'stats' => [
+                'sudah_diisi' => $summary['sudah'],
+                'kosong' => $summary['kosong'],
+                'digantikan' => $summary['digantikan'],
+                'total' => $summary['sudah'] + $summary['kosong'] + $summary['digantikan'],
+                'total_jurnal' => $journalRows->count(),
+            ],
+            'journal_rows' => $journalRows,
+            'empty_slots' => $summary['empty_slots'],
+        ];
+    }
+
+    /**
+     * Tunggakan jurnal untuk semester akademik yang sedang aktif.
+     *
+     * Berbeda dari performa bulanan, rentang ini dimulai dari awal semester
+     * dan hanya memuat slot yang benar-benar telah lewat. Jika tanggal awal
+     * semester belum dilengkapi, gunakan awal tahun ajaran lalu awal bulan
+     * berjalan sebagai fallback aman agar data jadwal lama tidak ikut ditagih.
+     *
+     * @return array{
+     *   term: AcademicTerm,
+     *   term_label: string,
+     *   count: int,
+     *   class_count: int,
+     *   empty_slots: list<array<string, mixed>>,
+     * }|null
+     */
+    public function overdueForActiveTerm(Teacher $teacher): ?array
+    {
+        $term = AcademicTerm::query()
+            ->with('academicYear')
+            ->where('is_active', true)
+            ->first();
+
+        if (! $term) {
+            return null;
+        }
+
+        $now = Carbon::now('Asia/Jakarta');
+        $startDate = $term->starts_at
+            ? Carbon::parse($term->starts_at, 'Asia/Jakarta')->startOfDay()
+            : ($term->academicYear?->starts_at
+                ? Carbon::parse($term->academicYear->starts_at, 'Asia/Jakarta')->startOfDay()
+                : $now->copy()->startOfMonth());
+        $endDate = $now->copy()->subDay()->endOfDay();
+
+        if ($term->ends_at) {
+            $endDate = $endDate->min(Carbon::parse($term->ends_at, 'Asia/Jakarta')->endOfDay());
+        }
+
+        if ($startDate->greaterThan($endDate)) {
+            return [
+                'term' => $term,
+                'term_label' => $this->termLabel($term),
+                'count' => 0,
+                'class_count' => 0,
+                'empty_slots' => [],
+            ];
+        }
+
+        $summary = $this->summaryForRange($teacher, $startDate, $endDate, $term->id);
+        $classCount = collect($summary['empty_slots'])
+            ->flatMap(fn (array $slot) => $slot['classroom_names_list'] ?? [])
+            ->filter()
+            ->unique()
+            ->count();
+
+        return [
+            'term' => $term,
+            'term_label' => $this->termLabel($term),
+            'count' => $summary['kosong'],
+            'class_count' => $classCount,
+            'empty_slots' => $summary['empty_slots'],
+        ];
+    }
+
+    /**
+     * Jalankan penghitungan slot untuk sebuah rentang tanggal. Satu sumber
+     * kebenaran ini dipakai kartu performa bulanan dan pengingat semester.
+     *
+     * @return array{
+     *   sudah: int,
+     *   kosong: int,
+     *   digantikan: int,
+     *   journals: Collection<int, DiniyyahClassJournal>,
+     *   empty_slots: list<array<string, mixed>>,
+     * }
+     */
+    private function summaryForRange(
+        Teacher $teacher,
+        Carbon $startDate,
+        Carbon $endDate,
+        ?int $academicTermId = null,
+    ): array {
+        $today = Carbon::now('Asia/Jakarta')->toDateString();
+
         $schedules = DiniyyahTeachingSchedule::with([
             'teacherAssignment.classSubject.subject',
             'teacherAssignment.classSubject.classroomTerm.classroom',
             'classSession',
         ])
-            ->whereHas('teacherAssignment', fn ($q) => $q->where('teacher_id', $teacher->id))
+            ->whereHas('teacherAssignment', function ($query) use ($teacher, $academicTermId): void {
+                $query->where('teacher_id', $teacher->id)
+                    ->when($academicTermId, function ($query, int $academicTermId): void {
+                        $query->whereHas('classSubject.classroomTerm', fn ($query) => $query->where('academic_term_id', $academicTermId));
+                    });
+            })
             ->get();
 
         $journals = DiniyyahClassJournal::with([
@@ -81,11 +192,15 @@ class GuruPerformaService
             'teacherAssignment.classSubject.classroomTerm.classroom',
             'absences',
         ])
-            ->whereHas('teacherAssignment', fn ($q) => $q->where('teacher_id', $teacher->id))
+            ->whereHas('teacherAssignment', function ($query) use ($teacher, $academicTermId): void {
+                $query->where('teacher_id', $teacher->id)
+                    ->when($academicTermId, function ($query, int $academicTermId): void {
+                        $query->whereHas('classSubject.classroomTerm', fn ($query) => $query->where('academic_term_id', $academicTermId));
+                    });
+            })
             ->whereDate('date', '>=', $startDate->toDateString())
             ->whereDate('date', '<=', $endDate->toDateString())
             ->get();
-        $journalRows = $this->journalRows($journals);
 
         $holidays = SchoolHoliday::whereDate('holiday_date', '>=', $startDate->toDateString())
             ->whereDate('holiday_date', '<=', $endDate->toDateString())
@@ -196,18 +311,10 @@ class GuruPerformaService
             ->all();
 
         return [
-            'month' => $month,
-            'year' => $year,
-            'is_current_month' => $isCurrentMonth,
-            'month_label' => $this->monthLabel($month, $year),
-            'stats' => [
-                'sudah_diisi' => $sudah,
-                'kosong' => $kosong,
-                'digantikan' => $digantikan,
-                'total' => $sudah + $kosong + $digantikan,
-                'total_jurnal' => $journalRows->count(),
-            ],
-            'journal_rows' => $journalRows,
+            'sudah' => $sudah,
+            'kosong' => $kosong,
+            'digantikan' => $digantikan,
+            'journals' => $journals,
             'empty_slots' => $emptySlots,
         ];
     }
@@ -360,10 +467,15 @@ class GuruPerformaService
             'ends_at' => $time['ends_at'],
             'classroom_term_id' => $classroomTerm?->id,
             'classroom_names' => $classroomTerm?->classroom?->name ?? '-',
+            'classroom_names_list' => [$classroomTerm?->classroom?->name ?? '-'],
             'subject_name' => $classSubject->subject?->name ?? '-',
+            'assignment_id' => $sched->diniyyah_teacher_assignment_id,
+            'session_hour' => $sessionName,
             'fill_url' => route('guru.diniyyah-journals.index', [
                 'classroom_term_id' => $classroomTerm?->id,
                 'date' => $date->toDateString(),
+                'assignment_id' => $sched->diniyyah_teacher_assignment_id,
+                'session_hour' => $sessionName,
             ]),
         ];
     }
@@ -380,7 +492,12 @@ class GuruPerformaService
             ->filter()
             ->unique()
             ->values()
-            ->implode(', ');
+            ->all();
+        $assignmentIds = $tafsirSched
+            ->pluck('diniyyah_teacher_assignment_id')
+            ->unique()
+            ->values()
+            ->all();
 
         // Jam tafsir sama untuk semua classroom (09:50-10:20); resolve dari
         // classroom pertama, fallback ke default ClassSession tafsir.
@@ -397,10 +514,13 @@ class GuruPerformaService
             'starts_at' => $time['starts_at'],
             'ends_at' => $time['ends_at'],
             'classroom_term_id' => null,
-            'classroom_names' => $classroomNames ?: '-',
+            'classroom_names' => $classroomNames === [] ? '-' : implode(', ', $classroomNames),
+            'classroom_names_list' => $classroomNames,
             'subject_name' => $first?->teacherAssignment?->classSubject?->subject?->name ?? 'Tafsir',
+            'assignment_ids' => $assignmentIds,
             'fill_url' => route('guru.diniyyah-tafsir-journals.index', [
                 'date' => $date->toDateString(),
+                'assignment_ids' => $assignmentIds,
             ]),
         ];
     }
@@ -408,5 +528,12 @@ class GuruPerformaService
     private function monthLabel(int $month, int $year): string
     {
         return Carbon::createFromDate($year, $month, 1)->locale('id')->translatedFormat('F Y');
+    }
+
+    private function termLabel(AcademicTerm $term): string
+    {
+        return collect([$term->name, $term->academicYear?->name])
+            ->filter()
+            ->implode(' ');
     }
 }

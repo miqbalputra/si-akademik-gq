@@ -150,6 +150,9 @@
 
     <main class="school-main">{{ $slot }}</main>
     <footer class="school-footer">&copy; {{ date('Y') }} RUANG GQ · GRIYA QUR'AN TUNAS ILMU</footer>
+    @if($isGuruPortal)
+        <x-journal-overdue-reminder :journal-overdue-reminder="$journalOverdueReminder ?? null" />
+    @endif
     @stack('scripts')
 </body>
 </html>

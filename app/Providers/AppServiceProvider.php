@@ -26,7 +26,12 @@ use App\Observers\TahfidzUasScoreObserver;
 use App\Observers\TahfidzWeeklyScoreObserver;
 use App\Observers\TasmiExaminerAssignmentObserver;
 use App\Observers\TasmiRecordObserver;
+use App\Services\GuruPerformaService;
+use Filament\Forms\Components\Field;
+use Filament\Tables\Columns\Column;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\View\View as BladeView;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -56,10 +61,30 @@ class AppServiceProvider extends ServiceProvider
         HomeroomAssignment::observe(HomeroomAssignmentObserver::class);
         SchoolEvent::observe(SchoolEventObserver::class);
 
-        \Filament\Forms\Components\Field::configureUsing(function (\Filament\Forms\Components\Field $field): void {
+        View::composer('components.layouts.portal', function (BladeView $view): void {
+            $user = auth()->user();
+            $isGuruPortal = ($view->getData()['portalLabel'] ?? null) === 'Portal Guru';
+            $isJournalForm = request()->routeIs(
+                'guru.diniyyah-journals.index',
+                'guru.diniyyah-tafsir-journals.index',
+            );
+
+            if (! $isGuruPortal || $isJournalForm || ! $user?->hasRole('guru') || ! $user->teacher) {
+                $view->with('journalOverdueReminder', null);
+
+                return;
+            }
+
+            $view->with(
+                'journalOverdueReminder',
+                app(GuruPerformaService::class)->overdueForActiveTerm($user->teacher),
+            );
+        });
+
+        Field::configureUsing(function (Field $field): void {
             $field->translateLabel();
         });
-        \Filament\Tables\Columns\Column::configureUsing(function (\Filament\Tables\Columns\Column $column): void {
+        Column::configureUsing(function (Column $column): void {
             $column->translateLabel();
         });
     }

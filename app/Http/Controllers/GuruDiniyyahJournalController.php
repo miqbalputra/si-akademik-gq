@@ -2,27 +2,27 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Models\ClassEnrollment;
 use App\Models\ClassroomTerm;
 use App\Models\DiniyyahClassJournal;
 use App\Models\DiniyyahTeacherAssignment;
 use App\Models\DiniyyahTeachingSchedule;
 use App\Models\StudentAttendance;
-use App\Models\ClassEnrollment;
 use App\Support\SessionTimetable;
+use Illuminate\Database\QueryException;
+use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Database\QueryException;
 
 class GuruDiniyyahJournalController extends Controller
 {
     public function index(Request $request)
     {
         $teacher = Auth::user()->teacher;
-        if (!$teacher) {
+        if (! $teacher) {
             abort(403, 'Akses ditolak. Akun Anda tidak terhubung dengan data Guru.');
         }
-        
+
         // Active assignments for this teacher. eager-load `schedules.classSession` agar
         // pengecekan jadwal (hari & sesi) di kelas terpilih tidak menambah query (N+1).
         $assignments = DiniyyahTeacherAssignment::with(['classSubject.subject', 'classSubject.classroomTerm.classroom', 'schedules.classSession'])
@@ -36,37 +36,37 @@ class GuruDiniyyahJournalController extends Controller
         // Default "hari ini" dalam WIB — app tz=UTC, jadi date('Y-m-d') bisa meleset
         // ke kemarin di larut malam WIB. Lihat memori app-timezone-utc-vs-wib.
         $selectedDate = $request->query('date', Carbon::now('Asia/Jakarta')->toDateString());
-        
+
         $students = collect();
         $dailyAbsences = [];
         $existingJournals = collect();
         $classAssignments = collect();
-        
+
         if ($selectedClassroomTermId) {
-            $classAssignments = $assignments->filter(function($assignment) use ($selectedClassroomTermId) {
+            $classAssignments = $assignments->filter(function ($assignment) use ($selectedClassroomTermId) {
                 return $assignment->classSubject->classroom_term_id == $selectedClassroomTermId;
             });
-            
+
             $students = ClassEnrollment::with('student')
                 ->where('classroom_term_id', $selectedClassroomTermId)
                 ->where('status', 'active')
                 ->get();
-                
+
             $attendances = StudentAttendance::where('classroom_term_id', $selectedClassroomTermId)
                 ->where('attendance_date', $selectedDate)
                 ->get();
-                
+
             foreach ($attendances as $attendance) {
                 if (in_array($attendance->status, ['sick', 'permission', 'absent'])) {
                     $dailyAbsences[$attendance->class_enrollment_id] = $attendance->status;
                 }
             }
-            
+
             // Fetch existing journals for THIS class and THIS date, by ALL teachers, so they can see the whole log.
             // Termasuk jurnal pengganti (substituteTeacher) agar guru asli melihat tanda "digantikan oleh ...".
             $existingJournals = DiniyyahClassJournal::with(['teacherAssignment.teacher', 'substituteTeacher', 'teacherAssignment.classSubject.subject', 'absences.classEnrollment.student'])
                 ->whereDate('date', $selectedDate)
-                ->whereHas('teacherAssignment.classSubject', function($query) use ($selectedClassroomTermId) {
+                ->whereHas('teacherAssignment.classSubject', function ($query) use ($selectedClassroomTermId) {
                     $query->where('classroom_term_id', $selectedClassroomTermId);
                 })
                 ->orderBy('session_hour', 'asc')
@@ -141,6 +141,18 @@ class GuruDiniyyahJournalController extends Controller
             }
         }
 
+        // Tautan dari pengingat jurnal dapat mengarahkan guru tepat ke sesi
+        // yang tertunggak. Nilai query hanya dipakai untuk memilih UI; store()
+        // tetap menegakkan kepemilikan assignment dan jadwal di server.
+        $requestedAssignmentId = $request->integer('assignment_id');
+        $requestedSessionHour = (string) $request->query('session_hour', '');
+        $selectedScheduleSlot = $scheduledSlots->first(function ($slot) use ($requestedAssignmentId, $requestedSessionHour): bool {
+            return $requestedAssignmentId > 0
+                && (int) $slot->assignment_id === $requestedAssignmentId
+                && (string) $slot->session_name === $requestedSessionHour
+                && ! $slot->filled;
+        });
+
         return view('guru.diniyyah-journals.index', compact(
             'classes',
             'selectedClassroomTermId',
@@ -153,7 +165,8 @@ class GuruDiniyyahJournalController extends Controller
             'sessionSlots',
             'scheduledSlots',
             'selectedTerm',
-            'hasScheduleOnDay'
+            'hasScheduleOnDay',
+            'selectedScheduleSlot'
         ));
     }
 
@@ -165,7 +178,7 @@ class GuruDiniyyahJournalController extends Controller
     public function riwayat()
     {
         $teacher = Auth::user()->teacher;
-        if (!$teacher) {
+        if (! $teacher) {
             abort(403, 'Akses ditolak. Akun Anda tidak terhubung dengan data Guru.');
         }
 
@@ -190,7 +203,7 @@ class GuruDiniyyahJournalController extends Controller
     public function edit(DiniyyahClassJournal $diniyyah_journal)
     {
         $teacher = Auth::user()->teacher;
-        if (!$teacher) {
+        if (! $teacher) {
             abort(403, 'Akses ditolak. Akun Anda tidak terhubung dengan data Guru.');
         }
         abort_unless($diniyyah_journal->substitute_teacher_id === null, 403, 'Jurnal pengganti tidak dapat diedit dari menu ini.');
@@ -260,7 +273,7 @@ class GuruDiniyyahJournalController extends Controller
         ]);
 
         $teacher = Auth::user()->teacher;
-        if (!$teacher) {
+        if (! $teacher) {
             abort(403, 'Akses ditolak. Akun Anda tidak terhubung dengan data Guru.');
         }
         abort_unless($diniyyah_journal->substitute_teacher_id === null, 403, 'Jurnal pengganti tidak dapat diedit dari menu ini.');
@@ -310,7 +323,7 @@ class GuruDiniyyahJournalController extends Controller
         ]);
 
         $teacher = Auth::user()->teacher;
-        if (!$teacher) {
+        if (! $teacher) {
             abort(403, 'Akses ditolak. Akun Anda tidak terhubung dengan data Guru.');
         }
 
@@ -371,7 +384,7 @@ class GuruDiniyyahJournalController extends Controller
         if ($exists) {
             return redirect()->route('guru.diniyyah-journals.index', [
                 'classroom_term_id' => $validated['classroom_term_id'],
-                'date' => $validated['date']
+                'date' => $validated['date'],
             ])->withInput()->with('error', 'Jurnal untuk kelas, tanggal, dan jam sesi ini sudah pernah diisi.');
         }
 
@@ -406,7 +419,7 @@ class GuruDiniyyahJournalController extends Controller
             if ($this->isDuplicateKeyException($e)) {
                 return redirect()->route('guru.diniyyah-journals.index', [
                     'classroom_term_id' => $validated['classroom_term_id'],
-                    'date' => $validated['date']
+                    'date' => $validated['date'],
                 ])->withInput()->with('error', 'Jurnal untuk kelas, tanggal, dan jam sesi ini sudah pernah diisi.');
             }
 
@@ -415,14 +428,14 @@ class GuruDiniyyahJournalController extends Controller
 
         return redirect()->route('guru.diniyyah-journals.index', [
             'classroom_term_id' => $validated['classroom_term_id'],
-            'date' => $validated['date']
+            'date' => $validated['date'],
         ])->with('success', 'Jurnal jam ke-'.$validated['session_hour'].' berhasil disimpan.');
     }
-    
+
     public function destroy(DiniyyahClassJournal $diniyyah_journal)
     {
         $teacher = Auth::user()->teacher;
-        if (!$teacher) {
+        if (! $teacher) {
             abort(403, 'Akses ditolak. Akun Anda tidak terhubung dengan data Guru.');
         }
         // Jurnal pengganti hanya boleh dihapus oleh pengganti yang mengisinya
@@ -433,15 +446,15 @@ class GuruDiniyyahJournalController extends Controller
         if ($diniyyah_journal->teacherAssignment->teacher_id !== $teacher->id) {
             abort(403);
         }
-        
+
         $classroomTermId = $diniyyah_journal->teacherAssignment->classSubject->classroom_term_id;
         $date = $diniyyah_journal->date->format('Y-m-d');
-        
+
         $diniyyah_journal->delete();
-        
+
         return redirect()->route('guru.diniyyah-journals.index', [
             'classroom_term_id' => $classroomTermId,
-            'date' => $date
+            'date' => $date,
         ])->with('success', 'Jurnal berhasil dihapus.');
     }
 
