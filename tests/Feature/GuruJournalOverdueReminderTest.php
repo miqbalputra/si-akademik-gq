@@ -12,10 +12,12 @@ use App\Models\DiniyyahClassSubject;
 use App\Models\DiniyyahSubject;
 use App\Models\DiniyyahTeacherAssignment;
 use App\Models\DiniyyahTeachingSchedule;
+use App\Models\PanelUserPreference;
 use App\Models\School;
 use App\Models\SchoolHoliday;
 use App\Models\Teacher;
 use App\Models\User;
+use App\Services\GuruJournalReminderPreferenceService;
 use App\Services\GuruPerformaService;
 use App\Support\SessionTimetable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -75,6 +77,7 @@ class GuruJournalOverdueReminderTest extends TestCase
 
         $dashboard->assertOk()
             ->assertSee('Masih ada 1 jurnal kosong')
+            ->assertSee('Tutup sementara 3 jam')
             ->assertSee('Mustawa 2 Ikhwan')
             ->assertSee('data-journal-overdue-reminder', false)
             ->assertSee('assignment_id='.$context['assignment']->id, false)
@@ -120,6 +123,10 @@ class GuruJournalOverdueReminderTest extends TestCase
         $context = $this->makeRegularContext('2026-08-01');
 
         $this->actingAs($context['user'])
+            ->postJson(route('guru.journal-reminder.snooze'))
+            ->assertOk();
+
+        $this->actingAs($context['user'])
             ->post(route('guru.diniyyah-journals.store'), [
                 'diniyyah_teacher_assignment_id' => $context['assignment']->id,
                 'classroom_term_id' => $context['classroomTerm']->id,
@@ -134,6 +141,85 @@ class GuruJournalOverdueReminderTest extends TestCase
             ->get(route('guru.dashboard'))
             ->assertOk()
             ->assertDontSee('Masih ada 1 jurnal kosong');
+
+        $preference = $this->reminderPreferenceFor($context['user']);
+        $this->assertArrayNotHasKey('snoozed_until', $preference->preferences ?? []);
+    }
+
+    public function test_teacher_can_snooze_reminder_for_three_hours(): void
+    {
+        $this->setNow();
+        $context = $this->makeRegularContext('2026-08-01');
+
+        $response = $this->actingAs($context['user'])
+            ->postJson(route('guru.journal-reminder.snooze'));
+
+        $response->assertOk()
+            ->assertJsonPath('snoozed_until', now('Asia/Jakarta')->addHours(3)->toIso8601String())
+            ->assertJsonPath('snoozed_until_label', '15:00');
+
+        $this->assertSame(
+            now('Asia/Jakarta')->addHours(3)->toIso8601String(),
+            $this->reminderPreferenceFor($context['user'])->preferences['snoozed_until'],
+        );
+    }
+
+    public function test_snoozed_reminder_renders_banner_until_the_snooze_expires(): void
+    {
+        $this->setNow();
+        $context = $this->makeRegularContext('2026-08-01');
+
+        $this->actingAs($context['user'])
+            ->postJson(route('guru.journal-reminder.snooze'))
+            ->assertOk();
+
+        $dashboard = $this->actingAs($context['user'])->get(route('guru.dashboard'));
+
+        $dashboard->assertOk()
+            ->assertSee('Buka daftar jurnal')
+            ->assertSee('Ingatkan lagi pukul')
+            ->assertSee('data-journal-overdue-banner', false)
+            ->assertSee('data-journal-overdue-modal', false);
+        $this->assertMatchesRegularExpression(
+            '/data-journal-overdue-modal\s+hidden/',
+            $dashboard->getContent(),
+        );
+        $this->assertDoesNotMatchRegularExpression(
+            '/data-journal-overdue-banner\s+hidden/',
+            $dashboard->getContent(),
+        );
+
+        $this->setNowAt('2026-08-10 15:01:00');
+        $expired = $this->actingAs($context['user'])->get(route('guru.dashboard'));
+
+        $expired->assertOk()
+            ->assertSee('Masih ada 1 jurnal kosong')
+            ->assertSee('Tutup sementara 3 jam');
+        $this->assertDoesNotMatchRegularExpression(
+            '/data-journal-overdue-modal\s+hidden/',
+            $expired->getContent(),
+        );
+        $this->assertMatchesRegularExpression(
+            '/data-journal-overdue-banner\s+hidden/',
+            $expired->getContent(),
+        );
+    }
+
+    public function test_snooze_endpoint_rejects_users_without_a_teacher_profile(): void
+    {
+        $this->setNow();
+        Role::firstOrCreate(['name' => 'guru', 'guard_name' => 'web']);
+        $guruWithoutProfile = User::factory()->create();
+        $guruWithoutProfile->assignRole('guru');
+        $nonGuru = User::factory()->create();
+
+        $this->actingAs($guruWithoutProfile)
+            ->postJson(route('guru.journal-reminder.snooze'))
+            ->assertForbidden();
+
+        $this->actingAs($nonGuru)
+            ->postJson(route('guru.journal-reminder.snooze'))
+            ->assertForbidden();
     }
 
     public function test_tafsir_reminder_opens_form_with_all_missing_classes_checked(): void
@@ -285,6 +371,19 @@ class GuruJournalOverdueReminderTest extends TestCase
 
     private function setNow(): void
     {
-        Carbon::setTestNow(Carbon::parse(self::TODAY.' 12:00:00', 'Asia/Jakarta')->setTimezone('UTC'));
+        $this->setNowAt(self::TODAY.' 12:00:00');
+    }
+
+    private function setNowAt(string $dateTime): void
+    {
+        Carbon::setTestNow(Carbon::parse($dateTime, 'Asia/Jakarta')->setTimezone('UTC'));
+    }
+
+    private function reminderPreferenceFor(User $user): PanelUserPreference
+    {
+        return PanelUserPreference::query()
+            ->where('user_id', $user->id)
+            ->where('panel_key', GuruJournalReminderPreferenceService::PANEL_KEY)
+            ->firstOrFail();
     }
 }

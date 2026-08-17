@@ -54,6 +54,8 @@ Route::middleware('auth')->prefix('guru')->name('guru.')->group(function () {
     Route::get('/performa/export/{format}', [\App\Http\Controllers\GuruDashboardController::class, 'performaExport'])
         ->whereIn('format', ['xlsx', 'pdf'])
         ->name('performa.export');
+    Route::post('/journal-reminder/snooze', [\App\Http\Controllers\GuruJournalReminderController::class, 'snooze'])
+        ->name('journal-reminder.snooze');
     Route::get('/jadwal/riwayat', [\App\Http\Controllers\GuruJadwalController::class, 'riwayat'])->name('jadwal.riwayat');
     Route::get('/diniyyah-scores', [GuruDiniyyahScoreController::class, 'index'])->name('diniyyah-scores.index');
     Route::get('/diniyyah-scores/{assessmentSet}', [GuruDiniyyahScoreController::class, 'edit'])->name('diniyyah-scores.edit');

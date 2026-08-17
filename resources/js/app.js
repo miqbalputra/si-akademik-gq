@@ -231,21 +231,59 @@ function initNotifications() {
 
 function initJournalOverdueReminder() {
     document.querySelectorAll('[data-journal-overdue-reminder]').forEach((root) => {
+        const modal = root.querySelector('[data-journal-overdue-modal]');
         const dialog = root.querySelector('[data-journal-overdue-dialog]');
-        if (!dialog) return;
+        const banner = root.querySelector('[data-journal-overdue-banner]');
+        const openButton = root.querySelector('[data-journal-overdue-open]');
+        const snoozeButton = root.querySelector('[data-journal-overdue-snooze]');
+        const error = root.querySelector('[data-journal-overdue-error]');
+        const nextTime = root.querySelector('[data-journal-overdue-next-time]');
+        const snoozeUrl = root.dataset.snoozeUrl;
+        if (!modal || !dialog || !banner || !openButton || !snoozeButton || !snoozeUrl) return;
 
-        document.body.classList.add('overflow-hidden');
-        [...document.body.children]
-            .filter((element) => element !== root)
-            .forEach((element) => element.setAttribute('inert', ''));
+        const lockBackground = () => {
+            document.body.classList.add('overflow-hidden');
+            [...document.body.children]
+                .filter((element) => element !== root && !element.hasAttribute('inert'))
+                .forEach((element) => {
+                    element.setAttribute('inert', '');
+                    element.setAttribute('data-journal-overdue-inert', '');
+                });
+        };
+
+        const unlockBackground = () => {
+            document.body.classList.remove('overflow-hidden');
+            [...document.body.children]
+                .filter((element) => element.hasAttribute('data-journal-overdue-inert'))
+                .forEach((element) => {
+                    element.removeAttribute('inert');
+                    element.removeAttribute('data-journal-overdue-inert');
+                });
+        };
 
         const focusable = () => [...dialog.querySelectorAll(
             'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
         )];
 
-        window.requestAnimationFrame(() => {
-            (focusable()[0] ?? dialog).focus();
-        });
+        const showModal = () => {
+            banner.hidden = true;
+            modal.hidden = false;
+            lockBackground();
+
+            window.requestAnimationFrame(() => {
+                (focusable()[0] ?? dialog).focus();
+            });
+        };
+
+        const showBanner = () => {
+            modal.hidden = true;
+            unlockBackground();
+            banner.hidden = false;
+
+            window.requestAnimationFrame(() => openButton.focus());
+        };
+
+        if (!modal.hidden) showModal();
 
         dialog.addEventListener('keydown', (event) => {
             if (event.key === 'Escape') {
@@ -270,6 +308,36 @@ function initJournalOverdueReminder() {
             } else if (!event.shiftKey && document.activeElement === last) {
                 event.preventDefault();
                 first.focus();
+            }
+        });
+
+        openButton.addEventListener('click', showModal);
+
+        snoozeButton.addEventListener('click', async () => {
+            snoozeButton.disabled = true;
+            error?.classList.add('hidden');
+
+            try {
+                const response = await fetch(snoozeUrl, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': getCsrfToken(),
+                        Accept: 'application/json',
+                    },
+                });
+
+                if (!response.ok) throw new Error('Gagal menyimpan penundaan pengingat.');
+
+                const payload = await response.json();
+                if (nextTime && payload.snoozed_until_label) nextTime.textContent = payload.snoozed_until_label;
+                showBanner();
+            } catch (_) {
+                if (error) {
+                    error.textContent = 'Penundaan belum tersimpan. Silakan coba lagi.';
+                    error.classList.remove('hidden');
+                }
+            } finally {
+                snoozeButton.disabled = false;
             }
         });
     });

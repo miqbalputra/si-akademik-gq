@@ -26,6 +26,7 @@ use App\Observers\TahfidzUasScoreObserver;
 use App\Observers\TahfidzWeeklyScoreObserver;
 use App\Observers\TasmiExaminerAssignmentObserver;
 use App\Observers\TasmiRecordObserver;
+use App\Services\GuruJournalReminderPreferenceService;
 use App\Services\GuruPerformaService;
 use Filament\Forms\Components\Field;
 use Filament\Tables\Columns\Column;
@@ -75,10 +76,30 @@ class AppServiceProvider extends ServiceProvider
                 return;
             }
 
-            $view->with(
-                'journalOverdueReminder',
-                app(GuruPerformaService::class)->overdueForActiveTerm($user->teacher),
-            );
+            $reminder = app(GuruPerformaService::class)->overdueForActiveTerm($user->teacher);
+            $preferences = app(GuruJournalReminderPreferenceService::class);
+
+            if (($reminder['count'] ?? 0) === 0) {
+                $preferences->clearSnooze($user);
+                $view->with('journalOverdueReminder', null);
+
+                return;
+            }
+
+            $snoozedUntil = $preferences->snoozedUntil($user);
+            $isSnoozed = $snoozedUntil?->isFuture() ?? false;
+
+            if (! $isSnoozed && $snoozedUntil) {
+                $preferences->clearSnooze($user);
+            }
+
+            $reminder['is_snoozed'] = $isSnoozed;
+            $reminder['snoozed_until'] = $isSnoozed ? $snoozedUntil->toIso8601String() : null;
+            $reminder['snoozed_until_label'] = $isSnoozed
+                ? $snoozedUntil->format('H:i')
+                : null;
+
+            $view->with('journalOverdueReminder', $reminder);
         });
 
         Field::configureUsing(function (Field $field): void {
