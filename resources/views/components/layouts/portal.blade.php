@@ -152,7 +152,7 @@
     </header>
 
     <main class="school-main">{{ $slot }}</main>
-    <footer class="school-footer">&copy; {{ date('Y') }} RUANG GQ · GRIYA QUR'AN TUNAS ILMU</footer>
+    <footer class="school-footer">&copy; {{ date('Y') }} RUANG GQ · GRIYA QUR'AN TUNAS ILMU · Dikembangkan oleh Muhammad Iqbal Putra — SchoolVia.id</footer>
     @if($isGuruPortal)
         <x-journal-overdue-reminder :journal-overdue-reminder="$journalOverdueReminder ?? null" />
         <x-tasmi-wali-reminder :tasmi-wali-reminder="$tasmiWaliReminder ?? null" />

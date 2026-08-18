@@ -124,6 +124,6 @@
         </section>
     </main>
 
-    <footer class="school-footer">&copy; {{ date('Y') }} RUANG GQ · GRIYA QUR'AN TUNAS ILMU</footer>
+    <footer class="school-footer">&copy; {{ date('Y') }} RUANG GQ · GRIYA QUR'AN TUNAS ILMU · Dikembangkan oleh Muhammad Iqbal Putra — SchoolVia.id</footer>
 </body>
 </html>
