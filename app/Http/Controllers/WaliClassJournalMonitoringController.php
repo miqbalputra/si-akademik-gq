@@ -107,6 +107,7 @@ class WaliClassJournalMonitoringController extends Controller
             'absences.classEnrollment.student',
             'teacherAssignment.classSubject.subject',
             'teacherAssignment.classSubject.classroomTerm.classroom',
+            'substituteTeacher',
         ])
             ->whereHas('teacherAssignment.classSubject', function ($query) use ($classroomTermIds) {
                 $query->whereIn('classroom_term_id', $classroomTermIds);
@@ -260,8 +261,51 @@ class WaliClassJournalMonitoringController extends Controller
             }
         }
         
+        $monitoringRows = collect($monitoringData)
+            ->flatMap(function (array $dayData): array {
+                return collect($dayData['items'])->map(function (array $item) use ($dayData): array {
+                    $assignment = $item['schedule']->teacherAssignment ?? null;
+                    $classSubject = $assignment?->classSubject;
+                    $classroomTerm = $classSubject?->classroomTerm;
+                    $subject = $classSubject?->subject;
+                    $journal = $item['journal'];
+
+                    return [
+                        'date' => $dayData['date'],
+                        'date_label' => $dayData['date']->translatedFormat('l, d F Y'),
+                        'is_holiday' => $dayData['is_holiday'],
+                        'holiday_name' => $dayData['holiday_name'],
+                        'session_name' => $item['schedule']->classSession->session_name ?? '?',
+                        'session_time' => $item['session_time'],
+                        'classroom_term_id' => $classSubject?->classroom_term_id,
+                        'classroom_name' => $classroomTerm?->name ?? 'Kelas',
+                        'subject_id' => $classSubject?->subject_id,
+                        'subject_name' => $subject?->name ?? 'Mapel',
+                        'teacher_id' => $assignment?->teacher_id,
+                        'teacher_name' => $assignment?->teacher?->name ?? '-',
+                        'substitute_teacher_name' => $journal?->substituteTeacher?->name,
+                        'status' => $item['status'],
+                        'journal' => $journal,
+                        'schedule' => $item['schedule'],
+                    ];
+                })->all();
+            })
+            ->values();
+
+        $summaryRows = $monitoringRows;
+        $summary = [
+            'total_slots' => $summaryRows->count(),
+            'filled_slots' => $summaryRows->whereIn('status', ['TERISI', 'TERISI_TIDAK_TERJADWAL'])->count(),
+            'empty_slots' => $summaryRows->where('status', 'KOSONG')->count(),
+            'holiday_slots' => $summaryRows->where('status', 'LIBUR')->count(),
+            'empty_classrooms' => $summaryRows->where('status', 'KOSONG')->pluck('classroom_name')->filter()->unique()->values(),
+            'empty_teachers' => $summaryRows->where('status', 'KOSONG')->pluck('teacher_name')->filter()->unique()->values(),
+        ];
+
         return compact(
             'monitoringData',
+            'monitoringRows',
+            'summary',
             'month',
             'year',
             'subjectOptions',

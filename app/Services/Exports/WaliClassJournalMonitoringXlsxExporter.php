@@ -19,18 +19,16 @@ class WaliClassJournalMonitoringXlsxExporter
         $this->theme->tableHeader($sheet, 7, $headers);
 
         $lastRow = 7;
-        foreach ($data['monitoringData'] as $day) {
-            foreach ($day['items'] as $item) {
+        foreach ($data['monitoringRows'] ?? [] as $row) {
                 $lastRow++;
-                $assignment = $item['schedule']->teacherAssignment ?? null;
-                $journal = $item['journal'] ?? null;
-                $status = match ($item['status']) {
+                $journal = $row['journal'] ?? null;
+                $status = match ($row['status']) {
                     'TERISI' => 'Terisi',
                     'TERISI_TIDAK_TERJADWAL' => 'Terisi (Ekstra)',
                     'LIBUR' => 'Libur',
                     default => 'Kosong',
                 };
-                $time = collect([$item['session_time']['starts_at'] ?? null, $item['session_time']['ends_at'] ?? null])
+                $time = collect([$row['session_time']['starts_at'] ?? null, $row['session_time']['ends_at'] ?? null])
                     ->filter()->map(fn ($value) => substr((string) $value, 0, 5))->implode(' - ');
                 $material = '-';
                 if ($journal) {
@@ -38,12 +36,12 @@ class WaliClassJournalMonitoringXlsxExporter
                     $material = 'Materi: '.($journal->material ?: '-')."\nAbsensi: ".($absences ?: 'Hadir Semua');
                 }
                 $sheet->fromArray([[
-                    $day['date']->translatedFormat('l, d/m/Y').($day['is_holiday'] ? ' - '.$day['holiday_name'] : ''),
-                    $time ?: ('Jam '.($item['schedule']->classSession->session_name ?? '-')),
-                    ($assignment?->classSubject?->classroomTerm?->name ?? '-')."\n".($assignment?->classSubject?->subject?->name ?? '-'),
-                    $assignment?->teacher?->name ?? '-', $status, $material,
+                    $row['date']->translatedFormat('l, d/m/Y').($row['is_holiday'] ? ' - '.$row['holiday_name'] : ''),
+                    $time ?: ('Jam '.($row['session_name'] ?? '-')),
+                    ($row['classroom_name'] ?? '-')."\n".($row['subject_name'] ?? '-'),
+                    ($row['teacher_name'] ?? '-').($row['substitute_teacher_name'] ? "\nDiisi pengganti: {$row['substitute_teacher_name']}" : ''),
+                    $status, $material,
                 ]], null, "A{$lastRow}");
-            }
         }
         if ($lastRow === 7) {
             $lastRow++;
