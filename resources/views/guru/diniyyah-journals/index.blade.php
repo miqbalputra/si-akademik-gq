@@ -1,8 +1,12 @@
 <x-layouts.portal title="Jurnal Kelas Diniyyah" portalLabel="Portal Guru" breadcrumb="Jurnal Kelas">
-    <div class="mb-6 flex justify-between items-center glass-card p-4 rounded-2xl">
-        <h1 class="text-2xl font-black text-slate-900">Isi Jurnal Kelas</h1>
-        <a href="{{ route('guru.dashboard') }}" class="text-sm font-bold text-slate-500 hover:text-amber-600">Ke Dashboard</a>
-    </div>
+    <header class="portal-page-header">
+        <div>
+            <p class="school-index">Catatan Pengajaran</p>
+            <h1 class="text-slate-900">Isi Jurnal Kelas</h1>
+            <p class="mt-2 text-sm font-medium text-slate-500">Pilih kelas dan tanggal, lalu catat materi serta presensi sesi mengajar.</p>
+        </div>
+        <a href="{{ route('guru.dashboard') }}" class="btn btn-outline btn-sm">Ke Dashboard</a>
+    </header>
 
     @if(session('success'))
         <div class="mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-sm font-medium text-emerald-800">
@@ -18,7 +22,7 @@
 
     <!-- Akses cepat ke Riwayat Jurnal Saya (halaman terpisah, on-demand) -->
     <div class="mb-6 flex justify-end">
-        <a href="{{ route('guru.diniyyah-journals.riwayat') }}" class="inline-flex items-center gap-2 rounded-xl bg-amber-600 text-white px-5 py-2.5 text-sm font-bold shadow-sm hover:bg-amber-700 transition-colors">
+        <a href="{{ route('guru.diniyyah-journals.riwayat') }}" class="btn btn-primary">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
             </svg>
@@ -27,11 +31,11 @@
     </div>
 
     <!-- Filter Kelas dan Tanggal -->
-    <div class="glass-card rounded-2xl p-6 mb-6">
+    <section class="ui-card rounded-2xl p-5 sm:p-6 mb-6">
         <form method="GET" action="{{ route('guru.diniyyah-journals.index') }}" class="flex flex-col sm:flex-row gap-4 items-end" id="filter-form">
             <div class="flex-1 w-full">
-                <label for="classroom_term_id" class="block text-sm font-bold text-slate-700 mb-1.5">Kelas</label>
-                <select id="classroom_term_id" name="classroom_term_id" class="w-full rounded-xl border-slate-300 shadow-sm text-sm py-2.5 focus:ring-amber-500 focus:border-amber-500" onchange="document.getElementById('filter-form').submit()">
+                <label for="classroom_term_id" class="block text-sm font-black text-slate-700 mb-1.5">Kelas</label>
+                <select id="classroom_term_id" name="classroom_term_id" class="form-input py-2.5" onchange="document.getElementById('filter-form').submit()">
                     <option value="">-- Pilih Kelas --</option>
                     @foreach($classes as $classTerm)
                         <option value="{{ $classTerm->id }}" {{ $selectedClassroomTermId == $classTerm->id ? 'selected' : '' }}>
@@ -41,28 +45,29 @@
                 </select>
             </div>
             <div class="flex-1 w-full">
-                <label for="date" class="block text-sm font-bold text-slate-700 mb-1.5">Tanggal</label>
-                <input id="date" type="date" name="date" value="{{ $selectedDate }}" class="w-full rounded-xl border-slate-300 shadow-sm text-sm py-2.5 focus:ring-amber-500 focus:border-amber-500" onchange="document.getElementById('filter-form').submit()">
+                <label for="date" class="block text-sm font-black text-slate-700 mb-1.5">Tanggal</label>
+                <input id="date" type="date" name="date" value="{{ $selectedDate }}" class="form-input py-2.5" onchange="document.getElementById('filter-form').submit()">
                 <p class="mt-1.5 text-xs font-bold text-slate-600">{{ \Carbon\Carbon::parse($selectedDate)->locale('id')->translatedFormat('l, d F Y') }}</p>
             </div>
             <div class="w-full sm:w-auto">
-                <button type="submit" class="w-full sm:w-auto bg-amber-600 text-white rounded-xl px-6 py-2.5 text-sm font-bold shadow-sm hover:bg-amber-700 transition-colors">Pilih</button>
+                <button type="submit" class="btn btn-primary w-full sm:w-auto">Pilih</button>
             </div>
         </form>
-    </div>
+    </section>
 
     @if($selectedClassroomTermId)
         <!-- Tabel Jurnal (Seperti Excel) -->
-        <div class="glass-card rounded-2xl overflow-hidden mb-8 border border-slate-200">
-            <div class="bg-slate-50 p-4 border-b border-slate-200 text-center">
-                <h2 class="font-black text-lg uppercase tracking-wider text-slate-800">Jurnal Kelas Pembelajaran Diniyyah</h2>
-                <p class="text-sm font-bold text-slate-500">Tanggal: {{ \Carbon\Carbon::parse($selectedDate)->locale('id')->translatedFormat('l, d F Y') }}</p>
+        <section class="ui-card rounded-2xl overflow-hidden mb-8">
+            <div class="border-b border-line bg-school-50 px-4 py-4 text-center">
+                <p class="school-index justify-center">Rekap Kelas</p>
+                <h2 class="mt-2 font-black text-lg text-ink">Jurnal Kelas Pembelajaran Diniyyah</h2>
+                <p class="mt-1 text-sm font-bold text-slate-500">{{ \Carbon\Carbon::parse($selectedDate)->locale('id')->translatedFormat('l, d F Y') }}</p>
             </div>
             <!-- Desktop Table View -->
             <div class="hidden md:block overflow-x-auto w-full">
                 <table class="w-full text-left border-collapse min-w-[800px]">
                 <thead>
-                    <tr class="bg-slate-100 text-xs uppercase tracking-wider text-slate-600 font-bold border-b border-slate-200">
+                    <tr class="text-xs uppercase tracking-wider text-slate-600 font-bold border-b border-slate-200">
                         <th class="p-3 border-r border-slate-200 w-16 text-center">Jam</th>
                         <th class="p-3 border-r border-slate-200">Guru</th>
                         <th class="p-3 border-r border-slate-200">Mapel</th>
@@ -73,7 +78,7 @@
                 </thead>
                 <tbody>
                     @forelse($existingJournals as $journal)
-                        <tr class="border-b border-slate-100 {{ $journal->teacherAssignment->teacher_id === $teacher->id ? 'bg-amber-50/30' : '' }}">
+                        <tr class="border-b border-slate-100 {{ $journal->teacherAssignment->teacher_id === $teacher->id ? 'bg-school-50/70' : '' }}">
                             <td class="p-3 border-r border-slate-200 text-center font-bold text-slate-700">
                                 @php
                                     $slot = $sessionSlots->firstWhere('session_name', $journal->session_hour);
@@ -113,7 +118,7 @@
                             <td class="p-3 text-center">
                                 @if($journal->substitute_teacher_id === null && $journal->teacherAssignment->teacher_id === $teacher->id)
                                     <div class="flex items-center justify-center gap-3">
-                                        <a href="{{ route('guru.diniyyah-journals.edit', $journal) }}" class="text-xs font-bold text-amber-700 hover:text-amber-900">Edit</a>
+                                        <a href="{{ route('guru.diniyyah-journals.edit', $journal) }}" class="text-xs font-bold text-school-600 hover:text-school-800">Edit</a>
                                         <form action="{{ route('guru.diniyyah-journals.destroy', $journal) }}" method="POST" onsubmit="return confirm('Hapus jurnal jam ke-{{ $journal->session_hour }}?');">
                                             @csrf @method('DELETE')
                                             <button type="submit" class="text-xs font-bold text-red-600 hover:text-red-800">Hapus</button>
@@ -134,7 +139,7 @@
             <!-- Mobile Card View -->
             <div class="block md:hidden">
                 @forelse($existingJournals as $journal)
-                    <div class="border-b border-slate-200 p-4 {{ $journal->teacherAssignment->teacher_id === $teacher->id ? 'bg-amber-50/30' : 'bg-white' }} last:border-b-0">
+                    <div class="border-b border-slate-200 p-4 {{ $journal->teacherAssignment->teacher_id === $teacher->id ? 'bg-school-50/70' : 'bg-white' }} last:border-b-0">
                         <div class="flex justify-between items-start mb-2">
                             <div class="flex gap-3">
                                 <div class="flex flex-col items-center justify-center bg-slate-100 rounded-lg p-2 min-w-[3.5rem] border border-slate-200">
@@ -165,7 +170,7 @@
                             
                             @if($journal->substitute_teacher_id === null && $journal->teacherAssignment->teacher_id === $teacher->id)
                                 <div class="flex flex-col items-end gap-2">
-                                    <a href="{{ route('guru.diniyyah-journals.edit', $journal) }}" class="inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-bold text-amber-700 hover:bg-amber-50 transition-colors">Edit</a>
+                                    <a href="{{ route('guru.diniyyah-journals.edit', $journal) }}" class="inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-bold text-school-600 hover:bg-school-50 transition-colors">Edit</a>
                                     <form action="{{ route('guru.diniyyah-journals.destroy', $journal) }}" method="POST" onsubmit="return confirm('Hapus jurnal jam ke-{{ $journal->session_hour }}?');">
                                         @csrf @method('DELETE')
                                         <button type="submit" class="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors" title="Hapus">
@@ -203,13 +208,14 @@
                     <div class="p-8 text-center text-slate-500 font-medium">Belum ada jurnal tercatat di hari ini.</div>
                 @endforelse
             </div>
-        </div>
+        </section>
 
         <!-- Form Tambah Jurnal (Hanya untuk kelas/mapel yang diajarkan guru ini,
              dan hanya di hari yang guru benar-benar dijadwalkan mengajar kelas itu) -->
         @if($classAssignments->isNotEmpty() && $sessionSlots->isNotEmpty() && $hasScheduleOnDay)
-        <div class="glass-card rounded-2xl p-6 border border-slate-200">
-            <h3 class="text-lg font-black text-slate-800 mb-1">Isi Jam Pelajaran Anda</h3>
+        <section class="ui-card rounded-2xl p-5 sm:p-6">
+            <p class="school-index">Jurnal Baru</p>
+            <h3 class="mt-2 text-lg font-black text-slate-800 mb-1">Isi Jam Pelajaran Anda</h3>
             <p class="text-sm text-slate-500 mb-5">Lengkapi sesi, mata pelajaran, materi, dan presensi santri untuk satu jam pelajaran.</p>
 
             <form method="POST" action="{{ route('guru.diniyyah-journals.store') }}">
@@ -218,8 +224,8 @@
                 <input type="hidden" name="date" value="{{ $selectedDate }}">
 
                 <div>
-                    <label for="schedule_slot" class="block text-sm font-bold text-slate-700 mb-1.5">Jadwal Mengajar (Sesi & Mapel)</label>
-                    <select id="schedule_slot" name="schedule_slot" required class="w-full rounded-xl border-slate-300 shadow-sm text-sm focus:ring-amber-500 focus:border-amber-500">
+                    <label for="schedule_slot" class="block text-sm font-black text-slate-700 mb-1.5">Jadwal Mengajar (Sesi & Mapel)</label>
+                    <select id="schedule_slot" name="schedule_slot" required class="form-input">
                         <option value="" disabled @selected(! $selectedScheduleSlot)>Pilih jadwal...</option>
                         @foreach($scheduledSlots as $slot)
                             @php
@@ -245,8 +251,8 @@
                 <input type="hidden" name="session_hour" id="session_hour_input">
 
                 <div class="mt-5">
-                    <label for="material" class="block text-sm font-bold text-slate-700 mb-1.5">Materi</label>
-                    <textarea id="material" name="material" rows="3" required class="w-full rounded-xl border-slate-300 shadow-sm text-sm focus:ring-emerald-500 focus:border-emerald-500" placeholder="Tuliskan materi yang diajarkan..."></textarea>
+                    <label for="material" class="block text-sm font-black text-slate-700 mb-1.5">Materi</label>
+                    <textarea id="material" name="material" rows="3" required class="form-input" placeholder="Tuliskan materi yang diajarkan..."></textarea>
                 </div>
 
                 <div class="mt-5 bg-slate-50 border border-slate-200 rounded-xl p-4">
@@ -257,12 +263,12 @@
                 </div>
 
                 <div class="mt-6 flex justify-end">
-                    <button type="submit" class="w-full sm:w-auto rounded-xl bg-emerald-600 px-6 py-3 text-sm font-bold text-white hover:bg-emerald-700 shadow-sm transition-colors">
+                    <button type="submit" class="btn btn-primary w-full sm:w-auto">
                         Simpan Jurnal Jam Ini
                     </button>
                 </div>
             </form>
-        </div>
+        </section>
         <script>
             (function () {
                 const s = document.getElementById('schedule_slot'),

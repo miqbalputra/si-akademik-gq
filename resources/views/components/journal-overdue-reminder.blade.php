@@ -10,22 +10,22 @@
         data-snooze-url="{{ route('guru.journal-reminder.snooze') }}"
     >
         <aside
-            class="fixed inset-x-4 bottom-4 z-[90] mx-auto flex max-w-3xl flex-col gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 shadow-xl shadow-slate-950/15 sm:flex-row sm:items-center sm:justify-between sm:px-5"
+            class="fixed inset-x-4 bottom-4 z-[90] mx-auto flex max-w-3xl flex-col gap-3 rounded-2xl border border-brand-200 bg-brand-50 px-4 py-3 shadow-xl shadow-slate-950/15 sm:flex-row sm:items-center sm:justify-between sm:px-5"
             role="status"
             aria-live="polite"
             data-journal-overdue-banner
             @unless($isSnoozed) hidden @endunless
         >
             <div class="flex items-center gap-3">
-                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-base font-black text-white" aria-hidden="true">!</span>
-                <p class="text-sm font-semibold leading-5 text-amber-950">
+                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-neon text-base font-black text-neon-ink" aria-hidden="true">!</span>
+                <p class="text-sm font-semibold leading-5 text-school-800">
                     <span class="font-black">{{ $journalOverdueReminder['count'] }} jurnal masih kosong.</span>
                     Ingatkan lagi pukul <span class="font-black" data-journal-overdue-next-time>{{ $journalOverdueReminder['snoozed_until_label'] ?? '—' }}</span> WIB.
                 </p>
             </div>
             <button
                 type="button"
-                class="inline-flex shrink-0 items-center justify-center rounded-xl border border-amber-300 bg-white px-4 py-2 text-sm font-black text-amber-900 transition-colors hover:bg-amber-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600"
+                class="inline-flex shrink-0 items-center justify-center rounded-xl border border-brand-300 bg-white px-4 py-2 text-sm font-black text-school-800 transition-colors hover:bg-brand-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neon"
                 data-journal-overdue-open
             >
                 Buka daftar jurnal
