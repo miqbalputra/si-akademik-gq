@@ -2,103 +2,128 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ClassroomTerm;
 use App\Models\HomeroomAssignment;
+use App\Models\PanelNotification;
+use App\Models\ScoreChangeLog;
 use App\Models\TasmiRecord;
+use App\Models\Teacher;
+use App\Services\TasmiReportDownloadService;
+use App\Services\TasmiReportService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class WaliKelasTasmiController extends Controller
 {
+    public function __construct(
+        private readonly TasmiReportService $reportService,
+        private readonly TasmiReportDownloadService $downloadService,
+    ) {}
+
     /**
      * Tampilkan data tasmi' untuk santri di kelas yang diwalikan guru ini.
      * Read-only — wali kelas hanya melihat, tidak bisa input/edit.
      */
     public function index(Request $request): View
     {
-        $user = $request->user();
-        $teacher = $user->teacher;
-        abort_unless($teacher, 403, 'Akses ditolak. Akun Anda tidak terhubung dengan data Guru.');
+        $teacher = $this->waliTeacher($request);
+        $filters = $this->validatedReportFilters($request);
+        $baseQuery = $this->reportService->forHomeroom($teacher);
+        $options = $this->reportService->options($baseQuery);
+        $report = $this->reportService->paginate($this->reportService->applyFilters($baseQuery, $filters));
 
-        // Classroom terms yang diwalikan guru ini (aktif atau yang masih dalam rentang tanggal).
-        $homeroomClassroomTerms = ClassroomTerm::query()
-            ->with(['classroom', 'academicTerm.academicYear'])
-            ->whereHas('homeroomAssignments', function ($q) use ($teacher) {
-                $q->where('teacher_id', $teacher->id)
-                    ->where(function ($q) {
-                        $q->whereNull('starts_at')->orWhere('starts_at', '<=', now()->toDateString());
-                    })
-                    ->where(function ($q) {
-                        $q->whereNull('ends_at')->orWhere('ends_at', '>=', now()->toDateString());
-                    });
-            })
-            ->get();
-
-        $classroomTermIds = $homeroomClassroomTerms->pluck('id');
-
-        $query = TasmiRecord::query()
-            ->with(['student', 'classroomTerm.classroom', 'examinerTeacher', 'academicTerm'])
-            ->whereIn('classroom_term_id', $classroomTermIds);
-
-        if ($search = $request->query('search')) {
-            $query->whereHas('student', function ($q) use ($search) {
-                $q->where('name', 'ilike', "%{$search}%")
-                    ->orWhere('nis', 'ilike', "%{$search}%");
-            });
-        }
-        if ($examType = $request->query('exam_type')) {
-            $query->where('exam_type', $examType);
-        }
-        if ($predicate = $request->query('predicate')) {
-            $query->where('predicate', $predicate);
-        }
-        if ($dateFrom = $request->query('date_from')) {
-            $query->where('exam_date', '>=', $dateFrom);
-        }
-        if ($dateUntil = $request->query('date_until')) {
-            $query->where('exam_date', '<=', $dateUntil);
-        }
-        if ($classroomTermId = $request->query('classroom_term_id')) {
-            $query->where('classroom_term_id', $classroomTermId);
-        }
-
-        $records = $query->latest('exam_date')->latest('id')->paginate(20)->withQueryString();
-
-        return view('guru.tasmi.wali-view', [
-            'teacher' => $teacher,
-            'records' => $records,
-            'homeroomClassroomTerms' => $homeroomClassroomTerms,
-            'examTypeOptions' => TasmiRecord::examTypeOptions(),
-            'predicateOptions' => TasmiRecord::predicateOptions(),
-            'filters' => $request->only(['search', 'exam_type', 'predicate', 'date_from', 'date_until', 'classroom_term_id']),
+        return view('guru.tasmi.report', [
+            'report' => $report,
+            'options' => $options,
+            'filters' => $filters,
+            'scope' => 'homeroom',
+            'pageTitle' => "Hasil Tasmi' Kelas Saya",
+            'pageDescription' => 'Hasil Tasmi\' santri pada kelas yang Anda ampuh pada tanggal ujian.',
+            'backUrl' => route('guru.dashboard'),
+            'backLabel' => 'Dashboard Guru',
+            'exportRoute' => 'guru.tasmi-wali.export',
+            'resetRoute' => 'guru.tasmi-wali.index',
+            'canEdit' => false,
         ]);
     }
 
     public function show(Request $request, TasmiRecord $tasmi_record): View
     {
-        $user = $request->user();
-        $teacher = $user->teacher;
-        abort_unless($teacher, 403);
+        $teacher = $this->waliTeacher($request);
+        $record = $this->reportService->forHomeroom($teacher)
+            ->whereKey($tasmi_record->id)
+            ->firstOrFail();
 
-        // Wali kelas hanya boleh lihat record santri yang ada di kelas yang diwalinya.
-        $isHomeroomOfThisClass = HomeroomAssignment::query()
-            ->where('teacher_id', $teacher->id)
-            ->where('classroom_term_id', $tasmi_record->classroom_term_id)
-            ->where(function ($q) {
-                $q->whereNull('starts_at')->orWhere('starts_at', '<=', $tasmi_record->exam_date?->toDateString());
-            })
-            ->where(function ($q) use ($tasmi_record) {
-                $q->whereNull('ends_at')->orWhere('ends_at', '>=', $tasmi_record->exam_date?->toDateString());
-            })
-            ->exists();
+        PanelNotification::query()
+            ->where('user_id', $request->user()->id)
+            ->whereIn('notification_type', ['tasmi_created', 'tasmi_updated'])
+            ->where('link_url', route('guru.tasmi-wali.show', $record))
+            ->where('status', 'unread')
+            ->update([
+                'status' => 'read',
+                'read_at' => now(),
+            ]);
 
-        $isAdmin = $user->hasRole('admin');
-        abort_unless($isHomeroomOfThisClass || $isAdmin, 403, 'Anda hanya bisa melihat data tasmi\' santri dari kelas yang Anda wali.');
-
-        $tasmi_record->load(['student', 'classroomTerm.classroom', 'examinerTeacher', 'academicTerm.academicYear', 'inputBy']);
-
-        return view('guru.tasmi.show', [
-            'record' => $tasmi_record,
+        return view('guru.tasmi.detail', [
+            'record' => $record,
+            'auditLogs' => $this->auditLogs($record),
+            'backUrl' => route('guru.tasmi-wali.index'),
+            'backLabel' => "Hasil Tasmi' Kelas Saya",
+            'portalLabel' => 'Portal Guru',
+            'breadcrumb' => "Detail Hasil Tasmi'",
+            'readOnly' => true,
         ]);
+    }
+
+    public function export(Request $request, string $format)
+    {
+        $teacher = $this->waliTeacher($request);
+        $filters = $this->validatedReportFilters($request);
+        $baseQuery = $this->reportService->forHomeroom($teacher);
+        $options = $this->reportService->options($baseQuery);
+        $report = $this->reportService->exportReport(
+            $this->reportService->applyFilters($baseQuery, $filters),
+            $filters,
+            $options,
+        );
+        $report['filter_labels']['Wali Kelas'] = $teacher->name;
+
+        return $this->downloadService->download($report, $format, "Laporan Tasmi' Kelas - {$teacher->name}", 'homeroom');
+    }
+
+    private function waliTeacher(Request $request): Teacher
+    {
+        $user = $request->user();
+        $teacher = $user?->teacher;
+        abort_unless($user?->hasRole('guru') && $teacher, 403, 'Akun Anda belum terhubung dengan data Guru.');
+        abort_unless(HomeroomAssignment::query()->where('teacher_id', $teacher->id)->exists(), 403, 'Anda tidak memiliki penugasan wali kelas.');
+
+        return $teacher;
+    }
+
+    /** @return array<string, mixed> */
+    private function validatedReportFilters(Request $request): array
+    {
+        return $request->validate([
+            'academic_term_id' => ['nullable', 'integer', 'exists:academic_terms,id'],
+            'classroom_term_id' => ['nullable', 'integer', 'exists:classroom_terms,id'],
+            'student_id' => ['nullable', 'integer', 'exists:students,id'],
+            'exam_type' => ['nullable', Rule::in(array_keys(TasmiRecord::examTypeOptions()))],
+            'juz' => ['nullable', 'integer', 'min:1', 'max:30'],
+            'predicate' => ['nullable', Rule::in(array_keys(TasmiRecord::predicateOptions()))],
+            'date_from' => ['nullable', 'date'],
+            'date_until' => ['nullable', 'date', 'after_or_equal:date_from'],
+            'search' => ['nullable', 'string', 'max:120'],
+        ]);
+    }
+
+    private function auditLogs(TasmiRecord $record)
+    {
+        return ScoreChangeLog::query()
+            ->with('changer')
+            ->where('score_table', $record->getTable())
+            ->where('score_id', $record->id)
+            ->latest('changed_at')
+            ->get();
     }
 }

@@ -28,6 +28,7 @@ use App\Observers\TasmiExaminerAssignmentObserver;
 use App\Observers\TasmiRecordObserver;
 use App\Services\GuruJournalReminderPreferenceService;
 use App\Services\GuruPerformaService;
+use App\Services\TasmiWaliReminderPreferenceService;
 use Filament\Forms\Components\Field;
 use Filament\Tables\Columns\Column;
 use Illuminate\Support\Facades\View;
@@ -100,6 +101,19 @@ class AppServiceProvider extends ServiceProvider
                 : null;
 
             $view->with('journalOverdueReminder', $reminder);
+        });
+
+        View::composer('components.layouts.portal', function (BladeView $view): void {
+            $user = auth()->user();
+            $isGuruDashboard = request()->routeIs('guru.dashboard');
+
+            if (! $isGuruDashboard || ! $user?->hasRole('guru') || ! $user->teacher) {
+                $view->with('tasmiWaliReminder', null);
+
+                return;
+            }
+
+            $view->with('tasmiWaliReminder', app(TasmiWaliReminderPreferenceService::class)->reminderFor($user));
         });
 
         Field::configureUsing(function (Field $field): void {

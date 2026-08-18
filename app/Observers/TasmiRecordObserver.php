@@ -110,6 +110,7 @@ class TasmiRecordObserver
                 'tasmi_created',
                 route('guru.tasmi-wali.show', $record),
                 'success',
+                $record->exam_date?->toDateString(),
             );
         }
 
@@ -131,7 +132,7 @@ class TasmiRecordObserver
             'Input tasmi\' baru',
             $body,
             'tasmi_created',
-            route('guru.tasmi-wali.show', $record),
+            route('admin.tasmi-report.show', $record),
             'info',
         );
     }
@@ -170,6 +171,7 @@ class TasmiRecordObserver
                 'tasmi_updated',
                 route('guru.tasmi-wali.show', $record),
                 'info',
+                $record->exam_date?->toDateString(),
             );
         }
 
@@ -178,7 +180,7 @@ class TasmiRecordObserver
             'Tasmi\' diperbarui',
             $body,
             'tasmi_updated',
-            route('guru.tasmi-wali.show', $record),
+            route('admin.tasmi-report.show', $record),
             'info',
         );
     }
@@ -200,6 +202,7 @@ class TasmiRecordObserver
                 'tasmi_deleted',
                 route('guru.tasmi-wali.index'),
                 'warning',
+                $record->exam_date?->toDateString(),
             );
         }
 
@@ -208,7 +211,7 @@ class TasmiRecordObserver
             'Tasmi\' dihapus',
             $body,
             'tasmi_deleted',
-            route('guru.tasmi-wali.index'),
+            route('admin.tasmi-report.index'),
             'warning',
         );
     }

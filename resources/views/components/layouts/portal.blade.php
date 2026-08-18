@@ -20,7 +20,7 @@
         ]]);
     }
     if ($isTasmiExaminer) {
-        $guruTodayItems[] = ['label' => 'Tasmi\'', 'href' => route('guru.tasmi.index'), 'match' => ['guru.tasmi.index', 'guru.tasmi.create', 'guru.tasmi.store', 'guru.tasmi.records', 'guru.tasmi.edit', 'guru.tasmi.update', 'guru.tasmi.destroy']];
+        $guruTodayItems[] = ['label' => 'Tasmi\'', 'href' => route('guru.tasmi.index'), 'match' => ['guru.tasmi.*']];
     }
     $guruClassItems = [
         ['label' => 'Input Nilai', 'href' => route('guru.diniyyah-scores.index'), 'match' => ['guru.diniyyah-scores.*']],
@@ -46,6 +46,9 @@
         ['label' => 'Dashboard Admin', 'href' => url('/admin'), 'match' => ['filament.admin.pages.dashboard']],
         ['label' => 'Monitoring Diniyyah', 'href' => route('diniyyah.monitoring.index'), 'match' => ['diniyyah.monitoring.*']],
     ];
+    if (auth()->user()?->hasAnyRole(['admin', 'kabag_tahfidz'])) {
+        $managementTodayItems[] = ['label' => 'Laporan Tasmi\'', 'href' => route('admin.tasmi-report.index'), 'match' => ['admin.tasmi-report.*']];
+    }
     $managementArchiveItems = [
         isset($snapshot)
             ? ['label' => 'Leger / Rapor', 'href' => route('diniyyah.ledger.show', $snapshot), 'match' => ['diniyyah.ledger.*']]
@@ -152,6 +155,7 @@
     <footer class="school-footer">&copy; {{ date('Y') }} RUANG GQ · GRIYA QUR'AN TUNAS ILMU</footer>
     @if($isGuruPortal)
         <x-journal-overdue-reminder :journal-overdue-reminder="$journalOverdueReminder ?? null" />
+        <x-tasmi-wali-reminder :tasmi-wali-reminder="$tasmiWaliReminder ?? null" />
     @endif
     @stack('scripts')
 </body>

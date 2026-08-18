@@ -7,10 +7,10 @@
         .badge-amber { background: #fef3c7; color: #92400e; }
         .form-label { display:block; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:#475569; margin-bottom:6px; }
         .form-input { width:100%; border:1.5px solid #e2e8f0; border-radius:10px; padding:10px 13px; font-size:14px; font-weight:500; color:#1e293b; background:#f8fafc; outline:none; transition: border-color .2s, background .2s; font-family:'Outfit',sans-serif; }
-        .form-input:focus { border-color:#a855f7; background:#fff; box-shadow: 0 0 0 3px rgba(168,85,247,.12); }
+        .form-input:focus { border-color:#17663a; background:#fff; box-shadow: 0 0 0 3px rgba(0,223,102,.18); }
         .btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; font-weight:700; font-size:13px; border-radius:10px; padding:9px 18px; transition: all .2s; cursor:pointer; border:none; text-decoration:none; white-space:nowrap; }
-        .btn-primary { background:#6b21a8; color:#fff; }
-        .btn-primary:hover { background:#581c87; transform: translateY(-1px); }
+        .btn-primary { background:#00df66; color:#063d23; }
+        .btn-primary:hover { background:#29fa79; transform: translateY(-1px); }
         .btn-outline { background:transparent; border:1.5px solid #e2e8f0; color:#475569; }
         .btn-outline:hover { background:#f8fafc; }
         .btn-danger { background:transparent; border:1.5px solid #fecaca; color:#991b1b; }
@@ -18,12 +18,12 @@
         .predicate-maqbul { background: #f1f5f9; color: #475569; }
         .predicate-jayyid { background: #dbeafe; color: #1e40af; }
         .predicate-jayyid_jiddan { background: #dcfce7; color: #166534; }
-        .predicate-mumtaz { background: #f3e8ff; color: #6b21a8; }
+        .predicate-mumtaz { background: #eaffef; color: #17663a; }
     </style>
     @endpush
 
     <header class="fade-up" style="margin-bottom:24px;">
-        <a href="{{ route('guru.tasmi.records') }}" style="font-size:12px;font-weight:700;color:#6b21a8;display:inline-flex;align-items:center;gap:4px;margin-bottom:10px;text-decoration:none;">
+        <a href="{{ route('guru.tasmi.records') }}" style="font-size:12px;font-weight:700;color:#17663a;display:inline-flex;align-items:center;gap:4px;margin-bottom:10px;text-decoration:none;">
             <svg style="width:14px;height:14px;" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" /></svg>
             Riwayat Tasmi'
         </a>
@@ -145,15 +145,16 @@
             </button>
             <a href="{{ route('guru.tasmi.records') }}" class="btn btn-outline">Batal</a>
 
-            <form method="POST" action="{{ route('guru.tasmi.destroy', $record) }}" style="margin-left:auto;" onsubmit="return confirm('Hapus record tasmi\' ini? Tindakan ini tercatat di audit log (soft delete).');">
-                @csrf
-                @method('DELETE')
-                <button type="submit" class="btn btn-danger">
-                    <svg style="width:14px;height:14px;" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .342c.361.027.722.062 1.082.097m-1.082-.097L5.34 5.79a2.25 2.25 0 0 1 2.15-1.967L16.5 3.75a2.25 2.25 0 0 1 2.15 1.967L20.228 5.79" /></svg>
-                    Hapus
-                </button>
-            </form>
+            <button type="submit" form="tasmi-delete-form" class="btn btn-danger" style="margin-left:auto;" onclick="return confirm('Hapus record tasmi\' ini? Tindakan ini tercatat di audit log (soft delete).');">
+                <svg style="width:14px;height:14px;" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .342c.361.027.722.062 1.082.097m-1.082-.097L5.34 5.79a2.25 2.25 0 0 1 2.15-1.967L16.5 3.75a2.25 2.25 0 0 1 2.15 1.967L20.228 5.79" /></svg>
+                Hapus
+            </button>
         </div>
+    </form>
+
+    <form id="tasmi-delete-form" method="POST" action="{{ route('guru.tasmi.destroy', $record) }}" class="hidden">
+        @csrf
+        @method('DELETE')
     </form>
 
     @push('scripts')

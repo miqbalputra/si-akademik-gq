@@ -23,9 +23,9 @@ class TasmiRecordResource extends Resource
     protected const NAVIGATION_GROUP = 'Tahfidz';
     protected const NAVIGATION_LABEL = 'Laporan Tasmi\'';
     protected const NAVIGATION_SORT = 45;
-    // Admin & kabag_tahfidz bisa kelola (edit semua). Kepala sekolah read-only.
+    // Kabag Tahfidz memantau melalui laporan read-only; CRUD tetap admin-only.
     protected const VIEW_ROLES = ['admin', 'kabag_tahfidz', 'kepala_sekolah'];
-    protected const MANAGE_ROLES = ['admin', 'kabag_tahfidz'];
+    protected const MANAGE_ROLES = ['admin'];
 
     protected static ?string $model = TasmiRecord::class;
 

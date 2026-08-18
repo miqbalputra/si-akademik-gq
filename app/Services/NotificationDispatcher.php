@@ -189,8 +189,9 @@ class NotificationDispatcher
         string $type,
         string $linkUrl,
         string $severity = 'info',
+        ?string $onDate = null,
     ): int {
-        $today = now()->toDateString();
+        $today = $onDate ?: now()->toDateString();
         $teacherUserIds = HomeroomAssignment::query()
             ->where('classroom_term_id', $classroomTermId)
             ->where(function (Builder $q) use ($today) {

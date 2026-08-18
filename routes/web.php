@@ -100,13 +100,30 @@ Route::middleware('auth')->prefix('guru')->name('guru.')->group(function () {
     Route::get('/tasmi/create', [\App\Http\Controllers\GuruTasmiController::class, 'create'])->name('tasmi.create');
     Route::post('/tasmi', [\App\Http\Controllers\GuruTasmiController::class, 'store'])->name('tasmi.store');
     Route::get('/tasmi/records', [\App\Http\Controllers\GuruTasmiController::class, 'records'])->name('tasmi.records');
+    Route::get('/tasmi/records/export/{format}', [\App\Http\Controllers\GuruTasmiController::class, 'export'])
+        ->whereIn('format', ['xlsx', 'pdf'])
+        ->name('tasmi.export');
     Route::get('/tasmi/{tasmi_record}/edit', [\App\Http\Controllers\GuruTasmiController::class, 'edit'])->name('tasmi.edit');
     Route::put('/tasmi/{tasmi_record}', [\App\Http\Controllers\GuruTasmiController::class, 'update'])->name('tasmi.update');
     Route::delete('/tasmi/{tasmi_record}', [\App\Http\Controllers\GuruTasmiController::class, 'destroy'])->name('tasmi.destroy');
 
     // Menu "Tasmi' Kelas Saya" — wali kelas (homeroom teacher) lihat data tasmi' santri di kelasnya (read-only).
     Route::get('/tasmi-wali', [\App\Http\Controllers\WaliKelasTasmiController::class, 'index'])->name('tasmi-wali.index');
+    Route::get('/tasmi-wali/export/{format}', [\App\Http\Controllers\WaliKelasTasmiController::class, 'export'])
+        ->whereIn('format', ['xlsx', 'pdf'])
+        ->name('tasmi-wali.export');
+    Route::post('/tasmi-wali/reminder/dismiss', [\App\Http\Controllers\WaliKelasTasmiReminderController::class, 'dismiss'])
+        ->name('tasmi-wali.reminder.dismiss');
     Route::get('/tasmi-wali/{tasmi_record}', [\App\Http\Controllers\WaliKelasTasmiController::class, 'show'])->name('tasmi-wali.show');
+});
+
+// Laporan pengawasan Tasmi' lintas PJ untuk Kabag Tahfidz dan admin.
+Route::middleware('auth')->prefix('admin/tasmi-report')->name('admin.tasmi-report.')->group(function () {
+    Route::get('/', [\App\Http\Controllers\ManagementTasmiReportController::class, 'index'])->name('index');
+    Route::get('/export/{format}', [\App\Http\Controllers\ManagementTasmiReportController::class, 'export'])
+        ->whereIn('format', ['xlsx', 'pdf'])
+        ->name('export');
+    Route::get('/{tasmi_record}', [\App\Http\Controllers\ManagementTasmiReportController::class, 'show'])->name('show');
 });
 
 Route::middleware('auth')->prefix('attendance')->name('attendance.')->group(function () {

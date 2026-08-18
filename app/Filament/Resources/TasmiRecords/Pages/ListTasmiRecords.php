@@ -12,8 +12,6 @@ class ListTasmiRecords extends ListRecords
 
     protected function getHeaderActions(): array
     {
-        return [
-            CreateAction::make(),
-        ];
+        return TasmiRecordResource::canCreate() ? [CreateAction::make()] : [];
     }
 }

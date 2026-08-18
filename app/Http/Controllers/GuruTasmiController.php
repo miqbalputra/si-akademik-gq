@@ -5,7 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\ClassEnrollment;
 use App\Models\ClassroomTerm;
 use App\Models\Student;
+use App\Models\TasmiExaminerAssignment;
 use App\Models\TasmiRecord;
+use App\Models\Teacher;
+use App\Services\TasmiReportDownloadService;
+use App\Services\TasmiReportService;
 use App\Services\TasmiService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -15,7 +19,11 @@ use Illuminate\Validation\Rule;
 
 class GuruTasmiController extends Controller
 {
-    public function __construct(private readonly TasmiService $tasmiService) {}
+    public function __construct(
+        private readonly TasmiService $tasmiService,
+        private readonly TasmiReportService $reportService,
+        private readonly TasmiReportDownloadService $downloadService,
+    ) {}
 
     public function index(Request $request): View
     {
@@ -153,44 +161,41 @@ class GuruTasmiController extends Controller
 
     public function records(Request $request): View
     {
-        $user = $request->user();
-        $teacher = $user->teacher;
-        abort_unless($teacher, 403);
-        abort_unless($user->isTasmiExaminer(), 403, 'Anda tidak ditugaskan sebagai PJ Tasmi\'.');
+        $teacher = $this->reporterTeacher($request);
+        $filters = $this->validatedReportFilters($request);
+        $baseQuery = $this->reportService->forExaminer($teacher);
+        $options = $this->reportService->options($baseQuery);
+        $report = $this->reportService->paginate($this->reportService->applyFilters($baseQuery, $filters));
 
-        $assignment = $this->tasmiService->activeExaminerAssignment($teacher);
-
-        $query = TasmiRecord::query()
-            ->with(['student', 'classroomTerm.classroom', 'examinerTeacher'])
-            ->where('examiner_teacher_id', $teacher->id)
-            ->when($assignment, fn ($q) => $q->where('academic_term_id', $assignment->academic_term_id));
-
-        // Filter sederhana.
-        if ($search = $request->query('search')) {
-            $query->whereHas('student', fn ($q) => $q->where('name', 'ilike', "%{$search}%")->orWhere('nis', 'ilike', "%{$search}%"));
-        }
-        if ($examType = $request->query('exam_type')) {
-            $query->where('exam_type', $examType);
-        }
-        if ($predicate = $request->query('predicate')) {
-            $query->where('predicate', $predicate);
-        }
-        if ($dateFrom = $request->query('date_from')) {
-            $query->where('exam_date', '>=', $dateFrom);
-        }
-        if ($dateUntil = $request->query('date_until')) {
-            $query->where('exam_date', '<=', $dateUntil);
-        }
-
-        $records = $query->latest('exam_date')->latest('id')->paginate(20)->withQueryString();
-
-        return view('guru.tasmi.records', [
-            'teacher' => $teacher,
-            'records' => $records,
-            'examTypeOptions' => TasmiRecord::examTypeOptions(),
-            'predicateOptions' => TasmiRecord::predicateOptions(),
-            'filters' => $request->only(['search', 'exam_type', 'predicate', 'date_from', 'date_until']),
+        return view('guru.tasmi.report', [
+            'report' => $report,
+            'options' => $options,
+            'filters' => $filters,
+            'scope' => 'examiner',
+            'pageTitle' => "Riwayat & Laporan Tasmi' Saya",
+            'pageDescription' => 'Seluruh riwayat hasil Tasmi\' yang Anda input, dari semua semester.',
+            'backUrl' => route('guru.tasmi.index'),
+            'backLabel' => "Dashboard Tasmi'",
+            'exportRoute' => 'guru.tasmi.export',
+            'resetRoute' => 'guru.tasmi.records',
+            'canEdit' => true,
         ]);
+    }
+
+    public function export(Request $request, string $format)
+    {
+        $teacher = $this->reporterTeacher($request);
+        $filters = $this->validatedReportFilters($request);
+        $baseQuery = $this->reportService->forExaminer($teacher);
+        $options = $this->reportService->options($baseQuery);
+        $report = $this->reportService->exportReport(
+            $this->reportService->applyFilters($baseQuery, $filters),
+            $filters,
+            $options,
+        );
+        $report['filter_labels']['PJ Tasmi\''] = $teacher->name;
+
+        return $this->downloadService->download($report, $format, "Laporan Tasmi' - {$teacher->name}", 'examiner');
     }
 
     public function edit(Request $request, TasmiRecord $tasmi_record): View
@@ -201,8 +206,7 @@ class GuruTasmiController extends Controller
         abort_unless($user->isTasmiExaminer(), 403);
 
         $isOwner = $tasmi_record->examiner_teacher_id === $teacher->id;
-        $isAdminOrKabag = $user->hasAnyRole(['admin', 'kabag_tahfidz']);
-        abort_unless($isOwner || $isAdminOrKabag, 403, 'Anda hanya bisa mengedit record tasmi\' yang Anda input sendiri.');
+        abort_unless($isOwner, 403, 'Anda hanya bisa mengedit record tasmi\' yang Anda input sendiri.');
 
         $tasmi_record->load(['student', 'classroomTerm.classroom', 'academicTerm']);
 
@@ -221,8 +225,7 @@ class GuruTasmiController extends Controller
         abort_unless($user->isTasmiExaminer(), 403);
 
         $isOwner = $tasmi_record->examiner_teacher_id === $teacher->id;
-        $isAdminOrKabag = $user->hasAnyRole(['admin', 'kabag_tahfidz']);
-        abort_unless($isOwner || $isAdminOrKabag, 403, 'Anda hanya bisa mengedit record tasmi\' yang Anda input sendiri.');
+        abort_unless($isOwner, 403, 'Anda hanya bisa mengedit record tasmi\' yang Anda input sendiri.');
 
         $validated = $this->validateUpdate($request, $tasmi_record);
         $this->assertValidJuzRange($validated);
@@ -252,8 +255,7 @@ class GuruTasmiController extends Controller
         abort_unless($user->isTasmiExaminer(), 403);
 
         $isOwner = $tasmi_record->examiner_teacher_id === $teacher->id;
-        $isAdminOrKabag = $user->hasAnyRole(['admin', 'kabag_tahfidz']);
-        abort_unless($isOwner || $isAdminOrKabag, 403, 'Anda hanya bisa menghapus record tasmi\' yang Anda input sendiri.');
+        abort_unless($isOwner, 403, 'Anda hanya bisa menghapus record tasmi\' yang Anda input sendiri.');
 
         $tasmi_record->delete();
 
@@ -321,5 +323,34 @@ class GuruTasmiController extends Controller
     {
         // PostgreSQL unique violation (23505) atau SQLite integrity violation.
         return $e->getCode() === '23505' || str_contains((string) $e->getMessage(), 'Unique violation') || str_contains((string) $e->getMessage(), 'UNIQUE constraint failed');
+    }
+
+    private function reporterTeacher(Request $request): Teacher
+    {
+        $user = $request->user();
+        $teacher = $user?->teacher;
+        abort_unless($user?->hasRole('guru') && $teacher, 403, 'Akun Anda belum terhubung dengan data Guru.');
+
+        $hasTasmiHistory = TasmiRecord::query()->where('examiner_teacher_id', $teacher->id)->exists()
+            || TasmiExaminerAssignment::query()->where('teacher_id', $teacher->id)->exists();
+        abort_unless($hasTasmiHistory, 403, 'Anda tidak memiliki riwayat penugasan PJ Tasmi\'.');
+
+        return $teacher;
+    }
+
+    /** @return array<string, mixed> */
+    private function validatedReportFilters(Request $request): array
+    {
+        return $request->validate([
+            'academic_term_id' => ['nullable', 'integer', 'exists:academic_terms,id'],
+            'classroom_term_id' => ['nullable', 'integer', 'exists:classroom_terms,id'],
+            'student_id' => ['nullable', 'integer', 'exists:students,id'],
+            'exam_type' => ['nullable', Rule::in(array_keys(TasmiRecord::examTypeOptions()))],
+            'juz' => ['nullable', 'integer', 'min:1', 'max:30'],
+            'predicate' => ['nullable', Rule::in(array_keys(TasmiRecord::predicateOptions()))],
+            'date_from' => ['nullable', 'date'],
+            'date_until' => ['nullable', 'date', 'after_or_equal:date_from'],
+            'search' => ['nullable', 'string', 'max:120'],
+        ]);
     }
 }

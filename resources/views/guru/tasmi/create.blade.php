@@ -6,11 +6,11 @@
         .badge-amber { background: #fef3c7; color: #92400e; }
         .form-label { display:block; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:#475569; margin-bottom:6px; }
         .form-input { width:100%; border:1.5px solid #e2e8f0; border-radius:10px; padding:10px 13px; font-size:14px; font-weight:500; color:#1e293b; background:#f8fafc; outline:none; transition: border-color .2s, background .2s; font-family:'Outfit',sans-serif; }
-        .form-input:focus { border-color:#a855f7; background:#fff; box-shadow: 0 0 0 3px rgba(168,85,247,.12); }
+        .form-input:focus { border-color:#17663a; background:#fff; box-shadow: 0 0 0 3px rgba(0,223,102,.18); }
         .form-hint { font-size:12px; color:#64748b; margin-top:4px; font-weight:500; }
         .btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; font-weight:700; font-size:13px; border-radius:10px; padding:9px 18px; transition: all .2s; cursor:pointer; border:none; text-decoration:none; white-space:nowrap; }
-        .btn-primary { background:#6b21a8; color:#fff; box-shadow: 0 2px 8px rgba(107,33,168,.25); }
-        .btn-primary:hover { background:#581c87; transform: translateY(-1px); }
+        .btn-primary { background:#00df66; color:#063d23; box-shadow: 0 2px 8px rgba(0,173,79,.22); }
+        .btn-primary:hover { background:#29fa79; transform: translateY(-1px); }
         .btn-outline { background:transparent; border:1.5px solid #e2e8f0; color:#475569; }
         .btn-outline:hover { background:#f8fafc; }
     </style>
@@ -18,7 +18,7 @@
 
     {{-- Header --}}
     <header class="fade-up" style="margin-bottom:24px;">
-        <a href="{{ route('guru.tasmi.index') }}" style="font-size:12px;font-weight:700;color:#6b21a8;display:inline-flex;align-items:center;gap:4px;margin-bottom:10px;text-decoration:none;">
+        <a href="{{ route('guru.tasmi.index') }}" style="font-size:12px;font-weight:700;color:#17663a;display:inline-flex;align-items:center;gap:4px;margin-bottom:10px;text-decoration:none;">
             <svg style="width:14px;height:14px;" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" /></svg>
             Kembali ke dashboard Tasmi'
         </a>
