@@ -45,8 +45,8 @@
         $grouped = collect($emptySlots)->groupBy('date');
     @endphp
 
-    {{-- 3 stat cards --}}
-    <div class="grid gap-4 sm:grid-cols-3 mb-6">
+    {{-- 4 stat cards --}}
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
         <div class="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5 shadow-sm">
             <p class="text-xs font-bold uppercase tracking-wider text-emerald-700">Sudah Diisi</p>
             <p class="mt-1 text-4xl font-black text-emerald-700">{{ $stats['sudah_diisi'] }}</p>
@@ -61,6 +61,11 @@
             <p class="text-xs font-bold uppercase tracking-wider text-indigo-700">Digantikan</p>
             <p class="mt-1 text-4xl font-black text-indigo-700">{{ $stats['digantikan'] }}</p>
             <p class="mt-1 text-xs font-semibold text-indigo-600">diisi guru pengganti</p>
+        </div>
+        <div class="rounded-2xl border border-amber-200 bg-amber-50/60 p-5 shadow-sm">
+            <p class="text-xs font-bold uppercase tracking-wider text-amber-700">Dibebaskan</p>
+            <p class="mt-1 text-4xl font-black text-amber-700">{{ $stats['dibebaskan'] ?? 0 }}</p>
+            <p class="mt-1 text-xs font-semibold text-amber-600">izin/sakit dari presensi</p>
         </div>
     </div>
 

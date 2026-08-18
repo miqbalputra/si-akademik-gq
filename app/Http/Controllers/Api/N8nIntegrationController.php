@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\DiniyyahTeachingSchedule;
 use App\Models\DiniyyahClassJournal;
+use App\Services\AttendanceStatusClient;
 use Carbon\Carbon;
 
 class N8nIntegrationController extends Controller
@@ -51,6 +52,17 @@ class N8nIntegrationController extends Controller
             })
             ->get();
 
+        $attendanceClient = app(AttendanceStatusClient::class);
+        $attendanceStatuses = $attendanceClient->statusesForTeachers(
+            $schedules
+                ->map(fn ($schedule) => $schedule->teacherAssignment?->teacher)
+                ->filter()
+                ->unique('id')
+                ->values(),
+            Carbon::parse($currentDate, 'Asia/Jakarta')->startOfDay(),
+            Carbon::parse($currentDate, 'Asia/Jakarta')->endOfDay(),
+        );
+
         $missingJournals = [];
 
         foreach ($schedules as $schedule) {
@@ -64,6 +76,12 @@ class N8nIntegrationController extends Controller
                 ->exists();
 
             if (!$journalExists && $assignment->teacher) {
+                $teacherAttendance = $attendanceStatuses[(string) $assignment->teacher->id] ?? null;
+                if (($teacherAttendance['available'] ?? false)
+                    && $attendanceClient->isExempt($teacherAttendance['statuses'][$currentDate] ?? null)) {
+                    continue;
+                }
+
                 $missingJournals[] = [
                     'teacher_name' => $assignment->teacher->name,
                     'whatsapp' => $assignment->teacher->whatsapp ?? $assignment->teacher->phone ?? '',

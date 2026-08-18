@@ -43,6 +43,7 @@ class GuruPerformaXlsxExporter
             ['Sudah diisi', $stats['sudah_diisi'] ?? 0],
             ['Kosong', $stats['kosong'] ?? 0],
             ['Digantikan', $stats['digantikan'] ?? 0],
+            ['Dibebaskan (izin/sakit)', $stats['dibebaskan'] ?? 0],
             ['Total slot tercatat', $stats['total'] ?? 0],
             ['Total data jurnal', $stats['total_jurnal'] ?? 0],
         ];

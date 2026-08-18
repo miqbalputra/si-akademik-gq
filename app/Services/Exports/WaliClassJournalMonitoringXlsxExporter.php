@@ -26,6 +26,8 @@ class WaliClassJournalMonitoringXlsxExporter
                     'TERISI' => 'Terisi',
                     'TERISI_TIDAK_TERJADWAL' => 'Terisi (Ekstra)',
                     'LIBUR' => 'Libur',
+                    'IZIN' => 'IZIN - Dibebaskan',
+                    'SAKIT' => 'SAKIT - Dibebaskan',
                     default => 'Kosong',
                 };
                 $time = collect([$row['session_time']['starts_at'] ?? null, $row['session_time']['ends_at'] ?? null])
@@ -34,6 +36,8 @@ class WaliClassJournalMonitoringXlsxExporter
                 if ($journal) {
                     $absences = $journal->absences->map(fn ($absence) => ($absence->classEnrollment->student->name ?? '-') .' ('. $absence->status .')')->implode(', ');
                     $material = 'Materi: '.($journal->material ?: '-')."\nAbsensi: ".($absences ?: 'Hadir Semua');
+                } elseif (in_array($row['status'], ['IZIN', 'SAKIT'], true)) {
+                    $material = 'Dibebaskan oleh presensi: '.strtolower($row['status']);
                 }
                 $sheet->fromArray([[
                     $row['date']->translatedFormat('l, d/m/Y').($row['is_holiday'] ? ' - '.$row['holiday_name'] : ''),

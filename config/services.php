@@ -53,4 +53,12 @@ return [
         'token' => env('N8N_API_TOKEN'),
     ],
 
+    'attendance_journal' => [
+        'enabled' => env('ATTENDANCE_JOURNAL_INTEGRATION_ENABLED', false),
+        'base_url' => env('ATTENDANCE_API_BASE_URL', 'https://geo.griyaquran.web.id'),
+        'api_key' => env('ATTENDANCE_API_KEY'),
+        'timeout' => (int) env('ATTENDANCE_API_TIMEOUT', 5),
+        'cache_seconds' => (int) env('ATTENDANCE_API_CACHE_SECONDS', 60),
+    ],
+
 ];

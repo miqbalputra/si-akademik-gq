@@ -7,10 +7,13 @@ use App\Models\DiniyyahClassJournal;
 use App\Models\HomeroomAssignment;
 use App\Models\ClassSession;
 use App\Support\SessionTimetable;
+use App\Services\AttendanceStatusClient;
 use Illuminate\Support\Facades\Auth;
 
 class WaliClassJournalMonitoringController extends Controller
 {
+    public function __construct(private readonly AttendanceStatusClient $attendanceStatusClient) {}
+
     public function index(Request $request)
     {
         $data = $this->getMonitoringData($request);
@@ -87,6 +90,16 @@ class WaliClassJournalMonitoringController extends Controller
             $query->whereIn('classroom_term_id', $classroomTermIds);
         })
         ->get();
+
+        $attendanceStatuses = $this->attendanceStatusClient->statusesForTeachers(
+            $schedules
+                ->map(fn ($schedule) => $schedule->teacherAssignment?->teacher)
+                ->filter()
+                ->unique('id')
+                ->values(),
+            $startDate,
+            $endDate,
+        );
         
         // Collect options for filter dropdowns
         $subjectOptions = collect();
@@ -186,10 +199,23 @@ class WaliClassJournalMonitoringController extends Controller
                         $matchedJournalIds[] = $journal->id;
                     }
 
+                    $teacherAttendance = $attendanceStatuses[(string) ($schedule->teacherAssignment?->teacher_id ?? '')] ?? null;
+                    $attendanceStatus = ($teacherAttendance['available'] ?? false)
+                        ? ($teacherAttendance['statuses'][$dateStr] ?? null)
+                        : null;
+                    $status = $journal
+                        ? 'TERISI'
+                        : ($holiday
+                            ? 'LIBUR'
+                            : ($this->attendanceStatusClient->isExempt($attendanceStatus)
+                                ? strtoupper((string) $attendanceStatus)
+                                : 'KOSONG'));
+
                     $dayData['items'][] = [
                         'schedule' => $schedule,
                         'journal' => $journal,
-                        'status' => $journal ? 'TERISI' : ($holiday ? 'LIBUR' : 'KOSONG'),
+                        'status' => $status,
+                        'attendance_status' => $attendanceStatus,
                         'session_time' => $this->resolveSessionTime($schedule, $dayOfWeek),
                     ];
                 }
@@ -285,6 +311,7 @@ class WaliClassJournalMonitoringController extends Controller
                         'teacher_name' => $assignment?->teacher?->name ?? '-',
                         'substitute_teacher_name' => $journal?->substituteTeacher?->name,
                         'status' => $item['status'],
+                        'attendance_status' => $item['attendance_status'] ?? null,
                         'journal' => $journal,
                         'schedule' => $item['schedule'],
                     ];
@@ -297,6 +324,9 @@ class WaliClassJournalMonitoringController extends Controller
             'total_slots' => $summaryRows->count(),
             'filled_slots' => $summaryRows->whereIn('status', ['TERISI', 'TERISI_TIDAK_TERJADWAL'])->count(),
             'empty_slots' => $summaryRows->where('status', 'KOSONG')->count(),
+            'excused_slots' => $summaryRows->whereIn('status', ['IZIN', 'SAKIT'])->count(),
+            'izin_slots' => $summaryRows->where('status', 'IZIN')->count(),
+            'sakit_slots' => $summaryRows->where('status', 'SAKIT')->count(),
             'holiday_slots' => $summaryRows->where('status', 'LIBUR')->count(),
             'empty_classrooms' => $summaryRows->where('status', 'KOSONG')->pluck('classroom_name')->filter()->unique()->values(),
             'empty_teachers' => $summaryRows->where('status', 'KOSONG')->pluck('teacher_name')->filter()->unique()->values(),

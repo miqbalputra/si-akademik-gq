@@ -18,6 +18,8 @@ use App\Models\Teacher;
 use App\Models\User;
 use App\Support\SessionTimetable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -118,6 +120,41 @@ class WaliMonitoringTableTest extends TestCase
             ->assertSee('Materi diisi guru pengganti')
             ->assertSee('jurnal belum diisi')
             ->assertSee('KOSONG');
+    }
+
+    public function test_monitoring_marks_teacher_absence_as_excused_instead_of_empty(): void
+    {
+        config([
+            'services.attendance_journal.enabled' => true,
+            'services.attendance_journal.base_url' => 'https://geo.example.test',
+            'services.attendance_journal.api_key' => str_repeat('k', 32),
+        ]);
+        Cache::flush();
+        $context = $this->makeContext();
+        $teacher = $context['assignment']->teacher()->firstOrFail();
+        $teacher->update(['niy' => 'WALI-001']);
+        Http::fake([
+            'https://geo.example.test/*' => Http::response([
+                'success' => true,
+                'data' => [[
+                    'id_guru' => 'WALI-001',
+                    'tanggal' => '2025-03-03',
+                    'status' => 'izin',
+                    'updated_at' => '2025-03-03T07:30:00+07:00',
+                ]],
+            ]),
+        ]);
+
+        $this->actingAs($context['waliUser'])
+            ->get(route('wali.diniyyah-journals.index', ['month' => 3, 'year' => 2025]))
+            ->assertOk()
+            ->assertSee('IZIN · Dibebaskan')
+            ->assertSee('Dibebaskan oleh presensi: izin.')
+            ->assertSee('Dibebaskan')
+            // The month still contains other scheduled Mondays; only the
+            // slots on the presensi-excused date must change status.
+            ->assertSee('Belum ada data jurnal untuk slot ini.')
+            ->assertSee('jurnal belum diisi');
     }
 
     private function makeContext(): array

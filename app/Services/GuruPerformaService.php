@@ -34,6 +34,8 @@ use Illuminate\Support\Collection;
  */
 class GuruPerformaService
 {
+    public function __construct(private readonly AttendanceStatusClient $attendanceStatusClient) {}
+
     /**
      * Hitung performa guru untuk bulan/tahun tertentu.
      *
@@ -42,7 +44,7 @@ class GuruPerformaService
      *   year: int,
      *   is_current_month: bool,
      *   month_label: string,
-     *   stats: array{sudah_diisi: int, kosong: int, digantikan: int, total: int, total_jurnal: int},
+     *   stats: array{sudah_diisi: int, kosong: int, digantikan: int, dibebaskan: int, total: int, total_jurnal: int},
      *   journal_rows: Collection<int, array<string, mixed>>,
      *   empty_slots: list<array<string, mixed>>,
      * }
@@ -79,7 +81,10 @@ class GuruPerformaService
                 'sudah_diisi' => $summary['sudah'],
                 'kosong' => $summary['kosong'],
                 'digantikan' => $summary['digantikan'],
-                'total' => $summary['sudah'] + $summary['kosong'] + $summary['digantikan'],
+                'dibebaskan' => $summary['dibebaskan'],
+                'dibebaskan_izin' => $summary['dibebaskan_izin'],
+                'dibebaskan_sakit' => $summary['dibebaskan_sakit'],
+                'total' => $summary['sudah'] + $summary['kosong'] + $summary['digantikan'] + $summary['dibebaskan'],
                 'total_jurnal' => $journalRows->count(),
             ],
             'journal_rows' => $journalRows,
@@ -100,6 +105,9 @@ class GuruPerformaService
      *   term_label: string,
      *   count: int,
      *   class_count: int,
+     *   dibebaskan: int,
+     *   dibebaskan_izin: int,
+     *   dibebaskan_sakit: int,
      *   empty_slots: list<array<string, mixed>>,
      * }|null
      */
@@ -132,6 +140,9 @@ class GuruPerformaService
                 'term_label' => $this->termLabel($term),
                 'count' => 0,
                 'class_count' => 0,
+                'dibebaskan' => 0,
+                'dibebaskan_izin' => 0,
+                'dibebaskan_sakit' => 0,
                 'empty_slots' => [],
             ];
         }
@@ -148,6 +159,9 @@ class GuruPerformaService
             'term_label' => $this->termLabel($term),
             'count' => $summary['kosong'],
             'class_count' => $classCount,
+            'dibebaskan' => $summary['dibebaskan'],
+            'dibebaskan_izin' => $summary['dibebaskan_izin'],
+            'dibebaskan_sakit' => $summary['dibebaskan_sakit'],
             'empty_slots' => $summary['empty_slots'],
         ];
     }
@@ -160,6 +174,9 @@ class GuruPerformaService
      *   sudah: int,
      *   kosong: int,
      *   digantikan: int,
+     *   dibebaskan: int,
+     *   dibebaskan_izin: int,
+     *   dibebaskan_sakit: int,
      *   journals: Collection<int, DiniyyahClassJournal>,
      *   empty_slots: list<array<string, mixed>>,
      * }
@@ -210,7 +227,11 @@ class GuruPerformaService
         $sudah = 0;
         $kosong = 0;
         $digantikan = 0;
+        $dibebaskan = 0;
+        $dibebaskanIzin = 0;
+        $dibebaskanSakit = 0;
         $emptySlots = [];
+        $attendance = $this->attendanceStatusClient->statusesForTeacher($teacher, $startDate, $endDate);
 
         $date = $startDate->copy();
         while ($date <= $endDate) {
@@ -246,6 +267,8 @@ class GuruPerformaService
             }
 
             $dayJournals = $journals->filter(fn ($j) => $j->date->format('Y-m-d') === $dateStr);
+            $absenceStatus = $attendance['available'] ? ($attendance['statuses'][$dateStr] ?? null) : null;
+            $isExcused = $this->attendanceStatusClient->isExempt($absenceStatus);
 
             $tafsirSched = $daySchedules->filter(fn ($s) => $this->isTafsir($s))->values();
             $regularSched = $daySchedules->reject(fn ($s) => $this->isTafsir($s))->values();
@@ -267,7 +290,10 @@ class GuruPerformaService
                         $digantikan += (int) $journal->jp_count;
                     }
                 } else {
-                    if ($isPast) {
+                    if ($isExcused) {
+                        $dibebaskan += 1;
+                        $absenceStatus === 'izin' ? $dibebaskanIzin++ : $dibebaskanSakit++;
+                    } elseif ($isPast) {
                         $kosong += 1;
                         $emptySlots[] = $this->buildEmptySlot($sched, $date, $dayOfWeek);
                     }
@@ -294,7 +320,10 @@ class GuruPerformaService
                         $digantikan += 1;
                     }
                 } else {
-                    if ($isPast) {
+                    if ($isExcused) {
+                        $dibebaskan += 1;
+                        $absenceStatus === 'izin' ? $dibebaskanIzin++ : $dibebaskanSakit++;
+                    } elseif ($isPast) {
                         $kosong += 1;
                         $emptySlots[] = $this->buildEmptyTafsirSlot($tafsirSched, $date, $dayOfWeek);
                     }
@@ -314,6 +343,9 @@ class GuruPerformaService
             'sudah' => $sudah,
             'kosong' => $kosong,
             'digantikan' => $digantikan,
+            'dibebaskan' => $dibebaskan,
+            'dibebaskan_izin' => $dibebaskanIzin,
+            'dibebaskan_sakit' => $dibebaskanSakit,
             'journals' => $journals,
             'empty_slots' => $emptySlots,
         ];
