@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\Teachers\Tables;
 
+use App\Models\Teacher;
+use App\Services\AttendanceIntegrationStatusService;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -21,6 +23,14 @@ class TeachersTable
                     ->searchable(),
                 TextColumn::make('name')->label('Nama')
                     ->searchable(),
+                TextColumn::make('niy')->label('NIY')
+                    ->searchable()
+                    ->placeholder('-'),
+                TextColumn::make('attendance_integration_status')
+                    ->label('GeoPresensi')
+                    ->state(fn (Teacher $record): string => app(AttendanceIntegrationStatusService::class)->badgeLabel($record))
+                    ->badge()
+                    ->color(fn (Teacher $record): string => app(AttendanceIntegrationStatusService::class)->badgeColor($record)),
                 TextColumn::make('gender')->label('Jenis Kelamin')
                     ->formatStateUsing(fn ($state): string => \App\Support\UiLabel::genderLabel($state))
                     ->searchable(),
