@@ -29,6 +29,7 @@ use App\Observers\TasmiRecordObserver;
 use App\Services\GuruJournalReminderPreferenceService;
 use App\Services\GuruPerformaService;
 use App\Services\TasmiWaliReminderPreferenceService;
+use Filament\Auth\Http\Responses\Contracts\LogoutResponse as LogoutResponseContract;
 use Filament\Forms\Components\Field;
 use Filament\Tables\Columns\Column;
 use Illuminate\Support\Facades\View;
@@ -42,7 +43,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(LogoutResponseContract::class, \App\Filament\Auth\LogoutResponse::class);
     }
 
     /**

@@ -69,6 +69,54 @@
         </div>
     </div>
 
+    @php
+        $chartRows = [
+            ['label' => 'Sudah Diisi', 'value' => (int) ($stats['sudah_diisi'] ?? 0), 'color' => '#149447', 'tone' => 'emerald'],
+            ['label' => 'Kosong', 'value' => (int) ($stats['kosong'] ?? 0), 'color' => '#e11d48', 'tone' => 'rose'],
+            ['label' => 'Digantikan', 'value' => (int) ($stats['digantikan'] ?? 0), 'color' => '#4f46e5', 'tone' => 'indigo'],
+            ['label' => 'Dibebaskan', 'value' => (int) ($stats['dibebaskan'] ?? 0), 'color' => '#d97706', 'tone' => 'amber'],
+        ];
+        $chartTotal = array_sum(array_column($chartRows, 'value'));
+    @endphp
+
+    <section class="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6" aria-labelledby="performa-chart-heading">
+        <div class="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+                <p class="text-[11px] font-black uppercase tracking-[.16em] text-emerald-700">Ringkasan visual</p>
+                <h2 id="performa-chart-heading" class="mt-1 text-lg font-black text-slate-900">Status pengisian jurnal</h2>
+                <p class="mt-1 text-sm text-slate-500">Distribusi slot pada periode {{ $performa['month_label'] }}.</p>
+            </div>
+            <span class="font-mono text-xs font-bold text-slate-500">Total {{ $chartTotal }} slot</span>
+        </div>
+
+        <div class="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_17rem] lg:items-center">
+            <div class="relative h-64 min-h-0 sm:h-72">
+                <canvas id="guru-performance-chart" role="img" aria-label="Grafik status pengisian jurnal {{ $performa['month_label'] }}"></canvas>
+                <p data-performance-chart-fallback hidden class="absolute inset-0 grid place-items-center rounded-xl bg-slate-50 p-5 text-center text-sm font-semibold text-slate-500">Grafik belum dapat ditampilkan. Ringkasan angka tersedia di samping.</p>
+            </div>
+            <dl class="grid gap-2" aria-label="Rincian status pengisian jurnal">
+                @foreach($chartRows as $chartRow)
+                    @php
+                        $percentage = $chartTotal > 0 ? round(($chartRow['value'] / $chartTotal) * 100) : 0;
+                        $toneClasses = match ($chartRow['tone']) {
+                            'emerald' => 'border-emerald-100 bg-emerald-50 text-emerald-800',
+                            'rose' => 'border-rose-100 bg-rose-50 text-rose-800',
+                            'indigo' => 'border-indigo-100 bg-indigo-50 text-indigo-800',
+                            default => 'border-amber-100 bg-amber-50 text-amber-800',
+                        };
+                    @endphp
+                    <div class="flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5 {{ $toneClasses }}">
+                        <dt class="flex items-center gap-2 text-xs font-bold"><span class="h-2.5 w-2.5 rounded-full" style="background-color: {{ $chartRow['color'] }}"></span>{{ $chartRow['label'] }}</dt>
+                        <dd class="text-right"><span class="text-base font-black">{{ $chartRow['value'] }}</span> <span class="text-[10px] font-bold opacity-70">({{ $percentage }}%)</span></dd>
+                    </div>
+                @endforeach
+                @if($chartTotal === 0)
+                    <p class="rounded-xl border border-slate-200 bg-slate-50 p-3 text-center text-xs font-semibold text-slate-500">Belum ada slot jurnal pada periode ini.</p>
+                @endif
+            </dl>
+        </div>
+    </section>
+
     {{-- Daftar slot kosong --}}
     <div class="glass-card rounded-2xl p-6 border border-slate-200">
         <div class="flex items-center justify-between mb-4">
@@ -129,4 +177,51 @@
             </div>
         @endif
     </div>
+@push('scripts')
+    <script>
+        (() => {
+            const canvas = document.getElementById('guru-performance-chart');
+            const fallback = document.querySelector('[data-performance-chart-fallback]');
+            const chartRows = @json($chartRows);
+
+            if (!canvas || typeof window.Chart !== 'function') {
+                fallback?.removeAttribute('hidden');
+                return;
+            }
+
+            try {
+                new window.Chart(canvas, {
+                    type: 'bar',
+                    data: {
+                        labels: chartRows.map((row) => row.label),
+                        datasets: [{
+                            label: 'Slot',
+                            data: chartRows.map((row) => row.value),
+                            backgroundColor: chartRows.map((row) => row.color),
+                            borderRadius: 8,
+                            borderSkipped: false,
+                            barThickness: 24,
+                        }],
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        indexAxis: 'y',
+                        animation: { duration: 280 },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: { callbacks: { label: (context) => ` ${context.parsed.x} slot` } },
+                        },
+                        scales: {
+                            x: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#e5e7eb' } },
+                            y: { grid: { display: false } },
+                        },
+                    },
+                });
+            } catch (_) {
+                fallback?.removeAttribute('hidden');
+            }
+        })();
+    </script>
+@endpush
 </x-layouts.portal>

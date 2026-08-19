@@ -327,6 +327,26 @@ class GuruPerformaTest extends TestCase
             ->assertSee('Isi Jurnal');
     }
 
+    public function test_performa_detail_renders_status_chart_and_accessible_summary(): void
+    {
+        $this->setNow(self::TODAY);
+        $guru = $this->makeGuru('Guru A');
+        $this->makeRegularAssignment($guru['teacher'], 'Fiqih', 2, '1');
+
+        $response = $this->actingAs($guru['user'])
+            ->get(route('guru.performa', ['month' => 8, 'year' => 2026]));
+
+        $response->assertOk()
+            ->assertSee('guru-performance-chart', false)
+            ->assertSee('Status pengisian jurnal')
+            ->assertSee('Rincian status pengisian jurnal')
+            ->assertSee('Sudah Diisi')
+            ->assertSee('Kosong')
+            ->assertSee('Digantikan')
+            ->assertSee('Dibebaskan')
+            ->assertSee('data-performance-chart-fallback', false);
+    }
+
     public function test_performa_detail_offers_excel_and_pdf_downloads(): void
     {
         $this->setNow(self::TODAY);

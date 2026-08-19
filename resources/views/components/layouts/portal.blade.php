@@ -5,12 +5,12 @@
     $portalHomeUrl = $isGuruPortal
         ? route('guru.dashboard')
         : ($isWaliPortal ? route('wali.dashboard') : ($isManagementPortal ? url('/admin') : url('/')));
+    $isHomeActive = request()->routeIs($isGuruPortal ? 'guru.dashboard' : ($isWaliPortal ? 'wali.dashboard' : 'filament.admin.pages.dashboard'));
     $canAccessAttendance = $isGuruPortal && (auth()->user()?->canAccessAttendance() ?? false);
     $isTasmiExaminer = $isGuruPortal && (auth()->user()?->isTasmiExaminer() ?? false);
     $isHomeroomTeacher = $isGuruPortal && (auth()->user()?->canAccessAttendance() ?? false);
 
     $guruTodayItems = [
-        ['label' => 'Beranda', 'href' => route('guru.dashboard'), 'match' => ['guru.dashboard']],
         ['label' => 'Jurnal', 'href' => route('guru.diniyyah-journals.index'), 'match' => ['guru.diniyyah-journals.*', 'guru.diniyyah-tafsir-journals.*', 'guru.diniyyah-substitute-journals.*', 'guru.diniyyah-substitute-tafsir-journals.*']],
         ['label' => 'Tahfidz', 'href' => route('guru.tahfidz.index'), 'match' => ['guru.tahfidz.*']],
     ];
@@ -30,11 +30,12 @@
         $guruClassItems[] = ['label' => 'Monitoring Jurnal Kelas', 'href' => route('wali.diniyyah-journals.index'), 'match' => ['wali.diniyyah-journals.*']];
     }
     $guruArchiveItems = [
+        ['label' => 'Performa Jurnal Saya', 'href' => route('guru.performa'), 'match' => ['guru.performa']],
+        ['label' => 'Riwayat Jurnal', 'href' => route('guru.diniyyah-journals.riwayat'), 'match' => ['guru.diniyyah-journals.riwayat']],
         ['label' => 'Kalender', 'href' => route('guru.calendar'), 'match' => ['guru.calendar']],
     ];
 
     $waliTodayItems = [
-        ['label' => 'Beranda', 'href' => route('wali.dashboard'), 'match' => ['wali.dashboard']],
         ['label' => 'Tahfidz', 'href' => route('wali.tahfidz'), 'match' => ['wali.tahfidz']],
         ['label' => 'Kalender', 'href' => route('wali.calendar'), 'match' => ['wali.calendar']],
     ];
@@ -43,7 +44,6 @@
     ];
 
     $managementTodayItems = [
-        ['label' => 'Dashboard Admin', 'href' => url('/admin'), 'match' => ['filament.admin.pages.dashboard']],
         ['label' => 'Monitoring Diniyyah', 'href' => route('diniyyah.monitoring.index'), 'match' => ['diniyyah.monitoring.*']],
     ];
     if (auth()->user()?->hasAnyRole(['admin', 'kabag_tahfidz'])) {
@@ -57,9 +57,9 @@
 
     $portalNavGroups = $isGuruPortal
         ? [
-            ['label' => 'Kegiatan Hari Ini', 'items' => $guruTodayItems],
+            ['label' => 'Kegiatan', 'items' => $guruTodayItems],
             ['label' => 'Kelas & Santri', 'items' => $guruClassItems],
-            ['label' => 'Rekap & Arsip', 'items' => $guruArchiveItems],
+            ['label' => 'Laporan & Arsip', 'items' => $guruArchiveItems],
         ]
         : ($isWaliPortal
             ? [
@@ -104,14 +104,36 @@
             </div>
 
             <div class="school-nav" aria-label="Menu kegiatan">
-                @foreach($portalNavGroups as $group)
-                    <div class="school-nav-group" aria-label="{{ $group['label'] }}">
-                        @foreach($group['items'] as $item)
-                            @php($isActive = collect($item['match'])->contains(fn ($pattern) => request()->routeIs($pattern)))
-                            <a href="{{ $item['href'] }}" class="school-nav-link" @if($isActive) aria-current="page" @endif>{{ $item['label'] }}</a>
-                        @endforeach
-                    </div>
-                @endforeach
+                <a href="{{ $portalHomeUrl }}" class="school-nav-link school-nav-home" @if($isHomeActive) aria-current="page" @endif>Beranda</a>
+                @if($isGuruPortal)
+                    @foreach($portalNavGroups as $group)
+                        @php($isGroupActive = collect($group['items'])->contains(fn ($item) => collect($item['match'])->contains(fn ($pattern) => request()->routeIs($pattern))))
+                        <details class="school-nav-dropdown" data-portal-menu>
+                            <summary class="school-nav-dropdown-toggle @if($isGroupActive) is-active @endif" aria-expanded="false">
+                                <span>{{ $group['label'] }}</span>
+                                <svg class="school-nav-chevron" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6" /></svg>
+                            </summary>
+                            <div class="school-nav-dropdown-panel" role="menu" aria-label="{{ $group['label'] }}">
+                                @foreach($group['items'] as $item)
+                                    @php($isActive = collect($item['match'])->contains(fn ($pattern) => request()->routeIs($pattern)))
+                                    <a href="{{ $item['href'] }}" class="school-nav-dropdown-link" role="menuitem" @if($isActive) aria-current="page" @endif>
+                                        <span>{{ $item['label'] }}</span>
+                                        @if($isActive)<span class="school-nav-active-dot" aria-hidden="true"></span>@endif
+                                    </a>
+                                @endforeach
+                            </div>
+                        </details>
+                    @endforeach
+                @else
+                    @foreach($portalNavGroups as $group)
+                        <div class="school-nav-group" aria-label="{{ $group['label'] }}">
+                            @foreach($group['items'] as $item)
+                                @php($isActive = collect($item['match'])->contains(fn ($pattern) => request()->routeIs($pattern)))
+                                <a href="{{ $item['href'] }}" class="school-nav-link" @if($isActive) aria-current="page" @endif>{{ $item['label'] }}</a>
+                            @endforeach
+                        </div>
+                    @endforeach
+                @endif
             </div>
 
             <div class="school-header-actions" data-notification-root data-feed-url="{{ route('notifications.feed') }}" data-read-url-template="{{ route('notifications.read', '__ID__') }}" data-mark-all-url="{{ route('notifications.read-all') }}">
@@ -134,6 +156,7 @@
                     <summary class="school-menu-summary flex h-10 cursor-pointer items-center gap-2 rounded-lg border border-line bg-white px-3 text-xs font-extrabold text-ink" aria-expanded="false">Menu <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6" /></svg></summary>
                     <div class="absolute right-0 top-12 z-50 w-72 rounded-xl border border-line bg-white p-2 shadow-2xl shadow-slate-950/10" role="dialog" aria-label="Menu portal">
                         <p class="px-3 pb-2 pt-1 font-mono text-[10px] font-bold tracking-[.1em] text-slate-500">{{ $portalLabel ?? 'Ruang GQ' }}</p>
+                        <a href="{{ $portalHomeUrl }}" class="school-mobile-link" @if($isHomeActive) aria-current="page" @endif>Beranda @if($isHomeActive)<span class="h-2 w-2 rounded-full bg-neon"></span>@endif</a>
                         @foreach($portalNavGroups as $group)
                             <section class="school-mobile-group" aria-label="{{ $group['label'] }}">
                                 <p>{{ $group['label'] }}</p>

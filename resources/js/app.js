@@ -79,11 +79,15 @@ function initScrollSpy() {
 function initPortalMenu() {
     document.querySelectorAll('[data-portal-menu]').forEach((menu) => {
         const summary = menu.querySelector('summary');
-        const panel = menu.querySelector('[role="dialog"]');
+        const panel = menu.querySelector('[role="dialog"], [role="menu"]');
 
         menu.addEventListener('toggle', () => {
             summary?.setAttribute('aria-expanded', String(menu.open));
             if (!menu.open) return;
+
+            document.querySelectorAll('[data-portal-menu]').forEach((otherMenu) => {
+                if (otherMenu !== menu && otherMenu.open) otherMenu.open = false;
+            });
 
             window.requestAnimationFrame(() => {
                 panel?.querySelector('a, button, input, select, textarea, [tabindex]:not([tabindex="-1"])')?.focus();
