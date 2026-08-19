@@ -175,7 +175,7 @@ class SchoolCalendarController extends Controller
             'eventList' => $events->map(fn (SchoolEvent $event) => [
                 'date_label' => $this->eventDateLabel($event),
                 'title' => $event->title,
-                'type_label' => $event->typeLabel(),
+                'type_label' => $event->is_no_kbm ? 'Agenda Tanpa KBM' : $event->typeLabel(),
                 'location' => $event->location,
                 'description' => $event->description,
                 'target_label' => $event->targetSummary(),
@@ -255,7 +255,7 @@ class SchoolCalendarController extends Controller
                 ] : null,
                 'events' => $events->map(fn (SchoolEvent $event) => [
                     'title' => $event->title,
-                    'type_label' => $event->typeLabel(),
+                    'type_label' => $event->is_no_kbm ? 'Agenda Tanpa KBM' : $event->typeLabel(),
                     'location' => $event->location,
                     'target_label' => $event->targetSummary(),
                 ])->all(),

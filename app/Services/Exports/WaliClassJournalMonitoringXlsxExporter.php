@@ -28,6 +28,7 @@ class WaliClassJournalMonitoringXlsxExporter
                     'LIBUR' => 'Libur',
                     'IZIN' => 'IZIN - Dibebaskan',
                     'SAKIT' => 'SAKIT - Dibebaskan',
+                    'AGENDA' => 'Agenda tanpa KBM',
                     default => 'Kosong',
                 };
                 $time = collect([$row['session_time']['starts_at'] ?? null, $row['session_time']['ends_at'] ?? null])
@@ -38,6 +39,8 @@ class WaliClassJournalMonitoringXlsxExporter
                     $material = 'Materi: '.($journal->material ?: '-')."\nAbsensi: ".($absences ?: 'Hadir Semua');
                 } elseif (in_array($row['status'], ['IZIN', 'SAKIT'], true)) {
                     $material = 'Dibebaskan oleh presensi: '.strtolower($row['status']);
+                } elseif ($row['status'] === 'AGENDA') {
+                    $material = $row['agenda_reason'] ?? 'Libur Mengajar - Agenda';
                 }
                 $sheet->fromArray([[
                     $row['date']->translatedFormat('l, d/m/Y').($row['is_holiday'] ? ' - '.$row['holiday_name'] : ''),

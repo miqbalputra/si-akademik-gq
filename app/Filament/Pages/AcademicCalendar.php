@@ -123,7 +123,7 @@ class AcademicCalendar extends Page
             ->map(fn (SchoolEvent $event) => [
                 'date_label' => $this->eventDateLabel($event),
                 'title' => $event->title,
-                'type_label' => $event->typeLabel(),
+                'type_label' => $event->is_no_kbm ? 'Agenda Tanpa KBM' : $event->typeLabel(),
                 'location' => $event->location,
                 'description' => $event->description,
                 'target_label' => $event->targetSummary(),
@@ -238,7 +238,7 @@ class AcademicCalendar extends Page
                 'is_school_holiday' => (bool) $holiday,
                 'events' => $events->map(fn (SchoolEvent $event) => [
                     'title' => $event->title,
-                    'type_label' => $event->typeLabel(),
+                    'type_label' => $event->is_no_kbm ? 'Agenda Tanpa KBM' : $event->typeLabel(),
                     'location' => $event->location,
                     'target_label' => $event->targetSummary(),
                     'edit_url' => \App\Filament\Resources\SchoolEvents\SchoolEventResource::getUrl('edit', ['record' => $event]),

@@ -397,7 +397,7 @@
                     @foreach($upcomingAlerts as $alert)
                         <article class="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
                             <div class="flex min-w-0 items-start gap-3">
-                                <div class="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl {{ $alert['kind'] === 'holiday' ? 'bg-amber-50 text-amber-700' : 'bg-indigo-50 text-indigo-700' }}">
+                                        <div class="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl {{ $alert['kind'] === 'holiday' ? 'bg-amber-50 text-amber-700' : (($alert['is_no_kbm'] ?? false) ? 'bg-sky-50 text-sky-700' : 'bg-indigo-50 text-indigo-700') }}">
                                     @if($alert['kind'] === 'holiday')
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3M4 11h16M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z" /></svg>
                                     @else
@@ -406,7 +406,7 @@
                                 </div>
                                 <div class="min-w-0">
                                     <div class="flex flex-wrap items-center gap-2">
-                                        <span class="text-[10px] font-black uppercase tracking-wider {{ $alert['kind'] === 'holiday' ? 'text-amber-700' : 'text-indigo-700' }}">{{ $alert['kind_label'] }}</span>
+                                        <span class="text-[10px] font-black uppercase tracking-wider {{ $alert['kind'] === 'holiday' ? 'text-amber-700' : (($alert['is_no_kbm'] ?? false) ? 'text-sky-700' : 'text-indigo-700') }}">{{ $alert['kind_label'] }}</span>
                                         <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold {{ $alert['countdown_label'] === 'Hari ini' ? 'text-rose-700' : 'text-slate-500' }}">{{ $alert['countdown_label'] }}</span>
                                     </div>
                                     <h3 class="mt-1 truncate text-sm font-black text-slate-900 sm:text-base">{{ $alert['title'] }}</h3>

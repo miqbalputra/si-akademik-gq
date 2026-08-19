@@ -8,11 +8,15 @@ use App\Models\HomeroomAssignment;
 use App\Models\ClassSession;
 use App\Support\SessionTimetable;
 use App\Services\AttendanceStatusClient;
+use App\Services\DiniyyahNoKbmAgendaService;
 use Illuminate\Support\Facades\Auth;
 
 class WaliClassJournalMonitoringController extends Controller
 {
-    public function __construct(private readonly AttendanceStatusClient $attendanceStatusClient) {}
+    public function __construct(
+        private readonly AttendanceStatusClient $attendanceStatusClient,
+        private readonly DiniyyahNoKbmAgendaService $noKbmAgendaService,
+    ) {}
 
     public function index(Request $request)
     {
@@ -91,6 +95,33 @@ class WaliClassJournalMonitoringController extends Controller
         })
         ->get();
 
+        // Tafsir adalah satu sesi serentak lintas kelas. Ambil seluruh slot
+        // Tafsir milik guru yang muncul pada kelas wali (bukan hanya kelas wali
+        // tersebut) agar agenda dengan cakupan sebagian tidak membebaskan sesi
+        // secara keliru.
+        $tafsirTeacherIds = $schedules
+            ->filter(fn ($schedule) => $this->isTafsirSchedule($schedule))
+            ->map(fn ($schedule) => $schedule->teacherAssignment?->teacher_id)
+            ->filter()
+            ->unique()
+            ->values();
+        $globalTafsirSchedules = $tafsirTeacherIds->isEmpty()
+            ? collect()
+            : \App\Models\DiniyyahTeachingSchedule::with([
+                'teacherAssignment.teacher',
+                'teacherAssignment.classSubject.subject',
+                'teacherAssignment.classSubject.classroomTerm.classroom',
+                'classSession',
+            ])
+                ->whereHas('teacherAssignment', function ($query) use ($tafsirTeacherIds): void {
+                    $query->whereIn('teacher_id', $tafsirTeacherIds)
+                        ->whereHas('classSubject.subject', function ($query): void {
+                            $query->where('code', SessionTimetable::SESSION_TAFSIR)
+                                ->orWhere('name', 'like', '%tafsir%');
+                        });
+                })
+                ->get();
+
         $attendanceStatuses = $this->attendanceStatusClient->statusesForTeachers(
             $schedules
                 ->map(fn ($schedule) => $schedule->teacherAssignment?->teacher)
@@ -134,6 +165,14 @@ class WaliClassJournalMonitoringController extends Controller
             ->keyBy(function($item) {
                 return $item->holiday_date->format('Y-m-d');
             });
+
+        $agendaTerms = $schedules
+            ->concat($globalTafsirSchedules)
+            ->map(fn ($schedule) => $schedule->teacherAssignment?->classSubject?->classroomTerm)
+            ->filter()
+            ->unique('id')
+            ->values();
+        $agendaEvents = $this->noKbmAgendaService->eventsForRange($agendaTerms, $startDate, $endDate);
             
         // Generate daily data
         $monitoringData = [];
@@ -159,6 +198,25 @@ class WaliClassJournalMonitoringController extends Controller
                 }
                 
                 $holiday = $holidays->get($dateStr);
+
+                $tafsirAgendaByScheduleId = [];
+                $globalDayTafsir = $globalTafsirSchedules
+                    ->where('day_of_week', $dayOfWeek)
+                    ->filter(fn ($schedule): bool => $this->assignmentActiveOn($schedule->teacherAssignment, $date))
+                    ->groupBy(fn ($schedule) => $schedule->teacherAssignment->teacher_id.'|'.($schedule->classSession->session_name ?? SessionTimetable::SESSION_TAFSIR));
+                foreach ($globalDayTafsir as $tafsirGroup) {
+                    $tafsirTerms = $tafsirGroup
+                        ->map(fn ($schedule) => $schedule->teacherAssignment?->classSubject?->classroomTerm)
+                        ->filter()
+                        ->unique('id')
+                        ->values();
+                    $groupAgenda = $this->noKbmAgendaService->forClassroomTerms($agendaEvents, $tafsirTerms, $date);
+                    if ($groupAgenda !== null) {
+                        foreach ($tafsirGroup as $tafsirSchedule) {
+                            $tafsirAgendaByScheduleId[$tafsirSchedule->id] = $groupAgenda;
+                        }
+                    }
+                }
                 
                 $dayData = [
                     'date' => $date,
@@ -203,19 +261,28 @@ class WaliClassJournalMonitoringController extends Controller
                     $attendanceStatus = ($teacherAttendance['available'] ?? false)
                         ? ($teacherAttendance['statuses'][$dateStr] ?? null)
                         : null;
+                    $classroomTerm = $schedule->teacherAssignment?->classSubject?->classroomTerm;
+                    $agenda = $this->isTafsirSchedule($schedule)
+                        ? ($tafsirAgendaByScheduleId[$schedule->id] ?? null)
+                        : ($classroomTerm
+                            ? $this->noKbmAgendaService->forClassroomTerm($agendaEvents, $classroomTerm, $date)
+                            : null);
                     $status = $journal
                         ? 'TERISI'
                         : ($holiday
                             ? 'LIBUR'
-                            : ($this->attendanceStatusClient->isExempt($attendanceStatus)
-                                ? strtoupper((string) $attendanceStatus)
-                                : 'KOSONG'));
+                            : ($agenda !== null
+                                ? 'AGENDA'
+                                : ($this->attendanceStatusClient->isExempt($attendanceStatus)
+                                    ? strtoupper((string) $attendanceStatus)
+                                    : 'KOSONG')));
 
                     $dayData['items'][] = [
                         'schedule' => $schedule,
                         'journal' => $journal,
                         'status' => $status,
                         'attendance_status' => $attendanceStatus,
+                        'agenda' => $agenda,
                         'session_time' => $this->resolveSessionTime($schedule, $dayOfWeek),
                     ];
                 }
@@ -312,6 +379,9 @@ class WaliClassJournalMonitoringController extends Controller
                         'substitute_teacher_name' => $journal?->substituteTeacher?->name,
                         'status' => $item['status'],
                         'attendance_status' => $item['attendance_status'] ?? null,
+                        'agenda' => $item['agenda'] ?? null,
+                        'agenda_title' => $item['agenda']['title'] ?? null,
+                        'agenda_reason' => $item['agenda']['reason'] ?? null,
                         'journal' => $journal,
                         'schedule' => $item['schedule'],
                     ];
@@ -327,6 +397,7 @@ class WaliClassJournalMonitoringController extends Controller
             'excused_slots' => $summaryRows->whereIn('status', ['IZIN', 'SAKIT'])->count(),
             'izin_slots' => $summaryRows->where('status', 'IZIN')->count(),
             'sakit_slots' => $summaryRows->where('status', 'SAKIT')->count(),
+            'agenda_slots' => $summaryRows->where('status', 'AGENDA')->count(),
             'holiday_slots' => $summaryRows->where('status', 'LIBUR')->count(),
             'empty_classrooms' => $summaryRows->where('status', 'KOSONG')->pluck('classroom_name')->filter()->unique()->values(),
             'empty_teachers' => $summaryRows->where('status', 'KOSONG')->pluck('teacher_name')->filter()->unique()->values(),
@@ -364,6 +435,15 @@ class WaliClassJournalMonitoringController extends Controller
 
         return strtolower($subject->code) === SessionTimetable::SESSION_TAFSIR
             || str_contains(strtolower($subject->name), 'tafsir');
+    }
+
+    private function assignmentActiveOn($assignment, \Carbon\CarbonInterface $date): bool
+    {
+        $value = $date->toDateString();
+        $starts = $assignment?->starts_at?->toDateString();
+        $ends = $assignment?->ends_at?->toDateString();
+
+        return ($starts === null || $starts <= $value) && ($ends === null || $ends >= $value);
     }
 
     /**

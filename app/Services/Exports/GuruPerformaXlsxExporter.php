@@ -44,6 +44,7 @@ class GuruPerformaXlsxExporter
             ['Kosong', $stats['kosong'] ?? 0],
             ['Digantikan', $stats['digantikan'] ?? 0],
             ['Dibebaskan (izin/sakit)', $stats['dibebaskan'] ?? 0],
+            ['Agenda tanpa KBM', $stats['agenda'] ?? 0],
             ['Total slot tercatat', $stats['total'] ?? 0],
             ['Total data jurnal', $stats['total_jurnal'] ?? 0],
         ];
@@ -71,6 +72,14 @@ class GuruPerformaXlsxExporter
                 $row['kelas'] ?? '-', $row['mapel'] ?? '-', $row['material'] ?? '-', $row['jp'] ?? 0, $row['guru_asli'] ?? '-',
                 $row['pengganti'] ?? '-', $row['guru_mengajar'] ?? '-', $row['type_label'] ?? '-', $row['hadir'] ?? 0,
                 $row['sakit'] ?? 0, $row['izin'] ?? 0, $row['alpa'] ?? 0, $row['bolos'] ?? 0,
+            ]], null, "A{$lastRow}");
+        }
+        foreach (collect($performa['agenda_rows'] ?? []) as $row) {
+            $lastRow++;
+            $sheet->fromArray([[
+                '-', $row['date_label'] ?? ($row['date'] ?? '-'), $row['session_label'] ?? '-', $row['session_time'] ?? '-',
+                $row['kelas'] ?? '-', $row['mapel'] ?? '-', $row['material'] ?? '-', $row['jp'] ?? 1, $row['guru_asli'] ?? '-',
+                '-', '-', 'Agenda tanpa KBM', 0, 0, 0, 0, 0,
             ]], null, "A{$lastRow}");
         }
         if ($lastRow === 5) {

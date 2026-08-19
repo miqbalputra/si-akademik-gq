@@ -43,6 +43,7 @@ class DiniyyahJournalReportXlsxExporter
             'Total JP' => $stats['total_jp'] ?? 0,
             'Jurnal reguler' => $stats['jurnal_reguler'] ?? 0,
             'Jurnal pengganti' => $stats['jurnal_pengganti'] ?? 0,
+            'Agenda tanpa KBM' => $stats['agenda'] ?? 0,
             'Hari tercatat' => $stats['hari_tercatat'] ?? 0,
         ];
         $row = 6;

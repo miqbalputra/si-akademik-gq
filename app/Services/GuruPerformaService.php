@@ -21,7 +21,7 @@ use Illuminate\Support\Collection;
  * - sudah_diisi : slot milik guru yang diisi jurnal oleh guru sendiri
  *   (substitute_teacher_id IS NULL).
  * - kosong      : slot milik guru, tanggal sudah lewat, tanpa jurnal, dan
- *   bukan hari libur.
+ *   bukan hari libur atau agenda tanpa KBM.
  * - digantikan  : slot milik guru yang diisi teacher lain
  *   (substitute_teacher_id IS NOT NULL).
  *
@@ -34,7 +34,10 @@ use Illuminate\Support\Collection;
  */
 class GuruPerformaService
 {
-    public function __construct(private readonly AttendanceStatusClient $attendanceStatusClient) {}
+    public function __construct(
+        private readonly AttendanceStatusClient $attendanceStatusClient,
+        private readonly DiniyyahNoKbmAgendaService $noKbmAgendaService,
+    ) {}
 
     /**
      * Hitung performa guru untuk bulan/tahun tertentu.
@@ -44,8 +47,9 @@ class GuruPerformaService
      *   year: int,
      *   is_current_month: bool,
      *   month_label: string,
-     *   stats: array{sudah_diisi: int, kosong: int, digantikan: int, dibebaskan: int, total: int, total_jurnal: int},
+     *   stats: array{sudah_diisi: int, kosong: int, digantikan: int, dibebaskan: int, agenda: int, total: int, total_jurnal: int},
      *   journal_rows: Collection<int, array<string, mixed>>,
+     *   agenda_rows: Collection<int, array<string, mixed>>,
      *   empty_slots: list<array<string, mixed>>,
      * }
      */
@@ -84,10 +88,12 @@ class GuruPerformaService
                 'dibebaskan' => $summary['dibebaskan'],
                 'dibebaskan_izin' => $summary['dibebaskan_izin'],
                 'dibebaskan_sakit' => $summary['dibebaskan_sakit'],
-                'total' => $summary['sudah'] + $summary['kosong'] + $summary['digantikan'] + $summary['dibebaskan'],
+                'agenda' => $summary['agenda'],
+                'total' => $summary['sudah'] + $summary['kosong'] + $summary['digantikan'] + $summary['dibebaskan'] + $summary['agenda'],
                 'total_jurnal' => $journalRows->count(),
             ],
             'journal_rows' => $journalRows,
+            'agenda_rows' => collect($summary['agenda_rows']),
             'empty_slots' => $summary['empty_slots'],
         ];
     }
@@ -143,6 +149,7 @@ class GuruPerformaService
                 'dibebaskan' => 0,
                 'dibebaskan_izin' => 0,
                 'dibebaskan_sakit' => 0,
+                'agenda' => 0,
                 'empty_slots' => [],
             ];
         }
@@ -162,6 +169,7 @@ class GuruPerformaService
             'dibebaskan' => $summary['dibebaskan'],
             'dibebaskan_izin' => $summary['dibebaskan_izin'],
             'dibebaskan_sakit' => $summary['dibebaskan_sakit'],
+            'agenda' => $summary['agenda'],
             'empty_slots' => $summary['empty_slots'],
         ];
     }
@@ -177,7 +185,9 @@ class GuruPerformaService
      *   dibebaskan: int,
      *   dibebaskan_izin: int,
      *   dibebaskan_sakit: int,
+     *   agenda: int,
      *   journals: Collection<int, DiniyyahClassJournal>,
+     *   agenda_rows: list<array<string, mixed>>,
      *   empty_slots: list<array<string, mixed>>,
      * }
      */
@@ -224,13 +234,22 @@ class GuruPerformaService
             ->get()
             ->keyBy(fn ($h) => $h->holiday_date->format('Y-m-d'));
 
+        $classroomTerms = $schedules
+            ->map(fn ($schedule) => $schedule->teacherAssignment?->classSubject?->classroomTerm)
+            ->filter()
+            ->unique('id')
+            ->values();
+        $agendaEvents = $this->noKbmAgendaService->eventsForRange($classroomTerms, $startDate, $endDate);
+
         $sudah = 0;
         $kosong = 0;
         $digantikan = 0;
         $dibebaskan = 0;
         $dibebaskanIzin = 0;
         $dibebaskanSakit = 0;
+        $agendaCount = 0;
         $emptySlots = [];
+        $agendaRows = [];
         $attendance = $this->attendanceStatusClient->statusesForTeacher($teacher, $startDate, $endDate);
 
         $date = $startDate->copy();
@@ -290,7 +309,15 @@ class GuruPerformaService
                         $digantikan += (int) $journal->jp_count;
                     }
                 } else {
-                    if ($isExcused) {
+                    $classroomTerm = $sched->teacherAssignment?->classSubject?->classroomTerm;
+                    $agenda = $classroomTerm
+                        ? $this->noKbmAgendaService->forClassroomTerm($agendaEvents, $classroomTerm, $date)
+                        : null;
+
+                    if ($agenda !== null) {
+                        $agendaCount++;
+                        $agendaRows[] = $this->buildAgendaRow($sched, $date, $dayOfWeek, $agenda);
+                    } elseif ($isExcused) {
                         $dibebaskan += 1;
                         $absenceStatus === 'izin' ? $dibebaskanIzin++ : $dibebaskanSakit++;
                     } elseif ($isPast) {
@@ -320,7 +347,17 @@ class GuruPerformaService
                         $digantikan += 1;
                     }
                 } else {
-                    if ($isExcused) {
+                    $tafsirTerms = $tafsirSched
+                        ->map(fn ($schedule) => $schedule->teacherAssignment?->classSubject?->classroomTerm)
+                        ->filter()
+                        ->unique('id')
+                        ->values();
+                    $agenda = $this->noKbmAgendaService->forClassroomTerms($agendaEvents, $tafsirTerms, $date);
+
+                    if ($agenda !== null) {
+                        $agendaCount++;
+                        $agendaRows[] = $this->buildAgendaTafsirRow($tafsirSched, $date, $dayOfWeek, $agenda);
+                    } elseif ($isExcused) {
                         $dibebaskan += 1;
                         $absenceStatus === 'izin' ? $dibebaskanIzin++ : $dibebaskanSakit++;
                     } elseif ($isPast) {
@@ -346,7 +383,9 @@ class GuruPerformaService
             'dibebaskan' => $dibebaskan,
             'dibebaskan_izin' => $dibebaskanIzin,
             'dibebaskan_sakit' => $dibebaskanSakit,
+            'agenda' => $agendaCount,
             'journals' => $journals,
+            'agenda_rows' => $agendaRows,
             'empty_slots' => $emptySlots,
         ];
     }
@@ -477,6 +516,79 @@ class GuruPerformaService
         return [
             'starts_at' => $schedule->classSession->starts_at ?? null,
             'ends_at' => $schedule->classSession->ends_at ?? null,
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function buildAgendaRow($sched, Carbon $date, int $dayOfWeek, array $agenda): array
+    {
+        $classSubject = $sched->teacherAssignment->classSubject;
+        $classroomTerm = $classSubject->classroomTerm;
+        $time = $this->resolveSessionTime($sched, $dayOfWeek);
+        $sessionName = (string) ($sched->classSession->session_name ?? '');
+
+        return [
+            'id' => null,
+            'date' => $date->toDateString(),
+            'date_label' => $date->locale('id')->translatedFormat('l, d F Y'),
+            'session_hour' => $sessionName,
+            'session_label' => SessionTimetable::label($sessionName),
+            'session_time' => collect([$time['starts_at'] ?? null, $time['ends_at'] ?? null])->filter()->implode(' - '),
+            'kelas' => $classroomTerm?->name ?? '-',
+            'mapel' => $classSubject->subject?->name ?? '-',
+            'material' => $agenda['reason'],
+            'jp' => 1,
+            'guru_asli' => $sched->teacherAssignment?->teacher?->name ?? '-',
+            'pengganti' => null,
+            'guru_mengajar' => '-',
+            'type' => 'agenda',
+            'type_label' => 'Agenda tanpa KBM',
+            'status' => 'AGENDA',
+            'is_virtual' => true,
+            'agenda_id' => $agenda['ids'][0] ?? null,
+            'agenda_title' => $agenda['title'],
+            'hadir' => 0,
+            'sakit' => 0,
+            'izin' => 0,
+            'alpa' => 0,
+            'bolos' => 0,
+        ];
+    }
+
+    /** @param Collection<int, mixed> $tafsirSched */
+    private function buildAgendaTafsirRow(Collection $tafsirSched, Carbon $date, int $dayOfWeek, array $agenda): array
+    {
+        $first = $tafsirSched->first();
+        $time = $first ? $this->resolveSessionTime($first, $dayOfWeek) : ['starts_at' => null, 'ends_at' => null];
+        if (($time['starts_at'] ?? null) === null) {
+            $time = ['starts_at' => '09:50:00', 'ends_at' => '10:20:00'];
+        }
+
+        return [
+            'id' => null,
+            'date' => $date->toDateString(),
+            'date_label' => $date->locale('id')->translatedFormat('l, d F Y'),
+            'session_hour' => SessionTimetable::SESSION_TAFSIR,
+            'session_label' => SessionTimetable::label(SessionTimetable::SESSION_TAFSIR),
+            'session_time' => $time['starts_at'].' - '.$time['ends_at'],
+            'kelas' => $tafsirSched->map(fn ($schedule) => $schedule->teacherAssignment?->classSubject?->classroomTerm?->name)->filter()->unique()->implode(', '),
+            'mapel' => $first?->teacherAssignment?->classSubject?->subject?->name ?? 'Tafsir',
+            'material' => $agenda['reason'],
+            'jp' => 1,
+            'guru_asli' => $first?->teacherAssignment?->teacher?->name ?? '-',
+            'pengganti' => null,
+            'guru_mengajar' => '-',
+            'type' => 'agenda',
+            'type_label' => 'Agenda tanpa KBM',
+            'status' => 'AGENDA',
+            'is_virtual' => true,
+            'agenda_id' => $agenda['ids'][0] ?? null,
+            'agenda_title' => $agenda['title'],
+            'hadir' => 0,
+            'sakit' => 0,
+            'izin' => 0,
+            'alpa' => 0,
+            'bolos' => 0,
         ];
     }
 

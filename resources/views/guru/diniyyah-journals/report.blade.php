@@ -74,10 +74,11 @@
             </form>
         </section>
 
-        <section class="grid gap-3 sm:grid-cols-2 lg:grid-cols-5" aria-label="Statistik laporan">
+        <section class="grid gap-3 sm:grid-cols-2 lg:grid-cols-6" aria-label="Statistik laporan">
             <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"><p class="text-[10px] font-black uppercase tracking-wider text-slate-400">Total jurnal</p><p class="mt-2 text-3xl font-black text-slate-900">{{ $stats['total_jurnal'] }}</p></div>
             <div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm"><p class="text-[10px] font-black uppercase tracking-wider text-emerald-700">Jurnal reguler</p><p class="mt-2 text-3xl font-black text-emerald-800">{{ $stats['jurnal_reguler'] }}</p></div>
             <div class="rounded-2xl border border-indigo-200 bg-indigo-50 p-4 shadow-sm"><p class="text-[10px] font-black uppercase tracking-wider text-indigo-700">Jurnal pengganti</p><p class="mt-2 text-3xl font-black text-indigo-800">{{ $stats['jurnal_pengganti'] }}</p></div>
+            <div class="rounded-2xl border border-sky-200 bg-sky-50 p-4 shadow-sm"><p class="text-[10px] font-black uppercase tracking-wider text-sky-700">Agenda tanpa KBM</p><p class="mt-2 text-3xl font-black text-sky-800">{{ $stats['agenda'] ?? 0 }}</p></div>
             <div class="rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm"><p class="text-[10px] font-black uppercase tracking-wider text-amber-700">Hari tercatat</p><p class="mt-2 text-3xl font-black text-amber-800">{{ $stats['hari_tercatat'] }}</p></div>
             <div class="rounded-2xl border border-slate-800 bg-slate-900 p-4 shadow-sm"><p class="text-[10px] font-black uppercase tracking-wider text-slate-300">Total JP</p><p class="mt-2 text-3xl font-black text-white">{{ $stats['total_jp'] }}</p></div>
         </section>
@@ -113,7 +114,7 @@
                                 <td class="px-4 py-3 font-semibold text-slate-700">{{ $row['kelas'] }}</td>
                                 <td class="px-4 py-3 text-slate-700">{{ $row['mapel'] }}</td>
                                 <td class="px-4 py-3 font-bold text-slate-800">{{ $row['guru_mengajar'] }}</td>
-                                <td class="px-4 py-3"><span class="rounded-full px-2 py-1 text-[10px] font-black {{ $row['type'] === 'substitute' ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-700' }}">{{ $row['type_label'] }}</span></td>
+                                <td class="px-4 py-3"><span class="rounded-full px-2 py-1 text-[10px] font-black {{ $row['type'] === 'substitute' ? 'bg-indigo-100 text-indigo-700' : ($row['type'] === 'agenda' ? 'bg-sky-100 text-sky-700' : 'bg-emerald-100 text-emerald-700') }}">{{ $row['type_label'] }}</span></td>
                                 <td class="max-w-xs whitespace-normal px-4 py-3 text-slate-600">{{ $row['material'] }}</td>
                                 <td class="px-4 py-3 text-center font-black text-slate-800">{{ $row['jp'] }}</td>
                                 <td class="whitespace-nowrap px-4 py-3 text-center text-xs font-bold text-slate-600">{{ $row['hadir'] }}/{{ $row['sakit'] }}/{{ $row['izin'] }}/{{ $row['alpa'] }}/{{ $row['bolos'] }}</td>

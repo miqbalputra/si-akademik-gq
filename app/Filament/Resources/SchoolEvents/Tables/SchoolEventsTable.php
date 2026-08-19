@@ -41,6 +41,11 @@ class SchoolEventsTable
                         'religious' => 'Agenda Diniyyah',
                         default => 'Agenda Sekolah',
                     }),
+                TextColumn::make('is_no_kbm')
+                    ->label('Dampak KBM')
+                    ->formatStateUsing(fn (bool $state): string => $state ? 'Tanpa KBM' : 'Agenda biasa')
+                    ->badge()
+                    ->color(fn (bool $state): string => $state ? 'warning' : 'gray'),
                 TextColumn::make('target_scope')
                     ->label('Mode Target')
                     ->formatStateUsing(fn ($state, $record) => $record->targetScopeLabel())

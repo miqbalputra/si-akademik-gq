@@ -17,12 +17,13 @@
             </div>
         </header>
 
-        <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-5" aria-label="Ringkasan jurnal kelas">
+        <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-6" aria-label="Ringkasan jurnal kelas">
             <article class="metric-card"><p class="metric-label">Total slot</p><p class="metric-value">{{ $summary['total_slots'] }}</p><p class="mt-1 text-xs font-semibold text-slate-500">sesuai filter</p></article>
             <article class="metric-card border-emerald-200 bg-emerald-50/60"><p class="metric-label text-emerald-700">Sudah terisi</p><p class="metric-value text-emerald-800">{{ $summary['filled_slots'] }}</p><p class="mt-1 text-xs font-semibold text-emerald-700">jurnal tercatat</p></article>
             <article class="metric-card {{ $summary['empty_slots'] > 0 ? 'border-rose-300 bg-rose-50' : 'border-emerald-200 bg-emerald-50/60' }}"><p class="metric-label {{ $summary['empty_slots'] > 0 ? 'text-rose-700' : 'text-emerald-700' }}">Jurnal kosong</p><p class="metric-value {{ $summary['empty_slots'] > 0 ? 'text-rose-800' : 'text-emerald-800' }}">{{ $summary['empty_slots'] }}</p><p class="mt-1 text-xs font-semibold {{ $summary['empty_slots'] > 0 ? 'text-rose-700' : 'text-emerald-700' }}">{{ $summary['empty_slots'] > 0 ? 'perlu diingatkan' : 'semua sudah terisi' }}</p></article>
             <article class="metric-card border-slate-200 bg-slate-50"><p class="metric-label">Hari libur</p><p class="metric-value text-slate-700">{{ $summary['holiday_slots'] }}</p><p class="mt-1 text-xs font-semibold text-slate-500">slot tidak dihitung kosong</p></article>
             <article class="metric-card border-amber-200 bg-amber-50/70"><p class="metric-label text-amber-700">Dibebaskan</p><p class="metric-value text-amber-800">{{ $summary['excused_slots'] ?? 0 }}</p><p class="mt-1 text-xs font-semibold text-amber-700">izin/sakit guru</p></article>
+            <article class="metric-card border-sky-200 bg-sky-50/70"><p class="metric-label text-sky-700">Agenda tanpa KBM</p><p class="metric-value text-sky-800">{{ $summary['agenda_slots'] ?? 0 }}</p><p class="mt-1 text-xs font-semibold text-sky-700">dibebaskan oleh agenda</p></article>
         </section>
 
         @if($summary['empty_slots'] > 0)
@@ -97,6 +98,7 @@
                             <option value="LIBUR" @selected(($filterStatus ?? '') === 'LIBUR')>Hari libur</option>
                             <option value="IZIN" @selected(($filterStatus ?? '') === 'IZIN')>Guru izin</option>
                             <option value="SAKIT" @selected(($filterStatus ?? '') === 'SAKIT')>Guru sakit</option>
+                            <option value="AGENDA" @selected(($filterStatus ?? '') === 'AGENDA')>Agenda tanpa KBM</option>
                         </select>
                     </div>
                 </div>
@@ -171,6 +173,7 @@
                                         'TERISI_TIDAK_TERJADWAL' => 'status-badge-neutral',
                                         'LIBUR' => 'status-badge-neutral',
                                         'IZIN', 'SAKIT' => 'status-badge-neutral',
+                                        'AGENDA' => 'border border-sky-200 bg-sky-50 text-sky-800',
                                         default => 'status-badge-danger',
                                     };
                                     $statusLabel = match ($row['status']) {
@@ -179,10 +182,11 @@
                                         'LIBUR' => 'Libur',
                                         'IZIN' => 'IZIN · Dibebaskan',
                                         'SAKIT' => 'SAKIT · Dibebaskan',
+                                        'AGENDA' => 'AGENDA · Tanpa KBM',
                                         default => 'KOSONG',
                                     };
                                 @endphp
-                                <tr class="align-top transition-colors {{ $isEmpty ? 'border-l-4 border-l-rose-600 bg-rose-50 hover:bg-rose-100' : (($row['status'] === 'IZIN' || $row['status'] === 'SAKIT') ? 'border-l-4 border-l-amber-400 bg-amber-50/50 hover:bg-amber-50' : 'hover:bg-emerald-50/30') }}" @if($isEmpty) aria-label="Jurnal kosong, perlu diingatkan" @endif>
+                                <tr class="align-top transition-colors {{ $isEmpty ? 'border-l-4 border-l-rose-600 bg-rose-50 hover:bg-rose-100' : (($row['status'] === 'AGENDA') ? 'border-l-4 border-l-sky-400 bg-sky-50/60 hover:bg-sky-50' : (($row['status'] === 'IZIN' || $row['status'] === 'SAKIT') ? 'border-l-4 border-l-amber-400 bg-amber-50/50 hover:bg-amber-50' : 'hover:bg-emerald-50/30')) }}" @if($isEmpty) aria-label="Jurnal kosong, perlu diingatkan" @endif>
                                     <td class="whitespace-nowrap px-4 py-4 {{ $isEmpty ? 'font-black text-rose-950' : 'font-bold text-slate-700' }}">
                                         {{ $row['date']->translatedFormat('D, d M Y') }}
                                         @if($row['is_holiday'])<span class="mt-1 block text-[11px] font-bold text-slate-500">{{ $row['holiday_name'] ?? 'Hari Libur' }}</span>@endif
@@ -226,6 +230,8 @@
                                             </div>
                                         @elseif($isEmpty)
                                             <div class="rounded-xl border border-rose-200 bg-white/80 px-3 py-3 text-sm font-black text-rose-800"><span aria-hidden="true">⚠</span> Belum ada data jurnal untuk slot ini.</div>
+                                        @elseif($row['status'] === 'AGENDA')
+                                            <div class="rounded-xl border border-sky-200 bg-sky-50 px-3 py-3 text-sm font-black text-sky-800">{{ $row['agenda_reason'] ?? 'Libur Mengajar - Agenda' }}</div>
                                         @elseif(in_array($row['status'], ['IZIN', 'SAKIT'], true))
                                             <div class="rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-sm font-black text-amber-800">Dibebaskan oleh presensi: {{ strtolower($row['status']) }}.</div>
                                         @else

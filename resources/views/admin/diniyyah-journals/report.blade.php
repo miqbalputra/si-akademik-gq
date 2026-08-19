@@ -106,6 +106,7 @@
             <div class="rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm"><p class="text-[10px] font-black uppercase tracking-wider text-amber-700">Mapel</p><p class="mt-2 text-3xl font-black text-amber-800">{{ $stats['total_mapel'] }}</p></div>
             <div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm"><p class="text-[10px] font-black uppercase tracking-wider text-emerald-700">Jurnal reguler</p><p class="mt-2 text-3xl font-black text-emerald-800">{{ $stats['jurnal_reguler'] }}</p></div>
             <div class="rounded-2xl border border-indigo-200 bg-indigo-50 p-4 shadow-sm"><p class="text-[10px] font-black uppercase tracking-wider text-indigo-700">Jurnal pengganti</p><p class="mt-2 text-3xl font-black text-indigo-800">{{ $stats['jurnal_pengganti'] }}</p></div>
+            <div class="rounded-2xl border border-sky-200 bg-sky-50 p-4 shadow-sm"><p class="text-[10px] font-black uppercase tracking-wider text-sky-700">Agenda tanpa KBM</p><p class="mt-2 text-3xl font-black text-sky-800">{{ $stats['agenda'] ?? 0 }}</p></div>
         </section>
 
         <div class="grid gap-6 lg:grid-cols-3">
@@ -187,7 +188,7 @@
                                 <td class="px-4 py-3 text-slate-700">{{ $row['guru_asli'] }}</td>
                                 <td class="px-4 py-3 text-slate-700">{{ $row['pengganti'] ?? '-' }}</td>
                                 <td class="px-4 py-3 font-bold text-slate-800">{{ $row['guru_mengajar'] }}</td>
-                                <td class="px-4 py-3"><span class="rounded-full px-2 py-1 text-[10px] font-black {{ $row['type'] === 'substitute' ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-700' }}">{{ $row['type_label'] }}</span></td>
+                                <td class="px-4 py-3"><span class="rounded-full px-2 py-1 text-[10px] font-black {{ $row['type'] === 'substitute' ? 'bg-indigo-100 text-indigo-700' : ($row['type'] === 'agenda' ? 'bg-sky-100 text-sky-700' : 'bg-emerald-100 text-emerald-700') }}">{{ $row['type_label'] }}</span></td>
                                 <td class="max-w-sm whitespace-normal px-4 py-3 text-slate-600">{{ $row['material'] }}</td>
                                 <td class="px-4 py-3 text-center font-black text-slate-800">{{ $row['jp'] }}</td>
                                 <td class="whitespace-nowrap px-4 py-3 text-center text-xs font-bold text-slate-600">{{ $row['hadir'] }}/{{ $row['sakit'] }}/{{ $row['izin'] }}/{{ $row['alpa'] }}/{{ $row['bolos'] }}</td>

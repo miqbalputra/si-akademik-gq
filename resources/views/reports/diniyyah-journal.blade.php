@@ -28,6 +28,7 @@
         .muted { color: #58625c; }
         .type-regular { color: #166534; font-weight: bold; }
         .type-substitute { color: #3730a3; font-weight: bold; }
+        .type-agenda { color: #0369a1; font-weight: bold; }
         .material { white-space: normal; word-wrap: break-word; }
         .empty { color: #58625c; padding: 16px !important; text-align: center; }
         .footer { border-top: 1px solid #c8d0ca; color: #58625c; font-size: 7px; margin-top: 9px; padding-top: 5px; }
@@ -67,6 +68,7 @@
             <td class="stat"><div class="label">Mapel</div><div class="value">{{ $stats['total_mapel'] ?? 0 }}</div></td>
             <td class="stat"><div class="label">Total JP</div><div class="value">{{ $stats['total_jp'] ?? 0 }}</div></td>
             <td class="stat"><div class="label">Pengganti</div><div class="value">{{ $stats['jurnal_pengganti'] ?? 0 }}</div></td>
+            <td class="stat"><div class="label">Agenda tanpa KBM</div><div class="value">{{ $stats['agenda'] ?? 0 }}</div></td>
         </tr>
     </table>
 
@@ -103,7 +105,7 @@
                     <td>{{ $row['guru_asli'] ?? '-' }}</td>
                     <td>{{ $row['pengganti'] ?? '-' }}</td>
                     <td><strong>{{ $row['guru_mengajar'] ?? '-' }}</strong></td>
-                    <td class="{{ ($row['type'] ?? null) === 'substitute' ? 'type-substitute' : 'type-regular' }}">{{ $row['type_label'] ?? '-' }}</td>
+                    <td class="{{ ($row['type'] ?? null) === 'substitute' ? 'type-substitute' : (($row['type'] ?? null) === 'agenda' ? 'type-agenda' : 'type-regular') }}">{{ $row['type_label'] ?? '-' }}</td>
                     <td class="material">{{ $row['material'] ?? '-' }}</td>
                     <td class="center">{{ $row['jp'] ?? 0 }}</td>
                     <td class="center">{{ $row['hadir'] ?? 0 }}</td>

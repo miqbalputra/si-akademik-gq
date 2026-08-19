@@ -60,6 +60,7 @@
             <td class="stat"><div class="label">Kosong</div><div class="value">{{ $stats['kosong'] ?? 0 }}</div></td>
             <td class="stat"><div class="label">Digantikan</div><div class="value">{{ $stats['digantikan'] ?? 0 }}</div></td>
             <td class="stat"><div class="label">Dibebaskan</div><div class="value">{{ $stats['dibebaskan'] ?? 0 }}</div></td>
+            <td class="stat"><div class="label">Agenda tanpa KBM</div><div class="value">{{ $stats['agenda'] ?? 0 }}</div></td>
             <td class="stat"><div class="label">Total slot</div><div class="value">{{ $stats['total'] ?? 0 }}</div></td>
             <td class="stat"><div class="label">Data jurnal</div><div class="value">{{ $stats['total_jurnal'] ?? 0 }}</div></td>
         </tr>
@@ -112,6 +113,23 @@
             @empty
                 <tr><td class="empty" colspan="17">Tidak ada data jurnal pada periode ini.</td></tr>
             @endforelse
+            @foreach(collect($performa['agenda_rows'] ?? []) as $row)
+                <tr>
+                    <td class="center">-</td>
+                    <td>{{ $row['date_label'] ?? ($row['date'] ?? '-') }}</td>
+                    <td>{{ $row['session_label'] ?? '-' }}</td>
+                    <td>{{ $row['session_time'] ?? '-' }}</td>
+                    <td>{{ $row['kelas'] ?? '-' }}</td>
+                    <td>{{ $row['mapel'] ?? '-' }}</td>
+                    <td>{{ $row['material'] ?? '-' }}</td>
+                    <td class="center">{{ $row['jp'] ?? 1 }}</td>
+                    <td>{{ $row['guru_asli'] ?? '-' }}</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td class="regular">Agenda tanpa KBM</td>
+                    <td class="center">-</td><td class="center">-</td><td class="center">-</td><td class="center">-</td><td class="center">-</td>
+                </tr>
+            @endforeach
         </tbody>
     </table>
 

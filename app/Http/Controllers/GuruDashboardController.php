@@ -265,7 +265,8 @@ class GuruDashboardController extends Controller
             ->map(function (SchoolEvent $event): array {
                 return [
                     'kind' => 'event',
-                    'kind_label' => $event->typeLabel(),
+                    'kind_label' => $event->is_no_kbm ? 'Agenda Tanpa KBM' : $event->typeLabel(),
+                    'is_no_kbm' => (bool) $event->is_no_kbm,
                     'priority_key' => $event->priorityKey(),
                     'priority_label' => $event->priorityLabel(),
                     'title' => $event->title,

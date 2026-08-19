@@ -6,8 +6,12 @@ use App\Models\AcademicTerm;
 use App\Models\ClassEnrollment;
 use App\Models\ClassroomTerm;
 use App\Models\DiniyyahClassJournal;
+use App\Models\DiniyyahTeachingSchedule;
 use App\Models\DiniyyahSubject;
+use App\Models\SchoolEvent;
+use App\Models\SchoolHoliday;
 use App\Models\Teacher;
+use App\Support\SessionTimetable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -20,18 +24,29 @@ use Illuminate\Support\Collection;
  */
 class DiniyyahJournalReportService
 {
+    public function __construct(private readonly DiniyyahNoKbmAgendaService $noKbmAgendaService) {}
+
     /** @return array<string, mixed> */
     public function build(array $filters = [], ?int $teacherId = null): array
     {
         $filters = $this->normalizeFilters($filters);
         $journals = $this->query($filters, $teacherId)->get();
         $rows = $this->mapRows($journals);
+        $agendaRows = $this->agendaRows($filters, $teacherId, $journals);
+        $rows = $rows->concat($agendaRows)
+            ->sortBy(fn (array $row) => [
+                $row['date'] ?? '',
+                $row['session_time'] ?? '',
+                $row['session_hour'] ?? '',
+            ])
+            ->values();
         $term = $filters['academic_term_id']
             ? AcademicTerm::with('academicYear')->find($filters['academic_term_id'])
             : null;
 
         return [
             'rows' => $rows,
+            'agenda_rows' => $agendaRows,
             'filters' => $filters,
             'stats' => $this->buildStats($rows),
             'term' => $term,
@@ -213,7 +228,8 @@ class DiniyyahJournalReportService
     /** @param Collection<int, array<string, mixed>> $rows */
     private function buildStats(Collection $rows): array
     {
-        $byTeacher = $rows
+        $journalRows = $rows->reject(fn (array $row): bool => ($row['type'] ?? null) === 'agenda');
+        $byTeacher = $journalRows
             ->groupBy('guru_mengajar_id')
             ->map(function (Collection $teacherRows): array {
                 return [
@@ -238,19 +254,21 @@ class DiniyyahJournalReportService
             ->values();
 
         return [
-            'total_jurnal' => $rows->count(),
-            'total_guru' => $rows->pluck('guru_mengajar_id')->filter()->unique()->count(),
+            'total_jurnal' => $journalRows->count(),
+            'total_slot' => $rows->count(),
+            'agenda' => $rows->where('type', 'agenda')->count(),
+            'total_guru' => $journalRows->pluck('guru_mengajar_id')->filter()->unique()->count(),
             'total_kelas' => $rows->pluck('classroom_term_id')->filter()->unique()->count(),
             'total_mapel' => $rows->pluck('subject_id')->filter()->unique()->count(),
             'total_jp' => (int) $rows->sum('jp'),
-            'jurnal_reguler' => $rows->where('type', 'regular')->count(),
-            'jurnal_pengganti' => $rows->where('type', 'substitute')->count(),
+            'jurnal_reguler' => $journalRows->where('type', 'regular')->count(),
+            'jurnal_pengganti' => $journalRows->where('type', 'substitute')->count(),
             'hari_tercatat' => $rows->pluck('date')->filter()->unique()->count(),
-            'total_hadir' => (int) $rows->sum('hadir'),
-            'total_sakit' => (int) $rows->sum('sakit'),
-            'total_izin' => (int) $rows->sum('izin'),
-            'total_alpa' => (int) $rows->sum('alpa'),
-            'total_bolos' => (int) $rows->sum('bolos'),
+            'total_hadir' => (int) $journalRows->sum('hadir'),
+            'total_sakit' => (int) $journalRows->sum('sakit'),
+            'total_izin' => (int) $journalRows->sum('izin'),
+            'total_alpa' => (int) $journalRows->sum('alpa'),
+            'total_bolos' => (int) $journalRows->sum('bolos'),
             'by_teacher' => $byTeacher,
             'by_class' => $byClass,
         ];
@@ -278,6 +296,237 @@ class DiniyyahJournalReportService
             },
             'Pencarian' => $filters['search'] ?? 'Tidak ada',
         ];
+    }
+
+    /**
+     * Agenda tanpa KBM adalah baris virtual laporan: tidak ada record jurnal
+     * yang dibuat, tetapi slot tetap terlihat agar laporan menjelaskan mengapa
+     * guru tidak perlu mengisi jurnal.
+     *
+     * @param  Collection<int, DiniyyahClassJournal>  $journals
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function agendaRows(array $filters, ?int $teacherId, Collection $journals): Collection
+    {
+        // Agenda virtual bukan jurnal pengganti. Saat pengguna memilih filter
+        // khusus "Pengganti", hasil agenda harus tetap kosong agar filter laporan
+        // tidak bocor ke kategori lain.
+        if (($filters['type'] ?? null) === 'substitute') {
+            return collect();
+        }
+
+        $term = $filters['academic_term_id']
+            ? AcademicTerm::query()->find($filters['academic_term_id'])
+            : null;
+
+        $eventsQuery = SchoolEvent::query()
+            ->with('targetClassroomTerms.classroom')
+            ->noKbm()
+            ->when($term, fn (Builder $query) => $query->where('academic_term_id', $term->id))
+            ->when($filters['date_from'], fn (Builder $query, string $date) => $query->whereDate('ends_on', '>=', $date))
+            ->when($filters['date_until'], fn (Builder $query, string $date) => $query->whereDate('starts_on', '<=', $date))
+            ->orderBy('starts_on')
+            ->orderBy('title');
+        $events = $eventsQuery->get();
+
+        if ($events->isEmpty()) {
+            return collect();
+        }
+
+        $start = $filters['date_from']
+            ? Carbon::parse($filters['date_from'], 'Asia/Jakarta')->startOfDay()
+            : ($term?->starts_at
+                ? Carbon::parse($term->starts_at, 'Asia/Jakarta')->startOfDay()
+                : Carbon::parse($events->min('starts_on'), 'Asia/Jakarta')->startOfDay());
+        $end = $filters['date_until']
+            ? Carbon::parse($filters['date_until'], 'Asia/Jakarta')->endOfDay()
+            : ($term?->ends_at
+                ? Carbon::parse($term->ends_at, 'Asia/Jakarta')->endOfDay()
+                : Carbon::parse($events->max('ends_on'), 'Asia/Jakarta')->endOfDay());
+
+        if ($start->greaterThan($end)) {
+            return collect();
+        }
+
+        $schedules = DiniyyahTeachingSchedule::query()
+            ->with([
+                'teacherAssignment.teacher',
+                'teacherAssignment.classSubject.subject',
+                'teacherAssignment.classSubject.classroomTerm.classroom',
+                'classSession',
+            ])
+            ->whereHas('teacherAssignment', function (Builder $query) use ($filters, $teacherId): void {
+                $query
+                    ->when($teacherId, fn (Builder $query, int $id) => $query->where('teacher_id', $id))
+                    ->when($filters['teacher_id'], fn (Builder $query, int $id) => $query->where('teacher_id', $id))
+                    ->when($filters['academic_term_id'], fn (Builder $query, int $id) => $query->whereHas('classSubject.classroomTerm', fn (Builder $q) => $q->where('academic_term_id', $id)));
+            })
+            ->when($filters['classroom_term_id'], fn (Builder $query, int $id) => $query->whereHas('teacherAssignment.classSubject', fn (Builder $q) => $q->where('classroom_term_id', $id)))
+            ->when($filters['subject_id'], fn (Builder $query, int $id) => $query->whereHas('teacherAssignment.classSubject', fn (Builder $q) => $q->where('subject_id', $id)))
+            ->get()
+            ->filter(fn ($schedule): bool => $schedule->teacherAssignment?->classSubject?->classroomTerm !== null)
+            ->values();
+
+        if ($schedules->isEmpty()) {
+            return collect();
+        }
+
+        $terms = $schedules
+            ->map(fn ($schedule) => $schedule->teacherAssignment?->classSubject?->classroomTerm)
+            ->filter()
+            ->unique('id')
+            ->values();
+        $agendaEvents = $this->noKbmAgendaService->eventsForRange($terms, $start, $end);
+        $holidayDates = SchoolHoliday::query()
+            ->whereDate('holiday_date', '>=', $start->toDateString())
+            ->whereDate('holiday_date', '<=', $end->toDateString())
+            ->pluck('holiday_date')
+            ->map(fn ($date): string => Carbon::parse($date)->toDateString())
+            ->flip();
+
+        $journalKeys = $journals->mapWithKeys(function (DiniyyahClassJournal $journal): array {
+            return [$journal->diniyyah_teacher_assignment_id.'|'.$journal->date?->toDateString().'|'.strtolower((string) $journal->session_hour) => true];
+        });
+        $rows = collect();
+        $date = $start->copy();
+
+        while ($date <= $end) {
+            $dateString = $date->toDateString();
+            if ($holidayDates->has($dateString)) {
+                $date->addDay();
+
+                continue;
+            }
+            $daySchedules = $schedules->where('day_of_week', $date->dayOfWeekIso)
+                ->filter(fn ($schedule): bool => $this->assignmentActiveOn($schedule->teacherAssignment, $date));
+
+            $tafsirGroups = $daySchedules
+                ->filter(fn ($schedule): bool => $this->isTafsirSchedule($schedule))
+                ->groupBy(fn ($schedule) => $schedule->teacherAssignment->teacher_id.'|'.($schedule->classSession?->session_name ?? SessionTimetable::SESSION_TAFSIR));
+
+            foreach ($daySchedules->reject(fn ($schedule) => $this->isTafsirSchedule($schedule)) as $schedule) {
+                $assignment = $schedule->teacherAssignment;
+                $classroomTerm = $assignment->classSubject->classroomTerm;
+                $sessionName = (string) ($schedule->classSession?->session_name ?? '');
+                $key = $assignment->id.'|'.$dateString.'|'.strtolower($sessionName);
+                if ($sessionName === '' || $journalKeys->has($key)) {
+                    continue;
+                }
+                $agenda = $this->noKbmAgendaService->forClassroomTerm($agendaEvents, $classroomTerm, $date);
+                if ($agenda !== null && $this->agendaMatchesSearch($agenda, $schedule, $filters['search'])) {
+                    $rows->push($this->agendaReportRow($schedule, $date, $agenda));
+                }
+            }
+
+            foreach ($tafsirGroups as $group) {
+                $assignmentIds = $group->pluck('diniyyah_teacher_assignment_id')->unique();
+                $hasJournal = $assignmentIds->contains(fn ($assignmentId): bool => $journalKeys->has($assignmentId.'|'.$dateString.'|'.SessionTimetable::SESSION_TAFSIR));
+                if ($hasJournal) {
+                    continue;
+                }
+                $tafsirTerms = $group
+                    ->map(fn ($schedule) => $schedule->teacherAssignment?->classSubject?->classroomTerm)
+                    ->filter()
+                    ->unique('id')
+                    ->values();
+                $agenda = $this->noKbmAgendaService->forClassroomTerms($agendaEvents, $tafsirTerms, $date);
+                if ($agenda !== null && $this->agendaMatchesSearch($agenda, $group->first(), $filters['search'])) {
+                    $rows->push($this->agendaTafsirReportRow($group, $date, $agenda));
+                }
+            }
+
+            $date->addDay();
+        }
+
+        return $rows->values();
+    }
+
+    private function assignmentActiveOn($assignment, Carbon $date): bool
+    {
+        $value = $date->toDateString();
+        $starts = $assignment?->starts_at?->toDateString();
+        $ends = $assignment?->ends_at?->toDateString();
+
+        return ($starts === null || $starts <= $value) && ($ends === null || $ends >= $value);
+    }
+
+    private function isTafsirSchedule($schedule): bool
+    {
+        $subject = $schedule->teacherAssignment?->classSubject?->subject;
+
+        return $subject !== null && (
+            strtolower((string) $subject->code) === SessionTimetable::SESSION_TAFSIR
+            || str_contains(strtolower((string) $subject->name), 'tafsir')
+        );
+    }
+
+    private function agendaMatchesSearch(array $agenda, $schedule, ?string $search): bool
+    {
+        if (! filled($search)) {
+            return true;
+        }
+
+        $haystack = collect([
+            $agenda['title'] ?? '',
+            $agenda['reason'] ?? '',
+            $schedule->teacherAssignment?->teacher?->name ?? '',
+            $schedule->teacherAssignment?->classSubject?->subject?->name ?? '',
+            $schedule->teacherAssignment?->classSubject?->classroomTerm?->name ?? '',
+        ])->implode(' ');
+
+        return str_contains(strtolower($haystack), strtolower($search));
+    }
+
+    /** @return array<string, mixed> */
+    private function agendaReportRow($schedule, Carbon $date, array $agenda): array
+    {
+        $assignment = $schedule->teacherAssignment;
+        $classSubject = $assignment->classSubject;
+        $time = collect([$schedule->classSession?->starts_at, $schedule->classSession?->ends_at])->filter()->map(fn ($value) => Carbon::parse($value)->format('H:i'))->implode(' - ');
+
+        return [
+            'journal' => null,
+            'id' => null,
+            'date' => $date->toDateString(),
+            'date_label' => $date->locale('id')->translatedFormat('d M Y'),
+            'session_hour' => (string) ($schedule->classSession?->session_name ?? ''),
+            'session_label' => SessionTimetable::label((string) ($schedule->classSession?->session_name ?? '')),
+            'session_time' => $time ?: null,
+            'classroom_term_id' => $classSubject->classroomTerm?->id,
+            'subject_id' => $classSubject->subject?->id,
+            'kelas' => $classSubject->classroomTerm?->name ?? '-',
+            'mapel' => $classSubject->subject?->name ?? '-',
+            'guru_asli_id' => $assignment->teacher_id,
+            'guru_asli' => $assignment->teacher?->name ?? '-',
+            'pengganti_id' => null,
+            'pengganti' => null,
+            'guru_mengajar_id' => $assignment->teacher_id,
+            'guru_mengajar' => $assignment->teacher?->name ?? '-',
+            'type' => 'agenda',
+            'type_label' => 'Agenda tanpa KBM',
+            'status' => 'AGENDA',
+            'is_virtual' => true,
+            'material' => $agenda['reason'],
+            'jp' => 1,
+            'hadir' => 0,
+            'sakit' => 0,
+            'izin' => 0,
+            'alpa' => 0,
+            'bolos' => 0,
+        ];
+    }
+
+    /** @param Collection<int, mixed> $group */
+    private function agendaTafsirReportRow(Collection $group, Carbon $date, array $agenda): array
+    {
+        $first = $group->first();
+        $firstRow = $this->agendaReportRow($first, $date, $agenda);
+        $firstRow['session_hour'] = SessionTimetable::SESSION_TAFSIR;
+        $firstRow['session_label'] = 'Tafsir serentak';
+        $firstRow['kelas'] = $group->map(fn ($schedule) => $schedule->teacherAssignment?->classSubject?->classroomTerm?->name)->filter()->unique()->implode(', ');
+        $firstRow['mapel'] = 'Tafsir';
+
+        return $firstRow;
     }
 
     private function sessionTime(DiniyyahClassJournal $journal): ?string

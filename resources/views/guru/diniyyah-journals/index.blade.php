@@ -210,6 +210,26 @@
             </div>
         </section>
 
+        @php
+            $agendaSlots = $scheduledSlots->filter(function ($slot) {
+                return ! $slot->filled && $slot->agenda !== null;
+            });
+        @endphp
+        @if($agendaSlots->isNotEmpty())
+            <section class="rounded-2xl border-2 border-sky-200 bg-sky-50 p-5 sm:p-6" aria-labelledby="agenda-no-kbm-heading">
+                <p class="text-xs font-black uppercase tracking-[.14em] text-sky-700">Agenda tanpa KBM</p>
+                <h3 id="agenda-no-kbm-heading" class="mt-2 text-lg font-black text-sky-950">Anda tidak perlu mengisi jurnal pada slot berikut</h3>
+                <div class="mt-3 space-y-2">
+                    @foreach($agendaSlots as $agendaSlot)
+                        <div class="rounded-xl border border-sky-200 bg-white px-3 py-2 text-sm font-semibold text-sky-900">
+                            {{ \App\Support\SessionTimetable::label($agendaSlot->session_name) }} · {{ $agendaSlot->subject_name }}
+                            <span class="block text-xs font-bold text-sky-700">{{ $agendaSlot->agenda['reason'] }}</span>
+                        </div>
+                    @endforeach
+                </div>
+            </section>
+        @endif
+
         <!-- Form Tambah Jurnal (Hanya untuk kelas/mapel yang diajarkan guru ini,
              dan hanya di hari yang guru benar-benar dijadwalkan mengajar kelas itu) -->
         @if($classAssignments->isNotEmpty() && $sessionSlots->isNotEmpty() && $hasScheduleOnDay)
@@ -218,6 +238,12 @@
             <h3 class="mt-2 text-lg font-black text-slate-800 mb-1">Isi Jam Pelajaran Anda</h3>
             <p class="text-sm text-slate-500 mb-5">Lengkapi sesi, mata pelajaran, materi, dan presensi santri untuk satu jam pelajaran.</p>
 
+            @if(! $hasFillableSchedule)
+                <div class="mb-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800">
+                    Semua slot pada tanggal ini sudah terisi. Tidak ada jurnal baru yang perlu ditambahkan.
+                </div>
+            @endif
+
             <form method="POST" action="{{ route('guru.diniyyah-journals.store') }}">
                 @csrf
                 <input type="hidden" name="classroom_term_id" value="{{ $selectedClassroomTermId }}">
@@ -225,21 +251,24 @@
 
                 <div>
                     <label for="schedule_slot" class="block text-sm font-black text-slate-700 mb-1.5">Jadwal Mengajar (Sesi & Mapel)</label>
-                    <select id="schedule_slot" name="schedule_slot" required class="form-input">
+                    <select id="schedule_slot" name="schedule_slot" @if($hasFillableSchedule) required @endif class="form-input">
                         <option value="" disabled @selected(! $selectedScheduleSlot)>Pilih jadwal...</option>
                         @foreach($scheduledSlots as $slot)
                             @php
                                 $slotStart = $slot->starts_at ? \Carbon\Carbon::parse($slot->starts_at)->format('H:i') : '';
                                 $slotEnd = $slot->ends_at ? \Carbon\Carbon::parse($slot->ends_at)->format('H:i') : '';
+                                $slotStatusSuffix = $slot->filled
+                                    ? ' (sudah terisi)'
+                                    : ($slot->agenda ? ' (agenda tanpa KBM)' : '');
                             @endphp
                             <option value="{{ $slot->assignment_id }}|{{ $slot->session_name }}"
                                     data-assignment="{{ $slot->assignment_id }}"
                                     data-session="{{ $slot->session_name }}"
                                     data-start="{{ $slotStart }}"
                                     data-end="{{ $slotEnd }}"
-                                    @disabled($slot->filled)
+                                    @disabled($slot->filled || $slot->agenda !== null)
                                     @selected($selectedScheduleSlot && $selectedScheduleSlot->assignment_id === $slot->assignment_id && $selectedScheduleSlot->session_name === $slot->session_name)>
-                                {{ \App\Support\SessionTimetable::label($slot->session_name) }} — {{ $slot->subject_name }}@if($slotStart) ({{ $slotStart }} - {{ $slotEnd }}) @endif{{ $slot->filled ? ' (sudah terisi)' : '' }}
+                                {{ \App\Support\SessionTimetable::label($slot->session_name) }} — {{ $slot->subject_name }}{{ $slotStart ? " ({$slotStart} - {$slotEnd})" : '' }}{{ $slotStatusSuffix }}
                             </option>
                         @endforeach
                     </select>
@@ -250,6 +279,7 @@
                 <input type="hidden" name="diniyyah_teacher_assignment_id" id="assignment_id_input">
                 <input type="hidden" name="session_hour" id="session_hour_input">
 
+                @if($hasFillableSchedule)
                 <div class="mt-5">
                     <label for="material" class="block text-sm font-black text-slate-700 mb-1.5">Materi</label>
                     <textarea id="material" name="material" rows="3" required class="form-input" placeholder="Tuliskan materi yang diajarkan..."></textarea>
@@ -267,6 +297,7 @@
                         Simpan Jurnal Jam Ini
                     </button>
                 </div>
+                @endif
             </form>
         </section>
         <script>

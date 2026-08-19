@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\DiniyyahClassJournal;
 use App\Models\DiniyyahTeacherAssignment;
+use App\Services\DiniyyahNoKbmAgendaService;
 use App\Support\SessionTimetable;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -28,6 +29,8 @@ use Illuminate\Support\Facades\Auth;
  */
 class GuruDiniyyahTafsirJournalController extends Controller
 {
+    public function __construct(private readonly DiniyyahNoKbmAgendaService $noKbmAgendaService) {}
+
     public function index(Request $request)
     {
         $teacher = Auth::user()->teacher;
@@ -41,12 +44,31 @@ class GuruDiniyyahTafsirJournalController extends Controller
             ->whereIn('id', collect($request->query('assignment_ids', []))->map(fn ($id) => (int) $id))
             ->pluck('id')
             ->all();
+        $agendaEvents = $this->noKbmAgendaService->eventsForRange(
+            $tafsirAssignments->pluck('classSubject.classroomTerm')->filter()->unique('id')->values(),
+            Carbon::parse($selectedDate, 'Asia/Jakarta')->startOfDay(),
+            Carbon::parse($selectedDate, 'Asia/Jakarta')->endOfDay(),
+        );
+        $agendaAssignments = $tafsirAssignments->filter(fn ($assignment) =>
+            $this->noKbmAgendaService->forClassroomTerm(
+                $agendaEvents,
+                $assignment->classSubject->classroomTerm,
+                $selectedDate,
+            ) !== null
+        )->mapWithKeys(fn ($assignment) => [
+            $assignment->id => $this->noKbmAgendaService->forClassroomTerm(
+                $agendaEvents,
+                $assignment->classSubject->classroomTerm,
+                $selectedDate,
+            ),
+        ]);
 
         return view('guru.diniyyah-tafsir-journals.index', [
             'tafsirAssignments' => $tafsirAssignments,
             'selectedDate' => $selectedDate,
             'preselectedAssignmentIds' => $preselectedAssignmentIds,
             'teacher' => $teacher,
+            'agendaAssignments' => $agendaAssignments,
         ]);
     }
 
@@ -89,8 +111,19 @@ class GuruDiniyyahTafsirJournalController extends Controller
             return back()->withInput()->with('error', 'Kelas yang Anda pilih tidak valid atau bukan penugasan Tafsir Anda.');
         }
 
+        $agendaEvents = $this->noKbmAgendaService->eventsForRange(
+            $selected->pluck('classSubject.classroomTerm')->filter()->unique('id')->values(),
+            Carbon::parse($validated['date'], 'Asia/Jakarta')->startOfDay(),
+            Carbon::parse($validated['date'], 'Asia/Jakarta')->endOfDay(),
+        );
+        $agendaAssignments = $selected->filter(fn ($assignment) =>
+            $this->noKbmAgendaService->forClassroomTerm($agendaEvents, $assignment->classSubject->classroomTerm, $validated['date']) !== null
+        );
+        $selected = $selected->reject(fn ($assignment) => $agendaAssignments->contains('id', $assignment->id))->values();
+
         $created = 0;
         $skipped = 0;
+        $agendaSkipped = $agendaAssignments->count();
 
         foreach ($selected as $assignment) {
             $alreadyExists = DiniyyahClassJournal::where('diniyyah_teacher_assignment_id', $assignment->id)
@@ -135,6 +168,9 @@ class GuruDiniyyahTafsirJournalController extends Controller
         $message = $created.' jurnal Tafsir berhasil dibuat untuk '.$created.' kelas yang dipilih.';
         if ($skipped > 0) {
             $message .= ' '.$skipped.' kelas sudah ada jurnal Tafsir di tanggal ini (di-skip).';
+        }
+        if ($agendaSkipped > 0) {
+            $message .= ' '.$agendaSkipped.' kelas dibebaskan oleh agenda tanpa KBM.';
         }
 
         return redirect()->route('guru.diniyyah-tafsir-journals.index', ['date' => $validated['date']])

@@ -17,6 +17,7 @@ use Illuminate\Support\Collection;
     'academic_term_id',
     'title',
     'event_type',
+    'is_no_kbm',
     'target_scope',
     'target_level_name',
     'target_gender_group',
@@ -59,6 +60,7 @@ class SchoolEvent extends Model
             'ends_on' => 'date',
             'show_to_teachers' => 'boolean',
             'show_to_guardians' => 'boolean',
+            'is_no_kbm' => 'boolean',
         ];
     }
 
@@ -70,6 +72,16 @@ class SchoolEvent extends Model
     public function scopeVisibleToGuardians(Builder $query): Builder
     {
         return $query->where('show_to_guardians', true);
+    }
+
+    public function scopeNoKbm(Builder $query): Builder
+    {
+        return $query->where('is_no_kbm', true);
+    }
+
+    public function isNoKbmLabel(): string
+    {
+        return $this->is_no_kbm ? 'Tanpa KBM' : 'Agenda biasa';
     }
 
     public function scopeOverlapping(Builder $query, CarbonInterface $startsOn, CarbonInterface $endsOn): Builder
@@ -165,7 +177,7 @@ class SchoolEvent extends Model
             'level' => 'Jenjang Tertentu',
             'gender' => 'Kelompok Gender',
             'level_gender' => 'Jenjang + Gender',
-            default => 'Semua Sekolah',
+            default => $this->is_no_kbm ? 'Semua Kelas' : 'Semua Sekolah',
         };
     }
 
@@ -234,7 +246,7 @@ class SchoolEvent extends Model
         }
 
         if ($targets->isEmpty()) {
-            return 'Semua sekolah';
+            return $this->is_no_kbm ? 'Semua kelas' : 'Semua sekolah';
         }
 
         $visibleTargets = $targets->take($limit)->implode(', ');

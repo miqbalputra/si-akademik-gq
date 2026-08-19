@@ -8,6 +8,8 @@ use App\Models\DiniyyahClassJournal;
 use App\Models\DiniyyahTeacherAssignment;
 use App\Models\DiniyyahTeachingSchedule;
 use App\Models\StudentAttendance;
+use App\Services\DiniyyahNoKbmAgendaService;
+use App\Services\DiniyyahJournalReportService;
 use App\Support\SessionTimetable;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -16,6 +18,8 @@ use Illuminate\Support\Facades\Auth;
 
 class GuruDiniyyahJournalController extends Controller
 {
+    public function __construct(private readonly DiniyyahNoKbmAgendaService $noKbmAgendaService) {}
+
     public function index(Request $request)
     {
         $teacher = Auth::user()->teacher;
@@ -79,9 +83,15 @@ class GuruDiniyyahJournalController extends Controller
         $scheduledSlots = collect();
         $selectedTerm = null;
         $hasScheduleOnDay = false;
+        $agendaEvents = collect();
         if ($selectedClassroomTermId) {
             $selectedTerm = ClassroomTerm::with('classroom')->find($selectedClassroomTermId);
             if ($selectedTerm) {
+                $agendaEvents = $this->noKbmAgendaService->eventsForRange(
+                    collect([$selectedTerm]),
+                    Carbon::parse($selectedDate, 'Asia/Jakarta')->startOfDay(),
+                    Carbon::parse($selectedDate, 'Asia/Jakarta')->endOfDay(),
+                );
                 $dayOfWeek = SessionTimetable::dayOfWeekIso($selectedDate);
                 $sessionSlots = SessionTimetable::slotsFor($selectedTerm->classroom_id, $dayOfWeek);
 
@@ -119,6 +129,7 @@ class GuruDiniyyahJournalController extends Controller
                             continue;
                         }
                         $slot = $sessionSlots->firstWhere('session_name', $sessionName);
+                        $agenda = $this->noKbmAgendaService->forClassroomTerm($agendaEvents, $selectedTerm, $selectedDate);
                         $scheduledSlots->push((object) [
                             'assignment_id' => $assignment->id,
                             'session_name' => $sessionName,
@@ -126,6 +137,7 @@ class GuruDiniyyahJournalController extends Controller
                             'starts_at' => $slot?->starts_at,
                             'ends_at' => $slot?->ends_at,
                             'filled' => in_array($assignment->id.'|'.$sessionName, $filledKeys, true),
+                            'agenda' => $agenda,
                         ]);
                     }
                 }
@@ -150,8 +162,10 @@ class GuruDiniyyahJournalController extends Controller
             return $requestedAssignmentId > 0
                 && (int) $slot->assignment_id === $requestedAssignmentId
                 && (string) $slot->session_name === $requestedSessionHour
-                && ! $slot->filled;
+                && ! $slot->filled
+                && $slot->agenda === null;
         });
+        $hasFillableSchedule = $scheduledSlots->contains(fn ($slot): bool => ! $slot->filled && $slot->agenda === null);
 
         return view('guru.diniyyah-journals.index', compact(
             'classes',
@@ -166,7 +180,8 @@ class GuruDiniyyahJournalController extends Controller
             'scheduledSlots',
             'selectedTerm',
             'hasScheduleOnDay',
-            'selectedScheduleSlot'
+            'selectedScheduleSlot',
+            'hasFillableSchedule',
         ));
     }
 
@@ -175,7 +190,7 @@ class GuruDiniyyahJournalController extends Controller
      * guru asli (bukan pengganti), di semua kelas, tersusun per tanggal. Dipisah
      * dari halaman input supaya guru fokus mengisi jurnal, riwayat dibuka on-demand.
      */
-    public function riwayat()
+    public function riwayat(DiniyyahJournalReportService $reportService)
     {
         $teacher = Auth::user()->teacher;
         if (! $teacher) {
@@ -193,7 +208,9 @@ class GuruDiniyyahJournalController extends Controller
             ->orderBy('session_starts_at')
             ->get();
 
-        return view('guru.diniyyah-journals.riwayat', compact('myJournals', 'teacher'));
+        $agendaRows = $reportService->build([], $teacher->id)['agenda_rows'] ?? collect();
+
+        return view('guru.diniyyah-journals.riwayat', compact('myJournals', 'agendaRows', 'teacher'));
     }
 
     /**
@@ -361,6 +378,22 @@ class GuruDiniyyahJournalController extends Controller
                     'date' => $validated['date'],
                 ])->withInput()->with('error', 'Sesi/mapel ini tidak sesuai jadwal mengajar Anda di kelas & hari ini.');
             }
+        }
+
+        // Agenda tanpa KBM adalah status virtual yang read-only. UI menonaktifkan
+        // slot ini, tetapi pemeriksaan server tetap wajib agar request manual tidak
+        // dapat membuat record jurnal palsu pada hari agenda.
+        $classroomTerm = $assignment->classSubject->classroomTerm;
+        $agendaEvents = $this->noKbmAgendaService->eventsForRange(
+            collect([$classroomTerm]),
+            Carbon::parse($validated['date'], 'Asia/Jakarta')->startOfDay(),
+            Carbon::parse($validated['date'], 'Asia/Jakarta')->endOfDay(),
+        );
+        if ($this->noKbmAgendaService->forClassroomTerm($agendaEvents, $classroomTerm, $validated['date']) !== null) {
+            return redirect()->route('guru.diniyyah-journals.index', [
+                'classroom_term_id' => $validated['classroom_term_id'],
+                'date' => $validated['date'],
+            ])->withInput()->with('error', 'Slot ini dibebaskan oleh agenda tanpa KBM dan tidak perlu diisi.');
         }
 
         // Hanya terima absensi untuk enrollment yang AKTIF di classroom_term ini.

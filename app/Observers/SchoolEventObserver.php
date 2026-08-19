@@ -17,7 +17,7 @@ class SchoolEventObserver
     public function updated(SchoolEvent $event): void
     {
         // Hanya bila field penting berubah.
-        if (! $event->wasChanged(['title', 'starts_on', 'ends_on', 'target_scope', 'target_level_name', 'target_gender_group', 'location', 'show_to_teachers', 'show_to_guardians'])) {
+        if (! $event->wasChanged(['title', 'event_type', 'is_no_kbm', 'starts_on', 'ends_on', 'target_scope', 'target_level_name', 'target_gender_group', 'location', 'show_to_teachers', 'show_to_guardians'])) {
             return;
         }
         $this->dispatch($event, 'Agenda sekolah diperbarui', 'diperbarui', 'school_event_updated', 'info');

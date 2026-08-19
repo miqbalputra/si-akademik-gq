@@ -43,10 +43,11 @@
         $stats = $performa['stats'];
         $emptySlots = $performa['empty_slots'];
         $grouped = collect($emptySlots)->groupBy('date');
+        $agendaRows = collect($performa['agenda_rows'] ?? []);
     @endphp
 
-    {{-- 4 stat cards --}}
-    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
+    {{-- 5 stat cards --}}
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-5 mb-6">
         <div class="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5 shadow-sm">
             <p class="text-xs font-bold uppercase tracking-wider text-emerald-700">Sudah Diisi</p>
             <p class="mt-1 text-4xl font-black text-emerald-700">{{ $stats['sudah_diisi'] }}</p>
@@ -67,6 +68,11 @@
             <p class="mt-1 text-4xl font-black text-amber-700">{{ $stats['dibebaskan'] ?? 0 }}</p>
             <p class="mt-1 text-xs font-semibold text-amber-600">izin/sakit dari presensi</p>
         </div>
+        <div class="rounded-2xl border border-sky-200 bg-sky-50/60 p-5 shadow-sm">
+            <p class="text-xs font-bold uppercase tracking-wider text-sky-700">Agenda tanpa KBM</p>
+            <p class="mt-1 text-4xl font-black text-sky-700">{{ $stats['agenda'] ?? 0 }}</p>
+            <p class="mt-1 text-xs font-semibold text-sky-600">libur mengajar terjadwal</p>
+        </div>
     </div>
 
     @php
@@ -75,6 +81,7 @@
             ['label' => 'Kosong', 'value' => (int) ($stats['kosong'] ?? 0), 'color' => '#e11d48', 'tone' => 'rose'],
             ['label' => 'Digantikan', 'value' => (int) ($stats['digantikan'] ?? 0), 'color' => '#4f46e5', 'tone' => 'indigo'],
             ['label' => 'Dibebaskan', 'value' => (int) ($stats['dibebaskan'] ?? 0), 'color' => '#d97706', 'tone' => 'amber'],
+            ['label' => 'Agenda tanpa KBM', 'value' => (int) ($stats['agenda'] ?? 0), 'color' => '#0284c7', 'tone' => 'sky'],
         ];
         $chartTotal = array_sum(array_column($chartRows, 'value'));
     @endphp
@@ -102,6 +109,7 @@
                             'emerald' => 'border-emerald-100 bg-emerald-50 text-emerald-800',
                             'rose' => 'border-rose-100 bg-rose-50 text-rose-800',
                             'indigo' => 'border-indigo-100 bg-indigo-50 text-indigo-800',
+                            'sky' => 'border-sky-100 bg-sky-50 text-sky-800',
                             default => 'border-amber-100 bg-amber-50 text-amber-800',
                         };
                     @endphp
@@ -116,6 +124,29 @@
             </dl>
         </div>
     </section>
+
+    @if($agendaRows->isNotEmpty())
+        <section class="mb-6 rounded-2xl border border-sky-200 bg-sky-50/60 p-5 shadow-sm sm:p-6" aria-labelledby="agenda-rows-heading">
+            <div class="flex items-center justify-between gap-3">
+                <div>
+                    <p class="text-[11px] font-black uppercase tracking-[.16em] text-sky-700">Tidak perlu diisi</p>
+                    <h2 id="agenda-rows-heading" class="mt-1 text-lg font-black text-sky-950">Agenda tanpa KBM</h2>
+                </div>
+                <span class="rounded-full border border-sky-200 bg-white px-3 py-1 text-xs font-black text-sky-800">{{ $agendaRows->count() }} slot</span>
+            </div>
+            <div class="mt-4 space-y-2">
+                @foreach($agendaRows as $row)
+                    <div class="flex flex-col gap-1 rounded-xl border border-sky-200 bg-white px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <p class="text-sm font-black text-sky-950">{{ $row['date_label'] }} · {{ $row['session_label'] }}</p>
+                            <p class="text-xs font-semibold text-slate-600">{{ $row['kelas'] }} · {{ $row['mapel'] }}</p>
+                        </div>
+                        <p class="text-xs font-black text-sky-700">{{ $row['material'] }}</p>
+                    </div>
+                @endforeach
+            </div>
+        </section>
+    @endif
 
     {{-- Daftar slot kosong --}}
     <div class="glass-card rounded-2xl p-6 border border-slate-200">

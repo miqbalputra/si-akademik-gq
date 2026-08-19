@@ -79,4 +79,28 @@
             </div>
         @endif
     </div>
+
+    @if(collect($agendaRows ?? [])->isNotEmpty())
+        <section class="glass-card rounded-2xl border border-sky-200 bg-sky-50/60 p-6" aria-labelledby="agenda-history-heading">
+            <div class="flex items-center justify-between gap-3">
+                <div>
+                    <p class="text-[11px] font-black uppercase tracking-[.16em] text-sky-700">Status virtual</p>
+                    <h2 id="agenda-history-heading" class="mt-1 text-lg font-black text-sky-950">Agenda tanpa KBM</h2>
+                    <p class="mt-1 text-sm font-medium text-sky-800">Slot berikut tidak membuat record jurnal karena kegiatan khusus sekolah.</p>
+                </div>
+                <span class="rounded-full border border-sky-200 bg-white px-3 py-1 text-xs font-black text-sky-800">{{ collect($agendaRows)->count() }} slot</span>
+            </div>
+            <div class="mt-4 space-y-2">
+                @foreach($agendaRows as $row)
+                    <div class="flex flex-col gap-1 rounded-xl border border-sky-200 bg-white px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <p class="text-sm font-black text-sky-950">{{ $row['date_label'] }} · {{ $row['session_label'] }}</p>
+                            <p class="text-xs font-semibold text-slate-600">{{ $row['kelas'] }} · {{ $row['mapel'] }}</p>
+                        </div>
+                        <p class="text-xs font-black text-sky-700">{{ $row['material'] }}</p>
+                    </div>
+                @endforeach
+            </div>
+        </section>
+    @endif
 </x-layouts.portal>

@@ -44,13 +44,19 @@
                     </div>
                 </div>
                 <p class="text-xs text-slate-500 mb-4">Centang kelas yang ikut sesi Tafsir Kamis ini (sesi 09:50-10:20). Kelas yang sudah ada jurnal Tafsir di tanggal ini akan di-skip.</p>
+                @if($agendaAssignments->isNotEmpty())
+                    <div class="mb-4 rounded-xl border border-sky-200 bg-sky-50 p-3 text-xs font-bold text-sky-800">
+                        {{ $agendaAssignments->count() }} kelas dibebaskan oleh agenda tanpa KBM. Kelas tersebut tidak perlu dibuatkan jurnal.
+                    </div>
+                @endif
                 <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                     @foreach($tafsirAssignments as $assignment)
                         <label for="tafsir-{{ $assignment->id }}" class="rounded-xl border border-slate-200 bg-white p-3 flex items-start gap-2 cursor-pointer hover:bg-slate-50 has-[:checked]:border-teal-500 has-[:checked]:bg-teal-50 transition-colors">
-                            <input type="checkbox" name="assignments[]" value="{{ $assignment->id }}" id="tafsir-{{ $assignment->id }}" class="mt-0.5 rounded border-slate-300 text-teal-600 focus:ring-teal-500" @checked(in_array($assignment->id, $preselectedAssignmentIds, true))>
+                            <input type="checkbox" name="assignments[]" value="{{ $assignment->id }}" id="tafsir-{{ $assignment->id }}" class="mt-0.5 rounded border-slate-300 text-teal-600 focus:ring-teal-500" @checked(in_array($assignment->id, $preselectedAssignmentIds, true)) @disabled($agendaAssignments->has($assignment->id))>
                             <span>
                                 <span class="block text-xs font-bold text-slate-800">{{ $assignment->classSubject->classroomTerm->name ?? $assignment->classSubject->classroomTerm->classroom->name }}</span>
                                 <span class="block text-[10px] uppercase text-slate-400 font-semibold mt-0.5">Tafsir · 09:50-10:20</span>
+                                @if($agendaAssignments->has($assignment->id))<span class="mt-1 block text-[10px] font-black text-sky-700">Agenda tanpa KBM</span>@endif
                             </span>
                         </label>
                     @endforeach

@@ -36,7 +36,7 @@
                     <div class="flex items-start justify-between gap-3">
                         <div class="min-w-0">
                             <div class="flex flex-wrap items-center gap-2">
-                                <p class="text-xs font-semibold uppercase {{ $style['type'] }} dark:text-current">{{ $event->typeLabel() }}</p>
+                                <p class="text-xs font-semibold uppercase {{ $event->is_no_kbm ? 'text-sky-700' : $style['type'] }} dark:text-current">{{ $event->is_no_kbm ? 'Agenda Tanpa KBM' : $event->typeLabel() }}</p>
                                 <span class="rounded-full px-2.5 py-1 text-[11px] font-semibold {{ $style['priority'] }}">
                                     {{ $event->priorityLabel() }}
                                 </span>

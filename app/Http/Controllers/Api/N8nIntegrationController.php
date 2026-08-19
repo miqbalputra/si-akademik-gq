@@ -6,7 +6,10 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\DiniyyahTeachingSchedule;
 use App\Models\DiniyyahClassJournal;
+use App\Models\SchoolHoliday;
 use App\Services\AttendanceStatusClient;
+use App\Services\DiniyyahNoKbmAgendaService;
+use App\Support\SessionTimetable;
 use Carbon\Carbon;
 
 class N8nIntegrationController extends Controller
@@ -53,6 +56,49 @@ class N8nIntegrationController extends Controller
             ->get();
 
         $attendanceClient = app(AttendanceStatusClient::class);
+        $agendaService = app(DiniyyahNoKbmAgendaService::class);
+        $todayStart = Carbon::parse($currentDate, 'Asia/Jakarta')->startOfDay();
+        $todayEnd = Carbon::parse($currentDate, 'Asia/Jakarta')->endOfDay();
+        $agendaEvents = $agendaService->eventsForRange(
+            $schedules
+                ->map(fn ($schedule) => $schedule->teacherAssignment?->classSubject?->classroomTerm)
+                ->filter()
+                ->unique('id')
+                ->values(),
+            $todayStart,
+            $todayEnd,
+        );
+        $scheduleTermIds = $schedules
+            ->map(fn ($schedule) => $schedule->teacherAssignment?->classSubject?->classroomTerm?->academic_term_id)
+            ->filter()
+            ->unique()
+            ->values();
+        $isSchoolHoliday = SchoolHoliday::query()
+            ->whereIn('academic_term_id', $scheduleTermIds)
+            ->whereDate('holiday_date', $currentDate)
+            ->exists();
+
+        // Tafsir dibuat serentak untuk beberapa kelas. Agenda hanya membebaskan
+        // sesi tersebut bila seluruh kelas dalam kelompok Tafsir tercakup.
+        $tafsirAgendaByScheduleId = [];
+        $tafsirSchedules = $schedules->filter(fn ($schedule): bool => $this->isTafsirSchedule($schedule));
+        $tafsirGroups = $tafsirSchedules->groupBy(fn ($schedule) =>
+            ($schedule->teacherAssignment?->teacher_id ?? '').'|'.($schedule->classSession?->session_name ?? SessionTimetable::SESSION_TAFSIR)
+        );
+        foreach ($tafsirGroups as $group) {
+            $terms = $group
+                ->map(fn ($schedule) => $schedule->teacherAssignment?->classSubject?->classroomTerm)
+                ->filter()
+                ->unique('id')
+                ->values();
+            $agenda = $agendaService->forClassroomTerms($agendaEvents, $terms, $currentDate);
+            if ($agenda !== null) {
+                foreach ($group as $schedule) {
+                    $tafsirAgendaByScheduleId[$schedule->id] = $agenda;
+                }
+            }
+        }
+
         $attendanceStatuses = $attendanceClient->statusesForTeachers(
             $schedules
                 ->map(fn ($schedule) => $schedule->teacherAssignment?->teacher)
@@ -66,6 +112,11 @@ class N8nIntegrationController extends Controller
         $missingJournals = [];
 
         foreach ($schedules as $schedule) {
+            // Agenda tanpa KBM dan libur sekolah bukan jurnal yang perlu ditagih.
+            if ($isSchoolHoliday) {
+                continue;
+            }
+
             $assignment = $schedule->teacherAssignment;
             $session = $schedule->classSession;
 
@@ -76,6 +127,16 @@ class N8nIntegrationController extends Controller
                 ->exists();
 
             if (!$journalExists && $assignment->teacher) {
+                $classroomTerm = $assignment->classSubject?->classroomTerm;
+                $agenda = $this->isTafsirSchedule($schedule)
+                    ? ($tafsirAgendaByScheduleId[$schedule->id] ?? null)
+                    : ($classroomTerm
+                        ? $agendaService->forClassroomTerm($agendaEvents, $classroomTerm, $currentDate)
+                        : null);
+                if ($agenda !== null) {
+                    continue;
+                }
+
                 $teacherAttendance = $attendanceStatuses[(string) $assignment->teacher->id] ?? null;
                 if (($teacherAttendance['available'] ?? false)
                     && $attendanceClient->isExempt($teacherAttendance['statuses'][$currentDate] ?? null)) {
@@ -101,5 +162,15 @@ class N8nIntegrationController extends Controller
             'missing_count' => count($missingJournals),
             'data' => $missingJournals
         ]);
+    }
+
+    private function isTafsirSchedule($schedule): bool
+    {
+        $subject = $schedule->teacherAssignment?->classSubject?->subject;
+
+        return $subject !== null && (
+            strtolower((string) $subject->code) === SessionTimetable::SESSION_TAFSIR
+            || str_contains(strtolower((string) $subject->name), 'tafsir')
+        );
     }
 }

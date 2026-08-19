@@ -15,7 +15,7 @@
                     <p class="text-sm font-medium text-amber-700">Rekap Event Sekolah</p>
                     <h2 class="mt-1 text-2xl font-bold text-slate-900">{{ $event->title }}</h2>
                     <p class="mt-2 text-sm text-slate-600">
-                        {{ $event->typeLabel() }} &middot; {{ $event->starts_on->locale('id')->translatedFormat('l, d F Y') }}
+                        {{ $event->is_no_kbm ? 'Agenda Tanpa KBM' : $event->typeLabel() }} &middot; {{ $event->starts_on->locale('id')->translatedFormat('l, d F Y') }}
                         @if (! $event->starts_on->equalTo($event->ends_on))
                             s.d. {{ $event->ends_on->locale('id')->translatedFormat('l, d F Y') }}
                         @endif
