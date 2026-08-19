@@ -11,6 +11,7 @@
     @include('partials.pwa-head')
 </head>
 <body class="school-home text-ink">
+    @include('partials.pwa-install-prompt')
     <main class="mx-auto grid min-h-screen max-w-7xl items-stretch lg:grid-cols-[1.05fr_.95fr]">
         <section class="hidden border-r border-line p-10 lg:flex lg:flex-col">
             <a href="{{ url('/') }}" class="school-brand w-fit">

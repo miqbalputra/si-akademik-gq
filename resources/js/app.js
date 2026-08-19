@@ -4,6 +4,172 @@ window.Chart = Chart;
 
 const getCsrfToken = () => document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
 
+const PWA_INSTALL_SNOOZE_KEY = 'gq-edu-install-dismissed-until';
+const PWA_INSTALLED_KEY = 'gq-edu-installed';
+const PWA_INSTALL_SNOOZE_MS = 24 * 60 * 60 * 1000;
+
+function isPwaStandalone() {
+    return window.matchMedia?.('(display-mode: standalone)')?.matches
+        || window.matchMedia?.('(display-mode: fullscreen)')?.matches
+        || window.navigator.standalone === true
+        || document.referrer.startsWith('android-app://');
+}
+
+function readPwaInstallSnooze() {
+    try {
+        return Number(window.localStorage.getItem(PWA_INSTALL_SNOOZE_KEY) ?? 0);
+    } catch (_) {
+        return 0;
+    }
+}
+
+function writePwaInstallSnooze() {
+    try {
+        window.localStorage.setItem(PWA_INSTALL_SNOOZE_KEY, String(Date.now() + PWA_INSTALL_SNOOZE_MS));
+    } catch (_) {
+        // Private browsing can deny localStorage; the popup remains closable for this view.
+    }
+}
+
+function clearPwaInstallSnooze() {
+    try {
+        window.localStorage.removeItem(PWA_INSTALL_SNOOZE_KEY);
+    } catch (_) {}
+}
+
+function wasPwaInstalled() {
+    try {
+        return window.localStorage.getItem(PWA_INSTALLED_KEY) === '1';
+    } catch (_) {
+        return false;
+    }
+}
+
+function rememberPwaInstalled() {
+    try {
+        window.localStorage.setItem(PWA_INSTALLED_KEY, '1');
+    } catch (_) {}
+}
+
+function initPwaInstallPrompt() {
+    const root = document.querySelector('[data-pwa-install-root]');
+    if (!root || isPwaStandalone() || wasPwaInstalled()) return;
+
+    const dialog = root.querySelector('[data-pwa-install-dialog]');
+    const installAction = root.querySelector('[data-pwa-install-action]');
+    const description = root.querySelector('[data-pwa-install-description]');
+    const fallback = root.querySelector('[data-pwa-install-fallback]');
+    const closeButtons = [...root.querySelectorAll('[data-pwa-install-close]')];
+    const defaultDescription = description?.textContent?.trim() ?? '';
+    const snoozed = () => readPwaInstallSnooze() > Date.now();
+    let deferredPrompt = null;
+    let fallbackTimer = null;
+
+    const focusable = () => [...dialog?.querySelectorAll(
+        'button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])',
+    ) ?? []];
+
+    const hide = () => {
+        root.hidden = true;
+    };
+
+    const show = (isFallback = false) => {
+        if (snoozed() || isPwaStandalone()) return;
+
+        root.hidden = false;
+        if (fallback) fallback.hidden = !isFallback;
+        if (installAction) installAction.hidden = isFallback;
+        if (description && isFallback) {
+            description.textContent = 'Browser ini belum menampilkan tombol instalasi otomatis. Anda tetap dapat memasang GQ Edu dari menu browser.';
+        } else if (description) {
+            description.textContent = defaultDescription;
+        }
+        window.requestAnimationFrame(() => (focusable()[0] ?? dialog)?.focus());
+    };
+
+    const close = () => {
+        writePwaInstallSnooze();
+        hide();
+    };
+
+    closeButtons.forEach((button) => button.addEventListener('click', close));
+
+    dialog?.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            close();
+            return;
+        }
+        if (event.key !== 'Tab') return;
+
+        const elements = focusable();
+        if (!elements.length) {
+            event.preventDefault();
+            dialog.focus();
+            return;
+        }
+        const first = elements[0];
+        const last = elements[elements.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+        }
+    });
+
+    installAction?.addEventListener('click', async () => {
+        if (!deferredPrompt) {
+            show(true);
+            return;
+        }
+
+        installAction.disabled = true;
+        try {
+            await deferredPrompt.prompt();
+            const choice = await deferredPrompt.userChoice;
+            deferredPrompt = null;
+            if (choice?.outcome !== 'accepted') close();
+            else hide();
+        } catch (_) {
+            show(true);
+        } finally {
+            installAction.disabled = false;
+        }
+    });
+
+    window.addEventListener('beforeinstallprompt', (event) => {
+        event.preventDefault();
+        deferredPrompt = event;
+        if (fallbackTimer) window.clearTimeout(fallbackTimer);
+        show(false);
+    }, { once: false });
+
+    window.addEventListener('appinstalled', () => {
+        deferredPrompt = null;
+        rememberPwaInstalled();
+        clearPwaInstallSnooze();
+        hide();
+    }, { once: false });
+
+    // Safari and browsers without beforeinstallprompt still receive a useful
+    // install explanation instead of a dead button.
+    if (!snoozed()) {
+        fallbackTimer = window.setTimeout(() => {
+            if (!deferredPrompt) show(true);
+        }, 1200);
+    }
+}
+
+function registerPwaServiceWorker() {
+    if (!('serviceWorker' in navigator)) return;
+
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {});
+    }, { once: true });
+}
+
 function initLearningMap() {
     const root = document.querySelector('[data-learning-map]');
     if (!root) return;
@@ -348,6 +514,8 @@ function initJournalOverdueReminder() {
 }
 
 function init() {
+    registerPwaServiceWorker();
+    initPwaInstallPrompt();
     initLearningMap();
     initScrollSpy();
     initPortalMenu();

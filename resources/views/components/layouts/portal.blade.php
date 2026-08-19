@@ -88,6 +88,9 @@
     @stack('head')
 </head>
 <body class="app-shell overflow-x-hidden text-slate-800 antialiased">
+    @if(in_array($portalLabel ?? null, ['Portal Guru', 'Portal Wali Santri'], true))
+        @include('partials.pwa-install-prompt')
+    @endif
     <header class="school-header">
         <nav class="school-header-inner" aria-label="Navigasi {{ $portalLabel ?? 'portal' }}">
             <a href="{{ $portalHomeUrl }}" class="school-brand">

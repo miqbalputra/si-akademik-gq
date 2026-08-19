@@ -202,6 +202,24 @@
     .app-shell th { color: #546157; font-family: var(--font-mono); font-size: .66rem; letter-spacing: .04em; text-transform: uppercase; }
     .app-shell tbody tr:hover { background: #f5fbf5; }
 
+    .pwa-install-root { position: fixed; inset: 0; z-index: 120; display: grid; place-items: center; padding: 1rem; }
+    .pwa-install-root[hidden] { display: none; }
+    .pwa-install-backdrop { position: absolute; inset: 0; background: rgb(9 28 16 / .58); backdrop-filter: blur(5px); }
+    .pwa-install-dialog { position: relative; width: min(100%, 28rem); border: 1px solid #b9dec4; border-radius: 1.5rem; background: #fff; padding: 1.5rem; box-shadow: 0 28px 70px -30px rgb(9 28 16 / .6); }
+    .pwa-install-close { position: absolute; top: .75rem; right: .75rem; display: grid; width: 2rem; height: 2rem; place-items: center; border: 1px solid #d4dfd5; border-radius: .65rem; background: #fff; color: #536057; font-size: 1.35rem; line-height: 1; }
+    .pwa-install-close:hover { border-color: #8ac49a; background: #effff5; color: #145d33; }
+    .pwa-install-icon { display: grid; width: 3.5rem; height: 3.5rem; place-items: center; border-radius: 1rem 1rem 1rem .25rem; background: #17231a; color: #00df66; font-family: var(--font-mono); font-size: 1rem; font-weight: 900; letter-spacing: -.08em; box-shadow: 0 0 0 5px #e5faeb; }
+    .pwa-install-eyebrow { margin: 1.15rem 0 .3rem; color: #287443; font-family: var(--font-mono); font-size: .62rem; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
+    .pwa-install-dialog h2 { margin: 0; color: var(--color-ink); font-size: 1.55rem; font-weight: 850; letter-spacing: -.04em; }
+    .pwa-install-dialog > p:not(.pwa-install-eyebrow):not(.pwa-install-fallback) { margin: .65rem 0 0; color: #5f6d63; font-size: .88rem; line-height: 1.6; }
+    .pwa-install-actions { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 1.35rem; }
+    .pwa-install-button, .pwa-install-later { min-height: 2.6rem; border-radius: .7rem; padding: .65rem .95rem; font-size: .78rem; font-weight: 850; }
+    .pwa-install-button { border: 1px solid #00ad4f; background: #00df66; color: #063d23; }
+    .pwa-install-button:hover { background: #29fa79; }
+    .pwa-install-later { border: 1px solid #c7d4c8; background: #fff; color: #465449; }
+    .pwa-install-later:hover { background: #f3fff6; }
+    .pwa-install-fallback { margin: .9rem 0 0; border: 1px solid #d5e7d8; border-radius: .7rem; background: #f3fff6; padding: .65rem .75rem; color: #28613d; font-size: .72rem; line-height: 1.5; }
+
     .fi-gq-notification { position: relative; }
 }
 

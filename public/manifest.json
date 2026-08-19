@@ -1,12 +1,14 @@
 {
-    "name": "Ruang GQ — Aktivitas Akademik Griya Qur'an",
-    "short_name": "Ruang GQ",
-    "description": "Aktivitas akademik kelas, halaqah, jurnal, leger, dan rapor Griya Qur'an Tunas Ilmu.",
+    "id": "/",
+    "name": "GQ Edu",
+    "short_name": "GQ Edu",
+    "description": "Portal pendidikan Griya Qur'an Tunas Ilmu untuk guru, wali, dan manajemen sekolah.",
     "start_url": "/",
+    "scope": "/",
     "display": "standalone",
     "orientation": "portrait-primary",
     "background_color": "#f7f7f2",
-    "theme_color": "#00df66",
+    "theme_color": "#00ad4f",
     "lang": "id",
     "dir": "ltr",
     "categories": ["education", "productivity"],
@@ -15,25 +17,37 @@
             "src": "/icons/icon-192.svg",
             "sizes": "192x192",
             "type": "image/svg+xml",
-            "purpose": "any maskable"
+            "purpose": "any"
         },
         {
             "src": "/icons/icon-512.svg",
             "sizes": "512x512",
             "type": "image/svg+xml",
-            "purpose": "any maskable"
+            "purpose": "any"
         },
         {
             "src": "/icons/icon-192.png",
             "sizes": "192x192",
             "type": "image/png",
-            "purpose": "any maskable"
+            "purpose": "any"
         },
         {
             "src": "/icons/icon-512.png",
             "sizes": "512x512",
             "type": "image/png",
-            "purpose": "any maskable"
+            "purpose": "any"
+        },
+        {
+            "src": "/icons/icon-192-maskable.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "/icons/icon-512-maskable.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
         }
     ],
     "shortcuts": [

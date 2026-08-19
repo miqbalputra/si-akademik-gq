@@ -23,6 +23,7 @@
     @include('partials.pwa-head')
 </head>
 <body class="school-home overflow-x-hidden">
+    @include('partials.pwa-install-prompt')
     <div class="school-announcement" role="status"><strong>RUANG GQ</strong> Aktivitas akademik untuk kegiatan belajar, catatan guru, dan perkembangan santri.</div>
 
     <header class="school-home-header">
