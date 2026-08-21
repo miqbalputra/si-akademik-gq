@@ -67,6 +67,38 @@
         </tr>
     </table>
 
+    <div class="section-title">RINCIAN PERHITUNGAN TOTAL JP</div>
+    <table class="data">
+        <thead>
+            <tr>
+                <th style="width: 4%;">No</th>
+                <th style="width: 15%;">Tanggal</th>
+                <th style="width: 12%;">Sesi</th>
+                <th style="width: 9%;">Jam</th>
+                <th style="width: 15%;">Mapel</th>
+                <th style="width: 29%;">Kelas</th>
+                <th style="width: 10%;">Jurnal sumber</th>
+                <th style="width: 6%;">JP</th>
+            </tr>
+        </thead>
+        <tbody>
+            @forelse(collect($performa['jp_rows'] ?? []) as $index => $row)
+                <tr>
+                    <td class="center">{{ $index + 1 }}</td>
+                    <td>{{ $row['date_label'] ?? ($row['date'] ?? '-') }}</td>
+                    <td>{{ $row['session_label'] ?? '-' }}</td>
+                    <td>{{ $row['session_time'] ?? '-' }}</td>
+                    <td>{{ $row['mapel'] ?? '-' }}</td>
+                    <td>{{ $row['kelas'] ?? '-' }}</td>
+                    <td class="center">{{ ($row['type'] ?? null) === 'tafsir_simultaneous' ? (($row['journal_count'] ?? 0).' jurnal → 1 sesi') : '1 jurnal' }}</td>
+                    <td class="center"><strong>{{ $row['jp'] ?? 0 }}</strong></td>
+                </tr>
+            @empty
+                <tr><td class="empty" colspan="8">Belum ada JP yang berhasil terlaksana pada periode ini.</td></tr>
+            @endforelse
+        </tbody>
+    </table>
+
     <div class="section-title">DETAIL SEMUA DATA JURNAL</div>
     <table class="data">
         <thead>

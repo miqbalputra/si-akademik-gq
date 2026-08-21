@@ -80,6 +80,57 @@
         </div>
     </div>
 
+    <details class="mb-6 overflow-hidden rounded-2xl border border-emerald-200 bg-white shadow-sm" data-jp-calculator="journal-session-v2">
+        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 bg-emerald-50 px-5 py-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600">
+            <span>
+                <span class="block text-sm font-black text-emerald-900">Rincian perhitungan Total JP</span>
+                <span class="mt-0.5 block text-xs font-semibold text-emerald-700">Tafsir serentak digabung berdasarkan tanggal dan jam pelaksanaan.</span>
+            </span>
+            <span class="shrink-0 rounded-full bg-emerald-900 px-3 py-1 text-xs font-black text-white">{{ $stats['jp_berhasil_terlaksana'] ?? 0 }} JP</span>
+        </summary>
+
+        <div class="overflow-x-auto border-t border-emerald-100">
+            <table class="min-w-full divide-y divide-slate-200 text-sm">
+                <thead class="bg-slate-50">
+                    <tr>
+                        <th class="px-5 py-3 text-left text-xs font-black uppercase tracking-wider text-slate-500">Tanggal</th>
+                        <th class="px-5 py-3 text-left text-xs font-black uppercase tracking-wider text-slate-500">Sesi</th>
+                        <th class="px-5 py-3 text-left text-xs font-black uppercase tracking-wider text-slate-500">Kelas &amp; Mapel</th>
+                        <th class="px-5 py-3 text-center text-xs font-black uppercase tracking-wider text-slate-500">Jurnal sumber</th>
+                        <th class="px-5 py-3 text-center text-xs font-black uppercase tracking-wider text-slate-500">JP</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 bg-white">
+                    @forelse(collect($performa['jp_rows'] ?? []) as $jpRow)
+                        <tr class="{{ ($jpRow['type'] ?? null) === 'tafsir_simultaneous' ? 'bg-emerald-50/40' : '' }}">
+                            <td class="whitespace-nowrap px-5 py-3 font-bold text-slate-800">{{ $jpRow['date_label'] ?? '-' }}</td>
+                            <td class="whitespace-nowrap px-5 py-3">
+                                <span class="font-bold text-slate-800">{{ $jpRow['session_label'] ?? '-' }}</span>
+                                @if($jpRow['session_time'] ?? null)
+                                    <span class="block text-xs text-slate-500">{{ $jpRow['session_time'] }}</span>
+                                @endif
+                            </td>
+                            <td class="px-5 py-3 text-slate-700">
+                                <span class="font-bold">{{ $jpRow['mapel'] ?? '-' }}</span>
+                                <span class="block text-xs text-slate-500">{{ $jpRow['kelas'] ?? '-' }}</span>
+                            </td>
+                            <td class="px-5 py-3 text-center">
+                                @if(($jpRow['type'] ?? null) === 'tafsir_simultaneous')
+                                    <span class="inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-black text-emerald-800">{{ $jpRow['journal_count'] ?? 0 }} jurnal kelas → 1 sesi</span>
+                                @else
+                                    <span class="font-bold text-slate-600">1 jurnal</span>
+                                @endif
+                            </td>
+                            <td class="px-5 py-3 text-center text-lg font-black text-emerald-800">{{ $jpRow['jp'] ?? 0 }}</td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="5" class="px-6 py-10 text-center text-sm font-semibold text-slate-500">Belum ada JP yang berhasil terlaksana pada periode ini.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </details>
+
     @php
         $chartRows = [
             ['label' => 'Sudah Diisi', 'value' => (int) ($stats['sudah_diisi'] ?? 0), 'color' => '#149447', 'tone' => 'emerald'],

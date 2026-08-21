@@ -16,6 +16,10 @@ class GuruPerformaXlsxExporter
         $summary->setTitle('Ringkasan');
         $this->summary($summary, $performa, $teacher);
 
+        $jpDetails = $workbook->createSheet();
+        $jpDetails->setTitle('Rincian Total JP');
+        $this->jpDetails($jpDetails, $performa);
+
         $journals = $workbook->createSheet();
         $journals->setTitle('Detail Jurnal');
         $this->journals($journals, $performa);
@@ -25,6 +29,39 @@ class GuruPerformaXlsxExporter
         $this->emptySlots($emptySlots, $performa);
 
         return $this->theme->save($workbook);
+    }
+
+    private function jpDetails($sheet, array $performa): void
+    {
+        $headers = ['No', 'Tanggal', 'Sesi', 'Jam', 'Mapel', 'Kelas', 'Jurnal Sumber', 'JP'];
+        $this->theme->title($sheet, 'RINCIAN TOTAL JP BERHASIL TERLAKSANA', 'Tafsir serentak pada tanggal dan jam yang sama dihitung satu JP.', count($headers));
+        $this->theme->tableHeader($sheet, 5, $headers);
+        $lastRow = 5;
+
+        foreach (collect($performa['jp_rows'] ?? []) as $index => $row) {
+            $lastRow++;
+            $source = ($row['type'] ?? null) === 'tafsir_simultaneous'
+                ? ($row['journal_count'] ?? 0).' jurnal kelas menjadi 1 sesi'
+                : '1 jurnal';
+            $sheet->fromArray([[
+                $index + 1,
+                $row['date_label'] ?? ($row['date'] ?? '-'),
+                $row['session_label'] ?? '-',
+                $row['session_time'] ?? '-',
+                $row['mapel'] ?? '-',
+                $row['kelas'] ?? '-',
+                $source,
+                $row['jp'] ?? 0,
+            ]], null, "A{$lastRow}");
+        }
+
+        if ($lastRow === 5) {
+            $lastRow++;
+            $sheet->setCellValue('A6', 'Belum ada JP yang berhasil terlaksana pada periode ini.');
+        }
+
+        $this->theme->widths($sheet, [8, 25, 22, 16, 24, 48, 28, 8]);
+        $this->theme->finaliseTable($sheet, 5, $lastRow, count($headers));
     }
 
     private function summary($sheet, array $performa, Teacher $teacher): void

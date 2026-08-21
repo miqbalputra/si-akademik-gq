@@ -51,6 +51,7 @@ class GuruPerformaService
      *   month_label: string,
      *   stats: array{jp_berhasil_terlaksana: int, sudah_diisi: int, kosong: int, digantikan: int, dibebaskan: int, agenda: int, total: int, total_jurnal: int},
      *   journal_rows: Collection<int, array<string, mixed>>,
+     *   jp_rows: Collection<int, array<string, mixed>>,
      *   agenda_rows: Collection<int, array<string, mixed>>,
      *   empty_slots: list<array<string, mixed>>,
      * }
@@ -77,7 +78,7 @@ class GuruPerformaService
 
         $summary = $this->summaryForRange($teacher, $startDate, $endDate);
         $journalRows = $this->journalRows($summary['journals']);
-        $jpBerhasilTerlaksana = $this->completedTeachingJp($summary['journals']);
+        $jpSummary = $this->completedTeachingJp($summary['journals']);
 
         return [
             'month' => $month,
@@ -88,7 +89,7 @@ class GuruPerformaService
                 // Realisasi JP memakai jurnal aktual milik guru. Tafsir
                 // dikelompokkan dari snapshot tanggal dan jam jurnal, bukan
                 // dari banyaknya record kelas atau konfigurasi jadwal terbaru.
-                'jp_berhasil_terlaksana' => $jpBerhasilTerlaksana,
+                'jp_berhasil_terlaksana' => $jpSummary['total'],
                 'sudah_diisi' => $summary['sudah'],
                 'kosong' => $summary['kosong'],
                 'digantikan' => $summary['digantikan'],
@@ -100,6 +101,7 @@ class GuruPerformaService
                 'total_jurnal' => $journalRows->count(),
             ],
             'journal_rows' => $journalRows,
+            'jp_rows' => $jpSummary['rows'],
             'agenda_rows' => collect($summary['agenda_rows']),
             'empty_slots' => $summary['empty_slots'],
         ];
@@ -469,39 +471,98 @@ class GuruPerformaService
     /**
      * Total JP yang benar-benar terlaksana oleh guru pemegang jadwal.
      *
-     * Jurnal reguler menggunakan jp_count. Jurnal Tafsir disatukan menurut
-     * tanggal serta snapshot jam mulai–selesai, sehingga satu pengajaran
-     * serentak untuk banyak kelas tetap bernilai satu JP. Snapshot jurnal
-     * dipakai agar rekap masa lalu tidak berubah hanya karena jadwal diubah
-     * setelah jurnal dibuat.
+     * Jurnal reguler menggunakan jp_count. Hanya jurnal dengan penanda resmi
+     * session_hour="tafsir" yang diperlakukan sebagai Tafsir serentak; Tafsir
+     * individual yang disimpan lewat sesi reguler tetap dihitung normal.
+     * Jurnal serentak disatukan menurut tanggal dan snapshot jam mulai–selesai,
+     * sehingga banyak record kelas pada satu pengajaran tetap bernilai 1 JP.
      *
      * @param  Collection<int, DiniyyahClassJournal>  $journals
+     * @return array{total: int, rows: Collection<int, array<string, mixed>>}
      */
-    private function completedTeachingJp(Collection $journals): int
+    private function completedTeachingJp(Collection $journals): array
     {
         $ownJournals = $journals
             ->filter(fn (DiniyyahClassJournal $journal): bool => $journal->substitute_teacher_id === null)
             ->values();
 
-        $regularJp = $ownJournals
-            ->reject(fn (DiniyyahClassJournal $journal): bool => $this->isTafsirJournal($journal))
-            ->sum(fn (DiniyyahClassJournal $journal): int => (int) $journal->jp_count);
+        $regularRows = $ownJournals
+            ->reject(fn (DiniyyahClassJournal $journal): bool => $this->isSimultaneousTafsirJournal($journal))
+            ->map(fn (DiniyyahClassJournal $journal): array => $this->regularJpRow($journal));
 
-        $tafsirSessions = $ownJournals
-            ->filter(fn (DiniyyahClassJournal $journal): bool => $this->isTafsirJournal($journal))
-            ->groupBy(fn (DiniyyahClassJournal $journal): string => $this->tafsirJournalSessionKey($journal));
+        $tafsirRows = $ownJournals
+            ->filter(fn (DiniyyahClassJournal $journal): bool => $this->isSimultaneousTafsirJournal($journal))
+            ->groupBy(fn (DiniyyahClassJournal $journal): string => $this->tafsirJournalSessionKey($journal))
+            ->map(fn (Collection $sessionJournals): array => $this->simultaneousTafsirJpRow($sessionJournals));
 
-        return (int) $regularJp + $tafsirSessions->count();
+        $rows = $regularRows
+            ->concat($tafsirRows)
+            ->sortBy(fn (array $row): array => [$row['date'] ?? '', $row['starts_at'] ?? '', $row['type'] ?? ''])
+            ->values();
+
+        return [
+            'total' => (int) $rows->sum('jp'),
+            'rows' => $rows,
+        ];
     }
 
-    private function isTafsirJournal(DiniyyahClassJournal $journal): bool
+    private function isSimultaneousTafsirJournal(DiniyyahClassJournal $journal): bool
     {
-        $subject = $journal->teacherAssignment?->classSubject?->subject;
+        return strtolower(trim((string) $journal->session_hour)) === SessionTimetable::SESSION_TAFSIR;
+    }
 
-        return $subject !== null && (
-            strtolower((string) $subject->code) === SessionTimetable::SESSION_TAFSIR
-            || str_contains(strtolower((string) $subject->name), 'tafsir')
-        );
+    /** @return array<string, mixed> */
+    private function regularJpRow(DiniyyahClassJournal $journal): array
+    {
+        $assignment = $journal->teacherAssignment;
+        $classSubject = $assignment?->classSubject;
+
+        return [
+            'key' => 'journal|'.$journal->id,
+            'type' => 'regular',
+            'type_label' => 'Jurnal kelas',
+            'date' => $journal->date?->toDateString(),
+            'date_label' => $journal->date?->locale('id')->translatedFormat('l, d F Y') ?? '-',
+            'starts_at' => $this->journalTimePart($journal->session_starts_at),
+            'ends_at' => $this->journalTimePart($journal->session_ends_at),
+            'session_label' => SessionTimetable::label((string) $journal->session_hour),
+            'session_time' => $this->journalTime($journal),
+            'mapel' => $classSubject?->subject?->name ?? '-',
+            'kelas' => $classSubject?->classroomTerm?->name ?? '-',
+            'journal_count' => 1,
+            'jp' => max(0, (int) $journal->jp_count),
+        ];
+    }
+
+    /**
+     * @param  Collection<int, DiniyyahClassJournal>  $journals
+     * @return array<string, mixed>
+     */
+    private function simultaneousTafsirJpRow(Collection $journals): array
+    {
+        /** @var DiniyyahClassJournal $first */
+        $first = $journals->first();
+        $classes = $journals
+            ->map(fn (DiniyyahClassJournal $journal) => $journal->teacherAssignment?->classSubject?->classroomTerm?->name)
+            ->filter()
+            ->unique()
+            ->values();
+
+        return [
+            'key' => $this->tafsirJournalSessionKey($first),
+            'type' => 'tafsir_simultaneous',
+            'type_label' => 'Tafsir serentak',
+            'date' => $first->date?->toDateString(),
+            'date_label' => $first->date?->locale('id')->translatedFormat('l, d F Y') ?? '-',
+            'starts_at' => $this->journalTimePart($first->session_starts_at),
+            'ends_at' => $this->journalTimePart($first->session_ends_at),
+            'session_label' => 'Tafsir serentak',
+            'session_time' => $this->journalTime($first),
+            'mapel' => 'Tafsir',
+            'kelas' => $classes->implode(', ') ?: '-',
+            'journal_count' => $journals->count(),
+            'jp' => 1,
+        ];
     }
 
     private function tafsirJournalSessionKey(DiniyyahClassJournal $journal): string

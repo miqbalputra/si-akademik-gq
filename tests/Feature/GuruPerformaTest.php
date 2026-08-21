@@ -26,8 +26,8 @@ use Tests\TestCase;
 
 /**
  * Kartu performa jurnal mengajar guru: 3 angka (sudah diisi / kosong /
- * digantikan) per bulan, plus daftar slot kosong. Tafsir di-dedup per
- * (guru, tanggal) = 1 JP, konsisten dengan RekapJurnalGuruService.
+ * digantikan) per bulan, plus daftar slot kosong. Tafsir serentak di-dedup per
+ * (guru, tanggal, jam mulai, jam selesai) = 1 JP, konsisten dengan rekap jurnal.
  *
  * "Today" dibekukan ke Senin 2026-08-10 (WIB) supaya tanggal lewat/future
  * deterministik. App tz=UTC → test now diset ke WIB noon (UTC same date).
@@ -183,10 +183,71 @@ class GuruPerformaTest extends TestCase
             ]);
         }
 
+        // Penanda sesi jurnal adalah sumber kebenaran untuk Tafsir serentak,
+        // walaupun metadata mapel kemudian berubah.
+        $assignments[0]->classSubject->subject->update(['code' => 'kajian', 'name' => 'Kajian Al-Quran']);
+
         $performa = app(GuruPerformaService::class)->calculate($guru['teacher'], 8, 2026);
 
-        $this->assertSame(2, $performa['stats']['sudah_diisi']);
         $this->assertSame(1, $performa['stats']['jp_berhasil_terlaksana']);
+        $this->assertCount(1, $performa['jp_rows']);
+        $this->assertSame('tafsir_simultaneous', $performa['jp_rows']->first()['type']);
+        $this->assertSame(2, $performa['jp_rows']->first()['journal_count']);
+    }
+
+    public function test_total_jp_keeps_different_simultaneous_tafsir_times_separate_on_same_date(): void
+    {
+        $this->setNow(self::TODAY);
+        $guru = $this->makeGuru('Guru Dua Sesi Tafsir');
+        $assignments = $this->makeTafsirAssignments($guru['teacher'], [
+            'Mustawa 2 Akhwat',
+            'Mustawa 3 Akhwat',
+            'Mustawa 4 Akhwat',
+        ]);
+
+        foreach ($assignments as $index => $assignment) {
+            $isSecondSession = $index === 2;
+
+            DiniyyahClassJournal::create([
+                'diniyyah_teacher_assignment_id' => $assignment->id,
+                'date' => self::KAMIS_LEWAT,
+                'session_hour' => SessionTimetable::SESSION_TAFSIR,
+                'session_starts_at' => $isSecondSession ? '10:30:00' : '09:50:00',
+                'session_ends_at' => $isSecondSession ? '11:00:00' : '10:20:00',
+                'material' => 'Tafsir serentak',
+                'jp_count' => 1,
+            ]);
+        }
+
+        $performa = app(GuruPerformaService::class)->calculate($guru['teacher'], 8, 2026);
+
+        $this->assertSame(2, $performa['stats']['jp_berhasil_terlaksana']);
+        $this->assertCount(2, $performa['jp_rows']);
+        $this->assertSame([1, 2], $performa['jp_rows']->pluck('journal_count')->sort()->values()->all());
+    }
+
+    public function test_total_jp_treats_individual_tafsir_in_regular_session_as_regular_journal(): void
+    {
+        $this->setNow(self::TODAY);
+        $guru = $this->makeGuru('Guru Tafsir Individual');
+        [$assignment] = $this->makeTafsirAssignments($guru['teacher'], ['Mustawa 1 Akhwat']);
+
+        DiniyyahClassJournal::create([
+            'diniyyah_teacher_assignment_id' => $assignment->id,
+            'date' => self::KAMIS_LEWAT,
+            'session_hour' => '2',
+            'session_starts_at' => '11:00:00',
+            'session_ends_at' => '11:30:00',
+            'material' => 'Tafsir individual',
+            'jp_count' => 1,
+        ]);
+
+        $performa = app(GuruPerformaService::class)->calculate($guru['teacher'], 8, 2026);
+
+        $this->assertSame(1, $performa['stats']['jp_berhasil_terlaksana']);
+        $this->assertCount(1, $performa['jp_rows']);
+        $this->assertSame('regular', $performa['jp_rows']->first()['type']);
+        $this->assertSame('Sesi 2', $performa['jp_rows']->first()['session_label']);
     }
 
     public function test_performa_tafsir_dedup_substituted_counts_one(): void
@@ -423,6 +484,8 @@ class GuruPerformaTest extends TestCase
             ->assertSee('Rincian status pengisian jurnal')
             ->assertSee('Total JP')
             ->assertSee('JP berhasil terlaksana oleh Anda')
+            ->assertSee('Rincian perhitungan Total JP')
+            ->assertSee('data-jp-calculator="journal-session-v2"', false)
             ->assertSee('Sudah Diisi')
             ->assertSee('Kosong')
             ->assertSee('Digantikan')
@@ -467,6 +530,7 @@ class GuruPerformaTest extends TestCase
         }
         $this->assertNotNull($workbook->getSheetByName('Detail Jurnal'));
         $this->assertNotNull($workbook->getSheetByName('Slot Kosong'));
+        $this->assertNotNull($workbook->getSheetByName('Rincian Total JP'));
         $summaryText = collect($workbook->getSheetByName('Ringkasan')->toArray())->flatten()->implode("\n");
         $this->assertStringContainsString('Total JP berhasil terlaksana', $summaryText);
         $detailText = collect($workbook->getSheetByName('Detail Jurnal')->toArray())->flatten()->implode("\n");
