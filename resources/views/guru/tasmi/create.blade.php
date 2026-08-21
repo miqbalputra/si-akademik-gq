@@ -34,10 +34,10 @@
         </div>
     @endif
 
-    <form method="POST" action="{{ route('guru.tasmi.store') }}" class="fade-up delay-1">
-        @csrf
+    {{-- Pemilih kelas sengaja memakai GET; jangan jadikan perubahan dropdown
+         sebagai submit form Tasmi' yang membutuhkan seluruh data ujian. --}}
+    <form method="GET" action="{{ route('guru.tasmi.create') }}" class="fade-up delay-1">
         <div class="card" style="padding:24px;margin-bottom:18px;">
-            {{-- 1. Pilih Kelas --}}
             <div style="margin-bottom:20px;">
                 <label for="classroom_term_id" class="form-label">1. Pilih Kelas</label>
                 <select id="classroom_term_id" name="classroom_term_id" class="form-input" required onchange="this.form.submit()">
@@ -51,8 +51,12 @@
                 <p class="form-hint">Hanya kelas @if($genderScope === 'male') ikhwan @elseif($genderScope === 'female') akhwat @endif yang muncul sesuai gender Anda.</p>
             </div>
         </div>
+    </form>
 
-        @if($selectedClassroomTerm)
+    @if($selectedClassroomTerm)
+        <form method="POST" action="{{ route('guru.tasmi.store') }}" class="fade-up delay-1">
+            @csrf
+            <input type="hidden" name="classroom_term_id" value="{{ $selectedClassroomTerm->id }}">
             <div class="card" style="padding:24px;margin-bottom:18px;">
                 {{-- 2. Pilih Santri --}}
                 <div style="margin-bottom:20px;">
@@ -153,12 +157,12 @@
                 </button>
                 <a href="{{ route('guru.tasmi.index') }}" class="btn btn-outline">Batal</a>
             </div>
-        @else
-            <div class="card" style="padding:24px;text-align:center;">
-                <p style="font-size:14px;color:#64748b;font-weight:600;margin:0;">Pilih kelas terlebih dahulu untuk menampilkan daftar santri.</p>
-            </div>
-        @endif
-    </form>
+        </form>
+    @else
+        <div class="card fade-up delay-1" style="padding:24px;text-align:center;">
+            <p style="font-size:14px;color:#64748b;font-weight:600;margin:0;">Pilih kelas terlebih dahulu untuk menampilkan daftar santri.</p>
+        </div>
+    @endif
 
     @push('scripts')
     <script>

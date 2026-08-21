@@ -67,7 +67,10 @@ class GuruTasmiController extends Controller
         $assignment = $this->tasmiService->activeExaminerAssignment($teacher);
         $classroomTerms = $this->tasmiService->eligibleClassroomTerms($teacher);
 
-        $classroomTermId = $request->query('classroom_term_id');
+        // Pemilihan kelas dilakukan lewat GET agar dropdown tidak pernah
+        // mengirim form penyimpanan Tasmi' yang belum lengkap. Fallback old()
+        // mempertahankan kelas dan daftar santri bila validasi simpan gagal.
+        $classroomTermId = $request->query('classroom_term_id', $request->old('classroom_term_id'));
         $selectedClassroomTerm = $classroomTerms->firstWhere('id', $classroomTermId);
 
         // Daftar santri aktif di kelas yang dipilih, urut by roll_number.
@@ -83,7 +86,7 @@ class GuruTasmiController extends Controller
                 ->map(fn (ClassEnrollment $e) => $e->student);
         }
 
-        $studentId = $request->query('student_id');
+        $studentId = $request->query('student_id', $request->old('student_id'));
 
         return view('guru.tasmi.create', [
             'teacher' => $teacher,
@@ -277,6 +280,14 @@ class GuruTasmiController extends Controller
             'hijri_date' => ['nullable', 'string', 'max:50'],
             'predicate' => ['required', Rule::in(array_keys(TasmiRecord::predicateOptions()))],
             'notes' => ['nullable', 'string', 'max:1000'],
+        ], [
+            'classroom_term_id.required' => 'Pilih kelas terlebih dahulu.',
+            'student_id.required' => 'Pilih nama santri terlebih dahulu.',
+            'exam_type.required' => 'Pilih jenis ujian Tasmi\'.',
+            'juz_start.required' => 'Pilih juz awal.',
+            'juz_end.required' => 'Pilih juz akhir.',
+            'exam_date.required' => 'Pilih tanggal ujian.',
+            'predicate.required' => 'Pilih predikat hasil Tasmi\'.',
         ]);
     }
 

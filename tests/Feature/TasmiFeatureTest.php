@@ -149,6 +149,25 @@ class TasmiFeatureTest extends TestCase
         $resp->assertSee('Tasmi\' 5 Juz');
         $resp->assertSee('Maqbul');
         $resp->assertSee('Mumtaz');
+        $resp->assertSee('method="GET" action="'.route('guru.tasmi.create').'"', false);
+        $resp->assertSee('name="classroom_term_id" value="'.$ctx['classroomTerm']->id.'"', false);
+    }
+
+    public function test_class_picker_does_not_submit_incomplete_tasmi_record(): void
+    {
+        $ctx = $this->makeContext('male');
+        TasmiExaminerAssignment::create([
+            'academic_term_id' => $ctx['term']->id,
+            'teacher_id' => $ctx['teacher']->id,
+            'status' => 'active',
+        ]);
+
+        $resp = $this->actingAs($ctx['user'])->get(route('guru.tasmi.create'));
+
+        $resp->assertOk()
+            ->assertSee('method="GET" action="'.route('guru.tasmi.create').'"', false)
+            ->assertDontSee('validation.required')
+            ->assertDontSee('Simpan Data Tasmi\'');
     }
 
     public function test_examiner_can_store_1_juz_tasmi(): void
