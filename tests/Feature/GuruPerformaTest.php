@@ -80,12 +80,13 @@ class GuruPerformaTest extends TestCase
             'session_starts_at' => '10:30:00',
             'session_ends_at' => '11:00:00',
             'material' => 'Bab Thaharah',
-            'jp_count' => 1,
+            'jp_count' => 2,
         ]);
 
         $performa = app(GuruPerformaService::class)->calculate($guru['teacher'], 8, 2026);
 
-        $this->assertSame(1, $performa['stats']['sudah_diisi']);
+        $this->assertSame(2, $performa['stats']['jp_berhasil_terlaksana']);
+        $this->assertSame(2, $performa['stats']['sudah_diisi']);
         $this->assertSame(0, $performa['stats']['kosong']);
         $this->assertSame(0, $performa['stats']['digantikan']);
     }
@@ -98,6 +99,7 @@ class GuruPerformaTest extends TestCase
 
         $performa = app(GuruPerformaService::class)->calculate($guru['teacher'], 8, 2026);
 
+        $this->assertSame(0, $performa['stats']['jp_berhasil_terlaksana']);
         $this->assertSame(1, $performa['stats']['kosong']);
         $this->assertCount(1, $performa['empty_slots']);
         $slot = $performa['empty_slots'][0];
@@ -127,6 +129,7 @@ class GuruPerformaTest extends TestCase
         $performa = app(GuruPerformaService::class)->calculate($guru['teacher'], 8, 2026);
 
         $this->assertSame(1, $performa['stats']['digantikan']);
+        $this->assertSame(0, $performa['stats']['jp_berhasil_terlaksana']);
         $this->assertSame(0, $performa['stats']['sudah_diisi']);
         $this->assertSame(0, $performa['stats']['kosong']);
     }
@@ -151,6 +154,7 @@ class GuruPerformaTest extends TestCase
 
         $performa = app(GuruPerformaService::class)->calculate($guru['teacher'], 8, 2026);
 
+        $this->assertSame(1, $performa['stats']['jp_berhasil_terlaksana'], '3 jurnal tafsir serentak = 1 JP berhasil terlaksana.');
         $this->assertSame(1, $performa['stats']['sudah_diisi'], '3 jurnal tafsir serentak = 1 JP (dedup).');
         $this->assertSame(0, $performa['stats']['kosong']);
     }
@@ -387,6 +391,8 @@ class GuruPerformaTest extends TestCase
             ->assertSee('guru-performance-chart', false)
             ->assertSee('Status pengisian jurnal')
             ->assertSee('Rincian status pengisian jurnal')
+            ->assertSee('Total JP')
+            ->assertSee('JP berhasil terlaksana oleh Anda')
             ->assertSee('Sudah Diisi')
             ->assertSee('Kosong')
             ->assertSee('Digantikan')
@@ -431,6 +437,8 @@ class GuruPerformaTest extends TestCase
         }
         $this->assertNotNull($workbook->getSheetByName('Detail Jurnal'));
         $this->assertNotNull($workbook->getSheetByName('Slot Kosong'));
+        $summaryText = collect($workbook->getSheetByName('Ringkasan')->toArray())->flatten()->implode("\n");
+        $this->assertStringContainsString('Total JP berhasil terlaksana', $summaryText);
         $detailText = collect($workbook->getSheetByName('Detail Jurnal')->toArray())->flatten()->implode("\n");
         $this->assertStringContainsString('Bab Thaharah', $detailText);
         $this->assertStringContainsString('Mustawa 2 Ikhwan', $detailText);

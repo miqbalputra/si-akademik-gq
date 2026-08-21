@@ -15,7 +15,7 @@ use Illuminate\Support\Collection;
 /**
  * Kartu performa jurnal mengajar diniyyah per guru, per bulan.
  *
- * Menghitung tiga angka dari sudut guru PEMILIK JADWAL
+ * Menghitung status jurnal dan realisasi JP dari sudut guru PEMILIK JADWAL
  * (teacherAssignment.teacher_id), bukan effectiveTeacher() (yang mencatat
  * JP ke pengganti):
  * - sudah_diisi : slot milik guru yang diisi jurnal oleh guru sendiri
@@ -24,6 +24,7 @@ use Illuminate\Support\Collection;
  *   bukan hari libur atau agenda tanpa KBM.
  * - digantikan  : slot milik guru yang diisi teacher lain
  *   (substitute_teacher_id IS NOT NULL).
+ * - jp_berhasil_terlaksana : JP dari slot yang diisi guru sendiri.
  *
  * Satuan = JP dengan dedup Tafsir (konsisten dengan {@see RekapJurnalGuruService}):
  * 1 sesi Tafsir serentak ke beberapa kelas di hari yang sama dihitung 1 JP
@@ -48,7 +49,7 @@ class GuruPerformaService
      *   year: int,
      *   is_current_month: bool,
      *   month_label: string,
-     *   stats: array{sudah_diisi: int, kosong: int, digantikan: int, dibebaskan: int, agenda: int, total: int, total_jurnal: int},
+     *   stats: array{jp_berhasil_terlaksana: int, sudah_diisi: int, kosong: int, digantikan: int, dibebaskan: int, agenda: int, total: int, total_jurnal: int},
      *   journal_rows: Collection<int, array<string, mixed>>,
      *   agenda_rows: Collection<int, array<string, mixed>>,
      *   empty_slots: list<array<string, mixed>>,
@@ -83,6 +84,13 @@ class GuruPerformaService
             'is_current_month' => $isCurrentMonth,
             'month_label' => $this->monthLabel($month, $year),
             'stats' => [
+                // Metrik realisasi JP milik guru pemegang jadwal. Nilainya
+                // sengaja setara "sudah_diisi", tetapi memiliki makna yang
+                // eksplisit untuk rekap beban mengajar: jurnal pengganti,
+                // kosong, izin/sakit, dan agenda tidak dikreditkan ke guru.
+                // $summary['sudah'] sudah menangani jp_count reguler dan
+                // deduplikasi satu sesi Tafsir serentak menjadi 1 JP.
+                'jp_berhasil_terlaksana' => $summary['sudah'],
                 'sudah_diisi' => $summary['sudah'],
                 'kosong' => $summary['kosong'],
                 'digantikan' => $summary['digantikan'],

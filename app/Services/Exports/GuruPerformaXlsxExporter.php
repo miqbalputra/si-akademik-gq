@@ -40,6 +40,7 @@ class GuruPerformaXlsxExporter
         $this->theme->tableHeader($sheet, 9, ['Status', 'Jumlah']);
         $stats = $performa['stats'] ?? [];
         $rows = [
+            ['Total JP berhasil terlaksana', $stats['jp_berhasil_terlaksana'] ?? 0],
             ['Sudah diisi', $stats['sudah_diisi'] ?? 0],
             ['Kosong', $stats['kosong'] ?? 0],
             ['Digantikan', $stats['digantikan'] ?? 0],
@@ -49,13 +50,13 @@ class GuruPerformaXlsxExporter
             ['Total data jurnal', $stats['total_jurnal'] ?? 0],
         ];
         $sheet->fromArray($rows, null, 'A10');
-        $this->theme->finaliseTable($sheet, 9, 14, 2);
-        $sheet->mergeCells('A16:B16');
-        $sheet->setCellValue('A16', 'CATATAN');
-        $sheet->getStyle('A16:B16')->applyFromArray(['font' => ['bold' => true], 'fill' => ['fillType' => 'solid', 'startColor' => ['argb' => 'FFF1F5F1']]]);
-        $sheet->mergeCells('A17:B18');
-        $sheet->setCellValue('A17', 'Slot kosong berarti jadwal yang sudah lewat tetapi belum memiliki jurnal.');
-        $sheet->getStyle('A17:B18')->getAlignment()->setWrapText(true)->setVertical(Alignment::VERTICAL_CENTER);
+        $this->theme->finaliseTable($sheet, 9, 17, 2);
+        $sheet->mergeCells('A19:B19');
+        $sheet->setCellValue('A19', 'CATATAN');
+        $sheet->getStyle('A19:B19')->applyFromArray(['font' => ['bold' => true], 'fill' => ['fillType' => 'solid', 'startColor' => ['argb' => 'FFF1F5F1']]]);
+        $sheet->mergeCells('A20:B21');
+        $sheet->setCellValue('A20', 'Total JP berhasil terlaksana hanya menghitung jurnal yang diisi guru pemegang jadwal. Slot kosong berarti jadwal yang sudah lewat tetapi belum memiliki jurnal.');
+        $sheet->getStyle('A20:B21')->getAlignment()->setWrapText(true)->setVertical(Alignment::VERTICAL_CENTER);
         $this->theme->widths($sheet, [34, 24]);
     }
 

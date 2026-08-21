@@ -56,6 +56,7 @@
 
     <table class="stats">
         <tr>
+            <td class="stat"><div class="label">Total JP berhasil terlaksana</div><div class="value">{{ $stats['jp_berhasil_terlaksana'] ?? 0 }}</div></td>
             <td class="stat"><div class="label">Sudah diisi</div><div class="value">{{ $stats['sudah_diisi'] ?? 0 }}</div></td>
             <td class="stat"><div class="label">Kosong</div><div class="value">{{ $stats['kosong'] ?? 0 }}</div></td>
             <td class="stat"><div class="label">Digantikan</div><div class="value">{{ $stats['digantikan'] ?? 0 }}</div></td>

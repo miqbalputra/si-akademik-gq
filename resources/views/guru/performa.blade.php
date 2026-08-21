@@ -46,8 +46,13 @@
         $agendaRows = collect($performa['agenda_rows'] ?? []);
     @endphp
 
-    {{-- 5 stat cards --}}
-    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-5 mb-6">
+    {{-- Total JP + 5 kartu status --}}
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 mb-6">
+        <div class="rounded-2xl border border-emerald-800 bg-emerald-900 p-5 shadow-sm">
+            <p class="text-xs font-bold uppercase tracking-wider text-emerald-100">Total JP</p>
+            <p class="mt-1 text-4xl font-black text-white">{{ $stats['jp_berhasil_terlaksana'] ?? 0 }}</p>
+            <p class="mt-1 text-xs font-semibold text-emerald-200">JP berhasil terlaksana oleh Anda</p>
+        </div>
         <div class="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5 shadow-sm">
             <p class="text-xs font-bold uppercase tracking-wider text-emerald-700">Sudah Diisi</p>
             <p class="mt-1 text-4xl font-black text-emerald-700">{{ $stats['sudah_diisi'] }}</p>
