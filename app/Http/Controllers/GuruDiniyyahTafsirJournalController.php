@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\DiniyyahClassJournal;
 use App\Models\DiniyyahTeacherAssignment;
+use App\Models\DiniyyahTeachingSchedule;
 use App\Services\DiniyyahNoKbmAgendaService;
+use App\Services\TafsirScheduleGroupingService;
 use App\Support\SessionTimetable;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -15,10 +17,9 @@ use Illuminate\Support\Facades\Auth;
  * Menu "Jurnal Tafsir": input serentak 1 materi → N jurnal (satu per kelas
  * Tafsir) untuk guru yang mengajar Tafsir ke beberapa kelas sekaligus.
  *
- * Skenario: Kamis 09:50-10:20, 1 Ustadz mengajar Tafsir ke M2-M6 Ikhwan,
- * 1 Ustadzah ke M2-M6 Akhwat. Alih-alih mengisi 5 jurnal manual, guru cukup
- * input 1 materi di sini → terbentuk 5 jurnal (session_hour='tafsir',
- * snapshot 09:50-10:20), satu per penugasan Tafsir miliknya.
+ * Skenario: satu guru mengajar Tafsir ke beberapa kelas pada hari dan jam yang
+ * sama. Alih-alih mengisi beberapa jurnal manual, guru cukup input 1 materi
+ * di sini → terbentuk 1 jurnal per kelas dalam kelompok serentak tersebut.
  *
  * Identifikasi penugasan Tafsir: assignment yang subject-nya ber-code 'tafsir'
  * (atau nama mengandung 'Tafsir'). Subject Tafsir ditambahkan via migration
@@ -29,7 +30,10 @@ use Illuminate\Support\Facades\Auth;
  */
 class GuruDiniyyahTafsirJournalController extends Controller
 {
-    public function __construct(private readonly DiniyyahNoKbmAgendaService $noKbmAgendaService) {}
+    public function __construct(
+        private readonly DiniyyahNoKbmAgendaService $noKbmAgendaService,
+        private readonly TafsirScheduleGroupingService $tafsirScheduleGroupingService,
+    ) {}
 
     public function index(Request $request)
     {
@@ -39,51 +43,63 @@ class GuruDiniyyahTafsirJournalController extends Controller
         }
 
         $tafsirAssignments = $this->tafsirAssignmentsFor($teacher);
-        $selectedDate = $request->query('date', $this->defaultThursday());
-        $preselectedAssignmentIds = $tafsirAssignments
-            ->whereIn('id', collect($request->query('assignment_ids', []))->map(fn ($id) => (int) $id))
-            ->pluck('id')
+        $selectedDate = $request->query('date', $this->defaultTafsirDate());
+        $schedules = $this->tafsirSchedulesFor($teacher);
+        $requestedAssignmentIds = collect($request->query('assignment_ids', []))
+            ->map(fn ($id) => (int) $id)
+            ->filter()
+            ->unique()
+            ->values()
             ->all();
         $agendaEvents = $this->noKbmAgendaService->eventsForRange(
             $tafsirAssignments->pluck('classSubject.classroomTerm')->filter()->unique('id')->values(),
             Carbon::parse($selectedDate, 'Asia/Jakarta')->startOfDay(),
             Carbon::parse($selectedDate, 'Asia/Jakarta')->endOfDay(),
         );
-        $agendaAssignments = $tafsirAssignments->filter(fn ($assignment) =>
-            $this->noKbmAgendaService->forClassroomTerm(
-                $agendaEvents,
-                $assignment->classSubject->classroomTerm,
-                $selectedDate,
-            ) !== null
-        )->mapWithKeys(fn ($assignment) => [
-            $assignment->id => $this->noKbmAgendaService->forClassroomTerm(
-                $agendaEvents,
-                $assignment->classSubject->classroomTerm,
-                $selectedDate,
-            ),
-        ]);
+        $simultaneousGroups = $this->tafsirScheduleGroupingService
+            ->simultaneousGroupsForDate($schedules, $selectedDate)
+            ->map(function (array $group) use ($agendaEvents, $selectedDate, $requestedAssignmentIds): array {
+                $assignments = $group['schedules']
+                    ->map(fn ($schedule) => $schedule->teacherAssignment)
+                    ->filter()
+                    ->unique('id')
+                    ->values();
+                $agendaAssignments = $assignments
+                    ->filter(fn ($assignment) => $this->noKbmAgendaService->forClassroomTerm(
+                        $agendaEvents,
+                        $assignment->classSubject->classroomTerm,
+                        $selectedDate,
+                    ) !== null)
+                    ->mapWithKeys(fn ($assignment) => [
+                        $assignment->id => $this->noKbmAgendaService->forClassroomTerm(
+                            $agendaEvents,
+                            $assignment->classSubject->classroomTerm,
+                            $selectedDate,
+                        ),
+                    ]);
+
+                $group['assignments'] = $assignments;
+                $group['agenda_assignments'] = $agendaAssignments;
+                $group['preselected_assignment_ids'] = $assignments
+                    ->whereIn('id', $requestedAssignmentIds)
+                    ->pluck('id')
+                    ->all();
+
+                return $group;
+            });
 
         return view('guru.diniyyah-tafsir-journals.index', [
             'tafsirAssignments' => $tafsirAssignments,
             'selectedDate' => $selectedDate,
-            'preselectedAssignmentIds' => $preselectedAssignmentIds,
             'teacher' => $teacher,
-            'agendaAssignments' => $agendaAssignments,
+            'simultaneousGroups' => $simultaneousGroups,
         ]);
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'date' => [
-                'required',
-                'date',
-                function (string $attribute, mixed $value, \Closure $fail) {
-                    if (Carbon::parse($value)->dayOfWeekIso !== 4) {
-                        $fail('Tafsir hanya diadakan hari Kamis. Pilih tanggal yang jatuh di hari Kamis.');
-                    }
-                },
-            ],
+            'date' => ['required', 'date'],
             'material' => 'required|string',
             'assignments' => ['required', 'array', 'min:1'],
             'assignments.*' => ['integer'],
@@ -97,19 +113,28 @@ class GuruDiniyyahTafsirJournalController extends Controller
             abort(403, 'Akses ditolak. Akun Anda tidak terhubung dengan data Guru.');
         }
 
-        $tafsirAssignments = $this->tafsirAssignmentsFor($teacher);
-        if ($tafsirAssignments->isEmpty()) {
+        $schedules = $this->tafsirSchedulesFor($teacher);
+        if ($schedules->isEmpty()) {
             return redirect()->route('guru.diniyyah-tafsir-journals.index')
                 ->with('error', 'Anda belum memiliki penugasan Tafsir. Minta admin menambahkannya di menu Diniyyah (subject Tafsir Al Quran + penugasan ke kelas Anda).');
         }
 
-        // Hanya assignment Tafsir milik guru sendiri yang dicentang. Karena
-        // tafsirAssignmentsFor() sudah memfilter teacher_id, whereIn('id', ...)
-        // menjamin tidak ada assignment guru lain yang lolos walau di-injeksi.
-        $selected = $tafsirAssignments->whereIn('id', $validated['assignments'])->values();
-        if ($selected->isEmpty()) {
-            return back()->withInput()->with('error', 'Kelas yang Anda pilih tidak valid atau bukan penugasan Tafsir Anda.');
+        $group = $this->tafsirScheduleGroupingService->groupContainingAssignments(
+            $this->tafsirScheduleGroupingService->simultaneousGroupsForDate($schedules, $validated['date']),
+            $validated['assignments'],
+        );
+        if ($group === null) {
+            return back()->withInput()->with('error', 'Kelas yang dipilih bukan bagian dari satu sesi Tafsir serentak yang dijadwalkan pada tanggal tersebut. Tafsir individual diisi melalui Jurnal Kelas.');
         }
+
+        $selectedSchedules = $group['schedules']
+            ->whereIn('diniyyah_teacher_assignment_id', $validated['assignments'])
+            ->values();
+        $selected = $selectedSchedules
+            ->map(fn ($schedule) => $schedule->teacherAssignment)
+            ->filter()
+            ->unique('id')
+            ->values();
 
         $agendaEvents = $this->noKbmAgendaService->eventsForRange(
             $selected->pluck('classSubject.classroomTerm')->filter()->unique('id')->values(),
@@ -125,11 +150,16 @@ class GuruDiniyyahTafsirJournalController extends Controller
         $skipped = 0;
         $agendaSkipped = $agendaAssignments->count();
 
-        foreach ($selected as $assignment) {
+        foreach ($selectedSchedules as $schedule) {
+            $assignment = $schedule->teacherAssignment;
+            if ($agendaAssignments->contains('id', $assignment->id)) {
+                continue;
+            }
+
             $alreadyExists = DiniyyahClassJournal::where('diniyyah_teacher_assignment_id', $assignment->id)
                 ->where('date', $validated['date'])
-                ->where('session_hour', SessionTimetable::SESSION_TAFSIR)
-                ->exists();
+                ->get()
+                ->contains(fn ($journal) => $this->tafsirScheduleGroupingService->journalMatchesSchedule($journal, $schedule));
 
             if ($alreadyExists) {
                 $skipped++;
@@ -138,16 +168,12 @@ class GuruDiniyyahTafsirJournalController extends Controller
             }
 
             try {
-                $classroomId = $assignment->classSubject->classroomTerm->classroom_id;
-                $time = SessionTimetable::resolve($classroomId, SessionTimetable::dayOfWeekIso($validated['date']), SessionTimetable::SESSION_TAFSIR)
-                    ?? ['starts_at' => '09:50:00', 'ends_at' => '10:20:00'];
-
                 DiniyyahClassJournal::create([
                     'diniyyah_teacher_assignment_id' => $assignment->id,
                     'date' => $validated['date'],
                     'session_hour' => SessionTimetable::SESSION_TAFSIR,
-                    'session_starts_at' => $time['starts_at'],
-                    'session_ends_at' => $time['ends_at'],
+                    'session_starts_at' => $group['starts_at'],
+                    'session_ends_at' => $group['ends_at'],
                     'material' => $validated['material'],
                     'jp_count' => 1,
                 ]);
@@ -192,12 +218,23 @@ class GuruDiniyyahTafsirJournalController extends Controller
             ->values();
     }
 
-    private function defaultThursday(): string
+    private function tafsirSchedulesFor($teacher)
     {
-        // WIB — app tz=UTC, agar "hari Kamis?" & "Kamis depan" tidak meleset di larut malam WIB.
-        $today = Carbon::now('Asia/Jakarta');
+        return DiniyyahTeachingSchedule::with([
+            'teacherAssignment.classSubject.subject',
+            'teacherAssignment.classSubject.classroomTerm.classroom',
+            'classSession',
+        ])->whereHas('teacherAssignment', fn ($query) => $query->where('teacher_id', $teacher->id))
+            ->get()
+            ->filter(fn ($schedule) => $this->tafsirScheduleGroupingService->isTafsirSchedule($schedule))
+            ->values();
+    }
 
-        return $today->isThursday() ? $today->toDateString() : $today->next(Carbon::THURSDAY)->toDateString();
+    private function defaultTafsirDate(): string
+    {
+        // Default tanggal hari ini dalam WIB. Jika guru membuka menu sebelum
+        // jadwal serentaknya, ia dapat memilih tanggal jadwal melalui filter.
+        return Carbon::now('Asia/Jakarta')->toDateString();
     }
 
     /**

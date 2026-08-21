@@ -10,6 +10,7 @@ use App\Models\DiniyyahClassJournal;
 use App\Models\DiniyyahClassSubject;
 use App\Models\DiniyyahSubject;
 use App\Models\DiniyyahTeacherAssignment;
+use App\Models\DiniyyahTeachingSchedule;
 use App\Models\School;
 use App\Models\Teacher;
 use App\Models\User;
@@ -36,7 +37,7 @@ class GuruDiniyyahSubstituteTafsirJournalTest extends TestCase
         $substitute = $this->makeSubstitute('Pengganti');
 
         $response = $this->actingAs($substitute['user'])
-            ->get(route('guru.diniyyah-substitute-tafsir-journals.index'));
+            ->get(route('guru.diniyyah-substitute-tafsir-journals.index', ['date' => self::KAMIS]));
 
         $response->assertOk()
             ->assertSee('Farhan Dhia Alauddin')
@@ -83,28 +84,28 @@ class GuruDiniyyahSubstituteTafsirJournalTest extends TestCase
         $this->assertSame($substitute['teacher']->id, $journal->effectiveTeacher()->id);
     }
 
-    public function test_store_cannot_substitute_own_tafsir_assignment(): void
+    public function test_store_rejects_mixed_assignments_from_own_and_other_groups(): void
     {
         // Pengganti kebetulan juga guru Tafsir dengan assignment sendiri.
         $substitute = $this->makeTafsirTeacher('Pengganti', ['Mustawa 2 Ikhwan']);
         $ownId = $substitute['assignments'][0]->id;
 
-        $original = $this->makeTafsirTeacher('Farhan', ['Mustawa 3 Ikhwan']);
+        $original = $this->makeTafsirTeacher('Farhan', ['Mustawa 3 Ikhwan', 'Mustawa 4 Ikhwan']);
         $otherId = $original['assignments'][0]->id;
 
-        // Injeksi assignment sendiri bersama assignment guru lain. Hanya milik
-        // guru lain yang diproses (othersTafsirAssignmentsFor mengecualikan diri).
+        // Satu request hanya boleh memuat kelas dari satu kelompok serentak
+        // milik guru asli yang sama.
         $response = $this->actingAs($substitute['user'])
             ->post(route('guru.diniyyah-substitute-tafsir-journals.store'), [
                 'date' => self::KAMIS,
                 'material' => 'Materi',
                 'assignments' => [$ownId, $otherId],
-            ]);
+        ]);
 
         $response->assertRedirect();
-        $this->assertDatabaseHas('diniyyah_class_journals', [
+        $response->assertSessionHas('error');
+        $this->assertDatabaseMissing('diniyyah_class_journals', [
             'diniyyah_teacher_assignment_id' => $otherId,
-            'substitute_teacher_id' => $substitute['teacher']->id,
         ]);
         $this->assertDatabaseMissing('diniyyah_class_journals', [
             'diniyyah_teacher_assignment_id' => $ownId,
@@ -165,7 +166,7 @@ class GuruDiniyyahSubstituteTafsirJournalTest extends TestCase
         );
     }
 
-    public function test_store_rejects_non_kamis_date(): void
+    public function test_store_rejects_date_without_simultaneous_tafsir_schedule(): void
     {
         $original = $this->makeTafsirTeacher('Farhan', ['Mustawa 2 Ikhwan']);
         $substitute = $this->makeSubstitute('Pengganti');
@@ -177,7 +178,7 @@ class GuruDiniyyahSubstituteTafsirJournalTest extends TestCase
                 'assignments' => [$original['assignments'][0]->id],
             ]);
 
-        $response->assertSessionHasErrors('date');
+        $response->assertSessionHas('error');
         $this->assertSame(0, DiniyyahClassJournal::count());
     }
 
@@ -206,6 +207,12 @@ class GuruDiniyyahSubstituteTafsirJournalTest extends TestCase
             $classroomTerm = ClassroomTerm::create(['academic_term_id' => $termId, 'classroom_id' => $classroom->id, 'name' => $name]);
             $classSubject = DiniyyahClassSubject::create(['classroom_term_id' => $classroomTerm->id, 'subject_id' => $tafsirSubject->id, 'assessment_method' => 'weighted', 'kkm' => 70, 'daily_weight' => 40, 'exam_weight' => 60]);
             $assignments[] = DiniyyahTeacherAssignment::create(['diniyyah_class_subject_id' => $classSubject->id, 'teacher_id' => $teacher->id, 'assignment_role' => 'primary']);
+            $tafsirSession = \App\Models\ClassSession::where('session_name', SessionTimetable::SESSION_TAFSIR)->firstOrFail();
+            DiniyyahTeachingSchedule::create([
+                'diniyyah_teacher_assignment_id' => $assignments[array_key_last($assignments)]->id,
+                'class_session_id' => $tafsirSession->id,
+                'day_of_week' => 4,
+            ]);
         }
 
         return ['user' => $user, 'teacher' => $teacher, 'assignments' => $assignments];

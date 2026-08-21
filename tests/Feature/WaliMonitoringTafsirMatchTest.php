@@ -32,7 +32,7 @@ use Tests\TestCase;
  * "Terisi (Ekstra)" berlabel "Jam ?".
  *
  * Setelah fix: jurnal mengisi slot terjadwal (TERISI), tanpa baris ekstra / "Jam ?".
- * Form reguler guru juga tidak menawarkan slot Tafsir (diisi via menu serentak).
+ * Form reguler guru tidak menawarkan slot Tafsir yang benar-benar serentak.
  */
 class WaliMonitoringTafsirMatchTest extends TestCase
 {
@@ -74,9 +74,8 @@ class WaliMonitoringTafsirMatchTest extends TestCase
     {
         $ctx = $this->makeContext();
 
-        // Buka form reguler untuk kelas Tafsir di hari Kamis. Tafsir diisi lewat
-        // menu "Jurnal Tafsir" (serentak), jadi slot Tafsir tidak boleh muncul
-        // di dropdown sesi — hanya slot non-Tafsir (Sesi 1 — Fiqih).
+        // Buka form reguler untuk kelas Tafsir yang tergabung dengan satu kelas
+        // lain pada jam yang sama. Slot Tafsir serentak tidak boleh muncul.
         $this->actingAs($ctx['tafsirUser'])
             ->get(route('guru.diniyyah-journals.index', [
                 'classroom_term_id' => $ctx['classroomTerm']->id,
@@ -195,6 +194,34 @@ class WaliMonitoringTafsirMatchTest extends TestCase
         // Jadwal Tafsir Kamis (day_of_week 4) memakai session bernama "Tafsir (M2 - M6)".
         DiniyyahTeachingSchedule::create([
             'diniyyah_teacher_assignment_id' => $tafsirAssignment->id,
+            'day_of_week' => 4,
+            'class_session_id' => $tafsirSession->id,
+        ]);
+
+        // Kelas Tafsir kedua pada guru, hari, dan jam sama. Ini yang membuat
+        // Tafsir pada kelas wali benar-benar termasuk sesi serentak.
+        $secondClassroom = Classroom::create(['name' => 'Mustawa 4 Akhwat']);
+        SessionTimetable::seedForClassroom($secondClassroom);
+        $secondClassroomTerm = ClassroomTerm::create([
+            'academic_term_id' => $termId,
+            'classroom_id' => $secondClassroom->id,
+            'name' => $secondClassroom->name,
+        ]);
+        $secondClassSubject = DiniyyahClassSubject::create([
+            'classroom_term_id' => $secondClassroomTerm->id,
+            'subject_id' => $tafsirSubject->id,
+            'assessment_method' => 'weighted',
+            'kkm' => 70,
+            'daily_weight' => 40,
+            'exam_weight' => 60,
+        ]);
+        $secondTafsirAssignment = DiniyyahTeacherAssignment::create([
+            'diniyyah_class_subject_id' => $secondClassSubject->id,
+            'teacher_id' => $tafsirTeacher->id,
+            'assignment_role' => 'primary',
+        ]);
+        DiniyyahTeachingSchedule::create([
+            'diniyyah_teacher_assignment_id' => $secondTafsirAssignment->id,
             'day_of_week' => 4,
             'class_session_id' => $tafsirSession->id,
         ]);

@@ -10,6 +10,7 @@ use App\Models\DiniyyahClassJournal;
 use App\Models\DiniyyahClassSubject;
 use App\Models\DiniyyahSubject;
 use App\Models\DiniyyahTeacherAssignment;
+use App\Models\DiniyyahTeachingSchedule;
 use App\Models\School;
 use App\Models\Teacher;
 use App\Models\User;
@@ -61,7 +62,7 @@ class GuruDiniyyahTafsirJournalTest extends TestCase
         [$a2, $a3, $a4] = $ctx['assignments'];
 
         // Hanya centang M2 & M4 — M3 tidak ikut.
-        $this->actingAs($ctx['user'])
+        $response = $this->actingAs($ctx['user'])
             ->post(route('guru.diniyyah-tafsir-journals.store'), [
                 'date' => self::KAMIS,
                 'material' => 'Materi',
@@ -90,25 +91,27 @@ class GuruDiniyyahTafsirJournalTest extends TestCase
         $this->assertSame(0, DiniyyahClassJournal::count());
     }
 
-    public function test_store_ignores_assignments_not_owned_by_teacher(): void
+    public function test_store_rejects_assignments_mixed_from_another_tafsir_group(): void
     {
-        $ctx = $this->makeTafsirTeacher(['Mustawa 2 Ikhwan']);
+        $ctx = $this->makeTafsirTeacher(['Mustawa 2 Ikhwan', 'Mustawa 3 Ikhwan']);
         $other = $this->makeTafsirTeacher(['Mustawa 3 Ikhwan']);
 
         // Injeksi assignment milik guru lain bersama assignment sendiri.
         $ownId = $ctx['assignments'][0]->id;
         $otherId = $other['assignments'][0]->id;
 
-        $this->actingAs($ctx['user'])
+        $response = $this->actingAs($ctx['user'])
             ->post(route('guru.diniyyah-tafsir-journals.store'), [
                 'date' => self::KAMIS,
                 'material' => 'Materi',
                 'assignments' => [$ownId, $otherId],
-            ])
-            ->assertRedirect();
+            ]);
 
-        // Hanya assignment sendiri yang dapat jurnal; milik guru lain diabaikan.
-        $this->assertDatabaseHas('diniyyah_class_journals', ['diniyyah_teacher_assignment_id' => $ownId]);
+        $response->assertRedirect();
+
+        // Kelas dari kelompok/guru lain tidak boleh dicampur ke input serentak.
+        $response->assertSessionHas('error');
+        $this->assertDatabaseMissing('diniyyah_class_journals', ['diniyyah_teacher_assignment_id' => $ownId]);
         $this->assertDatabaseMissing('diniyyah_class_journals', ['diniyyah_teacher_assignment_id' => $otherId]);
     }
 
@@ -131,7 +134,7 @@ class GuruDiniyyahTafsirJournalTest extends TestCase
         $this->assertSame(2, DiniyyahClassJournal::where('session_hour', 'tafsir')->count());
     }
 
-    public function test_store_rejects_non_kamis_date(): void
+    public function test_store_rejects_date_without_simultaneous_tafsir_schedule(): void
     {
         $ctx = $this->makeTafsirTeacher(['Mustawa 2 Ikhwan']);
         $ids = collect($ctx['assignments'])->pluck('id')->all();
@@ -140,8 +143,49 @@ class GuruDiniyyahTafsirJournalTest extends TestCase
         $response = $this->actingAs($ctx['user'])
             ->post(route('guru.diniyyah-tafsir-journals.store'), ['date' => '2026-07-14', 'material' => 'Materi', 'assignments' => $ids]);
 
-        $response->assertSessionHasErrors('date');
+        $response->assertSessionHas('error');
         $this->assertSame(0, DiniyyahClassJournal::count());
+    }
+
+    public function test_individual_tafsir_is_hidden_from_simultaneous_form_and_available_in_regular_journal(): void
+    {
+        $ctx = $this->makeTafsirTeacher(['Mustawa 2 Akhwat', 'Mustawa 3 Akhwat']);
+        $individual = $this->makeIndividualTafsirAssignment($ctx['teacher'], 'Mustawa 1 Akhwat');
+
+        $this->actingAs($ctx['user'])
+            ->get(route('guru.diniyyah-tafsir-journals.index', ['date' => self::KAMIS]))
+            ->assertOk()
+            ->assertSee('Mustawa 2 Akhwat')
+            ->assertSee('Mustawa 3 Akhwat')
+            ->assertDontSee('Mustawa 1 Akhwat');
+
+        $friday = '2026-07-17';
+        $this->actingAs($ctx['user'])
+            ->get(route('guru.diniyyah-journals.index', [
+                'classroom_term_id' => $individual['classroom_term']->id,
+                'date' => $friday,
+            ]))
+            ->assertOk()
+            ->assertSee('Tafsir Al Quran')
+            ->assertSee('09:20 - 09:50');
+
+        $this->actingAs($ctx['user'])
+            ->post(route('guru.diniyyah-journals.store'), [
+                'diniyyah_teacher_assignment_id' => $individual['assignment']->id,
+                'classroom_term_id' => $individual['classroom_term']->id,
+                'date' => $friday,
+                'session_hour' => '2',
+                'material' => 'Tafsir individual Mustawa 1',
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('diniyyah_class_journals', [
+            'diniyyah_teacher_assignment_id' => $individual['assignment']->id,
+            'session_hour' => '2',
+            'session_starts_at' => '09:20:00',
+            'session_ends_at' => '09:50:00',
+        ]);
+        $this->assertSame($friday, DiniyyahClassJournal::where('diniyyah_teacher_assignment_id', $individual['assignment']->id)->firstOrFail()->date->toDateString());
     }
 
     public function test_index_shows_message_when_teacher_has_no_tafsir_assignment(): void
@@ -230,6 +274,12 @@ class GuruDiniyyahTafsirJournalTest extends TestCase
                 'teacher_id' => $teacher->id,
                 'assignment_role' => 'primary',
             ]);
+            $tafsirSession = \App\Models\ClassSession::where('session_name', SessionTimetable::SESSION_TAFSIR)->firstOrFail();
+            DiniyyahTeachingSchedule::create([
+                'diniyyah_teacher_assignment_id' => $assignments[array_key_last($assignments)]->id,
+                'class_session_id' => $tafsirSession->id,
+                'day_of_week' => 4,
+            ]);
         }
 
         if ($withFiqihAssignment) {
@@ -246,6 +296,42 @@ class GuruDiniyyahTafsirJournalTest extends TestCase
             'teacher' => $teacher,
             'assignments' => $assignments,
         ];
+    }
+
+    private function makeIndividualTafsirAssignment(Teacher $teacher, string $name): array
+    {
+        $classroom = Classroom::create(['name' => $name]);
+        SessionTimetable::seedForClassroom($classroom);
+        $classroomTerm = ClassroomTerm::create([
+            'academic_term_id' => $this->academicTermId(),
+            'classroom_id' => $classroom->id,
+            'name' => $name,
+        ]);
+        $subject = DiniyyahSubject::firstOrCreate(
+            ['code' => 'tafsir'],
+            ['name' => 'Tafsir Al Quran', 'default_assessment_method' => 'weighted', 'is_active' => true],
+        );
+        $classSubject = DiniyyahClassSubject::create([
+            'classroom_term_id' => $classroomTerm->id,
+            'subject_id' => $subject->id,
+            'assessment_method' => 'weighted',
+            'kkm' => 70,
+            'daily_weight' => 40,
+            'exam_weight' => 60,
+        ]);
+        $assignment = DiniyyahTeacherAssignment::create([
+            'diniyyah_class_subject_id' => $classSubject->id,
+            'teacher_id' => $teacher->id,
+            'assignment_role' => 'primary',
+        ]);
+        $sessionTwo = \App\Models\ClassSession::where('session_name', '2')->firstOrFail();
+        DiniyyahTeachingSchedule::create([
+            'diniyyah_teacher_assignment_id' => $assignment->id,
+            'class_session_id' => $sessionTwo->id,
+            'day_of_week' => 5,
+        ]);
+
+        return ['assignment' => $assignment, 'classroom_term' => $classroomTerm];
     }
 
     private function academicTermId(): int

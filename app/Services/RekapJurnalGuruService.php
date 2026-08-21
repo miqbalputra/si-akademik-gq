@@ -94,8 +94,14 @@ class RekapJurnalGuruService
             $dateStr = $journal->date?->toDateString();
 
             if ($journal->session_hour === 'tafsir') {
-                // Dedup per (guru, tanggal): tafsir serentak = 1 JP per sesi.
-                $key = $tid.'|'.$dateStr;
+                // Dedup per kelompok waktu. Dua sesi Tafsir serentak pada hari
+                // yang sama tetapi jam berbeda harus tetap dihitung 2 JP.
+                // Jurnal lama tanpa snapshot jam tetap kompatibel sebagai satu
+                // kelompok legacy pada tanggal tersebut.
+                $timeKey = ($journal->session_starts_at && $journal->session_ends_at)
+                    ? $journal->session_starts_at.'|'.$journal->session_ends_at
+                    : 'legacy-tafsir';
+                $key = $tid.'|'.$dateStr.'|'.$timeKey;
                 if (isset($tafsirSeen[$key])) {
                     $teachers->put($tid, $row);
 

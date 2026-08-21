@@ -37,6 +37,7 @@ class GuruPerformaService
     public function __construct(
         private readonly AttendanceStatusClient $attendanceStatusClient,
         private readonly DiniyyahNoKbmAgendaService $noKbmAgendaService,
+        private readonly TafsirScheduleGroupingService $tafsirScheduleGroupingService,
     ) {}
 
     /**
@@ -289,18 +290,21 @@ class GuruPerformaService
             $absenceStatus = $attendance['available'] ? ($attendance['statuses'][$dateStr] ?? null) : null;
             $isExcused = $this->attendanceStatusClient->isExempt($absenceStatus);
 
-            $tafsirSched = $daySchedules->filter(fn ($s) => $this->isTafsir($s))->values();
-            $regularSched = $daySchedules->reject(fn ($s) => $this->isTafsir($s))->values();
+            $tafsirGroups = $this->tafsirScheduleGroupingService->simultaneousGroupsForDate($daySchedules, $date);
+            $simultaneousScheduleIds = $tafsirGroups
+                ->flatMap(fn (array $group) => $group['schedules']->pluck('id'))
+                ->map(fn ($id) => (int) $id)
+                ->all();
+            // Tafsir individual diperlakukan sama seperti slot reguler.
+            $regularSched = $daySchedules
+                ->reject(fn ($schedule) => in_array((int) $schedule->id, $simultaneousScheduleIds, true))
+                ->values();
 
             // Reguler: 1 slot = 1 JP (jp_count).
             foreach ($regularSched as $sched) {
                 $journal = $dayJournals
                     ->where('diniyyah_teacher_assignment_id', $sched->diniyyah_teacher_assignment_id)
-                    ->filter(function ($j) use ($sched): bool {
-                        // Cocokkan persis session_hour jurnal vs session_name slot jadwal.
-                        return (string) $j->session_hour === (string) ($sched->classSession->session_name ?? '');
-                    })
-                    ->first();
+                    ->first(fn ($journal) => $this->tafsirScheduleGroupingService->journalMatchesSchedule($journal, $sched));
 
                 if ($journal) {
                     if ($journal->substitute_teacher_id === null) {
@@ -327,13 +331,14 @@ class GuruPerformaService
                 }
             }
 
-            // Tafsir: dedup per (guru, tanggal) = 1 JP. 1 entry kosong gabungan
-            // semua kelas tafsir hari itu (diisi serentak via 1 form).
-            if ($tafsirSched->isNotEmpty()) {
-                $tafsirAssignmentIds = $tafsirSched->pluck('diniyyah_teacher_assignment_id')->unique()->all();
+            // Setiap kelompok Tafsir serentak dihitung 1 JP. Kelompok berbeda
+            // pada hari yang sama tetapi jam berbeda tetap dihitung terpisah.
+            foreach ($tafsirGroups as $tafsirGroup) {
+                $tafsirSched = $tafsirGroup['schedules'];
+                $tafsirAssignmentIds = $tafsirGroup['assignment_ids'];
                 $tafsirJournals = $dayJournals
                     ->whereIn('diniyyah_teacher_assignment_id', $tafsirAssignmentIds)
-                    ->filter(fn ($j) => strtolower((string) $j->session_hour) === SessionTimetable::SESSION_TAFSIR);
+                    ->filter(fn ($journal) => $tafsirSched->contains(fn ($schedule) => $this->tafsirScheduleGroupingService->journalMatchesSchedule($journal, $schedule)));
 
                 if ($tafsirJournals->isNotEmpty()) {
                     // ≥1 jurnal tafsir ada → dihitung 1 sesi (dedup). Sebagian
@@ -479,22 +484,6 @@ class GuruPerformaService
     }
 
     /**
-     * Apakah schedule ini milik penugasan Tafsir. Identifikasi sama dengan
-     * WaliClassJournalMonitoringController::isTafsirSchedule dan
-     * GuruDiniyyahTafsirJournalController::tafsirAssignmentsFor.
-     */
-    private function isTafsir($schedule): bool
-    {
-        $subject = $schedule->teacherAssignment?->classSubject?->subject ?? null;
-        if (! $subject) {
-            return false;
-        }
-
-        return strtolower((string) $subject->code) === SessionTimetable::SESSION_TAFSIR
-            || str_contains(strtolower((string) $subject->name), 'tafsir');
-    }
-
-    /**
      * Resolve jam sesi [starts_at, ends_at] untuk schedule memakai matrix
      * per-classroom (sumber kebenaran jam diniyyah), fallback ke jam default
      * global ClassSession. Mirror WaliClassJournalMonitoringController::resolveSessionTime.
@@ -503,20 +492,7 @@ class GuruPerformaService
      */
     private function resolveSessionTime($schedule, int $dayOfWeek): array
     {
-        $classroom = $schedule->teacherAssignment?->classSubject?->classroomTerm?->classroom ?? null;
-        $sessionName = (string) ($schedule->classSession->session_name ?? '');
-
-        if ($classroom) {
-            $resolved = SessionTimetable::resolve($classroom->id, $dayOfWeek, $sessionName);
-            if ($resolved) {
-                return ['starts_at' => $resolved['starts_at'], 'ends_at' => $resolved['ends_at']];
-            }
-        }
-
-        return [
-            'starts_at' => $schedule->classSession->starts_at ?? null,
-            'ends_at' => $schedule->classSession->ends_at ?? null,
-        ];
+        return $this->tafsirScheduleGroupingService->resolveSessionTime($schedule, $dayOfWeek);
     }
 
     /** @return array<string, mixed> */

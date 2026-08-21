@@ -9,7 +9,7 @@ use App\Models\DiniyyahClassJournal;
 use App\Models\SchoolHoliday;
 use App\Services\AttendanceStatusClient;
 use App\Services\DiniyyahNoKbmAgendaService;
-use App\Support\SessionTimetable;
+use App\Services\TafsirScheduleGroupingService;
 use Carbon\Carbon;
 
 class N8nIntegrationController extends Controller
@@ -42,21 +42,25 @@ class N8nIntegrationController extends Controller
         $currentDate = $now->format('Y-m-d');
         $currentTime = $now->format('H:i:s');
 
-        // Get schedules for today where the class session has ended
-        $schedules = DiniyyahTeachingSchedule::with([
+        // Ambil semua jadwal hari ini dahulu agar kelompok Tafsir serentak tidak
+        // terpecah hanya karena data kelas lain tidak ikut query awal.
+        $allDaySchedules = DiniyyahTeachingSchedule::with([
                 'teacherAssignment.teacher',
                 'teacherAssignment.classSubject.subject',
                 'teacherAssignment.classSubject.classroomTerm.classroom',
                 'classSession'
             ])
             ->where('day_of_week', $currentDayOfWeek)
-            ->whereHas('classSession', function($query) use ($currentTime) {
-                $query->where('ends_at', '<', $currentTime);
-            })
             ->get();
 
         $attendanceClient = app(AttendanceStatusClient::class);
         $agendaService = app(DiniyyahNoKbmAgendaService::class);
+        $tafsirGroupingService = app(TafsirScheduleGroupingService::class);
+        $schedules = $allDaySchedules->filter(function ($schedule) use ($tafsirGroupingService, $currentDayOfWeek, $currentTime): bool {
+            $time = $tafsirGroupingService->resolveSessionTime($schedule, $currentDayOfWeek);
+
+            return $time['ends_at'] !== null && $time['ends_at'] < $currentTime;
+        })->values();
         $todayStart = Carbon::parse($currentDate, 'Asia/Jakarta')->startOfDay();
         $todayEnd = Carbon::parse($currentDate, 'Asia/Jakarta')->endOfDay();
         $agendaEvents = $agendaService->eventsForRange(
@@ -81,19 +85,18 @@ class N8nIntegrationController extends Controller
         // Tafsir dibuat serentak untuk beberapa kelas. Agenda hanya membebaskan
         // sesi tersebut bila seluruh kelas dalam kelompok Tafsir tercakup.
         $tafsirAgendaByScheduleId = [];
-        $tafsirSchedules = $schedules->filter(fn ($schedule): bool => $this->isTafsirSchedule($schedule));
-        $tafsirGroups = $tafsirSchedules->groupBy(fn ($schedule) =>
-            ($schedule->teacherAssignment?->teacher_id ?? '').'|'.($schedule->classSession?->session_name ?? SessionTimetable::SESSION_TAFSIR)
-        );
+        $tafsirGroups = $tafsirGroupingService->simultaneousGroupsForDate($schedules, $currentDate);
+        $tafsirGroupByScheduleId = [];
         foreach ($tafsirGroups as $group) {
-            $terms = $group
+            $terms = $group['schedules']
                 ->map(fn ($schedule) => $schedule->teacherAssignment?->classSubject?->classroomTerm)
                 ->filter()
                 ->unique('id')
                 ->values();
             $agenda = $agendaService->forClassroomTerms($agendaEvents, $terms, $currentDate);
-            if ($agenda !== null) {
-                foreach ($group as $schedule) {
+            foreach ($group['schedules'] as $schedule) {
+                $tafsirGroupByScheduleId[$schedule->id] = $group;
+                if ($agenda !== null) {
                     $tafsirAgendaByScheduleId[$schedule->id] = $agenda;
                 }
             }
@@ -110,6 +113,7 @@ class N8nIntegrationController extends Controller
         );
 
         $missingJournals = [];
+        $handledTafsirGroups = [];
 
         foreach ($schedules as $schedule) {
             // Agenda tanpa KBM dan libur sekolah bukan jurnal yang perlu ditagih.
@@ -119,16 +123,25 @@ class N8nIntegrationController extends Controller
 
             $assignment = $schedule->teacherAssignment;
             $session = $schedule->classSession;
+            $tafsirGroup = $tafsirGroupByScheduleId[$schedule->id] ?? null;
 
-            // Check if journal exists
-            $journalExists = DiniyyahClassJournal::where('diniyyah_teacher_assignment_id', $assignment->id)
+            if ($tafsirGroup !== null) {
+                if (isset($handledTafsirGroups[$tafsirGroup['key']])) {
+                    continue;
+                }
+                $handledTafsirGroups[$tafsirGroup['key']] = true;
+            }
+
+            $groupSchedules = $tafsirGroup['schedules'] ?? collect([$schedule]);
+            $assignmentIds = $groupSchedules->pluck('diniyyah_teacher_assignment_id')->unique()->values();
+            $journalExists = DiniyyahClassJournal::whereIn('diniyyah_teacher_assignment_id', $assignmentIds)
                 ->where('date', $currentDate)
-                ->where('session_hour', (string)$session->session_name)
-                ->exists();
+                ->get()
+                ->contains(fn ($journal) => $groupSchedules->contains(fn ($item) => $tafsirGroupingService->journalMatchesSchedule($journal, $item)));
 
             if (!$journalExists && $assignment->teacher) {
                 $classroomTerm = $assignment->classSubject?->classroomTerm;
-                $agenda = $this->isTafsirSchedule($schedule)
+                $agenda = $tafsirGroup !== null
                     ? ($tafsirAgendaByScheduleId[$schedule->id] ?? null)
                     : ($classroomTerm
                         ? $agendaService->forClassroomTerm($agendaEvents, $classroomTerm, $currentDate)
@@ -146,11 +159,13 @@ class N8nIntegrationController extends Controller
                 $missingJournals[] = [
                     'teacher_name' => $assignment->teacher->name,
                     'whatsapp' => $assignment->teacher->whatsapp ?? $assignment->teacher->phone ?? '',
-                    'class_name' => $assignment->classSubject->classroomTerm->name ?? 'Unknown',
-                    'subject' => $assignment->classSubject->subject->name ?? 'Unknown',
-                    'session_name' => $session->session_name,
-                    'starts_at' => $session->starts_at,
-                    'ends_at' => $session->ends_at,
+                    'class_name' => $tafsirGroup !== null
+                        ? $groupSchedules->map(fn ($item) => $item->teacherAssignment?->classSubject?->classroomTerm?->name)->filter()->unique()->implode(', ')
+                        : ($assignment->classSubject->classroomTerm->name ?? 'Unknown'),
+                    'subject' => $tafsirGroup !== null ? 'Tafsir' : ($assignment->classSubject->subject->name ?? 'Unknown'),
+                    'session_name' => $tafsirGroup !== null ? 'Tafsir serentak' : $session->session_name,
+                    'starts_at' => $tafsirGroup['starts_at'] ?? $session->starts_at,
+                    'ends_at' => $tafsirGroup['ends_at'] ?? $session->ends_at,
                 ];
             }
         }
@@ -164,13 +179,4 @@ class N8nIntegrationController extends Controller
         ]);
     }
 
-    private function isTafsirSchedule($schedule): bool
-    {
-        $subject = $schedule->teacherAssignment?->classSubject?->subject;
-
-        return $subject !== null && (
-            strtolower((string) $subject->code) === SessionTimetable::SESSION_TAFSIR
-            || str_contains(strtolower((string) $subject->name), 'tafsir')
-        );
-    }
 }

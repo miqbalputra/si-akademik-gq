@@ -10,6 +10,7 @@ use App\Models\DiniyyahTeachingSchedule;
 use App\Models\StudentAttendance;
 use App\Services\DiniyyahNoKbmAgendaService;
 use App\Services\DiniyyahJournalReportService;
+use App\Services\TafsirScheduleGroupingService;
 use App\Support\SessionTimetable;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -18,7 +19,10 @@ use Illuminate\Support\Facades\Auth;
 
 class GuruDiniyyahJournalController extends Controller
 {
-    public function __construct(private readonly DiniyyahNoKbmAgendaService $noKbmAgendaService) {}
+    public function __construct(
+        private readonly DiniyyahNoKbmAgendaService $noKbmAgendaService,
+        private readonly TafsirScheduleGroupingService $tafsirScheduleGroupingService,
+    ) {}
 
     public function index(Request $request)
     {
@@ -32,6 +36,13 @@ class GuruDiniyyahJournalController extends Controller
         $assignments = DiniyyahTeacherAssignment::with(['classSubject.subject', 'classSubject.classroomTerm.classroom', 'schedules.classSession'])
             ->where('teacher_id', $teacher->id)
             ->get();
+        $assignments->each(fn ($assignment) => $assignment->schedules
+            ->each(fn ($schedule) => $schedule->setRelation('teacherAssignment', $assignment)));
+        $teacherSchedules = DiniyyahTeachingSchedule::with([
+            'teacherAssignment.classSubject.subject',
+            'teacherAssignment.classSubject.classroomTerm.classroom',
+            'classSession',
+        ])->whereHas('teacherAssignment', fn ($query) => $query->where('teacher_id', $teacher->id))->get();
 
         // Group by classroom_term_id to get unique classes
         $classes = $assignments->pluck('classSubject.classroomTerm')->unique('id');
@@ -111,15 +122,12 @@ class GuruDiniyyahJournalController extends Controller
                 $filledKeys = $existingJournals
                     ->map(fn ($journal) => $journal->teacherAssignment->id.'|'.$journal->session_hour)
                     ->all();
+                $simultaneousScheduleIds = $this->tafsirScheduleGroupingService
+                    ->simultaneousGroupsForDate($teacherSchedules, $selectedDate)
+                    ->flatMap(fn (array $group) => $group['schedules']->pluck('id'))
+                    ->map(fn ($id) => (int) $id)
+                    ->all();
                 foreach ($classAssignments as $assignment) {
-                    // Tafsir diisi lewat menu "Jurnal Tafsir" (serentak, session_hour='tafsir'),
-                    // bukan form reguler. Skip di sini supaya form tidak menawarkan slot Tafsir
-                    // yang (karena perbedaan session_name vs 'tafsir') terlihat belum terisi dan
-                    // bisa memicu guru membuat jurnal Tafsir ganda. Tabel riwayat jurnal tetap
-                    // menampilkan jurnal Tafsir yang sudah ada (read-only).
-                    if ($this->isTafsirSubject($assignment->classSubject->subject ?? null)) {
-                        continue;
-                    }
                     foreach ($assignment->schedules as $schedule) {
                         if ((int) $schedule->day_of_week !== $dayOfWeek) {
                             continue;
@@ -128,6 +136,14 @@ class GuruDiniyyahJournalController extends Controller
                         if (! $sessionName) {
                             continue;
                         }
+
+                        // Hanya Tafsir yang benar-benar berlangsung bersamaan
+                        // diisi dari menu khusus. Tafsir individual tetap muncul
+                        // sebagai slot jurnal kelas normal.
+                        if (in_array((int) $schedule->id, $simultaneousScheduleIds, true)) {
+                            continue;
+                        }
+
                         $slot = $sessionSlots->firstWhere('session_name', $sessionName);
                         $agenda = $this->noKbmAgendaService->forClassroomTerm($agendaEvents, $selectedTerm, $selectedDate);
                         $scheduledSlots->push((object) [
@@ -136,7 +152,8 @@ class GuruDiniyyahJournalController extends Controller
                             'subject_name' => $assignment->classSubject->subject->name,
                             'starts_at' => $slot?->starts_at,
                             'ends_at' => $slot?->ends_at,
-                            'filled' => in_array($assignment->id.'|'.$sessionName, $filledKeys, true),
+                            'filled' => in_array($assignment->id.'|'.$sessionName, $filledKeys, true)
+                                || $existingJournals->contains(fn ($journal) => $this->tafsirScheduleGroupingService->journalMatchesSchedule($journal, $schedule)),
                             'agenda' => $agenda,
                         ]);
                     }
@@ -380,6 +397,22 @@ class GuruDiniyyahJournalController extends Controller
             }
         }
 
+        $teacherSchedules = DiniyyahTeachingSchedule::with([
+            'teacherAssignment.classSubject.subject',
+            'teacherAssignment.classSubject.classroomTerm.classroom',
+            'classSession',
+        ])->whereHas('teacherAssignment', fn ($query) => $query->where('teacher_id', $teacher->id))->get();
+        $scheduledTafsir = $teacherSchedules->first(fn ($schedule) =>
+            (int) $schedule->diniyyah_teacher_assignment_id === (int) $assignment->id
+            && (int) $schedule->day_of_week === $dayOfWeek
+            && (string) ($schedule->classSession?->session_name ?? '') === $validated['session_hour']
+        );
+
+        if ($scheduledTafsir && $this->tafsirScheduleGroupingService->isSimultaneousSchedule($teacherSchedules, $scheduledTafsir, $validated['date'])) {
+            return redirect()->route('guru.diniyyah-tafsir-journals.index', ['date' => $validated['date']])
+                ->withInput()->with('error', 'Sesi Tafsir ini diajar serentak. Isi melalui menu Jurnal Tafsir agar semua kelas pada sesi yang sama tercatat bersama.');
+        }
+
         // Agenda tanpa KBM adalah status virtual yang read-only. UI menonaktifkan
         // slot ini, tetapi pemeriksaan server tetap wajib agar request manual tidak
         // dapat membuat record jurnal palsu pada hari agenda.
@@ -411,8 +444,10 @@ class GuruDiniyyahJournalController extends Controller
         // Cek double journaling
         $exists = DiniyyahClassJournal::where('diniyyah_teacher_assignment_id', $validated['diniyyah_teacher_assignment_id'])
             ->where('date', $validated['date'])
-            ->where('session_hour', $validated['session_hour'])
-            ->exists();
+            ->get()
+            ->contains(fn ($journal) => $scheduledTafsir
+                ? $this->tafsirScheduleGroupingService->journalMatchesSchedule($journal, $scheduledTafsir)
+                : (string) $journal->session_hour === $validated['session_hour']);
 
         if ($exists) {
             return redirect()->route('guru.diniyyah-journals.index', [
@@ -503,18 +538,4 @@ class GuruDiniyyahJournalController extends Controller
         return $sqlstate === '23000' || $driverCode === 19;
     }
 
-    /**
-     * Apakah subject ini Tafsir (code 'tafsir' atau nama mengandung 'Tafsir').
-     * Identifikasi sama dengan GuruDiniyyahTafsirJournalController::tafsirAssignmentsFor.
-     * Dipakai untuk mengecualikan Tafsir dari form reguler (diisi via menu serentak).
-     */
-    private function isTafsirSubject($subject): bool
-    {
-        if (! $subject) {
-            return false;
-        }
-
-        return strtolower($subject->code) === SessionTimetable::SESSION_TAFSIR
-            || str_contains(strtolower($subject->name), 'tafsir');
-    }
 }

@@ -24,7 +24,10 @@ use Illuminate\Support\Collection;
  */
 class DiniyyahJournalReportService
 {
-    public function __construct(private readonly DiniyyahNoKbmAgendaService $noKbmAgendaService) {}
+    public function __construct(
+        private readonly DiniyyahNoKbmAgendaService $noKbmAgendaService,
+        private readonly TafsirScheduleGroupingService $tafsirScheduleGroupingService,
+    ) {}
 
     /** @return array<string, mixed> */
     public function build(array $filters = [], ?int $teacherId = null): array
@@ -384,9 +387,6 @@ class DiniyyahJournalReportService
             ->map(fn ($date): string => Carbon::parse($date)->toDateString())
             ->flip();
 
-        $journalKeys = $journals->mapWithKeys(function (DiniyyahClassJournal $journal): array {
-            return [$journal->diniyyah_teacher_assignment_id.'|'.$journal->date?->toDateString().'|'.strtolower((string) $journal->session_hour) => true];
-        });
         $rows = collect();
         $date = $start->copy();
 
@@ -400,16 +400,17 @@ class DiniyyahJournalReportService
             $daySchedules = $schedules->where('day_of_week', $date->dayOfWeekIso)
                 ->filter(fn ($schedule): bool => $this->assignmentActiveOn($schedule->teacherAssignment, $date));
 
-            $tafsirGroups = $daySchedules
-                ->filter(fn ($schedule): bool => $this->isTafsirSchedule($schedule))
-                ->groupBy(fn ($schedule) => $schedule->teacherAssignment->teacher_id.'|'.($schedule->classSession?->session_name ?? SessionTimetable::SESSION_TAFSIR));
+            $dayJournals = $journals->filter(fn (DiniyyahClassJournal $journal): bool => $journal->date?->toDateString() === $dateString);
+            $tafsirGroups = $this->tafsirScheduleGroupingService->simultaneousGroupsForDate($daySchedules, $date);
+            $simultaneousScheduleIds = $tafsirGroups
+                ->flatMap(fn (array $group) => $group['schedules']->pluck('id'))
+                ->map(fn ($id) => (int) $id)
+                ->all();
 
-            foreach ($daySchedules->reject(fn ($schedule) => $this->isTafsirSchedule($schedule)) as $schedule) {
+            foreach ($daySchedules->reject(fn ($schedule) => in_array((int) $schedule->id, $simultaneousScheduleIds, true)) as $schedule) {
                 $assignment = $schedule->teacherAssignment;
                 $classroomTerm = $assignment->classSubject->classroomTerm;
-                $sessionName = (string) ($schedule->classSession?->session_name ?? '');
-                $key = $assignment->id.'|'.$dateString.'|'.strtolower($sessionName);
-                if ($sessionName === '' || $journalKeys->has($key)) {
+                if ($dayJournals->contains(fn ($journal) => $this->tafsirScheduleGroupingService->journalMatchesSchedule($journal, $schedule))) {
                     continue;
                 }
                 $agenda = $this->noKbmAgendaService->forClassroomTerm($agendaEvents, $classroomTerm, $date);
@@ -419,19 +420,20 @@ class DiniyyahJournalReportService
             }
 
             foreach ($tafsirGroups as $group) {
-                $assignmentIds = $group->pluck('diniyyah_teacher_assignment_id')->unique();
-                $hasJournal = $assignmentIds->contains(fn ($assignmentId): bool => $journalKeys->has($assignmentId.'|'.$dateString.'|'.SessionTimetable::SESSION_TAFSIR));
+                $groupSchedules = $group['schedules'];
+                $hasJournal = $dayJournals->contains(fn ($journal) => $groupSchedules
+                    ->contains(fn ($schedule) => $this->tafsirScheduleGroupingService->journalMatchesSchedule($journal, $schedule)));
                 if ($hasJournal) {
                     continue;
                 }
-                $tafsirTerms = $group
+                $tafsirTerms = $groupSchedules
                     ->map(fn ($schedule) => $schedule->teacherAssignment?->classSubject?->classroomTerm)
                     ->filter()
                     ->unique('id')
                     ->values();
                 $agenda = $this->noKbmAgendaService->forClassroomTerms($agendaEvents, $tafsirTerms, $date);
-                if ($agenda !== null && $this->agendaMatchesSearch($agenda, $group->first(), $filters['search'])) {
-                    $rows->push($this->agendaTafsirReportRow($group, $date, $agenda));
+                if ($agenda !== null && $this->agendaMatchesSearch($agenda, $groupSchedules->first(), $filters['search'])) {
+                    $rows->push($this->agendaTafsirReportRow($groupSchedules, $date, $agenda));
                 }
             }
 
@@ -448,16 +450,6 @@ class DiniyyahJournalReportService
         $ends = $assignment?->ends_at?->toDateString();
 
         return ($starts === null || $starts <= $value) && ($ends === null || $ends >= $value);
-    }
-
-    private function isTafsirSchedule($schedule): bool
-    {
-        $subject = $schedule->teacherAssignment?->classSubject?->subject;
-
-        return $subject !== null && (
-            strtolower((string) $subject->code) === SessionTimetable::SESSION_TAFSIR
-            || str_contains(strtolower((string) $subject->name), 'tafsir')
-        );
     }
 
     private function agendaMatchesSearch(array $agenda, $schedule, ?string $search): bool
@@ -482,7 +474,8 @@ class DiniyyahJournalReportService
     {
         $assignment = $schedule->teacherAssignment;
         $classSubject = $assignment->classSubject;
-        $time = collect([$schedule->classSession?->starts_at, $schedule->classSession?->ends_at])->filter()->map(fn ($value) => Carbon::parse($value)->format('H:i'))->implode(' - ');
+        $resolvedTime = $this->tafsirScheduleGroupingService->resolveSessionTime($schedule, $date->dayOfWeekIso);
+        $time = collect([$resolvedTime['starts_at'], $resolvedTime['ends_at']])->filter()->map(fn ($value) => Carbon::parse($value)->format('H:i'))->implode(' - ');
 
         return [
             'journal' => null,

@@ -237,12 +237,10 @@ class GuruJournalOverdueReminderTest extends TestCase
         $form = $this->actingAs($context['user'])->get($reminder['empty_slots'][0]['fill_url']);
 
         $form->assertOk()
-            ->assertDontSee('Masih ada 1 jurnal kosong')
-            ->assertSee('id="tafsir-'.$context['assignments'][0]->id.'"', false)
-            ->assertSee('id="tafsir-'.$context['assignments'][1]->id.'"', false);
+            ->assertDontSee('Masih ada 1 jurnal kosong');
         foreach ($context['assignments'] as $assignment) {
             $this->assertMatchesRegularExpression(
-                '/<input[^>]*id="tafsir-'.$assignment->id.'"[^>]*\schecked(?:\s|=|>)/',
+                '/<input[^>]*name="assignments\[\]"[^>]*value="'.$assignment->id.'"[^>]*\schecked(?:\s|=|>)/',
                 $form->getContent(),
             );
         }

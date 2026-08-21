@@ -4,95 +4,83 @@
         <a href="{{ route('guru.diniyyah-substitute-tafsir-journals.index') }}" class="btn btn-outline btn-sm {{ request()->routeIs('guru.diniyyah-substitute-tafsir-journals.index') ? 'bg-slate-100 border-slate-300 text-slate-800' : 'text-slate-500 hover:bg-slate-50' }}">Pengganti Tafsir</a>
     </x-slot>
 
-    <div class="mb-6 flex justify-between items-center glass-card p-4 rounded-2xl">
-        <div>
-            <h1 class="text-2xl font-black text-slate-900">Jurnal Tafsir (Serentak)</h1>
-            <p class="text-xs font-semibold text-slate-500 mt-1">Tafsir Kamis 09:50-10:20 diajar serentak ke beberapa kelas. Cukup isi 1 materi, sistem membuat 1 jurnal per kelas Anda.</p>
-        </div>
+    <div class="mb-6 glass-card rounded-2xl p-5">
+        <h1 class="text-2xl font-black text-slate-900">Jurnal Tafsir Serentak</h1>
+        <p class="mt-1 text-xs font-semibold text-slate-500">Sistem hanya menggabungkan kelas Tafsir yang diajar oleh Anda pada hari dan jam yang sama. Tafsir individual tetap diisi melalui Jurnal Kelas.</p>
     </div>
 
     @if(session('success'))
-        <div class="mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-sm font-medium text-emerald-800">
-            {{ session('success') }}
-        </div>
+        <div class="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-medium text-emerald-800">{{ session('success') }}</div>
     @endif
 
     @if(session('error'))
-        <div class="mb-6 p-4 rounded-xl bg-red-50 border border-red-200 text-sm font-medium text-red-800">
-            {{ session('error') }}
-        </div>
+        <div class="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-800">{{ session('error') }}</div>
     @endif
 
+    <form method="GET" class="mb-6 flex flex-wrap items-end gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div>
+            <label for="tafsir-date" class="mb-1 block text-sm font-bold text-slate-700">Tanggal jadwal</label>
+            <input id="tafsir-date" type="date" name="date" value="{{ $selectedDate }}" required class="rounded-xl border-slate-300 text-sm shadow-sm focus:border-teal-500 focus:ring-teal-500">
+        </div>
+        <button type="submit" class="rounded-xl border border-teal-600 bg-teal-600 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-teal-700">Tampilkan sesi</button>
+    </form>
+
     @if($tafsirAssignments->isEmpty())
-        <div class="glass-card rounded-2xl p-10 border border-slate-200 text-center">
-            <svg class="mx-auto h-12 w-12 text-slate-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13M12 6.253C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253M12 6.253C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-            </svg>
+        <div class="glass-card rounded-2xl border border-slate-200 p-10 text-center">
             <p class="text-sm font-bold text-slate-700">Anda belum memiliki penugasan Tafsir.</p>
-            <p class="text-xs text-slate-500 mt-1">Minta admin menambahkan di menu Diniyyah: subject <strong>Tafsir Al Quran</strong> + penugasan ke kelas Anda.</p>
+            <p class="mt-1 text-xs text-slate-500">Minta admin menambahkan subject Tafsir Al Quran dan penugasan ke kelas Anda.</p>
+        </div>
+    @elseif($simultaneousGroups->isEmpty())
+        <div class="glass-card rounded-2xl border border-sky-200 bg-sky-50 p-8 text-center">
+            <p class="text-base font-black text-sky-900">Tidak ada sesi Tafsir serentak pada tanggal ini.</p>
+            <p class="mx-auto mt-2 max-w-2xl text-sm text-sky-800">Jadwal Tafsir yang hanya berlaku untuk satu kelas, misalnya Mustawa 1 Akhwat pada Jumat, diisi sebagai jurnal individual melalui Jurnal Kelas.</p>
+            <a href="{{ route('guru.diniyyah-journals.index', ['date' => $selectedDate]) }}" class="mt-5 inline-flex rounded-xl border border-sky-600 bg-white px-4 py-2 text-sm font-bold text-sky-800 transition-colors hover:bg-sky-100">Buka Jurnal Kelas</a>
         </div>
     @else
-        <form method="POST" action="{{ route('guru.diniyyah-tafsir-journals.store') }}" x-data="{ checked() { return [...$root.querySelectorAll('input[name=\'assignments[]\']')].filter(c => c.checked).length } }">
-            @csrf
-            <!-- Daftar kelas Tafsir -->
-            <div class="glass-card rounded-2xl p-6 mb-6 border border-slate-200">
-                <div class="flex items-center justify-between mb-1">
-                    <h2 class="text-lg font-black text-slate-800">Kelas Tafsir Anda</h2>
-                    <div class="flex gap-2">
-                        <button type="button" @click="[...$root.querySelectorAll('input[name=\'assignments[]\']')].forEach(c => c.checked = true)" class="text-[11px] font-bold text-teal-700 bg-teal-50 border border-teal-200 rounded-lg px-2 py-1 hover:bg-teal-100">Centang Semua</button>
-                        <button type="button" @click="[...$root.querySelectorAll('input[name=\'assignments[]\']')].forEach(c => c.checked = false)" class="text-[11px] font-bold text-slate-600 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 hover:bg-slate-100">Kosongkan</button>
-                    </div>
-                </div>
-                <p class="text-xs text-slate-500 mb-4">Centang kelas yang ikut sesi Tafsir Kamis ini (sesi 09:50-10:20). Kelas yang sudah ada jurnal Tafsir di tanggal ini akan di-skip.</p>
-                @if($agendaAssignments->isNotEmpty())
-                    <div class="mb-4 rounded-xl border border-sky-200 bg-sky-50 p-3 text-xs font-bold text-sky-800">
-                        {{ $agendaAssignments->count() }} kelas dibebaskan oleh agenda tanpa KBM. Kelas tersebut tidak perlu dibuatkan jurnal.
-                    </div>
-                @endif
-                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-                    @foreach($tafsirAssignments as $assignment)
-                        <label for="tafsir-{{ $assignment->id }}" class="rounded-xl border border-slate-200 bg-white p-3 flex items-start gap-2 cursor-pointer hover:bg-slate-50 has-[:checked]:border-teal-500 has-[:checked]:bg-teal-50 transition-colors">
-                            <input type="checkbox" name="assignments[]" value="{{ $assignment->id }}" id="tafsir-{{ $assignment->id }}" class="mt-0.5 rounded border-slate-300 text-teal-600 focus:ring-teal-500" @checked(in_array($assignment->id, $preselectedAssignmentIds, true)) @disabled($agendaAssignments->has($assignment->id))>
-                            <span>
-                                <span class="block text-xs font-bold text-slate-800">{{ $assignment->classSubject->classroomTerm->name ?? $assignment->classSubject->classroomTerm->classroom->name }}</span>
-                                <span class="block text-[10px] uppercase text-slate-400 font-semibold mt-0.5">Tafsir · 09:50-10:20</span>
-                                @if($agendaAssignments->has($assignment->id))<span class="mt-1 block text-[10px] font-black text-sky-700">Agenda tanpa KBM</span>@endif
-                            </span>
-                        </label>
-                    @endforeach
-                </div>
-            </div>
+        @foreach($simultaneousGroups as $group)
+            <form method="POST" action="{{ route('guru.diniyyah-tafsir-journals.store') }}" x-data="{ checked() { return [...$root.querySelectorAll('input[name=\'assignments[]\']')].filter(c => c.checked).length } }" class="mb-6">
+                @csrf
+                <input type="hidden" name="date" value="{{ $selectedDate }}">
 
-            <!-- Form Serentak -->
-            <div class="glass-card rounded-2xl p-6 border border-slate-200">
-                <h3 class="text-lg font-black text-slate-800 mb-2 border-b border-slate-100 pb-2">Isi Jurnal Tafsir</h3>
-                <p class="text-xs font-semibold text-teal-700 bg-teal-50 border border-teal-200 rounded-lg p-3 mb-4">
-                    Pilih <strong>tanggal Kamis</strong>, centang kelas yang ikut, lalu tulis materi sekali. Jurnal hanya dibuat untuk <strong>kelas yang tercentang</strong>. Kelas yang sudah ada jurnal Tafsir di tanggal ini akan di-skip.
-                </p>
-
-                <div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
-                    <div class="sm:col-span-1 space-y-4">
+                <div class="glass-card rounded-2xl border border-slate-200 p-6">
+                    <div class="mb-4 flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-4">
                         <div>
-                            <label class="block text-sm font-bold text-slate-700 mb-1">Tanggal (harus Kamis)</label>
-                            <input type="date" name="date" value="{{ $selectedDate }}" required class="w-full rounded-xl border-slate-300 shadow-sm text-sm py-2 focus:ring-teal-500 focus:border-teal-500">
-                            <p class="text-[10px] text-slate-400 mt-1">Tafsir hanya pada hari Kamis.</p>
+                            <h2 class="text-lg font-black text-slate-800">Tafsir Serentak · {{ \Carbon\Carbon::parse($group['starts_at'])->format('H:i') }}–{{ \Carbon\Carbon::parse($group['ends_at'])->format('H:i') }}</h2>
+                            <p class="mt-1 text-xs text-slate-500">{{ \Carbon\Carbon::parse($selectedDate)->locale('id')->translatedFormat('l, d F Y') }} · Centang kelas yang mengikuti sesi ini.</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button type="button" @click="[...$root.querySelectorAll('input[name=\'assignments[]\']:not(:disabled)')].forEach(c => c.checked = true)" class="rounded-lg border border-teal-200 bg-teal-50 px-2 py-1 text-[11px] font-bold text-teal-700 hover:bg-teal-100">Centang Semua</button>
+                            <button type="button" @click="[...$root.querySelectorAll('input[name=\'assignments[]\']')].forEach(c => c.checked = false)" class="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-bold text-slate-600 hover:bg-slate-100">Kosongkan</button>
                         </div>
                     </div>
-                    <div class="sm:col-span-2">
-                        <label class="block text-sm font-bold text-slate-700 mb-1">Materi</label>
-                        <textarea name="material" rows="6" required class="w-full rounded-xl border-slate-300 shadow-sm text-sm focus:ring-teal-500 focus:border-teal-500" placeholder="Tuliskan materi Tafsir yang diajarkan ke semua kelas..."></textarea>
+
+                    @if($group['agenda_assignments']->isNotEmpty())
+                        <div class="mb-4 rounded-xl border border-sky-200 bg-sky-50 p-3 text-xs font-bold text-sky-800">{{ $group['agenda_assignments']->count() }} kelas dibebaskan oleh agenda tanpa KBM dan tidak perlu dibuatkan jurnal.</div>
+                    @endif
+
+                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        @foreach($group['assignments'] as $assignment)
+                            <label for="tafsir-{{ $group['key'] }}-{{ $assignment->id }}" class="flex cursor-pointer items-start gap-2 rounded-xl border border-slate-200 bg-white p-3 transition-colors hover:bg-slate-50 has-[:checked]:border-teal-500 has-[:checked]:bg-teal-50">
+                                <input type="checkbox" name="assignments[]" value="{{ $assignment->id }}" id="tafsir-{{ $group['key'] }}-{{ $assignment->id }}" class="mt-0.5 rounded border-slate-300 text-teal-600 focus:ring-teal-500" @checked(in_array($assignment->id, $group['preselected_assignment_ids'], true)) @disabled($group['agenda_assignments']->has($assignment->id))>
+                                <span>
+                                    <span class="block text-sm font-bold text-slate-800">{{ $assignment->classSubject->classroomTerm->name ?? $assignment->classSubject->classroomTerm->classroom->name }}</span>
+                                    <span class="mt-0.5 block text-[10px] font-semibold uppercase text-slate-400">Tafsir · {{ \Carbon\Carbon::parse($group['starts_at'])->format('H:i') }}–{{ \Carbon\Carbon::parse($group['ends_at'])->format('H:i') }}</span>
+                                    @if($group['agenda_assignments']->has($assignment->id))<span class="mt-1 block text-[10px] font-black text-sky-700">Agenda tanpa KBM</span>@endif
+                                </span>
+                            </label>
+                        @endforeach
+                    </div>
+
+                    <div class="mt-6 grid grid-cols-1 gap-4 border-t border-slate-100 pt-5 md:grid-cols-[1fr_auto] md:items-end">
+                        <div>
+                            <label class="mb-1 block text-sm font-bold text-slate-700">Materi Tafsir</label>
+                            <textarea name="material" rows="4" required class="w-full rounded-xl border-slate-300 text-sm shadow-sm focus:border-teal-500 focus:ring-teal-500" placeholder="Tuliskan materi yang diajarkan ke kelas tercentang..."></textarea>
+                            <p class="mt-2 text-xs text-slate-500"><span x-text="checked()"></span> dari {{ $group['assignments']->count() }} kelas tercentang.</p>
+                        </div>
+                        <button type="submit" class="rounded-xl bg-teal-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-50" :disabled="checked() === 0">Simpan Jurnal Serentak</button>
                     </div>
                 </div>
-
-                <div class="mt-6 flex items-center justify-between gap-3 flex-wrap">
-                    <p class="text-xs text-slate-500">
-                        <span x-text="checked()"></span> dari {{ $tafsirAssignments->count() }} kelas tercentang.
-                    </p>
-                    <button type="submit" class="rounded-xl bg-teal-600 px-6 py-3 text-sm font-bold text-white hover:bg-teal-700 shadow-sm transition-colors" :class="{ 'opacity-50 cursor-not-allowed': checked() === 0 }" :disabled="checked() === 0">
-                        Buat Jurnal untuk Kelas Tercentang
-                    </button>
-                </div>
-            </div>
-        </form>
+            </form>
+        @endforeach
     @endif
 </x-layouts.portal>

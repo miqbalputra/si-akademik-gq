@@ -199,6 +199,53 @@ class GuruPerformaTest extends TestCase
         $this->assertStringContainsString('Mustawa 4 Ikhwan', $slot['classroom_names']);
     }
 
+    public function test_performa_keeps_individual_tafsir_separate_from_simultaneous_group(): void
+    {
+        $this->setNow(self::TODAY);
+        $guru = $this->makeGuru('Guru Tafsir Campuran');
+        $simultaneous = $this->makeTafsirAssignments($guru['teacher'], ['Mustawa 2 Akhwat', 'Mustawa 3 Akhwat']);
+        foreach ($simultaneous as $assignment) {
+            $assignment->update(['starts_at' => self::KAMIS_LEWAT, 'ends_at' => self::KAMIS_LEWAT]);
+        }
+
+        $classroom = Classroom::create(['name' => 'Mustawa 1 Akhwat']);
+        SessionTimetable::seedForClassroom($classroom);
+        $classroomTerm = ClassroomTerm::create([
+            'academic_term_id' => $this->academicTermId(),
+            'classroom_id' => $classroom->id,
+            'name' => 'Mustawa 1 Akhwat',
+        ]);
+        $tafsir = DiniyyahSubject::where('code', 'tafsir')->firstOrFail();
+        $classSubject = DiniyyahClassSubject::create([
+            'classroom_term_id' => $classroomTerm->id,
+            'subject_id' => $tafsir->id,
+            'assessment_method' => 'weighted',
+            'kkm' => 70,
+            'daily_weight' => 40,
+            'exam_weight' => 60,
+        ]);
+        $individual = DiniyyahTeacherAssignment::create([
+            'diniyyah_class_subject_id' => $classSubject->id,
+            'teacher_id' => $guru['teacher']->id,
+            'assignment_role' => 'primary',
+            'starts_at' => '2026-08-07',
+            'ends_at' => '2026-08-07',
+        ]);
+        DiniyyahTeachingSchedule::create([
+            'diniyyah_teacher_assignment_id' => $individual->id,
+            'class_session_id' => ClassSession::where('session_name', '2')->firstOrFail()->id,
+            'day_of_week' => 5,
+        ]);
+
+        $performa = app(GuruPerformaService::class)->calculate($guru['teacher'], 8, 2026);
+
+        $this->assertSame(2, $performa['stats']['kosong']);
+        $this->assertCount(2, $performa['empty_slots']);
+        $this->assertCount(1, array_filter($performa['empty_slots'], fn (array $slot): bool => $slot['is_tafsir']));
+        $this->assertCount(1, array_filter($performa['empty_slots'], fn (array $slot): bool => ! $slot['is_tafsir']));
+        $this->assertContains('Mustawa 1 Akhwat', array_column($performa['empty_slots'], 'classroom_names'));
+    }
+
     public function test_performa_excludes_future_dates_in_current_month(): void
     {
         $this->setNow(self::TODAY);

@@ -9,6 +9,7 @@ use App\Models\ClassSession;
 use App\Support\SessionTimetable;
 use App\Services\AttendanceStatusClient;
 use App\Services\DiniyyahNoKbmAgendaService;
+use App\Services\TafsirScheduleGroupingService;
 use Illuminate\Support\Facades\Auth;
 
 class WaliClassJournalMonitoringController extends Controller
@@ -16,6 +17,7 @@ class WaliClassJournalMonitoringController extends Controller
     public function __construct(
         private readonly AttendanceStatusClient $attendanceStatusClient,
         private readonly DiniyyahNoKbmAgendaService $noKbmAgendaService,
+        private readonly TafsirScheduleGroupingService $tafsirScheduleGroupingService,
     ) {}
 
     public function index(Request $request)
@@ -100,7 +102,7 @@ class WaliClassJournalMonitoringController extends Controller
         // tersebut) agar agenda dengan cakupan sebagian tidak membebaskan sesi
         // secara keliru.
         $tafsirTeacherIds = $schedules
-            ->filter(fn ($schedule) => $this->isTafsirSchedule($schedule))
+            ->filter(fn ($schedule) => $this->tafsirScheduleGroupingService->isTafsirSchedule($schedule))
             ->map(fn ($schedule) => $schedule->teacherAssignment?->teacher_id)
             ->filter()
             ->unique()
@@ -200,19 +202,21 @@ class WaliClassJournalMonitoringController extends Controller
                 $holiday = $holidays->get($dateStr);
 
                 $tafsirAgendaByScheduleId = [];
-                $globalDayTafsir = $globalTafsirSchedules
-                    ->where('day_of_week', $dayOfWeek)
-                    ->filter(fn ($schedule): bool => $this->assignmentActiveOn($schedule->teacherAssignment, $date))
-                    ->groupBy(fn ($schedule) => $schedule->teacherAssignment->teacher_id.'|'.($schedule->classSession->session_name ?? SessionTimetable::SESSION_TAFSIR));
+                $globalDayTafsir = $this->tafsirScheduleGroupingService
+                    ->simultaneousGroupsForDate($globalTafsirSchedules, $date);
+                $globalSimultaneousScheduleIds = $globalDayTafsir
+                    ->flatMap(fn (array $group) => $group['schedules']->pluck('id'))
+                    ->map(fn ($id) => (int) $id)
+                    ->all();
                 foreach ($globalDayTafsir as $tafsirGroup) {
-                    $tafsirTerms = $tafsirGroup
+                    $tafsirTerms = $tafsirGroup['schedules']
                         ->map(fn ($schedule) => $schedule->teacherAssignment?->classSubject?->classroomTerm)
                         ->filter()
                         ->unique('id')
                         ->values();
                     $groupAgenda = $this->noKbmAgendaService->forClassroomTerms($agendaEvents, $tafsirTerms, $date);
                     if ($groupAgenda !== null) {
-                        foreach ($tafsirGroup as $tafsirSchedule) {
+                        foreach ($tafsirGroup['schedules'] as $tafsirSchedule) {
                             $tafsirAgendaByScheduleId[$tafsirSchedule->id] = $groupAgenda;
                         }
                     }
@@ -234,24 +238,11 @@ class WaliClassJournalMonitoringController extends Controller
                 
                 // 1. Process all scheduled sessions
                 foreach ($daySchedules as $schedule) {
-                    $isTafsir = $this->isTafsirSchedule($schedule);
+                    $isSimultaneousTafsir = in_array((int) $schedule->id, $globalSimultaneousScheduleIds, true);
 
                     $journal = $dayJournals->where('diniyyah_teacher_assignment_id', $schedule->diniyyah_teacher_assignment_id)
-                                        ->filter(function($j) use ($schedule, $isTafsir) {
-                                            // Cocokkan persis session_hour vs session_name slot jadwal.
-                                            if ((string)$j->session_hour === (string)($schedule->classSession->session_name ?? '')) {
-                                                return true;
-                                            }
-                                            // Pengecualian Tafsir: jurnal serentak menyimpan
-                                            // session_hour='tafsir' (konstanta mesin), sedangkan slot
-                                            // jadwal bisa memakai ClassSession bernama lain (mis.
-                                            // "Tafsir (M2 - M6)" via admin). Ikat berdasar assignment
-                                            // supaya jurnal mengisi slot terjadwal, bukan jadi baris
-                                            // "Ekstra" dengan label "Jam ?".
-                                            return $isTafsir
-                                                && strtolower((string)$j->session_hour) === SessionTimetable::SESSION_TAFSIR;
-                                        })
-                                        ->first();
+                                         ->filter(fn ($journal) => $this->tafsirScheduleGroupingService->journalMatchesSchedule($journal, $schedule))
+                                         ->first();
 
                     if ($journal) {
                         $matchedJournalIds[] = $journal->id;
@@ -262,7 +253,7 @@ class WaliClassJournalMonitoringController extends Controller
                         ? ($teacherAttendance['statuses'][$dateStr] ?? null)
                         : null;
                     $classroomTerm = $schedule->teacherAssignment?->classSubject?->classroomTerm;
-                    $agenda = $this->isTafsirSchedule($schedule)
+                    $agenda = $isSimultaneousTafsir
                         ? ($tafsirAgendaByScheduleId[$schedule->id] ?? null)
                         : ($classroomTerm
                             ? $this->noKbmAgendaService->forClassroomTerm($agendaEvents, $classroomTerm, $date)
@@ -420,23 +411,6 @@ class WaliClassJournalMonitoringController extends Controller
         );
     }
 
-    /**
-     * Apakah schedule ini milik penugasan Tafsir (subject code 'tafsir' atau nama
-     * mengandung 'Tafsir'). Dipakai untuk pencocokan jurnal serentak yang menyimpan
-     * session_hour='tafsir' ke slot jadwal yang mungkin memakai nama session lain.
-     * Identifikasi sama dengan GuruDiniyyahTafsirJournalController::tafsirAssignmentsFor.
-     */
-    private function isTafsirSchedule($schedule): bool
-    {
-        $subject = $schedule->teacherAssignment?->classSubject?->subject ?? null;
-        if (! $subject) {
-            return false;
-        }
-
-        return strtolower($subject->code) === SessionTimetable::SESSION_TAFSIR
-            || str_contains(strtolower($subject->name), 'tafsir');
-    }
-
     private function assignmentActiveOn($assignment, \Carbon\CarbonInterface $date): bool
     {
         $value = $date->toDateString();
@@ -455,25 +429,6 @@ class WaliClassJournalMonitoringController extends Controller
      */
     private function resolveSessionTime($schedule, int $dayOfWeek): ?array
     {
-        $classroom = $schedule->teacherAssignment?->classSubject?->classroomTerm?->classroom ?? null;
-        $sessionName = $schedule->classSession?->session_name ?? null;
-
-        if ($classroom && $sessionName) {
-            $resolved = \App\Support\SessionTimetable::resolve($classroom->id, $dayOfWeek, $sessionName);
-            if ($resolved) {
-                return $resolved;
-            }
-        }
-
-        // Fallback: jam default global ClassSession bila matrix per-classroom
-        // belum di-seed (mis. classroom non-Mustawa / hari tanpa matrix).
-        if ($schedule->classSession && $schedule->classSession->starts_at) {
-            return [
-                'starts_at' => $schedule->classSession->starts_at,
-                'ends_at' => $schedule->classSession->ends_at,
-            ];
-        }
-
-        return null;
+        return $this->tafsirScheduleGroupingService->resolveSessionTime($schedule, $dayOfWeek);
     }
 }
