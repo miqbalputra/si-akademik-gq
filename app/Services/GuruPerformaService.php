@@ -77,6 +77,7 @@ class GuruPerformaService
 
         $summary = $this->summaryForRange($teacher, $startDate, $endDate);
         $journalRows = $this->journalRows($summary['journals']);
+        $jpBerhasilTerlaksana = $this->completedTeachingJp($summary['journals']);
 
         return [
             'month' => $month,
@@ -84,13 +85,10 @@ class GuruPerformaService
             'is_current_month' => $isCurrentMonth,
             'month_label' => $this->monthLabel($month, $year),
             'stats' => [
-                // Metrik realisasi JP milik guru pemegang jadwal. Nilainya
-                // sengaja setara "sudah_diisi", tetapi memiliki makna yang
-                // eksplisit untuk rekap beban mengajar: jurnal pengganti,
-                // kosong, izin/sakit, dan agenda tidak dikreditkan ke guru.
-                // $summary['sudah'] sudah menangani jp_count reguler dan
-                // deduplikasi satu sesi Tafsir serentak menjadi 1 JP.
-                'jp_berhasil_terlaksana' => $summary['sudah'],
+                // Realisasi JP memakai jurnal aktual milik guru. Tafsir
+                // dikelompokkan dari snapshot tanggal dan jam jurnal, bukan
+                // dari banyaknya record kelas atau konfigurasi jadwal terbaru.
+                'jp_berhasil_terlaksana' => $jpBerhasilTerlaksana,
                 'sudah_diisi' => $summary['sudah'],
                 'kosong' => $summary['kosong'],
                 'digantikan' => $summary['digantikan'],
@@ -466,6 +464,65 @@ class GuruPerformaService
                 'bolos' => $absenceCounts['skipped'],
             ];
         })->values();
+    }
+
+    /**
+     * Total JP yang benar-benar terlaksana oleh guru pemegang jadwal.
+     *
+     * Jurnal reguler menggunakan jp_count. Jurnal Tafsir disatukan menurut
+     * tanggal serta snapshot jam mulai–selesai, sehingga satu pengajaran
+     * serentak untuk banyak kelas tetap bernilai satu JP. Snapshot jurnal
+     * dipakai agar rekap masa lalu tidak berubah hanya karena jadwal diubah
+     * setelah jurnal dibuat.
+     *
+     * @param  Collection<int, DiniyyahClassJournal>  $journals
+     */
+    private function completedTeachingJp(Collection $journals): int
+    {
+        $ownJournals = $journals
+            ->filter(fn (DiniyyahClassJournal $journal): bool => $journal->substitute_teacher_id === null)
+            ->values();
+
+        $regularJp = $ownJournals
+            ->reject(fn (DiniyyahClassJournal $journal): bool => $this->isTafsirJournal($journal))
+            ->sum(fn (DiniyyahClassJournal $journal): int => (int) $journal->jp_count);
+
+        $tafsirSessions = $ownJournals
+            ->filter(fn (DiniyyahClassJournal $journal): bool => $this->isTafsirJournal($journal))
+            ->groupBy(fn (DiniyyahClassJournal $journal): string => $this->tafsirJournalSessionKey($journal));
+
+        return (int) $regularJp + $tafsirSessions->count();
+    }
+
+    private function isTafsirJournal(DiniyyahClassJournal $journal): bool
+    {
+        $subject = $journal->teacherAssignment?->classSubject?->subject;
+
+        return $subject !== null && (
+            strtolower((string) $subject->code) === SessionTimetable::SESSION_TAFSIR
+            || str_contains(strtolower((string) $subject->name), 'tafsir')
+        );
+    }
+
+    private function tafsirJournalSessionKey(DiniyyahClassJournal $journal): string
+    {
+        $date = $journal->date?->toDateString() ?? 'without-date';
+        $startsAt = $this->journalTimePart($journal->session_starts_at);
+        $endsAt = $this->journalTimePart($journal->session_ends_at);
+
+        if ($startsAt !== null && $endsAt !== null) {
+            return implode('|', [$date, $startsAt, $endsAt]);
+        }
+
+        // Kompatibilitas jurnal Tafsir lama yang belum menyimpan snapshot jam.
+        return implode('|', [$date, 'legacy', (string) $journal->session_hour]);
+    }
+
+    private function journalTimePart(mixed $time): ?string
+    {
+        $time = trim((string) $time);
+
+        return $time === '' ? null : substr($time, 0, 5);
     }
 
     private function journalTime(DiniyyahClassJournal $journal): ?string

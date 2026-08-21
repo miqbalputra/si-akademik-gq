@@ -159,6 +159,36 @@ class GuruPerformaTest extends TestCase
         $this->assertSame(0, $performa['stats']['kosong']);
     }
 
+    public function test_total_jp_deduplicates_tafsir_using_actual_journal_session_after_schedule_changes(): void
+    {
+        $this->setNow(self::TODAY);
+        $guru = $this->makeGuru('Guru Tafsir');
+        $assignments = $this->makeTafsirAssignments($guru['teacher'], ['Mustawa 2 Akhwat', 'Mustawa 3 Akhwat']);
+
+        // Salah satu jadwal berubah setelah jurnal dibuat. Snapshot jurnal
+        // membuktikan keduanya tetap dilaksanakan serentak pukul 09:50-10:20.
+        DiniyyahTeachingSchedule::query()
+            ->where('diniyyah_teacher_assignment_id', $assignments[1]->id)
+            ->update(['class_session_id' => ClassSession::where('session_name', '2')->firstOrFail()->id]);
+
+        foreach ($assignments as $assignment) {
+            DiniyyahClassJournal::create([
+                'diniyyah_teacher_assignment_id' => $assignment->id,
+                'date' => self::KAMIS_LEWAT,
+                'session_hour' => SessionTimetable::SESSION_TAFSIR,
+                'session_starts_at' => '09:50:00',
+                'session_ends_at' => '10:20:00',
+                'material' => 'Tafsir serentak',
+                'jp_count' => 1,
+            ]);
+        }
+
+        $performa = app(GuruPerformaService::class)->calculate($guru['teacher'], 8, 2026);
+
+        $this->assertSame(2, $performa['stats']['sudah_diisi']);
+        $this->assertSame(1, $performa['stats']['jp_berhasil_terlaksana']);
+    }
+
     public function test_performa_tafsir_dedup_substituted_counts_one(): void
     {
         $this->setNow(self::TODAY);
