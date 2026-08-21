@@ -13,6 +13,7 @@ use App\Models\Teacher;
 use App\Models\TasmiExaminerAssignment;
 use App\Models\TasmiRecord;
 use App\Models\User;
+use App\Services\TasmiService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -149,6 +150,10 @@ class TasmiFeatureTest extends TestCase
         $resp->assertSee('Tasmi\' 5 Juz');
         $resp->assertSee('Maqbul');
         $resp->assertSee('Mumtaz');
+        $resp->assertSee('>Senin</option>', false);
+        $resp->assertSee('>Ahad</option>', false);
+        $resp->assertSee('data-hijri-auto', false);
+        $resp->assertSee("Intl.DateTimeFormat('id-ID-u-ca-islamic'", false);
         $resp->assertSee('method="GET" action="'.route('guru.tasmi.create').'"', false);
         $resp->assertSee('name="classroom_term_id" value="'.$ctx['classroomTerm']->id.'"', false);
     }
@@ -168,6 +173,11 @@ class TasmiFeatureTest extends TestCase
             ->assertSee('method="GET" action="'.route('guru.tasmi.create').'"', false)
             ->assertDontSee('validation.required')
             ->assertDontSee('Simpan Data Tasmi\'');
+    }
+
+    public function test_hijri_date_is_calculated_from_gregorian_date_in_wib(): void
+    {
+        $this->assertSame('9 Rabiulawal 1448 H', app(TasmiService::class)->hijriDateFor('2026-08-21'));
     }
 
     public function test_examiner_can_store_1_juz_tasmi(): void
@@ -199,6 +209,7 @@ class TasmiFeatureTest extends TestCase
             'juz_start' => 30,
             'juz_end' => 30,
             'predicate' => 'mumtaz',
+            'hijri_date' => '3 Rabiulawal 1448 H',
         ]);
         // Audit log tercatat.
         $this->assertDatabaseHas('score_change_logs', [

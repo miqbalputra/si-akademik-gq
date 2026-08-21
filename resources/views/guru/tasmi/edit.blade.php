@@ -59,18 +59,28 @@
 
         <div class="card" style="padding:24px;margin-bottom:18px;">
             {{-- Hari & Tanggal --}}
+            @php($selectedExamDay = old('exam_day_label', $record->exam_day_label))
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px;">
                 <div>
-                    <label for="exam_day_label" class="form-label">Hari (label)</label>
-                    <input id="exam_day_label" name="exam_day_label" type="text" class="form-input" maxlength="50" value="{{ old('exam_day_label', $record->exam_day_label) }}">
+                    <label for="exam_day_label" class="form-label">Hari</label>
+                    <select id="exam_day_label" name="exam_day_label" class="form-input">
+                        <option value="">— Pilih hari —</option>
+                        @if(filled($selectedExamDay) && !array_key_exists($selectedExamDay, $dayOptions))
+                            <option value="{{ $selectedExamDay }}" selected>{{ $selectedExamDay }} (data lama)</option>
+                        @endif
+                        @foreach($dayOptions as $value => $label)
+                            <option value="{{ $value }}" @selected($selectedExamDay === $value)>{{ $label }}</option>
+                        @endforeach
+                    </select>
                 </div>
                 <div>
                     <label for="exam_date" class="form-label">Tanggal (Masehi) *</label>
-                    <input id="exam_date" name="exam_date" type="date" class="form-input" required value="{{ old('exam_date', $record->exam_date?->toDateString()) }}">
+                    <input id="exam_date" name="exam_date" type="date" class="form-input" required value="{{ old('exam_date', $record->exam_date?->toDateString()) }}" onchange="tasmiAutofillHijriDate()">
                 </div>
                 <div>
                     <label for="hijri_date" class="form-label">Tanggal (Hijriyah)</label>
-                    <input id="hijri_date" name="hijri_date" type="text" class="form-input" maxlength="50" value="{{ old('hijri_date', $record->hijri_date) }}">
+                    <input id="hijri_date" name="hijri_date" type="text" class="form-input" readonly data-hijri-auto maxlength="50" value="{{ old('hijri_date', $record->hijri_date) }}">
+                    <p class="form-hint">Terisi otomatis berdasarkan kalender Hijriyah dan zona waktu WIB.</p>
                 </div>
             </div>
 
@@ -177,7 +187,32 @@
             if (computed > 30) computed = 30;
             end.value = String(computed);
         }
-        document.addEventListener('DOMContentLoaded', tasmiToggleJuzFields);
+        function tasmiAutofillHijriDate() {
+            var dateInput = document.getElementById('exam_date');
+            var hijriInput = document.getElementById('hijri_date');
+            if (!dateInput || !hijriInput) return;
+            if (!dateInput.value) {
+                hijriInput.value = '';
+                return;
+            }
+            try {
+                var date = new Date(dateInput.value + 'T00:00:00+07:00');
+                if (Number.isNaN(date.getTime())) return;
+                hijriInput.value = new Intl.DateTimeFormat('id-ID-u-ca-islamic', {
+                    timeZone: 'Asia/Jakarta',
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric',
+                    era: 'short'
+                }).format(date);
+            } catch (error) {
+                // Server menghitung ulang ketika data disimpan.
+            }
+        }
+        document.addEventListener('DOMContentLoaded', function () {
+            tasmiToggleJuzFields();
+            tasmiAutofillHijriDate();
+        });
     </script>
     @endpush
 </x-layouts.portal>

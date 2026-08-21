@@ -7,6 +7,7 @@ use App\Models\ClassroomTerm;
 use App\Models\Teacher;
 use App\Models\TasmiExaminerAssignment;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 class TasmiService
@@ -72,5 +73,32 @@ class TasmiService
     public function activeAcademicTerm(): ?AcademicTerm
     {
         return AcademicTerm::where('is_active', true)->first();
+    }
+
+    /**
+     * Konversi tanggal Masehi ke label Hijriyah Indonesia menggunakan ICU.
+     * Tanggal diperlakukan sebagai awal hari WIB agar tidak bergeser pada
+     * browser atau server yang menggunakan zona waktu lain.
+     */
+    public function hijriDateFor(string|Carbon $date): ?string
+    {
+        if (! class_exists(\IntlDateFormatter::class)) {
+            return null;
+        }
+
+        $wibDate = $date instanceof Carbon
+            ? $date->copy()->setTimezone('Asia/Jakarta')->startOfDay()
+            : Carbon::parse($date, 'Asia/Jakarta')->startOfDay();
+        $formatter = new \IntlDateFormatter(
+            'id_ID@calendar=islamic',
+            \IntlDateFormatter::NONE,
+            \IntlDateFormatter::NONE,
+            'Asia/Jakarta',
+            \IntlDateFormatter::TRADITIONAL,
+            'd MMMM y G',
+        );
+        $formatted = $formatter->format($wibDate->getTimestamp());
+
+        return is_string($formatted) ? $formatted : null;
     }
 }

@@ -75,16 +75,22 @@
                 {{-- 3. Hari & Tanggal --}}
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px;">
                     <div>
-                        <label for="exam_day_label" class="form-label">3. Hari (label)</label>
-                        <input id="exam_day_label" name="exam_day_label" type="text" class="form-input" placeholder="Mis. Hari 1" maxlength="50" value="{{ old('exam_day_label') }}">
+                        <label for="exam_day_label" class="form-label">3. Hari</label>
+                        <select id="exam_day_label" name="exam_day_label" class="form-input">
+                            <option value="">— Pilih hari —</option>
+                            @foreach($dayOptions as $value => $label)
+                                <option value="{{ $value }}" @selected(old('exam_day_label') === $value)>{{ $label }}</option>
+                            @endforeach
+                        </select>
                     </div>
                     <div>
                         <label for="exam_date" class="form-label">Tanggal (Masehi) *</label>
-                        <input id="exam_date" name="exam_date" type="date" class="form-input" required value="{{ old('exam_date') }}">
+                        <input id="exam_date" name="exam_date" type="date" class="form-input" required value="{{ old('exam_date') }}" onchange="tasmiAutofillHijriDate()">
                     </div>
                     <div>
                         <label for="hijri_date" class="form-label">Tanggal (Hijriyah)</label>
-                        <input id="hijri_date" name="hijri_date" type="text" class="form-input" placeholder="Mis. 15 Sya'ban 1448 H" maxlength="50" value="{{ old('hijri_date') }}">
+                        <input id="hijri_date" name="hijri_date" type="text" class="form-input" readonly data-hijri-auto placeholder="Otomatis dari tanggal Masehi" maxlength="50" value="{{ old('hijri_date') }}">
+                        <p class="form-hint">Terisi otomatis berdasarkan kalender Hijriyah dan zona waktu WIB.</p>
                     </div>
                 </div>
 
@@ -197,7 +203,36 @@
             end.value = String(computed);
         }
 
-        document.addEventListener('DOMContentLoaded', tasmiToggleJuzFields);
+        function tasmiAutofillHijriDate() {
+            var dateInput = document.getElementById('exam_date');
+            var hijriInput = document.getElementById('hijri_date');
+            if (!dateInput || !hijriInput) return;
+            if (!dateInput.value) {
+                hijriInput.value = '';
+                return;
+            }
+
+            try {
+                // Tambahkan offset WIB secara eksplisit agar tanggal tidak
+                // bergeser pada perangkat dengan zona waktu selain Indonesia.
+                var date = new Date(dateInput.value + 'T00:00:00+07:00');
+                if (Number.isNaN(date.getTime())) return;
+                hijriInput.value = new Intl.DateTimeFormat('id-ID-u-ca-islamic', {
+                    timeZone: 'Asia/Jakarta',
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric',
+                    era: 'short'
+                }).format(date);
+            } catch (error) {
+                // Nilai tetap akan dihitung ulang di server saat disimpan.
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            tasmiToggleJuzFields();
+            tasmiAutofillHijriDate();
+        });
     </script>
     @endpush
 </x-layouts.portal>

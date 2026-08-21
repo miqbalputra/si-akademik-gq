@@ -54,6 +54,20 @@ class TasmiRecord extends Model
         ];
     }
 
+    /** @return array<string, string> */
+    public static function examDayOptions(): array
+    {
+        return [
+            'Senin' => 'Senin',
+            'Selasa' => 'Selasa',
+            'Rabu' => 'Rabu',
+            'Kamis' => 'Kamis',
+            "Jum'at" => "Jum'at",
+            'Sabtu' => 'Sabtu',
+            'Ahad' => 'Ahad',
+        ];
+    }
+
     public static function predicateOptions(): array
     {
         return [

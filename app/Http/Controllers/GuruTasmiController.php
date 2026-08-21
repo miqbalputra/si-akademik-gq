@@ -96,6 +96,7 @@ class GuruTasmiController extends Controller
             'students' => $students,
             'selectedStudent' => $students->firstWhere('id', $studentId),
             'genderScope' => $this->tasmiService->expectedGenderScope($teacher),
+            'dayOptions' => TasmiRecord::examDayOptions(),
             'examTypeOptions' => TasmiRecord::examTypeOptions(),
             'predicateOptions' => TasmiRecord::predicateOptions(),
         ]);
@@ -112,6 +113,8 @@ class GuruTasmiController extends Controller
         abort_unless($assignment, 403, 'Penugasan PJ Tasmi\' tidak ditemukan untuk periode aktif.');
 
         $validated = $this->validateStore($request);
+        $validated['hijri_date'] = $this->tasmiService->hijriDateFor($validated['exam_date'])
+            ?? $validated['hijri_date'];
 
         // Verifikasi kelas sesuai gender guru.
         $eligibleClassroomTerms = $this->tasmiService->eligibleClassroomTerms($teacher);
@@ -215,6 +218,7 @@ class GuruTasmiController extends Controller
 
         return view('guru.tasmi.edit', [
             'record' => $tasmi_record,
+            'dayOptions' => TasmiRecord::examDayOptions(),
             'examTypeOptions' => TasmiRecord::examTypeOptions(),
             'predicateOptions' => TasmiRecord::predicateOptions(),
         ]);
@@ -231,6 +235,8 @@ class GuruTasmiController extends Controller
         abort_unless($isOwner, 403, 'Anda hanya bisa mengedit record tasmi\' yang Anda input sendiri.');
 
         $validated = $this->validateUpdate($request, $tasmi_record);
+        $validated['hijri_date'] = $this->tasmiService->hijriDateFor($validated['exam_date'])
+            ?? $validated['hijri_date'];
         $this->assertValidJuzRange($validated);
 
         $tasmi_record->fill([
