@@ -224,40 +224,55 @@ class AttendanceStatusClient
      */
     private function knownTeacherIds(Collection $externalIds): Collection
     {
-        $cacheKey = 'attendance-journal:teachers:'.sha1($externalIds->implode(','));
+        // Only cache a positive verification. Caching an empty response made
+        // the teacher dashboard disagree with the admin integration audit if
+        // GeoPresensi had a transient response during the previous 60 seconds.
+        // The versioned key intentionally leaves any old negative cache entry
+        // behind so the correction takes effect immediately after deployment.
+        $cacheKey = 'attendance-journal:teachers:v2:'.sha1($externalIds->implode(','));
+        $cachedIds = Cache::get($cacheKey);
+        if (is_array($cachedIds) && $cachedIds !== []) {
+            return collect($cachedIds)
+                ->filter(fn ($id): bool => is_string($id) && $externalIds->contains($id))
+                ->values();
+        }
 
-        return Cache::remember(
-            $cacheKey,
-            now()->addSeconds(max(0, (int) config('services.attendance_journal.cache_seconds', 60))),
-            function () use ($externalIds): Collection {
-                $baseUrl = rtrim((string) config('services.attendance_journal.base_url'), '/');
-                $apiKey = trim((string) config('services.attendance_journal.api_key'));
-                if ($baseUrl === '' || $apiKey === '') {
-                    throw new \RuntimeException('Attendance integration URL or API key is not configured.');
-                }
+        $baseUrl = rtrim((string) config('services.attendance_journal.base_url'), '/');
+        $apiKey = trim((string) config('services.attendance_journal.api_key'));
+        if ($baseUrl === '' || $apiKey === '') {
+            throw new \RuntimeException('Attendance integration URL or API key is not configured.');
+        }
 
-                $response = Http::acceptJson()
-                    ->withHeaders(['X-API-Key' => $apiKey])
-                    ->timeout(max(1, (int) config('services.attendance_journal.timeout', 5)))
-                    ->get($baseUrl.'/api/v1/integrations/journal/teachers', [
-                        'teacher_ids' => $externalIds->implode(','),
-                    ]);
-                if (! $response->successful()) {
-                    throw new \RuntimeException('GeoPresensi teacher mapping returned HTTP '.$response->status().'.');
-                }
+        $response = Http::acceptJson()
+            ->withHeaders(['X-API-Key' => $apiKey])
+            ->timeout(max(1, (int) config('services.attendance_journal.timeout', 5)))
+            ->get($baseUrl.'/api/v1/integrations/journal/teachers', [
+                'teacher_ids' => $externalIds->implode(','),
+            ]);
+        if (! $response->successful()) {
+            throw new \RuntimeException('GeoPresensi teacher mapping returned HTTP '.$response->status().'.');
+        }
 
-                $payload = $response->json();
-                if (! is_array($payload) || ($payload['success'] ?? false) !== true || ! is_array($payload['data'] ?? null)) {
-                    throw new \RuntimeException('GeoPresensi returned an invalid teacher mapping response.');
-                }
+        $payload = $response->json();
+        if (! is_array($payload) || ($payload['success'] ?? false) !== true || ! is_array($payload['data'] ?? null)) {
+            throw new \RuntimeException('GeoPresensi returned an invalid teacher mapping response.');
+        }
 
-                return collect($payload['data'])
-                    ->filter(fn ($row): bool => is_array($row))
-                    ->map(fn (array $row): string => trim((string) ($row['id_guru'] ?? '')))
-                    ->filter(fn (string $id): bool => $id !== '' && $externalIds->contains($id))
-                    ->unique()
-                    ->values();
-            },
-        );
+        $knownIds = collect($payload['data'])
+            ->filter(fn ($row): bool => is_array($row))
+            ->map(fn (array $row): string => trim((string) ($row['id_guru'] ?? '')))
+            ->filter(fn (string $id): bool => $id !== '' && $externalIds->contains($id))
+            ->unique()
+            ->values();
+
+        if ($knownIds->isNotEmpty()) {
+            Cache::put(
+                $cacheKey,
+                $knownIds->all(),
+                now()->addSeconds(max(1, (int) config('services.attendance_journal.cache_seconds', 60))),
+            );
+        }
+
+        return $knownIds;
     }
 }

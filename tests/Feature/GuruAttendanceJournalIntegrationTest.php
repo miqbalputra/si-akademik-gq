@@ -15,6 +15,7 @@ use App\Models\DiniyyahTeachingSchedule;
 use App\Models\School;
 use App\Models\Teacher;
 use App\Models\User;
+use App\Services\AttendanceStatusClient;
 use App\Services\GuruPerformaService;
 use App\Services\TeachingAttendanceReconciliationService;
 use App\Support\SessionTimetable;
@@ -224,6 +225,36 @@ class GuruAttendanceJournalIntegrationTest extends TestCase
         $this->assertTrue($performa['reconciliation']['mapped']);
         $this->assertSame('Status presensi belum dapat diverifikasi dari GeoPresensi.', $performa['reconciliation']['message']);
         $this->assertSame([], $performa['reconciliation']['rows']->all());
+    }
+
+    public function test_reconciliation_ignores_a_legacy_negative_mapping_cache_and_reuses_a_verified_mapping(): void
+    {
+        $context = $this->makeRegularContext('GURU-REKON-CACHE');
+        Cache::put(
+            'attendance-journal:teachers:'.sha1('GURU-REKON-CACHE'),
+            [],
+            now()->addMinute(),
+        );
+        Http::fake([
+            'https://geo.example.test/api/v1/integrations/journal/teachers*' => Http::response([
+                'success' => true,
+                'data' => [['id_guru' => 'GURU-REKON-CACHE']],
+            ]),
+            'https://geo.example.test/api/v1/integrations/journal/attendance*' => Http::response([
+                'success' => true,
+                'data' => [],
+            ]),
+        ]);
+
+        $client = app(AttendanceStatusClient::class);
+        $first = $client->statusesForTeacher($context['teacher'], Carbon::parse('2026-08-01'), Carbon::parse('2026-08-10'), true);
+        $second = $client->statusesForTeacher($context['teacher'], Carbon::parse('2026-08-01'), Carbon::parse('2026-08-10'), true);
+
+        $this->assertTrue($first['mapped']);
+        $this->assertTrue($first['available']);
+        $this->assertTrue($second['mapped']);
+        $this->assertTrue($second['available']);
+        Http::assertSentCount(2);
     }
 
     private function makeRegularContext(?string $niy): array
