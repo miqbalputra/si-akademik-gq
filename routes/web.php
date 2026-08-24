@@ -54,6 +54,12 @@ Route::middleware('auth')->prefix('guru')->name('guru.')->group(function () {
     Route::get('/performa/export/{format}', [\App\Http\Controllers\GuruDashboardController::class, 'performaExport'])
         ->whereIn('format', ['xlsx', 'pdf'])
         ->name('performa.export');
+    Route::get('/presensi-saya', [\App\Http\Controllers\GuruAttendanceReportController::class, 'index'])
+        ->middleware('throttle:20,1')
+        ->name('attendance-report.index');
+    Route::get('/presensi-saya/export/{format}', [\App\Http\Controllers\GuruAttendanceReportController::class, 'export'])
+        ->whereIn('format', ['xlsx', 'pdf'])
+        ->name('attendance-report.export');
     Route::post('/journal-reminder/snooze', [\App\Http\Controllers\GuruJournalReminderController::class, 'snooze'])
         ->name('journal-reminder.snooze');
     Route::get('/jadwal/riwayat', [\App\Http\Controllers\GuruJadwalController::class, 'riwayat'])->name('jadwal.riwayat');

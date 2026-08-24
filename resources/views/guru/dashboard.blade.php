@@ -50,7 +50,7 @@
                 </div>
                 <p class="text-sm font-medium text-slate-500">Pilih catatan atau agenda yang ingin Anda selesaikan.</p>
             </div>
-            <div class="grid gap-3 sm:grid-cols-3">
+            <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <a href="{{ $singleJournalLink }}" class="group rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600">
                     <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700" aria-hidden="true">✎</span>
                     <span class="mt-3 block text-sm font-black text-slate-900">Isi jurnal Diniyyah</span>
@@ -61,6 +61,13 @@
                     <span class="mt-3 block text-sm font-black text-slate-900">Lihat performa</span>
                     <span class="mt-1 block text-xs font-medium text-slate-500">Cek jurnal kosong dan download laporan.</span>
                 </a>
+                @if($teacher)
+                    <a href="{{ route('guru.attendance-report.index') }}" class="group rounded-2xl border border-sky-100 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600">
+                        <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-50 text-sky-700" aria-hidden="true">✓</span>
+                        <span class="mt-3 block text-sm font-black text-slate-900">Presensi saya</span>
+                        <span class="mt-1 block text-xs font-medium text-slate-500">Lihat rekap GeoPresensi dan unduh laporan.</span>
+                    </a>
+                @endif
                 <a href="{{ route('guru.calendar') }}" class="group rounded-2xl border border-indigo-100 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
                     <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-700" aria-hidden="true">◷</span>
                     <span class="mt-3 block text-sm font-black text-slate-900">Buka kalender</span>

@@ -143,7 +143,8 @@ class AttendanceWorkflowTest extends TestCase
         $this->actingAs($otherUser)
             ->get(route('guru.dashboard'))
             ->assertOk()
-            ->assertDontSee('Presensi');
+            ->assertDontSee(route('attendance.index'), false)
+            ->assertSee(route('guru.attendance-report.index'), false);
     }
 
     /** @return array{ClassroomTerm, User, ClassEnrollment} */

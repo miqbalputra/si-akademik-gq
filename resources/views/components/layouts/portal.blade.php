@@ -2,13 +2,15 @@
     $isGuruPortal = ($portalLabel ?? null) === 'Portal Guru';
     $isWaliPortal = ($portalLabel ?? null) === 'Portal Wali Santri';
     $isManagementPortal = ($portalLabel ?? null) === 'Portal Manajemen';
+    $portalUser = auth()->user();
+    $hasLinkedTeacher = $isGuruPortal && $portalUser?->teacher !== null;
     $portalHomeUrl = $isGuruPortal
         ? route('guru.dashboard')
         : ($isWaliPortal ? route('wali.dashboard') : ($isManagementPortal ? url('/admin') : url('/')));
     $isHomeActive = request()->routeIs($isGuruPortal ? 'guru.dashboard' : ($isWaliPortal ? 'wali.dashboard' : 'filament.admin.pages.dashboard'));
-    $canAccessAttendance = $isGuruPortal && (auth()->user()?->canAccessAttendance() ?? false);
-    $isTasmiExaminer = $isGuruPortal && (auth()->user()?->isTasmiExaminer() ?? false);
-    $isHomeroomTeacher = $isGuruPortal && (auth()->user()?->canAccessAttendance() ?? false);
+    $canAccessAttendance = $isGuruPortal && ($portalUser?->canAccessAttendance() ?? false);
+    $isTasmiExaminer = $isGuruPortal && ($portalUser?->isTasmiExaminer() ?? false);
+    $isHomeroomTeacher = $isGuruPortal && ($portalUser?->canAccessAttendance() ?? false);
 
     $guruTodayItems = [
         ['label' => 'Jurnal', 'href' => route('guru.diniyyah-journals.index'), 'match' => ['guru.diniyyah-journals.*', 'guru.diniyyah-tafsir-journals.*', 'guru.diniyyah-substitute-journals.*', 'guru.diniyyah-substitute-tafsir-journals.*']],
@@ -34,6 +36,11 @@
         ['label' => 'Riwayat Jurnal', 'href' => route('guru.diniyyah-journals.riwayat'), 'match' => ['guru.diniyyah-journals.riwayat']],
         ['label' => 'Kalender', 'href' => route('guru.calendar'), 'match' => ['guru.calendar']],
     ];
+    if ($hasLinkedTeacher) {
+        array_unshift($guruArchiveItems, [
+            'label' => 'Presensi Saya', 'href' => route('guru.attendance-report.index'), 'match' => ['guru.attendance-report.*'],
+        ]);
+    }
 
     $waliTodayItems = [
         ['label' => 'Tahfidz', 'href' => route('wali.tahfidz'), 'match' => ['wali.tahfidz']],

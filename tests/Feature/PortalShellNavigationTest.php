@@ -53,9 +53,10 @@ class PortalShellNavigationTest extends TestCase
             ->assertSee('Laporan &amp; Arsip', false)
             ->assertSee('Input Nilai')
             ->assertSee('Performa Jurnal Saya')
+            ->assertSee('Presensi Saya')
             ->assertDontSee('Tasmi\' Kelas Saya')
             ->assertDontSee('Monitoring Jurnal Kelas')
-            ->assertDontSee('Presensi');
+            ->assertSee(route('guru.attendance-report.index'), false);
     }
 
     private function userWithRole(string $role): User
