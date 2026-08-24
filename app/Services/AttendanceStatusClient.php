@@ -19,11 +19,10 @@ use Throwable;
 class AttendanceStatusClient
 {
     public const EXEMPT_STATUSES = ['izin', 'sakit'];
+    public const PRESENT_STATUSES = ['hadir', 'hadir_terlambat', 'hadir_izin_terlambat'];
 
     private const VALID_STATUSES = [
-        'hadir',
-        'hadir_terlambat',
-        'hadir_izin_terlambat',
+        ...self::PRESENT_STATUSES,
         'izin',
         'sakit',
     ];
@@ -32,7 +31,7 @@ class AttendanceStatusClient
      * @param  iterable<Teacher>  $teachers
      * @return array<string, array{available: bool, mapped: bool, external_id: ?string, statuses: array<string, string>}>
      */
-    public function statusesForTeachers(iterable $teachers, Carbon $startDate, Carbon $endDate): array
+    public function statusesForTeachers(iterable $teachers, Carbon $startDate, Carbon $endDate, bool $verifyMappings = false): array
     {
         $teachers = collect($teachers)
             ->filter(fn ($teacher): bool => $teacher instanceof Teacher)
@@ -82,6 +81,38 @@ class AttendanceStatusClient
             ->unique()
             ->sort()
             ->values();
+        if ($verifyMappings) {
+            try {
+                $knownExternalIds = $this->knownTeacherIds($externalIds);
+            } catch (Throwable $exception) {
+                Log::warning('Attendance teacher mapping could not be verified; journal reconciliation disabled for this request.', [
+                    'exception' => $exception::class,
+                    'message' => $exception->getMessage(),
+                ]);
+
+                return $result;
+            }
+
+            $mappedTeachers = $mappedTeachers->filter(
+                fn (Teacher $teacher): bool => $knownExternalIds->contains(trim((string) $teacher->niy)),
+            )->values();
+            $externalIds = $mappedTeachers
+                ->map(fn (Teacher $teacher): string => trim((string) $teacher->niy))
+                ->unique()
+                ->sort()
+                ->values();
+            if ($mappedTeachers->isEmpty()) {
+                return $result;
+            }
+
+            // Preserve a verified NIY even when the subsequent attendance
+            // request fails, so reconciliation can accurately say that the
+            // attendance service (not the identity mapping) is unavailable.
+            foreach ($mappedTeachers as $teacher) {
+                $result[(string) $teacher->id]['mapped'] = true;
+                $result[(string) $teacher->id]['external_id'] = trim((string) $teacher->niy);
+            }
+        }
         $start = $startDate->copy()->setTimezone('Asia/Jakarta')->toDateString();
         $end = $endDate->copy()->setTimezone('Asia/Jakarta')->toDateString();
         $cacheKey = 'attendance-journal:'.sha1($externalIds->implode(',').'|'.$start.'|'.$end);
@@ -172,14 +203,61 @@ class AttendanceStatusClient
     /**
      * @return array{available: bool, mapped: bool, external_id: ?string, statuses: array<string, string>}
      */
-    public function statusesForTeacher(Teacher $teacher, Carbon $startDate, Carbon $endDate): array
+    public function statusesForTeacher(Teacher $teacher, Carbon $startDate, Carbon $endDate, bool $verifyMappings = false): array
     {
-        return $this->statusesForTeachers([$teacher], $startDate, $endDate)[(string) $teacher->id]
+        return $this->statusesForTeachers([$teacher], $startDate, $endDate, $verifyMappings)[(string) $teacher->id]
             ?? ['available' => false, 'mapped' => false, 'external_id' => null, 'statuses' => []];
     }
 
     public function isExempt(?string $status): bool
     {
         return in_array(strtolower(trim((string) $status)), self::EXEMPT_STATUSES, true);
+    }
+
+    public function isPresent(?string $status): bool
+    {
+        return in_array(strtolower(trim((string) $status)), self::PRESENT_STATUSES, true);
+    }
+
+    /** @param Collection<int, string> $externalIds
+     *  @return Collection<int, string>
+     */
+    private function knownTeacherIds(Collection $externalIds): Collection
+    {
+        $cacheKey = 'attendance-journal:teachers:'.sha1($externalIds->implode(','));
+
+        return Cache::remember(
+            $cacheKey,
+            now()->addSeconds(max(0, (int) config('services.attendance_journal.cache_seconds', 60))),
+            function () use ($externalIds): Collection {
+                $baseUrl = rtrim((string) config('services.attendance_journal.base_url'), '/');
+                $apiKey = trim((string) config('services.attendance_journal.api_key'));
+                if ($baseUrl === '' || $apiKey === '') {
+                    throw new \RuntimeException('Attendance integration URL or API key is not configured.');
+                }
+
+                $response = Http::acceptJson()
+                    ->withHeaders(['X-API-Key' => $apiKey])
+                    ->timeout(max(1, (int) config('services.attendance_journal.timeout', 5)))
+                    ->get($baseUrl.'/api/v1/integrations/journal/teachers', [
+                        'teacher_ids' => $externalIds->implode(','),
+                    ]);
+                if (! $response->successful()) {
+                    throw new \RuntimeException('GeoPresensi teacher mapping returned HTTP '.$response->status().'.');
+                }
+
+                $payload = $response->json();
+                if (! is_array($payload) || ($payload['success'] ?? false) !== true || ! is_array($payload['data'] ?? null)) {
+                    throw new \RuntimeException('GeoPresensi returned an invalid teacher mapping response.');
+                }
+
+                return collect($payload['data'])
+                    ->filter(fn ($row): bool => is_array($row))
+                    ->map(fn (array $row): string => trim((string) ($row['id_guru'] ?? '')))
+                    ->filter(fn (string $id): bool => $id !== '' && $externalIds->contains($id))
+                    ->unique()
+                    ->values();
+            },
+        );
     }
 }

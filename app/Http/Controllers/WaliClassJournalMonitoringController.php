@@ -10,6 +10,7 @@ use App\Support\SessionTimetable;
 use App\Services\AttendanceStatusClient;
 use App\Services\DiniyyahNoKbmAgendaService;
 use App\Services\TafsirScheduleGroupingService;
+use App\Services\TeachingAttendanceReconciliationService;
 use Illuminate\Support\Facades\Auth;
 
 class WaliClassJournalMonitoringController extends Controller
@@ -18,6 +19,7 @@ class WaliClassJournalMonitoringController extends Controller
         private readonly AttendanceStatusClient $attendanceStatusClient,
         private readonly DiniyyahNoKbmAgendaService $noKbmAgendaService,
         private readonly TafsirScheduleGroupingService $tafsirScheduleGroupingService,
+        private readonly TeachingAttendanceReconciliationService $reconciliationService,
     ) {}
 
     public function index(Request $request)
@@ -132,6 +134,7 @@ class WaliClassJournalMonitoringController extends Controller
                 ->values(),
             $startDate,
             $endDate,
+            true,
         );
         
         // Collect options for filter dropdowns
@@ -258,6 +261,7 @@ class WaliClassJournalMonitoringController extends Controller
                         : ($classroomTerm
                             ? $this->noKbmAgendaService->forClassroomTerm($agendaEvents, $classroomTerm, $date)
                             : null);
+                    $sessionTime = $this->resolveSessionTime($schedule, $dayOfWeek);
                     $status = $journal
                         ? 'TERISI'
                         : ($holiday
@@ -267,6 +271,15 @@ class WaliClassJournalMonitoringController extends Controller
                                 : ($this->attendanceStatusClient->isExempt($attendanceStatus)
                                     ? strtoupper((string) $attendanceStatus)
                                     : 'KOSONG')));
+                    $reconciliation = $this->reconciliationService->reconcile(
+                        $dateStr,
+                        $sessionTime['ends_at'] ?? null,
+                        $attendanceStatus,
+                        (bool) ($teacherAttendance['available'] ?? false),
+                        $journal !== null,
+                        $journal?->substitute_teacher_id !== null,
+                        $holiday !== null || $agenda !== null || $isSimultaneousTafsir,
+                    );
 
                     $dayData['items'][] = [
                         'schedule' => $schedule,
@@ -274,7 +287,8 @@ class WaliClassJournalMonitoringController extends Controller
                         'status' => $status,
                         'attendance_status' => $attendanceStatus,
                         'agenda' => $agenda,
-                        'session_time' => $this->resolveSessionTime($schedule, $dayOfWeek),
+                        'session_time' => $sessionTime,
+                        'reconciliation' => $reconciliation,
                     ];
                 }
 
@@ -329,7 +343,8 @@ class WaliClassJournalMonitoringController extends Controller
                     if ($filterSubjectId && $assignment && $assignment->classSubject->subject_id != $filterSubjectId) continue;
                     if ($filterClassroomTermId && $assignment && $assignment->classSubject->classroom_term_id != $filterClassroomTermId) continue;
                     if ($filterTeacherId && $assignment && $assignment->teacher_id != $filterTeacherId) continue;
-                    if ($filterStatus && $item['status'] !== $filterStatus) continue;
+                    if ($filterStatus === 'REKONSILIASI' && ! ($item['reconciliation']['actionable'] ?? false)) continue;
+                    if ($filterStatus && $filterStatus !== 'REKONSILIASI' && $item['status'] !== $filterStatus) continue;
                     
                     $filteredItems[] = $item;
                 }
@@ -370,6 +385,7 @@ class WaliClassJournalMonitoringController extends Controller
                         'substitute_teacher_name' => $journal?->substituteTeacher?->name,
                         'status' => $item['status'],
                         'attendance_status' => $item['attendance_status'] ?? null,
+                        'reconciliation' => $item['reconciliation'] ?? null,
                         'agenda' => $item['agenda'] ?? null,
                         'agenda_title' => $item['agenda']['title'] ?? null,
                         'agenda_reason' => $item['agenda']['reason'] ?? null,
@@ -385,6 +401,11 @@ class WaliClassJournalMonitoringController extends Controller
             'total_slots' => $summaryRows->count(),
             'filled_slots' => $summaryRows->whereIn('status', ['TERISI', 'TERISI_TIDAK_TERJADWAL'])->count(),
             'empty_slots' => $summaryRows->where('status', 'KOSONG')->count(),
+            'hadir_tanpa_jurnal_slots' => $summaryRows->filter(fn (array $row): bool => ($row['reconciliation']['state'] ?? null) === TeachingAttendanceReconciliationService::HADIR_TANPA_JURNAL)->count(),
+            'presensi_belum_tercatat_slots' => $summaryRows->filter(fn (array $row): bool => in_array(($row['reconciliation']['state'] ?? null), [
+                TeachingAttendanceReconciliationService::PRESENSI_BELUM_TERCATAT,
+                TeachingAttendanceReconciliationService::PRESENSI_DAN_JURNAL_BELUM_TERCATAT,
+            ], true))->count(),
             'excused_slots' => $summaryRows->whereIn('status', ['IZIN', 'SAKIT'])->count(),
             'izin_slots' => $summaryRows->where('status', 'IZIN')->count(),
             'sakit_slots' => $summaryRows->where('status', 'SAKIT')->count(),
@@ -392,6 +413,7 @@ class WaliClassJournalMonitoringController extends Controller
             'holiday_slots' => $summaryRows->where('status', 'LIBUR')->count(),
             'empty_classrooms' => $summaryRows->where('status', 'KOSONG')->pluck('classroom_name')->filter()->unique()->values(),
             'empty_teachers' => $summaryRows->where('status', 'KOSONG')->pluck('teacher_name')->filter()->unique()->values(),
+            'unverified_teachers' => collect($attendanceStatuses)->filter(fn (array $status): bool => ! ($status['available'] ?? false))->count(),
         ];
 
         return compact(

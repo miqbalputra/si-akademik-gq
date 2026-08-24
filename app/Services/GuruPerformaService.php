@@ -39,6 +39,7 @@ class GuruPerformaService
         private readonly AttendanceStatusClient $attendanceStatusClient,
         private readonly DiniyyahNoKbmAgendaService $noKbmAgendaService,
         private readonly TafsirScheduleGroupingService $tafsirScheduleGroupingService,
+        private readonly TeachingAttendanceReconciliationService $reconciliationService,
     ) {}
 
     /**
@@ -76,7 +77,7 @@ class GuruPerformaService
             ? Carbon::parse($today, 'Asia/Jakarta')->endOfDay()
             : $startDate->copy()->endOfMonth();
 
-        $summary = $this->summaryForRange($teacher, $startDate, $endDate);
+        $summary = $this->summaryForRange($teacher, $startDate, $endDate, withReconciliation: true);
         $journalRows = $this->journalRows($summary['journals']);
         $jpSummary = $this->completedTeachingJp($summary['journals']);
 
@@ -104,6 +105,17 @@ class GuruPerformaService
             'jp_rows' => $jpSummary['rows'],
             'agenda_rows' => collect($summary['agenda_rows']),
             'empty_slots' => $summary['empty_slots'],
+            'reconciliation' => [
+                'available' => $summary['attendance_verification']['available'],
+                'mapped' => $summary['attendance_verification']['mapped'],
+                'message' => $summary['attendance_verification']['message'],
+                'rows' => collect($summary['reconciliation_rows']),
+                'stats' => [
+                    'hadir_tanpa_jurnal' => collect($summary['reconciliation_rows'])->where('reconciliation.state', TeachingAttendanceReconciliationService::HADIR_TANPA_JURNAL)->count(),
+                    'presensi_belum_tercatat' => collect($summary['reconciliation_rows'])->where('reconciliation.state', TeachingAttendanceReconciliationService::PRESENSI_BELUM_TERCATAT)->count(),
+                    'presensi_dan_jurnal_belum_tercatat' => collect($summary['reconciliation_rows'])->where('reconciliation.state', TeachingAttendanceReconciliationService::PRESENSI_DAN_JURNAL_BELUM_TERCATAT)->count(),
+                ],
+            ],
         ];
     }
 
@@ -205,6 +217,7 @@ class GuruPerformaService
         Carbon $startDate,
         Carbon $endDate,
         ?int $academicTermId = null,
+        bool $withReconciliation = false,
     ): array {
         $today = Carbon::now('Asia/Jakarta')->toDateString();
 
@@ -259,7 +272,8 @@ class GuruPerformaService
         $agendaCount = 0;
         $emptySlots = [];
         $agendaRows = [];
-        $attendance = $this->attendanceStatusClient->statusesForTeacher($teacher, $startDate, $endDate);
+        $attendance = $this->attendanceStatusClient->statusesForTeacher($teacher, $startDate, $endDate, $withReconciliation);
+        $reconciliationRows = [];
 
         $date = $startDate->copy();
         while ($date <= $endDate) {
@@ -313,6 +327,29 @@ class GuruPerformaService
                 $journal = $dayJournals
                     ->where('diniyyah_teacher_assignment_id', $sched->diniyyah_teacher_assignment_id)
                     ->first(fn ($journal) => $this->tafsirScheduleGroupingService->journalMatchesSchedule($journal, $sched));
+                $classroomTerm = $sched->teacherAssignment?->classSubject?->classroomTerm;
+                $agenda = $classroomTerm
+                    ? $this->noKbmAgendaService->forClassroomTerm($agendaEvents, $classroomTerm, $date)
+                    : null;
+
+                if ($withReconciliation) {
+                    $time = $this->resolveSessionTime($sched, $dayOfWeek);
+                    $reconciliation = $this->reconciliationService->reconcile(
+                        $dateStr,
+                        $time['ends_at'] ?? null,
+                        $absenceStatus,
+                        (bool) $attendance['available'],
+                        $journal !== null,
+                        $journal?->substitute_teacher_id !== null,
+                        $agenda !== null,
+                    );
+                    if ($reconciliation['actionable']) {
+                        $reconciliationRows[] = array_merge(
+                            $this->buildEmptySlot($sched, $date, $dayOfWeek),
+                            ['reconciliation' => $reconciliation],
+                        );
+                    }
+                }
 
                 if ($journal) {
                     if ($journal->substitute_teacher_id === null) {
@@ -321,11 +358,6 @@ class GuruPerformaService
                         $digantikan += (int) $journal->jp_count;
                     }
                 } else {
-                    $classroomTerm = $sched->teacherAssignment?->classSubject?->classroomTerm;
-                    $agenda = $classroomTerm
-                        ? $this->noKbmAgendaService->forClassroomTerm($agendaEvents, $classroomTerm, $date)
-                        : null;
-
                     if ($agenda !== null) {
                         $agendaCount++;
                         $agendaRows[] = $this->buildAgendaRow($sched, $date, $dayOfWeek, $agenda);
@@ -347,6 +379,34 @@ class GuruPerformaService
                 $tafsirJournals = $dayJournals
                     ->whereIn('diniyyah_teacher_assignment_id', $tafsirAssignmentIds)
                     ->filter(fn ($journal) => $tafsirSched->contains(fn ($schedule) => $this->tafsirScheduleGroupingService->journalMatchesSchedule($journal, $schedule)));
+                $tafsirTerms = $tafsirSched
+                    ->map(fn ($schedule) => $schedule->teacherAssignment?->classSubject?->classroomTerm)
+                    ->filter()
+                    ->unique('id')
+                    ->values();
+                $agenda = $this->noKbmAgendaService->forClassroomTerms($agendaEvents, $tafsirTerms, $date);
+
+                if ($withReconciliation) {
+                    $firstSchedule = $tafsirSched->first();
+                    $time = $firstSchedule ? $this->resolveSessionTime($firstSchedule, $dayOfWeek) : ['ends_at' => null];
+                    $allSubstitute = $tafsirJournals->isNotEmpty()
+                        && $tafsirJournals->every(fn ($journal) => $journal->substitute_teacher_id !== null);
+                    $reconciliation = $this->reconciliationService->reconcile(
+                        $dateStr,
+                        $time['ends_at'] ?? null,
+                        $absenceStatus,
+                        (bool) $attendance['available'],
+                        $tafsirJournals->isNotEmpty(),
+                        $allSubstitute,
+                        $agenda !== null,
+                    );
+                    if ($reconciliation['actionable']) {
+                        $reconciliationRows[] = array_merge(
+                            $this->buildEmptyTafsirSlot($tafsirSched, $date, $dayOfWeek),
+                            ['reconciliation' => $reconciliation],
+                        );
+                    }
+                }
 
                 if ($tafsirJournals->isNotEmpty()) {
                     // ≥1 jurnal tafsir ada → dihitung 1 sesi (dedup). Sebagian
@@ -360,13 +420,6 @@ class GuruPerformaService
                         $digantikan += 1;
                     }
                 } else {
-                    $tafsirTerms = $tafsirSched
-                        ->map(fn ($schedule) => $schedule->teacherAssignment?->classSubject?->classroomTerm)
-                        ->filter()
-                        ->unique('id')
-                        ->values();
-                    $agenda = $this->noKbmAgendaService->forClassroomTerms($agendaEvents, $tafsirTerms, $date);
-
                     if ($agenda !== null) {
                         $agendaCount++;
                         $agendaRows[] = $this->buildAgendaTafsirRow($tafsirSched, $date, $dayOfWeek, $agenda);
@@ -388,6 +441,10 @@ class GuruPerformaService
             ->sortByDesc('date')
             ->values()
             ->all();
+        $reconciliationRows = collect($reconciliationRows)
+            ->sortByDesc('date')
+            ->values()
+            ->all();
 
         return [
             'sudah' => $sudah,
@@ -400,7 +457,31 @@ class GuruPerformaService
             'journals' => $journals,
             'agenda_rows' => $agendaRows,
             'empty_slots' => $emptySlots,
+            'reconciliation_rows' => $reconciliationRows,
+            'attendance_verification' => $this->attendanceVerification($teacher, $attendance, $withReconciliation),
         ];
+    }
+
+    /** @return array{available: bool, mapped: bool, message: ?string} */
+    private function attendanceVerification(Teacher $teacher, array $attendance, bool $requested): array
+    {
+        if (! $requested) {
+            return ['available' => false, 'mapped' => false, 'message' => null];
+        }
+        if (! (bool) config('services.attendance_journal.enabled', false)) {
+            return ['available' => false, 'mapped' => false, 'message' => 'Integrasi GeoPresensi belum diaktifkan.'];
+        }
+        if (trim((string) $teacher->niy) === '') {
+            return ['available' => false, 'mapped' => false, 'message' => 'NIY Anda belum terhubung ke GeoPresensi.'];
+        }
+        if (! ($attendance['mapped'] ?? false)) {
+            return ['available' => false, 'mapped' => false, 'message' => 'NIY Anda belum ditemukan atau belum dapat diverifikasi di GeoPresensi.'];
+        }
+        if (! ($attendance['available'] ?? false)) {
+            return ['available' => false, 'mapped' => true, 'message' => 'Status presensi belum dapat diverifikasi dari GeoPresensi.'];
+        }
+
+        return ['available' => true, 'mapped' => true, 'message' => null];
     }
 
     /** @param Collection<int, DiniyyahClassJournal> $journals */

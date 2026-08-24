@@ -44,6 +44,9 @@
         $emptySlots = $performa['empty_slots'];
         $grouped = collect($emptySlots)->groupBy('date');
         $agendaRows = collect($performa['agenda_rows'] ?? []);
+        $reconciliation = $performa['reconciliation'] ?? [];
+        $reconciliationRows = collect($reconciliation['rows'] ?? []);
+        $reconciliationStats = $reconciliation['stats'] ?? [];
     @endphp
 
     {{-- Total JP + 5 kartu status --}}
@@ -79,6 +82,58 @@
             <p class="mt-1 text-xs font-semibold text-sky-600">libur mengajar terjadwal</p>
         </div>
     </div>
+
+    <section id="attendance-journal-reconciliation" class="mb-6 rounded-2xl border {{ ($reconciliation['available'] ?? false) ? 'border-violet-200 bg-violet-50/50' : 'border-amber-200 bg-amber-50' }} p-5 shadow-sm sm:p-6" aria-labelledby="attendance-journal-title">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+                <p class="text-[11px] font-black uppercase tracking-[.16em] {{ ($reconciliation['available'] ?? false) ? 'text-violet-700' : 'text-amber-700' }}">Pemeriksaan otomatis</p>
+                <h2 id="attendance-journal-title" class="mt-1 text-lg font-black text-slate-900">Kesesuaian Presensi &amp; Jurnal</h2>
+                <p class="mt-1 text-sm text-slate-600">Hari lampau diperiksa langsung; slot hari ini diperiksa 30 menit setelah sesi berakhir.</p>
+            </div>
+            @if(($reconciliation['available'] ?? false))
+                <span class="rounded-full border border-violet-200 bg-white px-3 py-1 text-xs font-black text-violet-800">{{ $reconciliationRows->count() }} perlu dicek</span>
+            @endif
+        </div>
+
+        @if(! ($reconciliation['available'] ?? false))
+            <div class="mt-4 rounded-xl border border-amber-200 bg-white/80 px-4 py-3 text-sm font-bold text-amber-900">{{ $reconciliation['message'] ?? 'Status presensi belum dapat diverifikasi dari GeoPresensi.' }}</div>
+        @elseif($reconciliationRows->isEmpty())
+            <div class="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800">Tidak ada ketidaksesuaian pada periode ini.</div>
+        @else
+            <div class="mt-4 grid gap-2 sm:grid-cols-3">
+                <div class="rounded-xl border border-violet-200 bg-white px-3 py-3"><p class="text-2xl font-black text-violet-800">{{ $reconciliationStats['hadir_tanpa_jurnal'] ?? 0 }}</p><p class="text-xs font-bold text-violet-700">Hadir tanpa jurnal</p></div>
+                <div class="rounded-xl border border-fuchsia-200 bg-white px-3 py-3"><p class="text-2xl font-black text-fuchsia-800">{{ $reconciliationStats['presensi_belum_tercatat'] ?? 0 }}</p><p class="text-xs font-bold text-fuchsia-700">Presensi belum tercatat</p></div>
+                <div class="rounded-xl border border-rose-200 bg-white px-3 py-3"><p class="text-2xl font-black text-rose-800">{{ $reconciliationStats['presensi_dan_jurnal_belum_tercatat'] ?? 0 }}</p><p class="text-xs font-bold text-rose-700">Keduanya belum tercatat</p></div>
+            </div>
+            <div class="mt-4 overflow-x-auto rounded-xl border border-violet-100 bg-white">
+                <table class="min-w-[760px] w-full divide-y divide-slate-200 text-sm">
+                    <thead class="bg-violet-50 text-left text-[11px] font-black uppercase tracking-wide text-violet-800">
+                        <tr><th class="px-4 py-3">Tanggal</th><th class="px-4 py-3">Sesi / kelas</th><th class="px-4 py-3">Presensi</th><th class="px-4 py-3">Jurnal</th><th class="px-4 py-3">Tindakan</th></tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        @foreach($reconciliationRows as $slot)
+                            @php
+                                $result = $slot['reconciliation'];
+                            @endphp
+                            <tr class="hover:bg-violet-50/50">
+                                <td class="whitespace-nowrap px-4 py-3 font-bold text-slate-800">{{ $slot['date_label'] }}</td>
+                                <td class="px-4 py-3"><span class="font-bold text-slate-800">{{ $slot['session_label'] }}</span><span class="block text-xs text-slate-500">{{ $slot['classroom_names'] }} · {{ $slot['subject_name'] }}</span></td>
+                                <td class="px-4 py-3 text-slate-700">{{ $result['attendance_label'] }}</td>
+                                <td class="px-4 py-3"><span class="font-bold text-violet-900">{{ $result['journal_label'] }}</span><span class="block text-xs text-violet-700">{{ $result['label'] }}</span></td>
+                                <td class="px-4 py-3">
+                                    @if(in_array($result['state'], [\App\Services\TeachingAttendanceReconciliationService::HADIR_TANPA_JURNAL, \App\Services\TeachingAttendanceReconciliationService::PRESENSI_DAN_JURNAL_BELUM_TERCATAT], true))
+                                        <a href="{{ $slot['fill_url'] }}" class="inline-flex rounded-lg bg-violet-700 px-3 py-2 text-xs font-black text-white hover:bg-violet-800">Isi jurnal</a>
+                                    @else
+                                        <a href="{{ route('guru.attendance-report.index') }}" class="inline-flex rounded-lg border border-fuchsia-200 bg-fuchsia-50 px-3 py-2 text-xs font-black text-fuchsia-800 hover:bg-fuchsia-100">Lihat presensi</a>
+                                    @endif
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
+    </section>
 
     <details class="mb-6 overflow-hidden rounded-2xl border border-emerald-200 bg-white shadow-sm" data-jp-calculator="journal-session-v2">
         <summary class="flex cursor-pointer list-none items-center justify-between gap-4 bg-emerald-50 px-5 py-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600">

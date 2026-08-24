@@ -131,6 +131,37 @@
                     </a>
                 </div>
             </section>
+
+            @php
+                $reconciliation = $performa['reconciliation'] ?? [];
+                $reconciliationStats = $reconciliation['stats'] ?? [];
+                $reconciliationCount = array_sum($reconciliationStats);
+            @endphp
+            <section class="rounded-[1.75rem] border {{ ($reconciliation['available'] ?? false) ? (($reconciliationCount ?? 0) > 0 ? 'border-violet-200 bg-violet-50/70' : 'border-emerald-200 bg-emerald-50/60') : 'border-amber-200 bg-amber-50' }} p-5 shadow-sm sm:p-6" aria-labelledby="attendance-journal-heading">
+                <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <p class="text-[11px] font-black uppercase tracking-[.16em] {{ ($reconciliation['available'] ?? false) ? 'text-violet-700' : 'text-amber-700' }}">Sinkronisasi operasional</p>
+                        <h2 id="attendance-journal-heading" class="mt-1 text-lg font-black text-slate-900">Kesesuaian Presensi &amp; Jurnal</h2>
+                        @if(! ($reconciliation['available'] ?? false))
+                            <p class="mt-1 text-sm text-amber-900">{{ $reconciliation['message'] ?? 'Status presensi belum dapat diverifikasi.' }}</p>
+                        @elseif($reconciliationCount > 0)
+                            <p class="mt-1 text-sm text-violet-900">Ada {{ $reconciliationCount }} slot yang perlu dicek setelah sesi berakhir.</p>
+                        @else
+                            <p class="mt-1 text-sm text-emerald-800">Presensi dan jurnal yang sudah jatuh tempo pada periode ini sudah selaras.</p>
+                        @endif
+                    </div>
+                    <a href="{{ route('guru.performa', ['month' => $performa['month'], 'year' => $performa['year']]) }}#attendance-journal-reconciliation" class="inline-flex shrink-0 items-center justify-center rounded-xl {{ ($reconciliation['available'] ?? false) && $reconciliationCount > 0 ? 'bg-violet-700 text-white hover:bg-violet-800' : 'border border-slate-300 bg-white text-slate-700 hover:border-violet-300 hover:bg-violet-50' }} px-4 py-2.5 text-sm font-black transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-700">
+                        Lihat rincian
+                    </a>
+                </div>
+                @if(($reconciliation['available'] ?? false))
+                    <div class="mt-4 grid gap-2 sm:grid-cols-3">
+                        <div class="rounded-xl border border-violet-100 bg-white/80 px-3 py-2.5"><p class="text-xl font-black text-violet-800">{{ $reconciliationStats['hadir_tanpa_jurnal'] ?? 0 }}</p><p class="text-[11px] font-bold text-violet-700">hadir tanpa jurnal</p></div>
+                        <div class="rounded-xl border border-fuchsia-100 bg-white/80 px-3 py-2.5"><p class="text-xl font-black text-fuchsia-800">{{ $reconciliationStats['presensi_belum_tercatat'] ?? 0 }}</p><p class="text-[11px] font-bold text-fuchsia-700">presensi belum tercatat</p></div>
+                        <div class="rounded-xl border border-rose-100 bg-white/80 px-3 py-2.5"><p class="text-xl font-black text-rose-800">{{ $reconciliationStats['presensi_dan_jurnal_belum_tercatat'] ?? 0 }}</p><p class="text-[11px] font-bold text-rose-700">keduanya belum tercatat</p></div>
+                    </div>
+                @endif
+            </section>
         @endif
 
         {{-- Role-based entry points --}}

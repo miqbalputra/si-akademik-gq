@@ -7,6 +7,7 @@ use App\Models\AcademicYear;
 use App\Models\Classroom;
 use App\Models\ClassroomTerm;
 use App\Models\ClassSession;
+use App\Models\DiniyyahClassJournal;
 use App\Models\DiniyyahClassSubject;
 use App\Models\DiniyyahSubject;
 use App\Models\DiniyyahTeacherAssignment;
@@ -15,6 +16,7 @@ use App\Models\School;
 use App\Models\Teacher;
 use App\Models\User;
 use App\Services\GuruPerformaService;
+use App\Services\TeachingAttendanceReconciliationService;
 use App\Support\SessionTimetable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -139,7 +141,89 @@ class GuruAttendanceJournalIntegrationTest extends TestCase
 
         $this->assertSame(1, $performa['stats']['kosong']);
         $this->assertSame(0, $performa['stats']['dibebaskan']);
+        $this->assertFalse($performa['reconciliation']['available']);
+        $this->assertSame([], $performa['reconciliation']['rows']->all());
         Http::assertNothingSent();
+    }
+
+    public function test_reconciliation_reports_late_presence_without_a_journal_without_changing_performance_scores(): void
+    {
+        $context = $this->makeRegularContext('GURU-REKON-1');
+        Http::fake([
+            'https://geo.example.test/api/v1/integrations/journal/teachers*' => Http::response([
+                'success' => true,
+                'data' => [['id_guru' => 'GURU-REKON-1']],
+            ]),
+            'https://geo.example.test/api/v1/integrations/journal/attendance*' => Http::response([
+                'success' => true,
+                'data' => [[
+                    'id_guru' => 'GURU-REKON-1',
+                    'tanggal' => '2026-08-04',
+                    'status' => 'hadir_terlambat',
+                ]],
+            ]),
+        ]);
+
+        $performa = app(GuruPerformaService::class)->calculate($context['teacher'], 8, 2026);
+
+        $this->assertTrue($performa['reconciliation']['available']);
+        $this->assertSame(1, $performa['reconciliation']['stats']['hadir_tanpa_jurnal']);
+        $this->assertSame(TeachingAttendanceReconciliationService::HADIR_TANPA_JURNAL, $performa['reconciliation']['rows']->first()['reconciliation']['state']);
+        $this->assertSame(1, $performa['stats']['kosong']);
+        $this->assertSame(0, $performa['stats']['dibebaskan']);
+        app(GuruPerformaService::class)->calculate($context['teacher'], 8, 2026);
+        Http::assertSentCount(2);
+    }
+
+    public function test_reconciliation_reports_journal_without_attendance(): void
+    {
+        $context = $this->makeRegularContext('GURU-REKON-2');
+        DiniyyahClassJournal::create([
+            'diniyyah_teacher_assignment_id' => $context['assignment']->id,
+            'date' => '2026-08-04',
+            'session_hour' => '1',
+            'session_starts_at' => '10:30:00',
+            'session_ends_at' => '11:00:00',
+            'material' => 'Materi jurnal yang presensinya belum tercatat',
+            'jp_count' => 1,
+        ]);
+        Http::fake([
+            'https://geo.example.test/api/v1/integrations/journal/teachers*' => Http::response([
+                'success' => true,
+                'data' => [['id_guru' => 'GURU-REKON-2']],
+            ]),
+            'https://geo.example.test/api/v1/integrations/journal/attendance*' => Http::response([
+                'success' => true,
+                'data' => [],
+            ]),
+        ]);
+
+        $performa = app(GuruPerformaService::class)->calculate($context['teacher'], 8, 2026);
+
+        $this->assertTrue($performa['reconciliation']['available']);
+        $this->assertSame(1, $performa['reconciliation']['stats']['presensi_belum_tercatat']);
+        $this->assertSame(TeachingAttendanceReconciliationService::PRESENSI_BELUM_TERCATAT, $performa['reconciliation']['rows']->first()['reconciliation']['state']);
+        $this->assertSame(0, $performa['stats']['kosong']);
+        $this->assertSame(1, $performa['stats']['sudah_diisi']);
+    }
+
+    public function test_reconciliation_marks_verified_niy_as_unverified_when_attendance_api_fails(): void
+    {
+        $context = $this->makeRegularContext('GURU-REKON-3');
+        Http::fake([
+            'https://geo.example.test/api/v1/integrations/journal/teachers*' => Http::response([
+                'success' => true,
+                'data' => [['id_guru' => 'GURU-REKON-3']],
+            ]),
+            'https://geo.example.test/api/v1/integrations/journal/attendance*' => Http::response([], 503),
+        ]);
+
+        $performa = app(GuruPerformaService::class)->calculate($context['teacher'], 8, 2026);
+
+        $this->assertFalse($performa['reconciliation']['available']);
+        $this->assertTrue($performa['reconciliation']['mapped']);
+        $this->assertSame('Status presensi belum dapat diverifikasi dari GeoPresensi.', $performa['reconciliation']['message']);
+        $this->assertSame([], $performa['reconciliation']['rows']->all());
     }
 
     private function makeRegularContext(?string $niy): array

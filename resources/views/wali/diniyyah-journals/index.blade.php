@@ -1,7 +1,9 @@
 @php
     $emptyQuery = array_merge(request()->query(), ['status' => 'KOSONG']);
+    $reconciliationQuery = array_merge(request()->query(), ['status' => 'REKONSILIASI']);
     $allQuery = request()->except('status');
     $hasEmptyFilter = ($filterStatus ?? '') === 'KOSONG';
+    $hasReconciliationFilter = ($filterStatus ?? '') === 'REKONSILIASI';
 @endphp
 
 <x-layouts.portal title="Pantau Jurnal Kelas" portalLabel="Portal Guru" breadcrumb="Monitoring Jurnal Kelas">
@@ -17,14 +19,23 @@
             </div>
         </header>
 
-        <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-6" aria-label="Ringkasan jurnal kelas">
+        <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Ringkasan jurnal kelas">
             <article class="metric-card"><p class="metric-label">Total slot</p><p class="metric-value">{{ $summary['total_slots'] }}</p><p class="mt-1 text-xs font-semibold text-slate-500">sesuai filter</p></article>
             <article class="metric-card border-emerald-200 bg-emerald-50/60"><p class="metric-label text-emerald-700">Sudah terisi</p><p class="metric-value text-emerald-800">{{ $summary['filled_slots'] }}</p><p class="mt-1 text-xs font-semibold text-emerald-700">jurnal tercatat</p></article>
             <article class="metric-card {{ $summary['empty_slots'] > 0 ? 'border-rose-300 bg-rose-50' : 'border-emerald-200 bg-emerald-50/60' }}"><p class="metric-label {{ $summary['empty_slots'] > 0 ? 'text-rose-700' : 'text-emerald-700' }}">Jurnal kosong</p><p class="metric-value {{ $summary['empty_slots'] > 0 ? 'text-rose-800' : 'text-emerald-800' }}">{{ $summary['empty_slots'] }}</p><p class="mt-1 text-xs font-semibold {{ $summary['empty_slots'] > 0 ? 'text-rose-700' : 'text-emerald-700' }}">{{ $summary['empty_slots'] > 0 ? 'perlu diingatkan' : 'semua sudah terisi' }}</p></article>
             <article class="metric-card border-slate-200 bg-slate-50"><p class="metric-label">Hari libur</p><p class="metric-value text-slate-700">{{ $summary['holiday_slots'] }}</p><p class="mt-1 text-xs font-semibold text-slate-500">slot tidak dihitung kosong</p></article>
             <article class="metric-card border-amber-200 bg-amber-50/70"><p class="metric-label text-amber-700">Dibebaskan</p><p class="metric-value text-amber-800">{{ $summary['excused_slots'] ?? 0 }}</p><p class="mt-1 text-xs font-semibold text-amber-700">izin/sakit guru</p></article>
             <article class="metric-card border-sky-200 bg-sky-50/70"><p class="metric-label text-sky-700">Agenda tanpa KBM</p><p class="metric-value text-sky-800">{{ $summary['agenda_slots'] ?? 0 }}</p><p class="mt-1 text-xs font-semibold text-sky-700">dibebaskan oleh agenda</p></article>
+            <article class="metric-card {{ ($summary['hadir_tanpa_jurnal_slots'] ?? 0) > 0 ? 'border-violet-300 bg-violet-50' : 'border-violet-100 bg-violet-50/50' }}"><p class="metric-label text-violet-700">Hadir tanpa jurnal</p><p class="metric-value text-violet-800">{{ $summary['hadir_tanpa_jurnal_slots'] ?? 0 }}</p><p class="mt-1 text-xs font-semibold text-violet-700">perlu tindak lanjut guru</p></article>
+            <article class="metric-card {{ ($summary['presensi_belum_tercatat_slots'] ?? 0) > 0 ? 'border-fuchsia-300 bg-fuchsia-50' : 'border-fuchsia-100 bg-fuchsia-50/50' }}"><p class="metric-label text-fuchsia-700">Presensi belum tercatat</p><p class="metric-value text-fuchsia-800">{{ $summary['presensi_belum_tercatat_slots'] ?? 0 }}</p><p class="mt-1 text-xs font-semibold text-fuchsia-700">jurnal/presensi perlu dicek</p></article>
         </section>
+
+        @if(($summary['unverified_teachers'] ?? 0) > 0)
+            <section class="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 shadow-sm" role="status">
+                <p class="text-sm font-black text-amber-900">Sebagian status presensi belum dapat diverifikasi dari GeoPresensi.</p>
+                <p class="mt-1 text-xs font-semibold text-amber-800">Penanda ketidaksesuaian hanya dibuat untuk guru dengan NIY yang terhubung dan respons presensi yang tersedia.</p>
+            </section>
+        @endif
 
         @if($summary['empty_slots'] > 0)
             <section class="rounded-2xl border-2 border-rose-300 bg-rose-50 px-5 py-4 shadow-sm sm:px-6" role="alert" aria-labelledby="empty-journal-alert-title">
@@ -53,7 +64,8 @@
                 </div>
                 <div class="flex flex-wrap gap-2" aria-label="Aksi monitoring jurnal">
                     <a href="{{ route('wali.diniyyah-journals.index', $emptyQuery) }}" class="btn min-h-11 {{ $hasEmptyFilter ? 'border-rose-600 bg-rose-600 text-white hover:bg-rose-700' : 'border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-600 hover:text-white' }}">{{ $hasEmptyFilter ? 'Menampilkan jurnal kosong' : 'Hanya jurnal kosong' }}</a>
-                    @if($hasEmptyFilter)
+                    <a href="{{ route('wali.diniyyah-journals.index', $reconciliationQuery) }}" class="btn min-h-11 {{ $hasReconciliationFilter ? 'border-violet-700 bg-violet-700 text-white hover:bg-violet-800' : 'border-violet-200 bg-violet-50 text-violet-800 hover:bg-violet-700 hover:text-white' }}">{{ $hasReconciliationFilter ? 'Menampilkan ketidaksesuaian' : 'Perlu dicek' }}</a>
+                    @if($hasEmptyFilter || $hasReconciliationFilter)
                         <a href="{{ route('wali.diniyyah-journals.index', $allQuery) }}" class="btn btn-outline min-h-11">Tampilkan semua</a>
                     @endif
                     <button type="submit" form="journal-filter-form" formaction="{{ route('wali.diniyyah-journals.export-pdf') }}" formtarget="_blank" class="btn min-h-11 border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-600 hover:text-white">Unduh PDF</button>
@@ -94,6 +106,7 @@
                             <option value="">Semua status</option>
                             <option value="TERISI" @selected(($filterStatus ?? '') === 'TERISI')>Sudah terisi</option>
                             <option value="KOSONG" @selected(($filterStatus ?? '') === 'KOSONG')>Kosong</option>
+                            <option value="REKONSILIASI" @selected(($filterStatus ?? '') === 'REKONSILIASI')>Presensi &amp; jurnal perlu dicek</option>
                             <option value="TERISI_TIDAK_TERJADWAL" @selected(($filterStatus ?? '') === 'TERISI_TIDAK_TERJADWAL')>Terisi di luar jadwal</option>
                             <option value="LIBUR" @selected(($filterStatus ?? '') === 'LIBUR')>Hari libur</option>
                             <option value="IZIN" @selected(($filterStatus ?? '') === 'IZIN')>Guru izin</option>
@@ -137,6 +150,8 @@
                 </div>
                 @if($hasEmptyFilter)
                     <span class="status-badge status-badge-danger">Mode: hanya jurnal kosong</span>
+                @elseif($hasReconciliationFilter)
+                    <span class="status-badge border border-violet-200 bg-violet-50 text-violet-800">Mode: presensi &amp; jurnal perlu dicek</span>
                 @endif
             </div>
 
@@ -168,6 +183,9 @@
                                 @php
                                     $isEmpty = $row['status'] === 'KOSONG';
                                     $isFilled = in_array($row['status'], ['TERISI', 'TERISI_TIDAK_TERJADWAL'], true) && $row['journal'];
+                                    $reconciliation = $row['reconciliation'] ?? [];
+                                    $isMismatch = (bool) ($reconciliation['actionable'] ?? false);
+                                    $isUnverified = ($reconciliation['state'] ?? null) === 'belum_terverifikasi';
                                     $statusClass = match ($row['status']) {
                                         'TERISI' => 'status-badge-success',
                                         'TERISI_TIDAK_TERJADWAL' => 'status-badge-neutral',
@@ -186,7 +204,7 @@
                                         default => 'KOSONG',
                                     };
                                 @endphp
-                                <tr class="align-top transition-colors {{ $isEmpty ? 'border-l-4 border-l-rose-600 bg-rose-50 hover:bg-rose-100' : (($row['status'] === 'AGENDA') ? 'border-l-4 border-l-sky-400 bg-sky-50/60 hover:bg-sky-50' : (($row['status'] === 'IZIN' || $row['status'] === 'SAKIT') ? 'border-l-4 border-l-amber-400 bg-amber-50/50 hover:bg-amber-50' : 'hover:bg-emerald-50/30')) }}" @if($isEmpty) aria-label="Jurnal kosong, perlu diingatkan" @endif>
+                                <tr class="align-top transition-colors {{ $isMismatch ? 'border-l-4 border-l-violet-600 bg-violet-50/70 hover:bg-violet-50' : ($isEmpty ? 'border-l-4 border-l-rose-600 bg-rose-50 hover:bg-rose-100' : (($row['status'] === 'AGENDA') ? 'border-l-4 border-l-sky-400 bg-sky-50/60 hover:bg-sky-50' : (($row['status'] === 'IZIN' || $row['status'] === 'SAKIT') ? 'border-l-4 border-l-amber-400 bg-amber-50/50 hover:bg-amber-50' : 'hover:bg-emerald-50/30'))) }}" @if($isMismatch) aria-label="Presensi dan jurnal perlu dicek" @elseif($isEmpty) aria-label="Jurnal kosong, perlu diingatkan" @endif>
                                     <td class="whitespace-nowrap px-4 py-4 {{ $isEmpty ? 'font-black text-rose-950' : 'font-bold text-slate-700' }}">
                                         {{ $row['date']->translatedFormat('D, d M Y') }}
                                         @if($row['is_holiday'])<span class="mt-1 block text-[11px] font-bold text-slate-500">{{ $row['holiday_name'] ?? 'Hari Libur' }}</span>@endif
@@ -210,8 +228,14 @@
                                     <td class="whitespace-nowrap px-4 py-4 text-center">
                                         <span class="status-badge {{ $statusClass }}">@if($isEmpty)<span aria-hidden="true">!</span>@endif{{ $statusLabel }}</span>
                                         @if($isEmpty)<span class="mt-2 block text-[11px] font-black uppercase tracking-wide text-rose-700">Belum diisi</span>@endif
+                                        @if($isMismatch)<span class="mt-2 inline-flex rounded-full border border-violet-200 bg-violet-50 px-2 py-1 text-[10px] font-black text-violet-800">{{ $reconciliation['label'] }}</span>@elseif($isUnverified)<span class="mt-2 inline-flex rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-[10px] font-black text-amber-800">Presensi belum dapat diverifikasi</span>@endif
                                     </td>
                                     <td class="min-w-[280px] px-4 py-4">
+                                        @if($isMismatch)
+                                            <div class="mb-3 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-bold text-violet-900">
+                                                Presensi: {{ $reconciliation['attendance_label'] ?? '-' }} · Jurnal: {{ $reconciliation['journal_label'] ?? '-' }}
+                                            </div>
+                                        @endif
                                         @if($isFilled)
                                             <div class="space-y-3">
                                                 <div><span class="field-label">Materi pembelajaran</span><p class="mt-1 rounded-xl border border-slate-100 bg-slate-50 p-2 text-xs font-semibold text-slate-700">{{ $row['journal']->material ?: '-' }}</p></div>

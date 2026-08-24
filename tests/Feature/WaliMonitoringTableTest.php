@@ -157,6 +157,51 @@ class WaliMonitoringTableTest extends TestCase
             ->assertSee('jurnal belum diisi');
     }
 
+    public function test_monitoring_shows_and_filters_attendance_journal_mismatches_for_its_class(): void
+    {
+        config([
+            'services.attendance_journal.enabled' => true,
+            'services.attendance_journal.base_url' => 'https://geo.example.test',
+            'services.attendance_journal.api_key' => str_repeat('k', 32),
+            'services.attendance_journal.cache_seconds' => 60,
+        ]);
+        Cache::flush();
+        $context = $this->makeContext();
+        $teacher = $context['assignment']->teacher()->firstOrFail();
+        $teacher->update(['niy' => 'WALI-REKON-001']);
+        Http::fake([
+            'https://geo.example.test/api/v1/integrations/journal/teachers*' => Http::response([
+                'success' => true,
+                'data' => [['id_guru' => 'WALI-REKON-001']],
+            ]),
+            'https://geo.example.test/api/v1/integrations/journal/attendance*' => Http::response([
+                'success' => true,
+                'data' => [[
+                    'id_guru' => 'WALI-REKON-001',
+                    'tanggal' => '2025-03-03',
+                    'status' => 'hadir',
+                ]],
+            ]),
+        ]);
+
+        $this->actingAs($context['waliUser'])
+            ->get(route('wali.diniyyah-journals.index', ['month' => 3, 'year' => 2025]))
+            ->assertOk()
+            ->assertSee('Hadir tanpa jurnal')
+            ->assertSee('Presensi & jurnal perlu dicek')
+            ->assertSee('Hadir, jurnal belum diisi');
+
+        $this->actingAs($context['waliUser'])
+            ->get(route('wali.diniyyah-journals.index', [
+                'month' => 3,
+                'year' => 2025,
+                'status' => 'REKONSILIASI',
+            ]))
+            ->assertOk()
+            ->assertSee('Mode: presensi & jurnal perlu dicek')
+            ->assertSee('Hadir, jurnal belum diisi');
+    }
+
     private function makeContext(): array
     {
         Role::firstOrCreate(['name' => 'guru', 'guard_name' => 'web']);
