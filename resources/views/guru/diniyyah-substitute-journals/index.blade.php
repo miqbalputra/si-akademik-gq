@@ -8,6 +8,9 @@
         <div>
             <h1 class="text-2xl font-black text-slate-900">Jurnal Guru Pengganti</h1>
             <p class="text-xs font-semibold text-slate-500 mt-1">Catat jurnal KBM diniyyah saat Anda menggantikan guru lain yang berhalangan. JP tercatat ke Anda (untuk penghitungan gaji).</p>
+            @if($isSchedulelessSubstitute)
+                <p class="mt-2 inline-flex rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-bold text-indigo-800">Mode guru pengganti tanpa jadwal — hanya kelas sesuai gender Anda.</p>
+            @endif
         </div>
     </div>
 
@@ -201,7 +204,11 @@
         <div class="glass-card rounded-2xl p-6 border border-slate-200">
             <h3 class="text-lg font-black text-slate-800 mb-2 border-b border-slate-100 pb-2">Isi Jurnal Pengganti</h3>
             <p class="text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
-                Pilih guru asli yang Anda gantikan. Anda akan tercatat sebagai <strong>Guru Pengganti</strong> untuk slot ini, dan JP-nya dihitung ke Anda.
+                @if($isSchedulelessSubstitute)
+                    Pilih mapel dan sesi yang Anda gantikan di kelas ini. Semua mapel aktif dan sesi timetable kelas tersedia; Anda tercatat sebagai <strong>Guru Pengganti</strong> dan JP-nya dihitung ke Anda.
+                @else
+                    Pilih guru asli yang Anda gantikan. Anda akan tercatat sebagai <strong>Guru Pengganti</strong> untuk slot ini, dan JP-nya dihitung ke Anda.
+                @endif
             </p>
 
             <form method="POST" action="{{ route('guru.diniyyah-substitute-journals.store') }}">
@@ -212,7 +219,7 @@
                 <div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
                     <div class="sm:col-span-1 space-y-4">
                         <div>
-                            <label for="schedule_slot" class="block text-sm font-bold text-slate-700 mb-1">Jadwal Guru Asli yang Digantikan (Sesi & Mapel)</label>
+                            <label for="schedule_slot" class="block text-sm font-bold text-slate-700 mb-1">{{ $isSchedulelessSubstitute ? 'Mapel & Sesi yang Digantikan' : 'Jadwal Guru Asli yang Digantikan (Sesi & Mapel)' }}</label>
                             <select id="schedule_slot" name="schedule_slot" required class="w-full rounded-xl border-slate-300 shadow-sm text-sm focus:ring-amber-500 focus:border-amber-500">
                                 <option value="" disabled selected>Pilih jadwal...</option>
                                 @foreach($scheduledSlots as $slot)
@@ -315,10 +322,17 @@
             </div>
         @else
             <div class="glass-card rounded-2xl p-8 border border-amber-200 bg-amber-50 text-center">
-                <p class="text-sm font-bold text-amber-800">
-                    Tidak ada jadwal mengajar guru asli di kelas {{ $selectedTerm?->name }} pada hari {{ \Carbon\Carbon::parse($selectedDate)->locale('id')->translatedFormat('l, d F Y') }}.
-                </p>
-                <p class="text-xs text-amber-700 mt-1">Pilih tanggal yang jatuh di hari mengajar guru asli pada kelas ini.</p>
+                @if($isSchedulelessSubstitute)
+                    <p class="text-sm font-bold text-amber-800">
+                        Tidak ada kombinasi mapel dan sesi yang tersedia di kelas {{ $selectedTerm?->name }} pada hari {{ \Carbon\Carbon::parse($selectedDate)->locale('id')->translatedFormat('l, d F Y') }}.
+                    </p>
+                    <p class="text-xs text-amber-700 mt-1">Pastikan timetable kelas dan assignment guru asli sudah tersedia.</p>
+                @else
+                    <p class="text-sm font-bold text-amber-800">
+                        Tidak ada jadwal mengajar guru asli di kelas {{ $selectedTerm?->name }} pada hari {{ \Carbon\Carbon::parse($selectedDate)->locale('id')->translatedFormat('l, d F Y') }}.
+                    </p>
+                    <p class="text-xs text-amber-700 mt-1">Pilih tanggal yang jatuh di hari mengajar guru asli pada kelas ini.</p>
+                @endif
             </div>
         @endif
 

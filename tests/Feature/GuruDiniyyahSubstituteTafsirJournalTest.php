@@ -6,6 +6,7 @@ use App\Models\AcademicTerm;
 use App\Models\AcademicYear;
 use App\Models\Classroom;
 use App\Models\ClassroomTerm;
+use App\Models\ClassSession;
 use App\Models\DiniyyahClassJournal;
 use App\Models\DiniyyahClassSubject;
 use App\Models\DiniyyahSubject;
@@ -43,6 +44,23 @@ class GuruDiniyyahSubstituteTafsirJournalTest extends TestCase
             ->assertSee('Farhan Dhia Alauddin')
             ->assertSee('Mustawa 2 Ikhwan')
             ->assertSee('Mustawa 3 Ikhwan');
+    }
+
+    public function test_scheduleless_male_tafsir_substitute_only_sees_ikhwan_classes(): void
+    {
+        $original = $this->makeTafsirTeacher('Guru Tafsir', [
+            'Mustawa 2 Ikhwan',
+            'Mustawa 3 Ikhwan',
+            'Mustawa 2 Akhwat',
+        ]);
+        $substitute = $this->makeSubstitute('Pengganti', 'male');
+
+        $this->actingAs($substitute['user'])
+            ->get(route('guru.diniyyah-substitute-tafsir-journals.index', ['date' => self::KAMIS]))
+            ->assertOk()
+            ->assertSee('Mustawa 2 Ikhwan')
+            ->assertSee('Mustawa 3 Ikhwan')
+            ->assertDontSee('Mustawa 2 Akhwat');
     }
 
     public function test_store_creates_substitute_journals_for_checked_classes(): void
@@ -100,7 +118,7 @@ class GuruDiniyyahSubstituteTafsirJournalTest extends TestCase
                 'date' => self::KAMIS,
                 'material' => 'Materi',
                 'assignments' => [$ownId, $otherId],
-        ]);
+            ]);
 
         $response->assertRedirect();
         $response->assertSessionHas('error');
@@ -185,7 +203,7 @@ class GuruDiniyyahSubstituteTafsirJournalTest extends TestCase
     /**
      * Buat guru Tafsir asli + tafsir assignment untuk tiap nama kelas.
      *
-     * @param string[] $classroomNames
+     * @param  string[]  $classroomNames
      */
     private function makeTafsirTeacher(string $teacherName, array $classroomNames): array
     {
@@ -207,7 +225,7 @@ class GuruDiniyyahSubstituteTafsirJournalTest extends TestCase
             $classroomTerm = ClassroomTerm::create(['academic_term_id' => $termId, 'classroom_id' => $classroom->id, 'name' => $name]);
             $classSubject = DiniyyahClassSubject::create(['classroom_term_id' => $classroomTerm->id, 'subject_id' => $tafsirSubject->id, 'assessment_method' => 'weighted', 'kkm' => 70, 'daily_weight' => 40, 'exam_weight' => 60]);
             $assignments[] = DiniyyahTeacherAssignment::create(['diniyyah_class_subject_id' => $classSubject->id, 'teacher_id' => $teacher->id, 'assignment_role' => 'primary']);
-            $tafsirSession = \App\Models\ClassSession::where('session_name', SessionTimetable::SESSION_TAFSIR)->firstOrFail();
+            $tafsirSession = ClassSession::where('session_name', SessionTimetable::SESSION_TAFSIR)->firstOrFail();
             DiniyyahTeachingSchedule::create([
                 'diniyyah_teacher_assignment_id' => $assignments[array_key_last($assignments)]->id,
                 'class_session_id' => $tafsirSession->id,
@@ -218,12 +236,12 @@ class GuruDiniyyahSubstituteTafsirJournalTest extends TestCase
         return ['user' => $user, 'teacher' => $teacher, 'assignments' => $assignments];
     }
 
-    private function makeSubstitute(string $name): array
+    private function makeSubstitute(string $name, ?string $gender = null): array
     {
         Role::firstOrCreate(['name' => 'guru', 'guard_name' => 'web']);
         $user = User::factory()->create(['name' => $name]);
         $user->assignRole('guru');
-        $teacher = Teacher::create(['user_id' => $user->id, 'name' => $name]);
+        $teacher = Teacher::create(['user_id' => $user->id, 'name' => $name, 'gender' => $gender]);
 
         return ['user' => $user, 'teacher' => $teacher];
     }

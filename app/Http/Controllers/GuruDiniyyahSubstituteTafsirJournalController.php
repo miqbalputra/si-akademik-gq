@@ -2,14 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ClassroomTerm;
 use App\Models\DiniyyahClassJournal;
-use App\Models\DiniyyahTeacherAssignment;
 use App\Models\DiniyyahTeachingSchedule;
+use App\Models\Teacher;
 use App\Services\DiniyyahNoKbmAgendaService;
 use App\Services\TafsirScheduleGroupingService;
 use App\Support\SessionTimetable;
-use Illuminate\Http\Request;
 use Illuminate\Database\QueryException;
+use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 
@@ -47,7 +48,10 @@ class GuruDiniyyahSubstituteTafsirJournalController extends Controller
         }
 
         $selectedDate = $request->query('date', Carbon::now('Asia/Jakarta')->toDateString());
-        $schedules = $this->othersTafsirSchedulesFor($teacher);
+        $fallbackGenderGroup = ! $this->hasActiveScheduleFor($teacher, $selectedDate)
+            ? $this->teacherGenderGroup($teacher)
+            : null;
+        $schedules = $this->othersTafsirSchedulesFor($teacher, $fallbackGenderGroup);
         $agendaEvents = $this->noKbmAgendaService->eventsForRange(
             $schedules
                 ->map(fn ($schedule) => $schedule->teacherAssignment?->classSubject?->classroomTerm)
@@ -104,7 +108,10 @@ class GuruDiniyyahSubstituteTafsirJournalController extends Controller
             abort(403, 'Akses ditolak. Akun Anda tidak terhubung dengan data Guru.');
         }
 
-        $schedules = $this->othersTafsirSchedulesFor($teacher);
+        $fallbackGenderGroup = ! $this->hasActiveScheduleFor($teacher, $validated['date'])
+            ? $this->teacherGenderGroup($teacher)
+            : null;
+        $schedules = $this->othersTafsirSchedulesFor($teacher, $fallbackGenderGroup);
         $group = $this->tafsirScheduleGroupingService->groupContainingAssignments(
             $this->tafsirScheduleGroupingService->simultaneousGroupsForDate($schedules, $validated['date']),
             $validated['assignments'],
@@ -151,6 +158,7 @@ class GuruDiniyyahSubstituteTafsirJournalController extends Controller
 
             if ($alreadyExists) {
                 $skipped++;
+
                 continue;
             }
 
@@ -171,6 +179,7 @@ class GuruDiniyyahSubstituteTafsirJournalController extends Controller
                 // Backstop race kondisi: unique index (assignment_id, date, session_hour).
                 if ($this->isDuplicateKeyException($e)) {
                     $skipped++;
+
                     continue;
                 }
 
@@ -191,7 +200,7 @@ class GuruDiniyyahSubstituteTafsirJournalController extends Controller
     }
 
     /** Semua schedule Tafsir milik guru lain dengan relasi yang dibutuhkan. */
-    private function othersTafsirSchedulesFor($teacher)
+    private function othersTafsirSchedulesFor($teacher, ?string $genderGroup = null)
     {
         return DiniyyahTeachingSchedule::with([
             'teacherAssignment.classSubject.subject',
@@ -201,6 +210,10 @@ class GuruDiniyyahSubstituteTafsirJournalController extends Controller
         ])->whereHas('teacherAssignment', fn ($query) => $query->where('teacher_id', '!=', $teacher->id))
             ->get()
             ->filter(fn ($schedule) => $this->tafsirScheduleGroupingService->isTafsirSchedule($schedule))
+            ->filter(fn ($schedule) => $genderGroup === null || $this->classroomTermMatchesGender(
+                $schedule->teacherAssignment?->classSubject?->classroomTerm,
+                $genderGroup,
+            ) && $this->scheduleTargetIsActive($schedule))
             ->values();
     }
 
@@ -214,5 +227,60 @@ class GuruDiniyyahSubstituteTafsirJournalController extends Controller
         $driverCode = $e->errorInfo[1] ?? null;
 
         return $sqlstate === '23000' || $driverCode === 19;
+    }
+
+    private function hasActiveScheduleFor(Teacher $teacher, string $date): bool
+    {
+        return DiniyyahTeachingSchedule::query()
+            ->whereHas('teacherAssignment', function ($query) use ($teacher, $date): void {
+                $query->where('teacher_id', $teacher->id)
+                    ->where(function ($query) use ($date): void {
+                        $query->whereNull('starts_at')->orWhereDate('starts_at', '<=', $date);
+                    })
+                    ->where(function ($query) use ($date): void {
+                        $query->whereNull('ends_at')->orWhereDate('ends_at', '>=', $date);
+                    });
+            })
+            ->exists();
+    }
+
+    private function teacherGenderGroup(Teacher $teacher): ?string
+    {
+        return match (strtolower((string) $teacher->gender)) {
+            'male' => 'male',
+            'female' => 'female',
+            default => null,
+        };
+    }
+
+    private function classroomTermMatchesGender(?ClassroomTerm $classroomTerm, string $genderGroup): bool
+    {
+        $classroom = $classroomTerm?->classroom;
+        if (! $classroom) {
+            return false;
+        }
+
+        $classGender = strtolower(trim((string) $classroom->gender_group));
+        if ($classGender === '' || $classGender === 'mixed') {
+            $parsed = SessionTimetable::parseClassroom($classroom);
+            $classGender = match ($parsed[0] ?? null) {
+                'ikhwan' => 'male',
+                'akhwat' => 'female',
+                default => $classGender,
+            };
+        }
+
+        return $classGender === $genderGroup;
+    }
+
+    private function scheduleTargetIsActive(mixed $schedule): bool
+    {
+        $assignment = $schedule->teacherAssignment ?? null;
+        $classSubject = $assignment?->classSubject;
+        $classroomTerm = $classSubject?->classroomTerm;
+
+        return $classSubject?->is_active !== false
+            && $classroomTerm?->status === 'active'
+            && $classroomTerm->classroom?->is_active !== false;
     }
 }

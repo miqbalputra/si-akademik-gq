@@ -2,18 +2,19 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Models\ClassEnrollment;
 use App\Models\ClassroomTerm;
 use App\Models\DiniyyahClassJournal;
 use App\Models\DiniyyahTeacherAssignment;
 use App\Models\DiniyyahTeachingSchedule;
 use App\Models\StudentAttendance;
-use App\Models\ClassEnrollment;
+use App\Models\Teacher;
 use App\Services\TafsirScheduleGroupingService;
 use App\Support\SessionTimetable;
+use Illuminate\Database\QueryException;
+use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Database\QueryException;
 
 /**
  * Menu "Jurnal Guru Pengganti": semua guru (akun terhubung ke Teacher) dapat
@@ -33,7 +34,7 @@ class GuruDiniyyahSubstituteJournalController extends Controller
     public function index(Request $request)
     {
         $teacher = Auth::user()->teacher;
-        if (!$teacher) {
+        if (! $teacher) {
             abort(403, 'Akses ditolak. Akun Anda tidak terhubung dengan data Guru.');
         }
 
@@ -42,8 +43,22 @@ class GuruDiniyyahSubstituteJournalController extends Controller
         // yang aktif pada tanggal tersebut tetap dapat ditangani dengan benar.
         $selectedDate = $request->query('date', Carbon::now('Asia/Jakarta')->toDateString());
 
+        // Guru tanpa jadwal sendiri mendapat mode pengganti khusus. Ia tidak
+        // dibatasi oleh jadwal miliknya, tetapi tetap dibatasi oleh gender kelas.
+        $fallbackGenderGroup = ! $this->hasActiveScheduleFor($teacher, $selectedDate)
+            ? $this->teacherGenderGroup($teacher)
+            : null;
+        $isSchedulelessSubstitute = $fallbackGenderGroup !== null;
+
         // Muat SEMUA assignment diniyyah aktif (semua guru), bukan hanya milik guru ini.
         $allAssignments = DiniyyahTeacherAssignment::with(['classSubject.subject', 'classSubject.classroomTerm.classroom', 'teacher', 'schedules.classSession'])
+            ->whereHas('classSubject', function ($query): void {
+                $query->where('is_active', true)
+                    ->whereHas('classroomTerm', function ($query): void {
+                        $query->where('status', 'active')
+                            ->whereHas('classroom', fn ($query) => $query->where('is_active', true));
+                    });
+            })
             ->where(function ($query) use ($selectedDate) {
                 $query->whereNull('starts_at')->orWhereDate('starts_at', '<=', $selectedDate);
             })
@@ -57,8 +72,17 @@ class GuruDiniyyahSubstituteJournalController extends Controller
 
         // Daftar kelas yang punya assignment diniyyah aktif (bisa digantikan).
         $classes = $allAssignments->pluck('classSubject.classroomTerm')->filter()->unique('id')->values();
+        if ($fallbackGenderGroup !== null) {
+            $classes = $classes
+                ->filter(fn ($classroomTerm) => $this->classroomTermMatchesGender($classroomTerm, $fallbackGenderGroup))
+                ->values();
+        }
 
         $selectedClassroomTermId = $request->query('classroom_term_id');
+        if ($fallbackGenderGroup !== null && $selectedClassroomTermId
+            && ! $classes->contains(fn ($classroomTerm) => (int) $classroomTerm->id === (int) $selectedClassroomTermId)) {
+            $selectedClassroomTermId = null;
+        }
         $simultaneousScheduleIds = $this->tafsirScheduleGroupingService
             ->simultaneousGroupsForDate($allSchedules, $selectedDate)
             ->flatMap(fn (array $group) => $group['schedules']->pluck('id'))
@@ -119,37 +143,64 @@ class GuruDiniyyahSubstituteJournalController extends Controller
                 $dayOfWeek = SessionTimetable::dayOfWeekIso($selectedDate);
                 $sessionSlots = SessionTimetable::slotsFor($selectedTerm->classroom_id, $dayOfWeek);
 
-                // Slot jadwal guru ASLI (yg digantikan) di kelas & hari ini: tiap baris
-                // DiniyyahTeachingSchedule pada assignment guru lain di kelas ini, yg
-                // day_of_week = hari tanggal → satu slot (assignment + sesi). Form hanya
-                // menawarkan slot ini supaya pengganti mengisi sesi sesuai jadwal guru
-                // asli (bukan sesi sembarang). `filled` = sudah ada jurnal → disabled.
+                // Guru yang memiliki jadwal hanya dapat menggantikan slot jadwal
+                // guru asli. Guru tanpa jadwal mendapat seluruh kombinasi mapel
+                // assignment aktif dan sesi timetable kelas pada tanggal ini.
                 $filledKeys = $existingJournals
                     ->map(fn ($journal) => $journal->teacherAssignment->id.'|'.$journal->session_hour)
                     ->all();
-                foreach ($classAssignments as $assignment) {
-                    foreach ($assignment->schedules as $schedule) {
-                        if ((int) $schedule->day_of_week !== $dayOfWeek) {
-                            continue;
+                if ($fallbackGenderGroup !== null) {
+                    foreach ($classAssignments as $assignment) {
+                        foreach ($sessionSlots as $slot) {
+                            if ($slot->is_break) {
+                                continue;
+                            }
+
+                            // Jika assignment memiliki slot Tafsir serentak yang
+                            // diketahui, tetap arahkan ke menu Tafsir khusus.
+                            $matchingSchedule = $assignment->schedules->first(fn ($schedule) => (int) $schedule->day_of_week === $dayOfWeek
+                                && (string) ($schedule->classSession?->session_name ?? '') === (string) $slot->session_name
+                            );
+                            if ($matchingSchedule && in_array((int) $matchingSchedule->id, $simultaneousScheduleIds, true)) {
+                                continue;
+                            }
+
+                            $scheduledSlots->push((object) [
+                                'assignment_id' => $assignment->id,
+                                'session_name' => $slot->session_name,
+                                'subject_name' => $assignment->classSubject->subject->name,
+                                'teacher_name' => $assignment->teacher?->name,
+                                'starts_at' => $slot->starts_at,
+                                'ends_at' => $slot->ends_at,
+                                'filled' => in_array($assignment->id.'|'.$slot->session_name, $filledKeys, true),
+                            ]);
                         }
-                        if (in_array((int) $schedule->id, $simultaneousScheduleIds, true)) {
-                            continue;
+                    }
+                } else {
+                    foreach ($classAssignments as $assignment) {
+                        foreach ($assignment->schedules as $schedule) {
+                            if ((int) $schedule->day_of_week !== $dayOfWeek) {
+                                continue;
+                            }
+                            if (in_array((int) $schedule->id, $simultaneousScheduleIds, true)) {
+                                continue;
+                            }
+                            $sessionName = $schedule->classSession?->session_name;
+                            if (! $sessionName) {
+                                continue;
+                            }
+                            $slot = $sessionSlots->firstWhere('session_name', $sessionName);
+                            $scheduledSlots->push((object) [
+                                'assignment_id' => $assignment->id,
+                                'session_name' => $sessionName,
+                                'subject_name' => $assignment->classSubject->subject->name,
+                                'teacher_name' => $assignment->teacher?->name,
+                                'starts_at' => $slot?->starts_at,
+                                'ends_at' => $slot?->ends_at,
+                                'filled' => in_array($assignment->id.'|'.$sessionName, $filledKeys, true)
+                                    || $existingJournals->contains(fn ($journal) => $this->tafsirScheduleGroupingService->journalMatchesSchedule($journal, $schedule)),
+                            ]);
                         }
-                        $sessionName = $schedule->classSession?->session_name;
-                        if (! $sessionName) {
-                            continue;
-                        }
-                        $slot = $sessionSlots->firstWhere('session_name', $sessionName);
-                        $scheduledSlots->push((object) [
-                            'assignment_id' => $assignment->id,
-                            'session_name' => $sessionName,
-                            'subject_name' => $assignment->classSubject->subject->name,
-                            'teacher_name' => $assignment->teacher?->name,
-                            'starts_at' => $slot?->starts_at,
-                            'ends_at' => $slot?->ends_at,
-                            'filled' => in_array($assignment->id.'|'.$sessionName, $filledKeys, true)
-                                || $existingJournals->contains(fn ($journal) => $this->tafsirScheduleGroupingService->journalMatchesSchedule($journal, $schedule)),
-                        ]);
                     }
                 }
                 $hasScheduleOnDay = $scheduledSlots->isNotEmpty();
@@ -175,7 +226,8 @@ class GuruDiniyyahSubstituteJournalController extends Controller
             'sessionSlots',
             'scheduledSlots',
             'selectedTerm',
-            'hasScheduleOnDay'
+            'hasScheduleOnDay',
+            'isSchedulelessSubstitute'
         ));
     }
 
@@ -192,7 +244,7 @@ class GuruDiniyyahSubstituteJournalController extends Controller
         ]);
 
         $teacher = Auth::user()->teacher;
-        if (!$teacher) {
+        if (! $teacher) {
             abort(403, 'Akses ditolak. Akun Anda tidak terhubung dengan data Guru.');
         }
 
@@ -204,6 +256,17 @@ class GuruDiniyyahSubstituteJournalController extends Controller
             abort(403, 'Tugas mengajar tidak sesuai dengan kelas yang dipilih.');
         }
 
+        if (! $this->assignmentIsActiveOn($assignment, $validated['date'])) {
+            abort(403, 'Tugas mengajar sudah tidak aktif pada tanggal yang dipilih.');
+        }
+        abort_unless(
+            $assignment->classSubject->is_active
+                && $assignment->classSubject->classroomTerm->status === 'active'
+                && $assignment->classSubject->classroomTerm->classroom->is_active,
+            403,
+            'Mapel atau kelas yang dipilih sudah tidak aktif.'
+        );
+
         // Tidak boleh menggantikan diri sendiri — gunakan menu Jurnal Kelas biasa.
         if ($assignment->teacher_id === $teacher->id) {
             return redirect()->route('guru.diniyyah-substitute-journals.index', [
@@ -212,26 +275,41 @@ class GuruDiniyyahSubstituteJournalController extends Controller
             ])->withInput()->with('error', 'Anda tidak bisa menggantikan diri sendiri. Gunakan menu Jurnal Kelas biasa untuk kelas/mapel Anda sendiri.');
         }
 
-        // Penegakan jadwal (enforce-if-assignment-has-schedules): bila guru asli
-        // punya ≥1 baris DiniyyahTeachingSchedule pada assignment ini (kasus prod),
-        // kombinasi (assignment, hari, sesi) harus cocok salah satu baris jadwal —
-        // jika tidak, tolak. Pengganti hanya boleh mengisi sesi sesuai jadwal guru
-        // asli yg digantikan. Bila assignment belum punya jadwal → permissive.
         $dayOfWeek = SessionTimetable::dayOfWeekIso($validated['date']);
-        $assignmentHasSchedules = DiniyyahTeachingSchedule::query()
-            ->where('diniyyah_teacher_assignment_id', $assignment->id)
-            ->exists();
-        if ($assignmentHasSchedules) {
-            $scheduled = DiniyyahTeachingSchedule::query()
+        $fallbackGenderGroup = ! $this->hasActiveScheduleFor($teacher, $validated['date'])
+            ? $this->teacherGenderGroup($teacher)
+            : null;
+
+        if ($fallbackGenderGroup !== null) {
+            abort_unless(
+                $this->classroomTermMatchesGender($assignment->classSubject->classroomTerm, $fallbackGenderGroup),
+                403,
+                'Kelas yang dipilih tidak sesuai gender Anda.'
+            );
+
+            $classroom = $assignment->classSubject->classroomTerm->classroom;
+            $slot = SessionTimetable::slotsFor($classroom->id, $dayOfWeek)
+                ->first(fn ($slot) => (string) $slot->session_name === (string) $validated['session_hour'] && ! $slot->is_break);
+            abort_unless($slot !== null, 403, 'Sesi yang dipilih tidak tersedia pada timetable kelas di tanggal tersebut.');
+        } else {
+            // Guru yang memiliki jadwal tetap mengikuti pembatasan jadwal guru
+            // asli. Assignment tanpa jadwal tetap permissive untuk kompatibilitas
+            // data legacy dan test lama.
+            $assignmentHasSchedules = DiniyyahTeachingSchedule::query()
                 ->where('diniyyah_teacher_assignment_id', $assignment->id)
-                ->where('day_of_week', $dayOfWeek)
-                ->whereHas('classSession', fn ($q) => $q->where('session_name', $validated['session_hour']))
                 ->exists();
-            if (! $scheduled) {
-                return redirect()->route('guru.diniyyah-substitute-journals.index', [
-                    'classroom_term_id' => $validated['classroom_term_id'],
-                    'date' => $validated['date'],
-                ])->withInput()->with('error', 'Sesi/mapel ini tidak sesuai jadwal guru asli di kelas & hari ini.');
+            if ($assignmentHasSchedules) {
+                $scheduled = DiniyyahTeachingSchedule::query()
+                    ->where('diniyyah_teacher_assignment_id', $assignment->id)
+                    ->where('day_of_week', $dayOfWeek)
+                    ->whereHas('classSession', fn ($q) => $q->where('session_name', $validated['session_hour']))
+                    ->exists();
+                if (! $scheduled) {
+                    return redirect()->route('guru.diniyyah-substitute-journals.index', [
+                        'classroom_term_id' => $validated['classroom_term_id'],
+                        'date' => $validated['date'],
+                    ])->withInput()->with('error', 'Sesi/mapel ini tidak sesuai jadwal guru asli di kelas & hari ini.');
+                }
             }
         }
 
@@ -240,8 +318,7 @@ class GuruDiniyyahSubstituteJournalController extends Controller
             'teacherAssignment.classSubject.classroomTerm.classroom',
             'classSession',
         ])->get();
-        $scheduledTafsir = $allSchedules->first(fn ($schedule) =>
-            (int) $schedule->diniyyah_teacher_assignment_id === (int) $assignment->id
+        $scheduledTafsir = $allSchedules->first(fn ($schedule) => (int) $schedule->diniyyah_teacher_assignment_id === (int) $assignment->id
             && (int) $schedule->day_of_week === $dayOfWeek
             && (string) ($schedule->classSession?->session_name ?? '') === $validated['session_hour']
         );
@@ -324,7 +401,7 @@ class GuruDiniyyahSubstituteJournalController extends Controller
     public function destroy(DiniyyahClassJournal $diniyyah_journal)
     {
         $teacher = Auth::user()->teacher;
-        if (!$teacher) {
+        if (! $teacher) {
             abort(403, 'Akses ditolak. Akun Anda tidak terhubung dengan data Guru.');
         }
 
@@ -356,5 +433,58 @@ class GuruDiniyyahSubstituteJournalController extends Controller
         $driverCode = $e->errorInfo[1] ?? null;
 
         return $sqlstate === '23000' || $driverCode === 19;
+    }
+
+    private function hasActiveScheduleFor(Teacher $teacher, string $date): bool
+    {
+        return DiniyyahTeachingSchedule::query()
+            ->whereHas('teacherAssignment', function ($query) use ($teacher, $date): void {
+                $query->where('teacher_id', $teacher->id)
+                    ->where(function ($query) use ($date): void {
+                        $query->whereNull('starts_at')->orWhereDate('starts_at', '<=', $date);
+                    })
+                    ->where(function ($query) use ($date): void {
+                        $query->whereNull('ends_at')->orWhereDate('ends_at', '>=', $date);
+                    });
+            })
+            ->exists();
+    }
+
+    private function teacherGenderGroup(Teacher $teacher): ?string
+    {
+        return match (strtolower((string) $teacher->gender)) {
+            'male' => 'male',
+            'female' => 'female',
+            default => null,
+        };
+    }
+
+    private function classroomTermMatchesGender(?ClassroomTerm $classroomTerm, string $genderGroup): bool
+    {
+        $classroom = $classroomTerm?->classroom;
+        if (! $classroom) {
+            return false;
+        }
+
+        $classGender = strtolower(trim((string) $classroom->gender_group));
+        if ($classGender === '' || $classGender === 'mixed') {
+            $parsed = SessionTimetable::parseClassroom($classroom);
+            $classGender = match ($parsed[0] ?? null) {
+                'ikhwan' => 'male',
+                'akhwat' => 'female',
+                default => $classGender,
+            };
+        }
+
+        return $classGender === $genderGroup;
+    }
+
+    private function assignmentIsActiveOn(DiniyyahTeacherAssignment $assignment, string $date): bool
+    {
+        $startsAt = $assignment->starts_at?->toDateString();
+        $endsAt = $assignment->ends_at?->toDateString();
+
+        return ($startsAt === null || $startsAt <= $date)
+            && ($endsAt === null || $endsAt >= $date);
     }
 }
