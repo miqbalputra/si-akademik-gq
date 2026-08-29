@@ -203,9 +203,10 @@ class GuruDiniyyahJournalController extends Controller
     }
 
     /**
-     * Halaman khusus "Riwayat Jurnal Saya" — seluruh jurnal yang guru isi sebagai
-     * guru asli (bukan pengganti), di semua kelas, tersusun per tanggal. Dipisah
-     * dari halaman input supaya guru fokus mengisi jurnal, riwayat dibuka on-demand.
+     * Halaman khusus "Riwayat Jurnal Saya" — seluruh jurnal yang benar-benar
+     * diisi guru, baik pada assignment sendiri maupun sebagai pengganti, di semua
+     * kelas dan tersusun per tanggal. Dipisah dari halaman input supaya guru fokus
+     * mengisi jurnal, riwayat dibuka on-demand.
      */
     public function riwayat(DiniyyahJournalReportService $reportService)
     {
@@ -215,12 +216,19 @@ class GuruDiniyyahJournalController extends Controller
         }
 
         $myJournals = DiniyyahClassJournal::with([
+            'substituteTeacher',
+            'teacherAssignment.teacher',
             'teacherAssignment.classSubject.subject',
             'teacherAssignment.classSubject.classroomTerm.classroom',
             'absences.classEnrollment.student',
         ])
-            ->whereHas('teacherAssignment', fn ($q) => $q->where('teacher_id', $teacher->id))
-            ->whereNull('substitute_teacher_id')
+            ->where(function ($query) use ($teacher): void {
+                $query->where('substitute_teacher_id', $teacher->id)
+                    ->orWhere(function ($query) use ($teacher): void {
+                        $query->whereNull('substitute_teacher_id')
+                            ->whereHas('teacherAssignment', fn ($query) => $query->where('teacher_id', $teacher->id));
+                    });
+            })
             ->orderByDesc('date')
             ->orderBy('session_starts_at')
             ->get();

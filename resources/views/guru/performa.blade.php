@@ -54,7 +54,7 @@
         <div class="rounded-2xl border border-emerald-800 bg-emerald-900 p-5 shadow-sm">
             <p class="text-xs font-bold uppercase tracking-wider text-emerald-100">Total JP</p>
             <p class="mt-1 text-4xl font-black text-white">{{ $stats['jp_berhasil_terlaksana'] ?? 0 }}</p>
-            <p class="mt-1 text-xs font-semibold text-emerald-200">JP berhasil terlaksana oleh Anda</p>
+            <p class="mt-1 text-xs font-semibold text-emerald-200">Jurnal yang Anda isi, termasuk pengganti</p>
         </div>
         <div class="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5 shadow-sm">
             <p class="text-xs font-bold uppercase tracking-wider text-emerald-700">Sudah Diisi</p>
@@ -201,7 +201,7 @@
         <div class="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
             <div>
                 <p class="text-[11px] font-black uppercase tracking-[.16em] text-emerald-700">Ringkasan visual</p>
-                <h2 id="performa-chart-heading" class="mt-1 text-lg font-black text-slate-900">Status pengisian jurnal</h2>
+                <h2 id="performa-chart-heading" class="mt-1 text-lg font-black text-slate-900">Status jadwal mengajar Anda</h2>
                 <p class="mt-1 text-sm text-slate-500">Distribusi slot pada periode {{ $performa['month_label'] }}.</p>
             </div>
             <span class="font-mono text-xs font-bold text-slate-500">Total {{ $chartTotal }} slot</span>

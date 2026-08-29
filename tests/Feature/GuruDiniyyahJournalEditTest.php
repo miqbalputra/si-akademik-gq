@@ -27,7 +27,7 @@ class GuruDiniyyahJournalEditTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_riwayat_page_shows_grouped_by_date_with_count_and_excludes_substitute(): void
+    public function test_riwayat_page_shows_regular_and_own_substitute_journals_only(): void
     {
         $ctx = $this->makeContext();
 
@@ -35,7 +35,8 @@ class GuruDiniyyahJournalEditTest extends TestCase
         $this->createJournal($ctx, '2026-07-09', '1', 'Materi Kamis pagi');
         $this->createJournal($ctx, '2026-07-10', '2', 'Materi Jumat');
 
-        // Satu jurnal pengganti (substitute) di assignment yang sama — TIDAK boleh muncul.
+        // Pengganti yang diisi guru lain pada assignment milik guru ini tetap
+        // bukan bagian dari riwayat guru pemilik jadwal.
         DiniyyahClassJournal::create([
             'diniyyah_teacher_assignment_id' => $ctx['assignment']->id,
             'substitute_teacher_id' => $ctx['otherTeacher']->id,
@@ -45,14 +46,29 @@ class GuruDiniyyahJournalEditTest extends TestCase
             'jp_count' => 1,
         ]);
 
+        $substituteAssignment = $this->createAssignmentFor($ctx, $ctx['otherTeacher']);
+        $ownSubstituteJournal = DiniyyahClassJournal::create([
+            'diniyyah_teacher_assignment_id' => $substituteAssignment->id,
+            'substitute_teacher_id' => $ctx['teacher']->id,
+            'date' => '2026-07-10',
+            'session_hour' => '3',
+            'material' => 'Materi yang saya gantikan',
+            'jp_count' => 1,
+        ]);
+
         $resp = $this->actingAs($ctx['teacher']->user)
             ->get(route('guru.diniyyah-journals.riwayat'));
 
         $resp->assertOk();
         $resp->assertSee('Riwayat Jurnal Saya');
-        $resp->assertSee('2 jurnal'); // badge count — hanya jurnal sebagai guru asli
+        $resp->assertSee('3 jurnal');
         $resp->assertSee('Materi Kamis pagi');
         $resp->assertSee('Materi Jumat');
+        $resp->assertSee('Materi yang saya gantikan');
+        $resp->assertSee('Jurnal Pengganti');
+        $resp->assertSee('Menggantikan Guru Lain');
+        $resp->assertSee(route('guru.diniyyah-substitute-journals.destroy', $ownSubstituteJournal), false);
+        $resp->assertDontSee(route('guru.diniyyah-journals.edit', $ownSubstituteJournal), false);
         $resp->assertDontSee('Materi pengganti rahasia');
     }
 
@@ -179,6 +195,29 @@ class GuruDiniyyahJournalEditTest extends TestCase
             'session_hour' => $session,
             'material' => $material,
             'jp_count' => 1,
+        ]);
+    }
+
+    private function createAssignmentFor(array $ctx, Teacher $teacher): DiniyyahTeacherAssignment
+    {
+        $subject = DiniyyahSubject::create([
+            'code' => 'aqidah',
+            'name' => 'Aqidah',
+            'default_assessment_method' => 'weighted',
+        ]);
+        $classSubject = DiniyyahClassSubject::create([
+            'classroom_term_id' => $ctx['classroomTerm']->id,
+            'subject_id' => $subject->id,
+            'assessment_method' => 'weighted',
+            'kkm' => 70,
+            'daily_weight' => 40,
+            'exam_weight' => 60,
+        ]);
+
+        return DiniyyahTeacherAssignment::create([
+            'diniyyah_class_subject_id' => $classSubject->id,
+            'teacher_id' => $teacher->id,
+            'assignment_role' => 'primary',
         ]);
     }
 

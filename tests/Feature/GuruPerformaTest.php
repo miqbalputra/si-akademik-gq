@@ -132,6 +132,14 @@ class GuruPerformaTest extends TestCase
         $this->assertSame(0, $performa['stats']['jp_berhasil_terlaksana']);
         $this->assertSame(0, $performa['stats']['sudah_diisi']);
         $this->assertSame(0, $performa['stats']['kosong']);
+
+        $performaPengganti = app(GuruPerformaService::class)->calculate($pengganti['teacher'], 8, 2026);
+
+        $this->assertSame(1, $performaPengganti['stats']['jp_berhasil_terlaksana']);
+        $this->assertSame(1, $performaPengganti['stats']['total_jurnal']);
+        $this->assertCount(1, $performaPengganti['journal_rows']);
+        $this->assertSame('Digantikan', $performaPengganti['journal_rows']->first()['material']);
+        $this->assertSame('Jurnal pengganti', $performaPengganti['journal_rows']->first()['type_label']);
     }
 
     public function test_performa_tafsir_dedup_filled_counts_one(): void
@@ -274,6 +282,13 @@ class GuruPerformaTest extends TestCase
 
         $this->assertSame(1, $performa['stats']['digantikan']);
         $this->assertSame(0, $performa['stats']['sudah_diisi']);
+
+        $performaPengganti = app(GuruPerformaService::class)->calculate($pengganti['teacher'], 8, 2026);
+
+        $this->assertSame(1, $performaPengganti['stats']['jp_berhasil_terlaksana']);
+        $this->assertSame(2, $performaPengganti['stats']['total_jurnal']);
+        $this->assertCount(1, $performaPengganti['jp_rows']);
+        $this->assertSame('tafsir_simultaneous', $performaPengganti['jp_rows']->first()['type']);
     }
 
     public function test_performa_tafsir_dedup_empty_counts_one(): void
@@ -480,10 +495,10 @@ class GuruPerformaTest extends TestCase
 
         $response->assertOk()
             ->assertSee('guru-performance-chart', false)
-            ->assertSee('Status pengisian jurnal')
+            ->assertSee('Status jadwal mengajar Anda')
             ->assertSee('Rincian status pengisian jurnal')
             ->assertSee('Total JP')
-            ->assertSee('JP berhasil terlaksana oleh Anda')
+            ->assertSee('Jurnal yang Anda isi, termasuk pengganti')
             ->assertSee('Rincian perhitungan Total JP')
             ->assertSee('data-jp-calculator="journal-session-v2"', false)
             ->assertSee('Sudah Diisi')

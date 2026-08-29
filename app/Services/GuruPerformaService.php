@@ -15,16 +15,17 @@ use Illuminate\Support\Collection;
 /**
  * Kartu performa jurnal mengajar diniyyah per guru, per bulan.
  *
- * Menghitung status jurnal dan realisasi JP dari sudut guru PEMILIK JADWAL
- * (teacherAssignment.teacher_id), bukan effectiveTeacher() (yang mencatat
- * JP ke pengganti):
+ * Menghitung status jurnal dari sudut guru PEMILIK JADWAL
+ * (teacherAssignment.teacher_id), sedangkan realisasi JP dan detail jurnal
+ * memakai effectiveTeacher() (guru yang benar-benar mengajar):
  * - sudah_diisi : slot milik guru yang diisi jurnal oleh guru sendiri
  *   (substitute_teacher_id IS NULL).
  * - kosong      : slot milik guru, tanggal sudah lewat, tanpa jurnal, dan
  *   bukan hari libur atau agenda tanpa KBM.
  * - digantikan  : slot milik guru yang diisi teacher lain
  *   (substitute_teacher_id IS NOT NULL).
- * - jp_berhasil_terlaksana : JP dari slot yang diisi guru sendiri.
+ * - jp_berhasil_terlaksana : JP dari jurnal yang diisi guru, termasuk ketika
+ *   ia menjadi pengganti.
  *
  * Satuan = JP dengan dedup Tafsir (konsisten dengan {@see RekapJurnalGuruService}):
  * 1 sesi Tafsir serentak ke beberapa kelas di hari yang sama dihitung 1 JP
@@ -78,8 +79,9 @@ class GuruPerformaService
             : $startDate->copy()->endOfMonth();
 
         $summary = $this->summaryForRange($teacher, $startDate, $endDate, withReconciliation: true);
-        $journalRows = $this->journalRows($summary['journals']);
-        $jpSummary = $this->completedTeachingJp($summary['journals']);
+        $effectiveJournals = $this->effectiveJournalsForRange($teacher, $startDate, $endDate);
+        $journalRows = $this->journalRows($effectiveJournals);
+        $jpSummary = $this->completedTeachingJp($effectiveJournals);
 
         return [
             'month' => $month,
@@ -462,6 +464,30 @@ class GuruPerformaService
         ];
     }
 
+    /** @return Collection<int, DiniyyahClassJournal> */
+    private function effectiveJournalsForRange(Teacher $teacher, Carbon $startDate, Carbon $endDate): Collection
+    {
+        return DiniyyahClassJournal::with([
+            'substituteTeacher',
+            'teacherAssignment.teacher',
+            'teacherAssignment.classSubject.subject',
+            'teacherAssignment.classSubject.classroomTerm.classroom',
+            'absences',
+        ])
+            ->where(function ($query) use ($teacher): void {
+                $query->where('substitute_teacher_id', $teacher->id)
+                    ->orWhere(function ($query) use ($teacher): void {
+                        $query->whereNull('substitute_teacher_id')
+                            ->whereHas('teacherAssignment', fn ($query) => $query->where('teacher_id', $teacher->id));
+                    });
+            })
+            ->whereDate('date', '>=', $startDate->toDateString())
+            ->whereDate('date', '<=', $endDate->toDateString())
+            ->orderBy('date')
+            ->orderBy('session_starts_at')
+            ->get();
+    }
+
     /** @return array{available: bool, mapped: bool, message: ?string} */
     private function attendanceVerification(Teacher $teacher, array $attendance, bool $requested): array
     {
@@ -539,7 +565,7 @@ class GuruPerformaService
                 'pengganti' => $journal->substituteTeacher?->name,
                 'guru_mengajar' => $journal->effectiveTeacher()?->name ?? '-',
                 'type' => $isSubstitute ? 'substitute' : 'regular',
-                'type_label' => $isSubstitute ? 'Digantikan' : 'Diisi sendiri',
+                'type_label' => $isSubstitute ? 'Jurnal pengganti' : 'Diisi sendiri',
                 'hadir' => max(0, $activeEnrollmentCount - $absenceTotal),
                 'sakit' => $absenceCounts['sick'],
                 'izin' => $absenceCounts['permission'],
@@ -550,7 +576,7 @@ class GuruPerformaService
     }
 
     /**
-     * Total JP yang benar-benar terlaksana oleh guru pemegang jadwal.
+     * Total JP yang benar-benar terlaksana oleh guru efektif.
      *
      * Jurnal reguler menggunakan jp_count. Hanya jurnal dengan penanda resmi
      * session_hour="tafsir" yang diperlakukan sebagai Tafsir serentak; Tafsir
@@ -563,15 +589,11 @@ class GuruPerformaService
      */
     private function completedTeachingJp(Collection $journals): array
     {
-        $ownJournals = $journals
-            ->filter(fn (DiniyyahClassJournal $journal): bool => $journal->substitute_teacher_id === null)
-            ->values();
-
-        $regularRows = $ownJournals
+        $regularRows = $journals
             ->reject(fn (DiniyyahClassJournal $journal): bool => $this->isSimultaneousTafsirJournal($journal))
             ->map(fn (DiniyyahClassJournal $journal): array => $this->regularJpRow($journal));
 
-        $tafsirRows = $ownJournals
+        $tafsirRows = $journals
             ->filter(fn (DiniyyahClassJournal $journal): bool => $this->isSimultaneousTafsirJournal($journal))
             ->groupBy(fn (DiniyyahClassJournal $journal): string => $this->tafsirJournalSessionKey($journal))
             ->map(fn (Collection $sessionJournals): array => $this->simultaneousTafsirJpRow($sessionJournals));

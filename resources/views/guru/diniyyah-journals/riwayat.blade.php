@@ -54,8 +54,14 @@
                                         <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
                                             <span class="text-sm font-bold text-slate-800">{{ $journal->teacherAssignment->classSubject->subject->name }}</span>
                                             <span class="text-xs font-medium text-slate-500">· {{ $journal->teacherAssignment->classSubject->classroomTerm->name }}</span>
+                                            @if($journal->substitute_teacher_id)
+                                                <span class="text-[10px] font-bold text-sky-800 bg-sky-100 px-2 py-0.5 rounded">Jurnal Pengganti</span>
+                                            @endif
                                         </div>
                                         <p class="text-sm text-slate-600 mt-0.5 line-clamp-2" title="{{ $journal->material }}">{{ $journal->material }}</p>
+                                        @if($journal->substitute_teacher_id)
+                                            <p class="mt-1 text-[11px] font-medium text-slate-500">Menggantikan {{ $journal->teacherAssignment->teacher->name }}</p>
+                                        @endif
                                         <div class="mt-1">
                                             @if($journal->absences->isEmpty())
                                                 <span class="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">Hadir semua</span>
@@ -65,8 +71,12 @@
                                         </div>
                                     </div>
                                     <div class="flex items-center gap-3 shrink-0">
-                                        <a href="{{ route('guru.diniyyah-journals.edit', $journal) }}" class="inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-bold text-amber-700 hover:bg-amber-50 transition-colors">Edit</a>
-                                        <form action="{{ route('guru.diniyyah-journals.destroy', $journal) }}" method="POST" onsubmit="return confirm('Hapus jurnal jam ke-{{ $journal->session_hour }}?');">
+                                        @if($journal->substitute_teacher_id)
+                                            <form action="{{ route('guru.diniyyah-substitute-journals.destroy', $journal) }}" method="POST" onsubmit="return confirm('Hapus jurnal pengganti jam ke-{{ $journal->session_hour }}?');">
+                                        @else
+                                            <a href="{{ route('guru.diniyyah-journals.edit', $journal) }}" class="inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-bold text-amber-700 hover:bg-amber-50 transition-colors">Edit</a>
+                                            <form action="{{ route('guru.diniyyah-journals.destroy', $journal) }}" method="POST" onsubmit="return confirm('Hapus jurnal jam ke-{{ $journal->session_hour }}?');">
+                                        @endif
                                             @csrf @method('DELETE')
                                             <button type="submit" class="inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-50 transition-colors">Hapus</button>
                                         </form>

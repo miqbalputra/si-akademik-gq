@@ -43,7 +43,7 @@
     <div class="header">
         <p class="eyebrow">Ruang GQ · Griya Qur'an Tunas Ilmu</p>
         <h1>Laporan Performa Mengajar - Detail Lengkap</h1>
-        <p class="subtitle">Seluruh data jurnal, status pengisian, materi, JP, guru pengganti, dan ringkasan kehadiran periode {{ $performa['month_label'] ?? '-' }}.</p>
+        <p class="subtitle">Jurnal yang Anda isi, termasuk sebagai guru pengganti, beserta status jadwal, materi, JP, dan ringkasan kehadiran periode {{ $performa['month_label'] ?? '-' }}.</p>
     </div>
 
     <table class="meta">
@@ -99,7 +99,7 @@
         </tbody>
     </table>
 
-    <div class="section-title">DETAIL SEMUA DATA JURNAL</div>
+    <div class="section-title">DETAIL JURNAL YANG ANDA ISI</div>
     <table class="data">
         <thead>
             <tr>

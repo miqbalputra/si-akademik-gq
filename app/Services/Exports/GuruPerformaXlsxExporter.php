@@ -92,7 +92,7 @@ class GuruPerformaXlsxExporter
         $sheet->setCellValue('A19', 'CATATAN');
         $sheet->getStyle('A19:B19')->applyFromArray(['font' => ['bold' => true], 'fill' => ['fillType' => 'solid', 'startColor' => ['argb' => 'FFF1F5F1']]]);
         $sheet->mergeCells('A20:B21');
-        $sheet->setCellValue('A20', 'Total JP berhasil terlaksana hanya menghitung jurnal yang diisi guru pemegang jadwal. Slot kosong berarti jadwal yang sudah lewat tetapi belum memiliki jurnal.');
+        $sheet->setCellValue('A20', 'Total JP berhasil terlaksana menghitung jurnal yang Anda isi, termasuk saat menjadi guru pengganti. Slot kosong berarti jadwal Anda yang sudah lewat tetapi belum memiliki jurnal.');
         $sheet->getStyle('A20:B21')->getAlignment()->setWrapText(true)->setVertical(Alignment::VERTICAL_CENTER);
         $this->theme->widths($sheet, [34, 24]);
     }
@@ -100,7 +100,7 @@ class GuruPerformaXlsxExporter
     private function journals($sheet, array $performa): void
     {
         $headers = ['No', 'Tanggal', 'Sesi', 'Jam', 'Kelas', 'Mapel', 'Materi', 'JP', 'Guru Asli', 'Pengganti', 'Guru Mengajar', 'Status', 'Hadir', 'Sakit', 'Izin', 'Alpa', 'Bolos'];
-        $this->theme->title($sheet, 'DETAIL SEMUA DATA JURNAL', 'Termasuk jurnal yang diisi guru pengganti.', count($headers));
+        $this->theme->title($sheet, 'DETAIL JURNAL YANG ANDA ISI', 'Termasuk jurnal yang Anda isi sebagai guru pengganti.', count($headers));
         $this->theme->tableHeader($sheet, 5, $headers);
         $lastRow = 5;
         foreach (collect($performa['journal_rows'] ?? []) as $index => $row) {
