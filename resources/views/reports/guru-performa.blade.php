@@ -60,6 +60,7 @@
             <td class="stat"><div class="label">Sudah diisi</div><div class="value">{{ $stats['sudah_diisi'] ?? 0 }}</div></td>
             <td class="stat"><div class="label">Kosong</div><div class="value">{{ $stats['kosong'] ?? 0 }}</div></td>
             <td class="stat"><div class="label">Digantikan</div><div class="value">{{ $stats['digantikan'] ?? 0 }}</div></td>
+            <td class="stat"><div class="label">Menggantikan guru lain</div><div class="value">{{ $stats['menggantikan_guru_lain'] ?? 0 }}</div></td>
             <td class="stat"><div class="label">Dibebaskan</div><div class="value">{{ $stats['dibebaskan'] ?? 0 }}</div></td>
             <td class="stat"><div class="label">Agenda tanpa KBM</div><div class="value">{{ $stats['agenda'] ?? 0 }}</div></td>
             <td class="stat"><div class="label">Total slot</div><div class="value">{{ $stats['total'] ?? 0 }}</div></td>

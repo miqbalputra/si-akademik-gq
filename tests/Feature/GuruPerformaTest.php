@@ -89,6 +89,7 @@ class GuruPerformaTest extends TestCase
         $this->assertSame(2, $performa['stats']['sudah_diisi']);
         $this->assertSame(0, $performa['stats']['kosong']);
         $this->assertSame(0, $performa['stats']['digantikan']);
+        $this->assertSame(0, $performa['stats']['menggantikan_guru_lain']);
     }
 
     public function test_performa_counts_empty_regular_slot(): void
@@ -132,10 +133,12 @@ class GuruPerformaTest extends TestCase
         $this->assertSame(0, $performa['stats']['jp_berhasil_terlaksana']);
         $this->assertSame(0, $performa['stats']['sudah_diisi']);
         $this->assertSame(0, $performa['stats']['kosong']);
+        $this->assertSame(0, $performa['stats']['menggantikan_guru_lain']);
 
         $performaPengganti = app(GuruPerformaService::class)->calculate($pengganti['teacher'], 8, 2026);
 
         $this->assertSame(1, $performaPengganti['stats']['jp_berhasil_terlaksana']);
+        $this->assertSame(1, $performaPengganti['stats']['menggantikan_guru_lain']);
         $this->assertSame(1, $performaPengganti['stats']['total_jurnal']);
         $this->assertCount(1, $performaPengganti['journal_rows']);
         $this->assertSame('Digantikan', $performaPengganti['journal_rows']->first()['material']);
@@ -286,6 +289,7 @@ class GuruPerformaTest extends TestCase
         $performaPengganti = app(GuruPerformaService::class)->calculate($pengganti['teacher'], 8, 2026);
 
         $this->assertSame(1, $performaPengganti['stats']['jp_berhasil_terlaksana']);
+        $this->assertSame(1, $performaPengganti['stats']['menggantikan_guru_lain']);
         $this->assertSame(2, $performaPengganti['stats']['total_jurnal']);
         $this->assertCount(1, $performaPengganti['jp_rows']);
         $this->assertSame('tafsir_simultaneous', $performaPengganti['jp_rows']->first()['type']);
@@ -499,6 +503,7 @@ class GuruPerformaTest extends TestCase
             ->assertSee('Rincian status pengisian jurnal')
             ->assertSee('Total JP')
             ->assertSee('Jurnal yang Anda isi, termasuk pengganti')
+            ->assertSee('Menggantikan Guru Lain')
             ->assertSee('Rincian perhitungan Total JP')
             ->assertSee('data-jp-calculator="journal-session-v2"', false)
             ->assertSee('Sudah Diisi')
@@ -548,6 +553,7 @@ class GuruPerformaTest extends TestCase
         $this->assertNotNull($workbook->getSheetByName('Rincian Total JP'));
         $summaryText = collect($workbook->getSheetByName('Ringkasan')->toArray())->flatten()->implode("\n");
         $this->assertStringContainsString('Total JP berhasil terlaksana', $summaryText);
+        $this->assertStringContainsString('Menggantikan guru lain', $summaryText);
         $detailText = collect($workbook->getSheetByName('Detail Jurnal')->toArray())->flatten()->implode("\n");
         $this->assertStringContainsString('Bab Thaharah', $detailText);
         $this->assertStringContainsString('Mustawa 2 Ikhwan', $detailText);

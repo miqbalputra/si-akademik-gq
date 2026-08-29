@@ -49,8 +49,8 @@
         $reconciliationStats = $reconciliation['stats'] ?? [];
     @endphp
 
-    {{-- Total JP + 5 kartu status --}}
-    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 mb-6">
+    {{-- Total JP + kartu statistik --}}
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 mb-6">
         <div class="rounded-2xl border border-emerald-800 bg-emerald-900 p-5 shadow-sm">
             <p class="text-xs font-bold uppercase tracking-wider text-emerald-100">Total JP</p>
             <p class="mt-1 text-4xl font-black text-white">{{ $stats['jp_berhasil_terlaksana'] ?? 0 }}</p>
@@ -70,6 +70,11 @@
             <p class="text-xs font-bold uppercase tracking-wider text-indigo-700">Digantikan</p>
             <p class="mt-1 text-4xl font-black text-indigo-700">{{ $stats['digantikan'] }}</p>
             <p class="mt-1 text-xs font-semibold text-indigo-600">diisi guru pengganti</p>
+        </div>
+        <div class="rounded-2xl border border-violet-200 bg-violet-50/60 p-5 shadow-sm">
+            <p class="text-xs font-bold uppercase tracking-wider text-violet-700">Menggantikan Guru Lain</p>
+            <p class="mt-1 text-4xl font-black text-violet-700">{{ $stats['menggantikan_guru_lain'] ?? 0 }}</p>
+            <p class="mt-1 text-xs font-semibold text-violet-600">sesi yang Anda isi sebagai pengganti</p>
         </div>
         <div class="rounded-2xl border border-amber-200 bg-amber-50/60 p-5 shadow-sm">
             <p class="text-xs font-bold uppercase tracking-wider text-amber-700">Dibebaskan</p>

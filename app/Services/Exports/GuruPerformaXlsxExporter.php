@@ -81,13 +81,14 @@ class GuruPerformaXlsxExporter
             ['Sudah diisi', $stats['sudah_diisi'] ?? 0],
             ['Kosong', $stats['kosong'] ?? 0],
             ['Digantikan', $stats['digantikan'] ?? 0],
+            ['Menggantikan guru lain', $stats['menggantikan_guru_lain'] ?? 0],
             ['Dibebaskan (izin/sakit)', $stats['dibebaskan'] ?? 0],
             ['Agenda tanpa KBM', $stats['agenda'] ?? 0],
             ['Total slot tercatat', $stats['total'] ?? 0],
             ['Total data jurnal', $stats['total_jurnal'] ?? 0],
         ];
         $sheet->fromArray($rows, null, 'A10');
-        $this->theme->finaliseTable($sheet, 9, 17, 2);
+        $this->theme->finaliseTable($sheet, 9, 18, 2);
         $sheet->mergeCells('A19:B19');
         $sheet->setCellValue('A19', 'CATATAN');
         $sheet->getStyle('A19:B19')->applyFromArray(['font' => ['bold' => true], 'fill' => ['fillType' => 'solid', 'startColor' => ['argb' => 'FFF1F5F1']]]);

@@ -51,7 +51,7 @@ class GuruPerformaService
      *   year: int,
      *   is_current_month: bool,
      *   month_label: string,
-     *   stats: array{jp_berhasil_terlaksana: int, sudah_diisi: int, kosong: int, digantikan: int, dibebaskan: int, agenda: int, total: int, total_jurnal: int},
+     *   stats: array{jp_berhasil_terlaksana: int, sudah_diisi: int, kosong: int, digantikan: int, menggantikan_guru_lain: int, dibebaskan: int, agenda: int, total: int, total_jurnal: int},
      *   journal_rows: Collection<int, array<string, mixed>>,
      *   jp_rows: Collection<int, array<string, mixed>>,
      *   agenda_rows: Collection<int, array<string, mixed>>,
@@ -82,6 +82,7 @@ class GuruPerformaService
         $effectiveJournals = $this->effectiveJournalsForRange($teacher, $startDate, $endDate);
         $journalRows = $this->journalRows($effectiveJournals);
         $jpSummary = $this->completedTeachingJp($effectiveJournals);
+        $substituteTeachingSessions = $this->substituteTeachingSessionCount($effectiveJournals);
 
         return [
             'month' => $month,
@@ -96,6 +97,7 @@ class GuruPerformaService
                 'sudah_diisi' => $summary['sudah'],
                 'kosong' => $summary['kosong'],
                 'digantikan' => $summary['digantikan'],
+                'menggantikan_guru_lain' => $substituteTeachingSessions,
                 'dibebaskan' => $summary['dibebaskan'],
                 'dibebaskan_izin' => $summary['dibebaskan_izin'],
                 'dibebaskan_sakit' => $summary['dibebaskan_sakit'],
@@ -607,6 +609,29 @@ class GuruPerformaService
             'total' => (int) $rows->sum('jp'),
             'rows' => $rows,
         ];
+    }
+
+    /**
+     * Jumlah sesi yang guru isi sebagai pengganti, bukan total JP.
+     *
+     * Tafsir serentak pada beberapa kelas disatukan menurut tanggal dan snapshot
+     * jam yang sama agar merepresentasikan satu sesi pengajaran.
+     *
+     * @param  Collection<int, DiniyyahClassJournal>  $journals
+     */
+    private function substituteTeachingSessionCount(Collection $journals): int
+    {
+        $substituteJournals = $journals
+            ->filter(fn (DiniyyahClassJournal $journal): bool => $journal->substitute_teacher_id !== null)
+            ->values();
+
+        return $substituteJournals
+            ->reject(fn (DiniyyahClassJournal $journal): bool => $this->isSimultaneousTafsirJournal($journal))
+            ->count()
+            + $substituteJournals
+                ->filter(fn (DiniyyahClassJournal $journal): bool => $this->isSimultaneousTafsirJournal($journal))
+                ->groupBy(fn (DiniyyahClassJournal $journal): string => $this->tafsirJournalSessionKey($journal))
+                ->count();
     }
 
     private function isSimultaneousTafsirJournal(DiniyyahClassJournal $journal): bool
