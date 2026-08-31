@@ -50,10 +50,12 @@ class WaliJpRecapService
 
             if (($row['status'] ?? null) === 'KOSONG' && $scheduledTeacherId > 0) {
                 $this->seedTeacher($teachers, null, null, $scheduledTeacherId, $row['teacher_name'] ?? '-');
-                $teachers[$scheduledTeacherId]['missing_slots'][] = [
+                $teacherRow = $teachers->get($scheduledTeacherId);
+                $teacherRow['missing_slots'][] = [
                     'date' => $row['date']->toDateString(),
                     'label' => $row['date']->translatedFormat('d M').' · Jam '.($row['session_name'] ?? '-').' · '.($row['subject_name'] ?? 'Mapel'),
                 ];
+                $teachers->put($scheduledTeacherId, $teacherRow);
             }
 
             if (! $journal || ! in_array($row['status'] ?? null, ['TERISI', 'TERISI_TIDAK_TERJADWAL'], true)) {
@@ -66,6 +68,7 @@ class WaliJpRecapService
             }
             $this->seedTeacher($teachers, $credited, $row['subject_name'] ?? null);
             $teacherId = (int) $credited->id;
+            $teacherRow = $teachers->get($teacherId);
             $isTafsir = strtolower((string) $journal->session_hour) === 'tafsir';
 
             if ($isTafsir) {
@@ -77,19 +80,21 @@ class WaliJpRecapService
                     continue;
                 }
                 $tafsirSeen[$key] = true;
-                $teachers[$teacherId]['sesi_tafsir']++;
-                $teachers[$teacherId]['total_jp']++;
+                $teacherRow['sesi_tafsir']++;
+                $teacherRow['total_jp']++;
+                $teachers->put($teacherId, $teacherRow);
                 continue;
             }
 
             $jp = (int) $journal->jp_count;
-            $teachers[$teacherId]['total_jp'] += $jp;
+            $teacherRow['total_jp'] += $jp;
             if ($journal->substitute_teacher_id !== null) {
-                $teachers[$teacherId]['sesi_pengganti']++;
-                $teachers[$teacherId]['pengganti_dari'][] = $row['teacher_name'] ?? '-';
+                $teacherRow['sesi_pengganti']++;
+                $teacherRow['pengganti_dari'][] = $row['teacher_name'] ?? '-';
             } else {
-                $teachers[$teacherId]['sesi_asli']++;
+                $teacherRow['sesi_asli']++;
             }
+            $teachers->put($teacherId, $teacherRow);
         }
 
         $period = $periodStart->copy()->startOfMonth()->toDateString();
