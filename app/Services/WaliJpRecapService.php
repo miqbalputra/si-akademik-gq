@@ -51,8 +51,17 @@ class WaliJpRecapService
             if (($row['status'] ?? null) === 'KOSONG' && $scheduledTeacherId > 0) {
                 $this->seedTeacher($teachers, null, null, $scheduledTeacherId, $row['teacher_name'] ?? '-');
                 $teacherRow = $teachers->get($scheduledTeacherId);
+                $sessionTime = collect([
+                    $row['session_time']['starts_at'] ?? null,
+                    $row['session_time']['ends_at'] ?? null,
+                ])->filter()->map(fn ($value) => substr((string) $value, 0, 5))->implode(' - ');
                 $teacherRow['missing_slots'][] = [
                     'date' => $row['date']->toDateString(),
+                    'date_label' => $row['date']->translatedFormat('l, d F Y'),
+                    'classroom_name' => $row['classroom_name'] ?? 'Kelas',
+                    'subject_name' => $row['subject_name'] ?? 'Mapel',
+                    'session_name' => $row['session_name'] ?? '-',
+                    'session_time' => $sessionTime ?: '-',
                     'label' => $row['date']->translatedFormat('d M').' · Jam '.($row['session_name'] ?? '-').' · '.($row['subject_name'] ?? 'Mapel'),
                 ];
                 $teachers->put($scheduledTeacherId, $teacherRow);
@@ -110,6 +119,9 @@ class WaliJpRecapService
             $row['missing_count'] = count($row['missing_slots']);
             $row['subjects'] = collect($row['subjects'])->filter()->unique()->values()->all();
             $row['pengganti_dari'] = collect($row['pengganti_dari'])->filter()->unique()->values()->all();
+            // total_jp adalah nama data lama. Nilainya memang hanya berasal dari
+            // jurnal yang terisi; alias ini dipakai oleh keluaran penggajian.
+            $row['jp_terealisasi'] = $row['total_jp'];
             $row['review_signature'] = $this->signature($row);
             $confirmation = $confirmations->get($teacherId);
             $row['confirmation'] = $this->confirmationState($confirmation, $row);
@@ -117,13 +129,27 @@ class WaliJpRecapService
             return $row;
         })->sortBy('name')->values();
 
+        $missingJournalRows = $teachers
+            ->flatMap(function (array $teacherRow): Collection {
+                return collect($teacherRow['missing_slots'])->map(fn (array $slot): array => [
+                    'teacher_id' => $teacherRow['teacher_id'],
+                    'teacher_name' => $teacherRow['name'],
+                    'niy' => $teacherRow['niy'],
+                    ...$slot,
+                ]);
+            })
+            ->sortBy([['date', 'asc'], ['teacher_name', 'asc'], ['session_name', 'asc']])
+            ->values();
+
         return [
             'classroom_term' => $classroomTerm,
             'period_start' => $periodStart->copy()->startOfMonth(),
             'teachers' => $teachers,
+            'missing_journal_rows' => $missingJournalRows,
             'stats' => [
                 'total_teachers' => $teachers->count(),
                 'total_jp' => (int) $teachers->sum('total_jp'),
+                'jp_terealisasi' => (int) $teachers->sum('jp_terealisasi'),
                 'missing_slots' => (int) $teachers->sum('missing_count'),
                 'confirmed_teachers' => $teachers->whereIn('confirmation.status', ['lengkap', 'override'])->count(),
             ],

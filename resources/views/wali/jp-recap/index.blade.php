@@ -10,7 +10,7 @@
                 <div>
                     <span class="badge badge-amber">Rekap JP</span>
                     <h1 class="mt-3 text-3xl font-black leading-tight text-white sm:text-4xl">Rekap JP Kelas</h1>
-                    <p class="mt-2 max-w-2xl text-sm font-medium text-slate-300">Periksa total JP dan kelengkapan jurnal guru sebelum mengirimkan rekap secara manual.</p>
+                    <p class="mt-2 max-w-2xl text-sm font-medium text-slate-300">Periksa JP terealisasi dari jurnal yang terisi serta kelengkapan jurnal guru sebelum mengirimkan rekap gaji.</p>
                 </div>
                 <div class="flex flex-wrap gap-2">
                     <a href="{{ route('wali.jp-recap.export-pdf', $query) }}" class="btn min-h-11 border border-white/25 bg-white/10 text-white hover:bg-white/20">Unduh PDF</a>
@@ -58,7 +58,7 @@
 
         <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Ringkasan rekap JP">
             <article class="metric-card"><p class="metric-label">Guru ditampilkan</p><p class="metric-value">{{ $stats['total_teachers'] }}</p></article>
-            <article class="metric-card border-slate-800 bg-slate-900"><p class="metric-label text-slate-300">Total JP</p><p class="metric-value text-white">{{ $stats['total_jp'] }}</p></article>
+            <article class="metric-card border-slate-800 bg-slate-900"><p class="metric-label text-slate-300">JP Terealisasi</p><p class="metric-value text-white">{{ $stats['jp_terealisasi'] }}</p></article>
             <article class="metric-card {{ $stats['missing_slots'] ? 'border-rose-300 bg-rose-50' : 'border-emerald-200 bg-emerald-50' }}"><p class="metric-label {{ $stats['missing_slots'] ? 'text-rose-700' : 'text-emerald-700' }}">Jurnal kosong</p><p class="metric-value {{ $stats['missing_slots'] ? 'text-rose-800' : 'text-emerald-800' }}">{{ $stats['missing_slots'] }}</p></article>
             <article class="metric-card border-sky-200 bg-sky-50"><p class="metric-label text-sky-700">Sudah diverifikasi</p><p class="metric-value text-sky-800">{{ $stats['confirmed_teachers'] }}</p></article>
         </section>
@@ -66,14 +66,14 @@
         <section class="card-lg overflow-hidden">
             <div class="border-b border-slate-100 bg-slate-50 px-5 py-4 sm:px-6">
                 <p class="text-xs font-black uppercase tracking-[.14em] text-slate-500">{{ $classroomTerm->name }} · {{ $periodStart->translatedFormat('F Y') }}</p>
-                <h2 class="mt-1 text-lg font-black text-slate-900">Rekap JP per Guru</h2>
-                <p class="mt-1 text-xs font-semibold text-slate-500">Status kosong hanya berasal dari slot jadwal yang perlu diisi. Tidak ada aksi untuk mengubah atau menghapus jurnal pada halaman ini.</p>
+                <h2 class="mt-1 text-lg font-black text-slate-900">Rekap JP Terealisasi per Guru</h2>
+                <p class="mt-1 text-xs font-semibold text-slate-500">JP terealisasi dihitung dari jurnal yang benar-benar terisi. Status kosong hanya berasal dari slot jadwal yang perlu diisi.</p>
             </div>
             <div class="overflow-x-auto">
                 <table class="min-w-[1240px] w-full text-left text-sm">
                     <thead class="bg-white"><tr class="border-b border-slate-200">
                         <th class="px-4 py-3 text-xs font-black uppercase tracking-wider text-slate-500">Guru &amp; Tugas</th>
-                        <th class="px-4 py-3 text-right text-xs font-black uppercase tracking-wider text-slate-500">JP</th>
+                        <th class="px-4 py-3 text-right text-xs font-black uppercase tracking-wider text-slate-500">JP Terealisasi</th>
                         <th class="px-4 py-3 text-xs font-black uppercase tracking-wider text-slate-500">Jurnal kosong</th>
                         <th class="px-4 py-3 text-xs font-black uppercase tracking-wider text-slate-500">Ceklist wali kelas</th>
                     </tr></thead>
@@ -87,7 +87,7 @@
                                     @if($row['pengganti_dari'])<p class="mt-1 text-xs font-bold text-indigo-700">JP pengganti dari: {{ collect($row['pengganti_dari'])->implode(', ') }}</p>@endif
                                 </td>
                                 <td class="px-4 py-4 text-right">
-                                    <p class="text-2xl font-black text-slate-900">{{ $row['total_jp'] }}</p>
+                                    <p class="text-2xl font-black text-slate-900">{{ $row['jp_terealisasi'] }}</p>
                                     <p class="mt-1 text-xs font-semibold text-slate-500">{{ $row['sesi_asli'] }} asli · {{ $row['sesi_pengganti'] }} ganti · {{ $row['sesi_tafsir'] }} tafsir</p>
                                 </td>
                                 <td class="px-4 py-4">

@@ -18,6 +18,7 @@ use App\Models\Teacher;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -119,6 +120,46 @@ class WaliJpRecapTest extends TestCase
             ->get(route('wali.jp-recap.index', ['classroom_term_id' => $ctx['classroomTerm']->id, 'month' => 8, 'year' => 2026]))
             ->assertOk()
             ->assertSee('Perlu cek ulang');
+    }
+
+    public function test_exports_separate_realized_jp_from_empty_journals(): void
+    {
+        $ctx = $this->context();
+        DiniyyahClassJournal::create([
+            'diniyyah_teacher_assignment_id' => $ctx['assignment']->id,
+            'date' => '2026-08-05', 'session_hour' => '1', 'material' => 'Materi', 'jp_count' => 1,
+        ]);
+        $query = ['classroom_term_id' => $ctx['classroomTerm']->id, 'month' => 8, 'year' => 2026];
+
+        $this->actingAs($ctx['waliUser'])
+            ->get(route('wali.jp-recap.index', $query))
+            ->assertOk()
+            ->assertSee('JP Terealisasi')
+            ->assertSee('Rekap JP Terealisasi per Guru');
+
+        $excel = $this->actingAs($ctx['waliUser'])
+            ->get(route('wali.jp-recap.export-excel', $query));
+        $excel->assertOk()->assertDownload('rekap-jp-kelas-wali-2026-08.xlsx');
+
+        $path = tempnam(sys_get_temp_dir(), 'wali-jp-recap-');
+        file_put_contents($path, $excel->getContent());
+
+        try {
+            $workbook = IOFactory::load($path);
+            $this->assertSame(['JP Terealisasi', 'Jurnal Kosong'], $workbook->getSheetNames());
+            $this->assertSame('JP Terealisasi', $workbook->getSheetByName('JP Terealisasi')->getCell('G7')->getValue());
+            $this->assertSame(1, $workbook->getSheetByName('JP Terealisasi')->getCell('G8')->getValue());
+            $this->assertSame('Guru', $workbook->getSheetByName('Jurnal Kosong')->getCell('B5')->getValue());
+            $this->assertSame('Guru Mapel', $workbook->getSheetByName('Jurnal Kosong')->getCell('B6')->getValue());
+            $this->assertSame('Fiqih', $workbook->getSheetByName('Jurnal Kosong')->getCell('E6')->getValue());
+        } finally {
+            @unlink($path);
+        }
+
+        $this->actingAs($ctx['waliUser'])
+            ->get(route('wali.jp-recap.export-pdf', $query))
+            ->assertOk()
+            ->assertDownload('rekap-jp-kelas-wali-2026-08.pdf');
     }
 
     private function context(): array

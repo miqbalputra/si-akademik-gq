@@ -72,7 +72,7 @@ class WaliJpRecapController extends Controller
                 'period_start' => $data['periodStart']->toDateString(),
             ],
             [
-                'confirmed_jp' => $row['total_jp'],
+                'confirmed_jp' => $row['jp_terealisasi'],
                 'review_signature' => $row['review_signature'],
                 'is_override' => $validated['mode'] === 'override',
                 'override_reason' => $validated['mode'] === 'override' ? trim((string) $validated['override_reason']) : null,
