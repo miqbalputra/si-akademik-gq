@@ -52,11 +52,22 @@ class PortalShellNavigationTest extends TestCase
             ->assertSee('Kelas &amp; Santri', false)
             ->assertSee('Laporan &amp; Arsip', false)
             ->assertSee('Input Nilai')
+            ->assertSee('Jurnal Pengganti')
             ->assertSee('Performa Jurnal Saya')
             ->assertSee('Presensi Saya')
             ->assertDontSee('Tasmi\' Kelas Saya')
             ->assertDontSee('Monitoring Jurnal Kelas')
             ->assertSee(route('guru.attendance-report.index'), false);
+    }
+
+    public function test_guru_without_linked_teacher_does_not_see_substitute_journal_link(): void
+    {
+        $user = $this->userWithRole('guru');
+
+        $this->actingAs($user)
+            ->get(route('guru.dashboard'))
+            ->assertOk()
+            ->assertDontSee(route('guru.diniyyah-substitute-journals.index'), false);
     }
 
     private function userWithRole(string $role): User

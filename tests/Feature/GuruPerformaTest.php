@@ -64,7 +64,14 @@ class GuruPerformaTest extends TestCase
 
         $response = $this->actingAs($guru['user'])->get(route('guru.dashboard'));
 
-        $response->assertOk()->assertDontSee('Performa Mengajar Saya');
+        $response->assertOk()
+            ->assertDontSee('Performa Mengajar Saya')
+            ->assertSee('Jurnal guru pengganti')
+            ->assertSee(route('guru.diniyyah-substitute-journals.index'), false);
+
+        $this->actingAs($guru['user'])
+            ->get(route('guru.diniyyah-substitute-journals.index'))
+            ->assertOk();
     }
 
     public function test_performa_counts_filled_regular_slot(): void

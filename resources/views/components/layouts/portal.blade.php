@@ -13,9 +13,14 @@
     $isHomeroomTeacher = $isGuruPortal && ($portalUser?->teacher?->homeroomAssignments()->exists() ?? false);
 
     $guruTodayItems = [
-        ['label' => 'Jurnal', 'href' => route('guru.diniyyah-journals.index'), 'match' => ['guru.diniyyah-journals.*', 'guru.diniyyah-tafsir-journals.*', 'guru.diniyyah-substitute-journals.*', 'guru.diniyyah-substitute-tafsir-journals.*']],
+        ['label' => 'Jurnal', 'href' => route('guru.diniyyah-journals.index'), 'match' => ['guru.diniyyah-journals.*', 'guru.diniyyah-tafsir-journals.*']],
         ['label' => 'Tahfidz', 'href' => route('guru.tahfidz.index'), 'match' => ['guru.tahfidz.*']],
     ];
+    if ($hasLinkedTeacher) {
+        array_splice($guruTodayItems, 1, 0, [[
+            'label' => 'Jurnal Pengganti', 'href' => route('guru.diniyyah-substitute-journals.index'), 'match' => ['guru.diniyyah-substitute-journals.*', 'guru.diniyyah-substitute-tafsir-journals.*'],
+        ]]);
+    }
     if ($canAccessAttendance) {
         array_splice($guruTodayItems, 1, 0, [[
             'label' => 'Presensi', 'href' => route('attendance.index'), 'match' => ['attendance.*'],

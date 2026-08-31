@@ -56,6 +56,13 @@
                     <span class="mt-3 block text-sm font-black text-slate-900">Isi jurnal Diniyyah</span>
                     <span class="mt-1 block text-xs font-medium text-slate-500">Catat materi dan kehadiran kelas.</span>
                 </a>
+                @if($teacher)
+                    <a href="{{ route('guru.diniyyah-substitute-journals.index') }}" class="group rounded-2xl border border-amber-100 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-amber-200 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600">
+                        <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-700" aria-hidden="true">↺</span>
+                        <span class="mt-3 block text-sm font-black text-slate-900">Jurnal guru pengganti</span>
+                        <span class="mt-1 block text-xs font-medium text-slate-500">Isi jurnal saat menggantikan guru lain.</span>
+                    </a>
+                @endif
                 <a href="{{ route('guru.performa', ['month' => $performaMonth, 'year' => $performaYear]) }}" class="group rounded-2xl border border-amber-100 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-amber-200 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600">
                     <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-700" aria-hidden="true">▥</span>
                     <span class="mt-3 block text-sm font-black text-slate-900">Lihat performa</span>
