@@ -510,7 +510,9 @@ class GuruPerformaTest extends TestCase
             ->assertSee('Kosong')
             ->assertSee('Digantikan')
             ->assertSee('Dibebaskan')
-            ->assertSee('data-performance-chart-fallback', false);
+            ->assertSee('data-performance-chart-fallback', false)
+            ->assertSee("window.addEventListener('load', initialiseChart", false)
+            ->assertSee("indexAxis: 'y'", false);
     }
 
     public function test_performa_detail_offers_excel_and_pdf_downloads(): void

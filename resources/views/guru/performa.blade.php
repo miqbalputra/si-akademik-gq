@@ -193,8 +193,8 @@
 
     @php
         $chartRows = [
-            ['label' => 'Sudah Diisi', 'value' => (int) ($stats['sudah_diisi'] ?? 0), 'color' => '#149447', 'tone' => 'emerald'],
             ['label' => 'Kosong', 'value' => (int) ($stats['kosong'] ?? 0), 'color' => '#e11d48', 'tone' => 'rose'],
+            ['label' => 'Sudah Diisi', 'value' => (int) ($stats['sudah_diisi'] ?? 0), 'color' => '#149447', 'tone' => 'emerald'],
             ['label' => 'Digantikan', 'value' => (int) ($stats['digantikan'] ?? 0), 'color' => '#4f46e5', 'tone' => 'indigo'],
             ['label' => 'Dibebaskan', 'value' => (int) ($stats['dibebaskan'] ?? 0), 'color' => '#d97706', 'tone' => 'amber'],
             ['label' => 'Agenda tanpa KBM', 'value' => (int) ($stats['agenda'] ?? 0), 'color' => '#0284c7', 'tone' => 'sky'],
@@ -327,46 +327,56 @@
 @push('scripts')
     <script>
         (() => {
-            const canvas = document.getElementById('guru-performance-chart');
-            const fallback = document.querySelector('[data-performance-chart-fallback]');
-            const chartRows = @json($chartRows);
+            const initialiseChart = () => {
+                const canvas = document.getElementById('guru-performance-chart');
+                const fallback = document.querySelector('[data-performance-chart-fallback]');
+                const chartRows = @json($chartRows);
 
-            if (!canvas || typeof window.Chart !== 'function') {
-                fallback?.removeAttribute('hidden');
-                return;
-            }
+                if (!canvas || typeof window.Chart !== 'function') {
+                    fallback?.removeAttribute('hidden');
+                    return;
+                }
 
-            try {
-                new window.Chart(canvas, {
-                    type: 'bar',
-                    data: {
-                        labels: chartRows.map((row) => row.label),
-                        datasets: [{
-                            label: 'Slot',
-                            data: chartRows.map((row) => row.value),
-                            backgroundColor: chartRows.map((row) => row.color),
-                            borderRadius: 8,
-                            borderSkipped: false,
-                            barThickness: 24,
-                        }],
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        indexAxis: 'y',
-                        animation: { duration: 280 },
-                        plugins: {
-                            legend: { display: false },
-                            tooltip: { callbacks: { label: (context) => ` ${context.parsed.x} slot` } },
+                try {
+                    new window.Chart(canvas, {
+                        type: 'bar',
+                        data: {
+                            labels: chartRows.map((row) => row.label),
+                            datasets: [{
+                                label: 'Slot',
+                                data: chartRows.map((row) => row.value),
+                                backgroundColor: chartRows.map((row) => row.color),
+                                borderRadius: 8,
+                                borderSkipped: false,
+                                barThickness: 24,
+                            }],
                         },
-                        scales: {
-                            x: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#e5e7eb' } },
-                            y: { grid: { display: false } },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            indexAxis: 'y',
+                            animation: { duration: 280 },
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: { callbacks: { label: (context) => ` ${context.parsed.x} slot` } },
+                            },
+                            scales: {
+                                x: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#e5e7eb' } },
+                                y: { grid: { display: false } },
+                            },
                         },
-                    },
-                });
-            } catch (_) {
-                fallback?.removeAttribute('hidden');
+                    });
+                } catch (_) {
+                    fallback?.removeAttribute('hidden');
+                }
+            };
+
+            // Aset Vite dimuat sebagai module (defer). Jalankan setelah event
+            // load agar window.Chart dari resources/js/app.js sudah tersedia.
+            if (document.readyState === 'complete') {
+                initialiseChart();
+            } else {
+                window.addEventListener('load', initialiseChart, { once: true });
             }
         })();
     </script>
