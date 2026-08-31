@@ -24,13 +24,13 @@ class WaliClassJournalMonitoringController extends Controller
 
     public function index(Request $request)
     {
-        $data = $this->getMonitoringData($request);
+        $data = $this->monitoringData($request);
         return view('wali.diniyyah-journals.index', $data);
     }
     
     public function exportPdf(Request $request)
     {
-        $data = $this->getMonitoringData($request);
+        $data = $this->monitoringData($request);
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('wali.diniyyah-journals.export-pdf', $data)
             ->setPaper('a4', 'landscape');
             
@@ -42,7 +42,7 @@ class WaliClassJournalMonitoringController extends Controller
     
     public function exportExcel(Request $request, \App\Services\Exports\WaliClassJournalMonitoringXlsxExporter $exporter)
     {
-        $data = $this->getMonitoringData($request);
+        $data = $this->monitoringData($request);
         $monthName = \Carbon\Carbon::create()->month($data['month'])->translatedFormat('F');
         $fileName = 'Rekap_Jurnal_Diniyyah_' . $monthName . '_' . $data['year'] . '.xlsx';
         $content = $exporter->export($data);
@@ -54,10 +54,17 @@ class WaliClassJournalMonitoringController extends Controller
         ]);
     }
 
-    private function getMonitoringData(Request $request)
+    /**
+     * Data slot jurnal bersama untuk tampilan pemantauan dan rekap JP wali.
+     * Tidak memuat aksi perubahan jurnal sehingga aman dipakai sebagai sumber
+     * data read-only oleh rekap penggajian.
+     *
+     * @return array<string, mixed>
+     */
+    public function monitoringData(Request $request): array
     {
         $teacher = Auth::user()->teacher;
-        abort_unless($teacher && Auth::user()->canAccessAttendance(), 403);
+        abort_unless($teacher, 403);
         
         $month = (int) $request->input('month', date('n')); // 1-12
         $year = (int) $request->input('year', date('Y'));
@@ -81,11 +88,15 @@ class WaliClassJournalMonitoringController extends Controller
         
         // Get classroom_term_ids where teacher is active homeroom
         $classroomTermIds = HomeroomAssignment::where('teacher_id', $teacher->id)
-            ->where(function($query) {
+            ->where(function ($query) use ($endDate): void {
+                $query->whereNull('starts_at')->orWhereDate('starts_at', '<=', $endDate->toDateString());
+            })
+            ->where(function($query) use ($startDate): void {
                 $query->whereNull('ends_at')
-                      ->orWhere('ends_at', '>=', now());
+                      ->orWhereDate('ends_at', '>=', $startDate->toDateString());
             })
             ->pluck('classroom_term_id');
+        abort_unless($classroomTermIds->isNotEmpty(), 403, 'Anda tidak memiliki penugasan wali kelas pada periode ini.');
             
         // Get schedules
         $schedules = \App\Models\DiniyyahTeachingSchedule::with([

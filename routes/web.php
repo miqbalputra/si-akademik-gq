@@ -173,6 +173,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/wali/diniyyah-journals', [\App\Http\Controllers\WaliClassJournalMonitoringController::class, 'index'])->name('wali.diniyyah-journals.index');
     Route::get('/wali/diniyyah-journals/export-pdf', [\App\Http\Controllers\WaliClassJournalMonitoringController::class, 'exportPdf'])->name('wali.diniyyah-journals.export-pdf');
     Route::get('/wali/diniyyah-journals/export-excel', [\App\Http\Controllers\WaliClassJournalMonitoringController::class, 'exportExcel'])->name('wali.diniyyah-journals.export-excel');
+    Route::get('/wali/rekap-jp', [\App\Http\Controllers\WaliJpRecapController::class, 'index'])->name('wali.jp-recap.index');
+    Route::post('/wali/rekap-jp/confirm', [\App\Http\Controllers\WaliJpRecapController::class, 'confirm'])->name('wali.jp-recap.confirm');
+    Route::get('/wali/rekap-jp/export-pdf', [\App\Http\Controllers\WaliJpRecapController::class, 'exportPdf'])->name('wali.jp-recap.export-pdf');
+    Route::get('/wali/rekap-jp/export-excel', [\App\Http\Controllers\WaliJpRecapController::class, 'exportExcel'])->name('wali.jp-recap.export-excel');
     Route::post('/wali/events/{event}/response', [GuardianSchoolEventResponseController::class, 'store'])->name('wali.events.response');
     Route::get('/school-events/{event}/recap/export', SchoolEventRecapExportController::class)->name('school-events.recap.export');
 });

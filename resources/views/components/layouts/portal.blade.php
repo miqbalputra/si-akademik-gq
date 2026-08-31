@@ -10,7 +10,7 @@
     $isHomeActive = request()->routeIs($isGuruPortal ? 'guru.dashboard' : ($isWaliPortal ? 'wali.dashboard' : 'filament.admin.pages.dashboard'));
     $canAccessAttendance = $isGuruPortal && ($portalUser?->canAccessAttendance() ?? false);
     $isTasmiExaminer = $isGuruPortal && ($portalUser?->isTasmiExaminer() ?? false);
-    $isHomeroomTeacher = $isGuruPortal && ($portalUser?->canAccessAttendance() ?? false);
+    $isHomeroomTeacher = $isGuruPortal && ($portalUser?->teacher?->homeroomAssignments()->exists() ?? false);
 
     $guruTodayItems = [
         ['label' => 'Jurnal', 'href' => route('guru.diniyyah-journals.index'), 'match' => ['guru.diniyyah-journals.*', 'guru.diniyyah-tafsir-journals.*', 'guru.diniyyah-substitute-journals.*', 'guru.diniyyah-substitute-tafsir-journals.*']],
@@ -30,6 +30,7 @@
     if ($isHomeroomTeacher) {
         $guruClassItems[] = ['label' => 'Tasmi\' Kelas Saya', 'href' => route('guru.tasmi-wali.index'), 'match' => ['guru.tasmi-wali.*']];
         $guruClassItems[] = ['label' => 'Monitoring Jurnal Kelas', 'href' => route('wali.diniyyah-journals.index'), 'match' => ['wali.diniyyah-journals.*']];
+        $guruClassItems[] = ['label' => 'Rekap JP Kelas', 'href' => route('wali.jp-recap.index'), 'match' => ['wali.jp-recap.*']];
     }
     $guruArchiveItems = [
         ['label' => 'Performa Jurnal Saya', 'href' => route('guru.performa'), 'match' => ['guru.performa']],
