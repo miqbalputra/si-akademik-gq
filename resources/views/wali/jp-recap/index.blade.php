@@ -8,7 +8,7 @@
         <header class="school-dashboard-hero p-6 sm:p-8">
             <div class="relative z-10 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                 <div>
-                    <span class="badge badge-amber">Rekap Penggajian</span>
+                    <span class="badge badge-amber">Rekap JP</span>
                     <h1 class="mt-3 text-3xl font-black leading-tight text-white sm:text-4xl">Rekap JP Kelas</h1>
                     <p class="mt-2 max-w-2xl text-sm font-medium text-slate-300">Periksa total JP dan kelengkapan jurnal guru sebelum mengirimkan rekap secara manual.</p>
                 </div>
