@@ -29,6 +29,7 @@ use App\Observers\TasmiRecordObserver;
 use App\Services\GuruJournalReminderPreferenceService;
 use App\Services\GuruPerformaService;
 use App\Services\TasmiWaliReminderPreferenceService;
+use App\Services\TafsirJournalMenuService;
 use Filament\Auth\Http\Responses\Contracts\LogoutResponse as LogoutResponseContract;
 use Filament\Forms\Components\Field;
 use Filament\Tables\Columns\Column;
@@ -115,6 +116,15 @@ class AppServiceProvider extends ServiceProvider
             }
 
             $view->with('tasmiWaliReminder', app(TasmiWaliReminderPreferenceService::class)->reminderFor($user));
+        });
+
+        View::composer('components.layouts.portal', function (BladeView $view): void {
+            $user = auth()->user();
+            $isGuruPortal = ($view->getData()['portalLabel'] ?? null) === 'Portal Guru';
+
+            $view->with('hasSimultaneousTafsirSchedule', $isGuruPortal && $user?->hasRole('guru') && $user->teacher
+                ? app(TafsirJournalMenuService::class)->hasActiveSimultaneousSchedule($user->teacher)
+                : false);
         });
 
         Field::configureUsing(function (Field $field): void {

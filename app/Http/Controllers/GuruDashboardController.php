@@ -13,6 +13,7 @@ use App\Services\DiniyyahAssessmentComponentBuilder;
 use App\Services\Exports\GuruPerformaXlsxExporter;
 use App\Services\GuruPerformaService;
 use App\Services\TasmiService;
+use App\Services\TafsirJournalMenuService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\CarbonInterface;
 use Illuminate\Contracts\View\View;
@@ -110,16 +111,12 @@ class GuruDashboardController extends Controller
             })
             ->get();
 
-        // 3c. Apakah guru punya penugasan Tafsir → tampilkan tombol "Jurnal Tafsir".
-        $hasTafsirAssignment = $diniyyahAssignments->contains(function ($assignment): bool {
-            $subject = $assignment->classSubject?->subject;
-            if (! $subject) {
-                return false;
-            }
-
-            return strtolower($subject->code) === 'tafsir'
-                || str_contains(strtolower($subject->name), 'tafsir');
-        });
+        // 3c. Jurnal Tafsir hanya untuk kelompok Tafsir yang benar-benar serentak.
+        // Pemeriksaannya tidak bergantung pada hari ini, agar menu tetap tersedia
+        // ketika guru membuka dashboard sebelum hari mengajarnya.
+        $hasSimultaneousTafsirSchedule = $teacher
+            ? app(TafsirJournalMenuService::class)->hasActiveSimultaneousSchedule($teacher)
+            : false;
 
         // 3d. Kartu performa jurnal mengajar bulan ini (atau bulan dari query).
         // Default "bulan berjalan" memakai WIB — app tz=UTC.
@@ -171,7 +168,7 @@ class GuruDashboardController extends Controller
             'diniyyahAssessmentSets',
             'tahfidzHalaqahs',
             'diniyyahAssignments',
-            'hasTafsirAssignment',
+            'hasSimultaneousTafsirSchedule',
             'upcomingAlerts',
             'performa',
             'performaMonth',

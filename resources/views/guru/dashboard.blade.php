@@ -63,6 +63,13 @@
                         <span class="mt-1 block text-xs font-medium text-slate-500">Isi jurnal saat menggantikan guru lain.</span>
                     </a>
                 @endif
+                @if($hasSimultaneousTafsirSchedule ?? false)
+                    <a href="{{ route('guru.diniyyah-tafsir-journals.index') }}" class="group rounded-2xl border border-violet-100 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-violet-200 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600">
+                        <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-50 text-violet-700" aria-hidden="true">☷</span>
+                        <span class="mt-3 block text-sm font-black text-slate-900">Jurnal Tafsir serentak</span>
+                        <span class="mt-1 block text-xs font-medium text-slate-500">Catat satu materi untuk beberapa kelas sekaligus.</span>
+                    </a>
+                @endif
                 <a href="{{ route('guru.performa', ['month' => $performaMonth, 'year' => $performaYear]) }}" class="group rounded-2xl border border-amber-100 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-amber-200 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600">
                     <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-700" aria-hidden="true">▥</span>
                     <span class="mt-3 block text-sm font-black text-slate-900">Lihat performa</span>
@@ -275,7 +282,7 @@
                                     Jurnal kelas
                                     <span class="text-slate-400">→</span>
                                 </a>
-                                @if($hasTafsirAssignment ?? false)
+                                @if($hasSimultaneousTafsirSchedule ?? false)
                                     <a href="{{ route('guru.diniyyah-tafsir-journals.index') }}" class="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 transition-colors hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700">
                                         Jurnal Tafsir
                                         <span class="text-slate-400">→</span>
