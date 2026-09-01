@@ -40,6 +40,16 @@ class WaliJpRecapXlsxExporter
                 $index + 1, $row['name'], collect($row['subjects'])->implode(', ') ?: '-',
                 $row['sesi_asli'], $row['sesi_pengganti'], $row['sesi_tafsir'], $row['jp_terealisasi'], $verification,
             ]], null, "A{$lastRow}");
+            // fromArray memperlakukan 0 seperti nilai kosong. Tetapkan angka JP
+            // secara eksplisit supaya guru tanpa JP tetap terbaca 0 di Excel.
+            foreach ([
+                'D' => $row['sesi_asli'],
+                'E' => $row['sesi_pengganti'],
+                'F' => $row['sesi_tafsir'],
+                'G' => $row['jp_terealisasi'],
+            ] as $column => $value) {
+                $sheet->setCellValue("{$column}{$lastRow}", (int) $value);
+            }
         }
         if ($lastRow === 7) {
             $lastRow++;
@@ -51,7 +61,7 @@ class WaliJpRecapXlsxExporter
         $totalRow = $lastRow + 2;
         $sheet->mergeCells("A{$totalRow}:F{$totalRow}");
         $sheet->setCellValue("A{$totalRow}", 'TOTAL JP TEREALISASI');
-        $sheet->setCellValue("G{$totalRow}", $data['recap']['stats']['jp_terealisasi']);
+        $sheet->setCellValue("G{$totalRow}", (int) $data['recap']['stats']['jp_terealisasi']);
         $sheet->getStyle("A{$totalRow}:G{$totalRow}")->getFont()->setBold(true);
     }
 

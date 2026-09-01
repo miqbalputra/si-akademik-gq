@@ -66,8 +66,9 @@ class WaliClassJournalMonitoringController extends Controller
         $teacher = Auth::user()->teacher;
         abort_unless($teacher, 403);
         
-        $month = (int) $request->input('month', date('n')); // 1-12
-        $year = (int) $request->input('year', date('Y'));
+        $today = now('Asia/Jakarta');
+        $month = (int) $request->input('month', $today->month); // 1-12
+        $year = (int) $request->input('year', $today->year);
         
         $filterSubjectId = $request->input('subject_id');
         $filterClassroomTermId = $request->input('classroom_term_id');
@@ -75,7 +76,7 @@ class WaliClassJournalMonitoringController extends Controller
         $filterStatus = $request->input('status');
         
         // Cek apakah tanggal hari ini ada di bulan yang dipilih
-        $isCurrentMonth = ($month == date('n') && $year == date('Y'));
+        $isCurrentMonth = ($month === $today->month && $year === $today->year);
         
         // Buat range tanggal
         $startDate = \Carbon\Carbon::createFromDate($year, $month, 1)->startOfDay();

@@ -162,6 +162,41 @@ class WaliJpRecapTest extends TestCase
             ->assertDownload('rekap-jp-kelas-wali-2026-08.pdf');
     }
 
+    public function test_realized_jp_is_credited_only_to_the_teacher_who_filled_the_journal(): void
+    {
+        $ctx = $this->context();
+        $substituteUser = User::factory()->create(['name' => 'Guru Pengganti']);
+        $substituteUser->assignRole('guru');
+        $substitute = Teacher::create(['user_id' => $substituteUser->id, 'name' => 'Guru Pengganti']);
+        DiniyyahClassJournal::create([
+            'diniyyah_teacher_assignment_id' => $ctx['assignment']->id,
+            'substitute_teacher_id' => $substitute->id,
+            'date' => '2026-08-05', 'session_hour' => '1', 'material' => 'Diisi guru pengganti', 'jp_count' => 1,
+        ]);
+        $query = ['classroom_term_id' => $ctx['classroomTerm']->id, 'month' => 8, 'year' => 2026];
+
+        $excel = $this->actingAs($ctx['waliUser'])
+            ->get(route('wali.jp-recap.export-excel', $query));
+        $excel->assertOk();
+
+        $path = tempnam(sys_get_temp_dir(), 'wali-jp-effective-teacher-');
+        file_put_contents($path, $excel->getContent());
+
+        try {
+            $workbook = IOFactory::load($path);
+            $realized = $workbook->getSheetByName('JP Terealisasi');
+            $missing = $workbook->getSheetByName('Jurnal Kosong');
+
+            $this->assertSame('Guru Mapel', $realized->getCell('B8')->getValue());
+            $this->assertSame(0, $realized->getCell('G8')->getValue(), 'Pemilik jadwal yang digantikan tidak menerima JP.');
+            $this->assertSame('Guru Pengganti', $realized->getCell('B9')->getValue());
+            $this->assertSame(1, $realized->getCell('G9')->getValue(), 'JP dikreditkan kepada guru yang mengisi jurnal pengganti.');
+            $this->assertSame('Guru Mapel', $missing->getCell('B6')->getValue(), 'Slot kosong tetap dilaporkan pada guru pemilik jadwal tanpa menambah JP.');
+        } finally {
+            @unlink($path);
+        }
+    }
+
     private function context(): array
     {
         Role::firstOrCreate(['name' => 'guru', 'guard_name' => 'web']);
