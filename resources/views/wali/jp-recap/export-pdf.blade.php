@@ -47,7 +47,6 @@
     </table>
     <p>
         <strong>Total JP Terealisasi:</strong> {{ $recap['stats']['jp_terealisasi'] }} &nbsp; | &nbsp;
-        <strong>Jurnal Kosong:</strong> {{ $recap['stats']['missing_slots'] }} &nbsp; | &nbsp;
         Dicetak: {{ now()->translatedFormat('d F Y H:i') }}
     </p>
 

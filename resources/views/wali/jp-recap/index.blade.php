@@ -67,14 +67,13 @@
             <div class="border-b border-slate-100 bg-slate-50 px-5 py-4 sm:px-6">
                 <p class="text-xs font-black uppercase tracking-[.14em] text-slate-500">{{ $classroomTerm->name }} · {{ $periodStart->translatedFormat('F Y') }}</p>
                 <h2 class="mt-1 text-lg font-black text-slate-900">Rekap JP Terealisasi per Guru</h2>
-                <p class="mt-1 text-xs font-semibold text-slate-500">JP terealisasi dihitung dari jurnal yang benar-benar terisi. Status kosong hanya berasal dari slot jadwal yang perlu diisi.</p>
+                <p class="mt-1 text-xs font-semibold text-slate-500">Hanya jurnal yang benar-benar terisi masuk ke JP terealisasi. Jurnal kosong ditampilkan pada laporan terpisah di bawah.</p>
             </div>
             <div class="overflow-x-auto">
-                <table class="min-w-[1240px] w-full text-left text-sm">
+                <table class="min-w-[980px] w-full text-left text-sm">
                     <thead class="bg-white"><tr class="border-b border-slate-200">
                         <th class="px-4 py-3 text-xs font-black uppercase tracking-wider text-slate-500">Guru &amp; Tugas</th>
                         <th class="px-4 py-3 text-right text-xs font-black uppercase tracking-wider text-slate-500">JP Terealisasi</th>
-                        <th class="px-4 py-3 text-xs font-black uppercase tracking-wider text-slate-500">Jurnal kosong</th>
                         <th class="px-4 py-3 text-xs font-black uppercase tracking-wider text-slate-500">Ceklist wali kelas</th>
                     </tr></thead>
                     <tbody class="divide-y divide-slate-100">
@@ -91,20 +90,15 @@
                                     <p class="mt-1 text-xs font-semibold text-slate-500">{{ $row['sesi_asli'] }} asli · {{ $row['sesi_pengganti'] }} ganti · {{ $row['sesi_tafsir'] }} tafsir</p>
                                 </td>
                                 <td class="px-4 py-4">
-                                    @if($row['missing_count'] === 0)
-                                        <span class="status-badge status-badge-success">Lengkap</span>
-                                    @else
-                                        <span class="status-badge status-badge-danger">{{ $row['missing_count'] }} slot kosong</span>
-                                        <ul class="mt-2 space-y-1 text-xs font-semibold text-rose-800">@foreach($row['missing_slots'] as $slot)<li>{{ $slot['label'] }}</li>@endforeach</ul>
-                                    @endif
-                                </td>
-                                <td class="px-4 py-4">
                                     @if(in_array($confirmation['status'], ['lengkap', 'override'], true))
                                         <span class="status-badge {{ $confirmation['status'] === 'lengkap' ? 'status-badge-success' : 'border border-amber-200 bg-amber-50 text-amber-800' }}">{{ $confirmation['label'] }}</span>
                                         @if(!empty($confirmation['reason']))<p class="mt-2 max-w-xs text-xs font-semibold text-amber-800">{{ $confirmation['reason'] }}</p>@endif
                                     @elseif($confirmation['status'] === 'perlu_cek_ulang')
                                         <span class="status-badge status-badge-danger">Perlu cek ulang</span>
                                         <p class="mt-2 max-w-xs text-xs font-semibold text-rose-800">Data JP atau slot kosong berubah setelah ceklist sebelumnya.</p>
+                                    @endif
+                                    @if($row['missing_count'] > 0)
+                                        <p class="mt-2 max-w-xs text-xs font-semibold text-rose-800">Ada {{ $row['missing_count'] }} jurnal kosong. Rinciannya ada pada laporan terpisah di bawah.</p>
                                     @endif
                                     <form method="POST" action="{{ route('wali.jp-recap.confirm') }}" class="mt-3 space-y-2">
                                         @csrf
@@ -118,11 +112,43 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="4" class="px-5 py-10 text-center text-sm font-semibold text-slate-500">Belum ada tugas mengajar atau jurnal untuk kelas ini pada periode tersebut.</td></tr>
+                            <tr><td colspan="3" class="px-5 py-10 text-center text-sm font-semibold text-slate-500">Belum ada tugas mengajar atau jurnal untuk kelas ini pada periode tersebut.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
         </section>
+
+        @if(collect($recap['missing_journal_rows'] ?? [])->isNotEmpty())
+            <section class="card-lg overflow-hidden border-rose-200" aria-labelledby="empty-journal-heading">
+                <div class="border-b border-rose-100 bg-rose-50 px-5 py-4 sm:px-6">
+                    <p class="text-xs font-black uppercase tracking-[.14em] text-rose-700">Laporan terpisah</p>
+                    <h2 id="empty-journal-heading" class="mt-1 text-lg font-black text-slate-900">Daftar Jurnal Kosong</h2>
+                    <p class="mt-1 text-xs font-semibold text-rose-800">Slot berikut tidak termasuk JP terealisasi dan perlu ditindaklanjuti wali kelas.</p>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-[900px] w-full text-left text-sm">
+                        <thead class="bg-white"><tr class="border-b border-slate-200">
+                            <th class="px-4 py-3 text-xs font-black uppercase tracking-wider text-slate-500">Guru</th>
+                            <th class="px-4 py-3 text-xs font-black uppercase tracking-wider text-slate-500">Kelas &amp; Mapel</th>
+                            <th class="px-4 py-3 text-xs font-black uppercase tracking-wider text-slate-500">Tanggal</th>
+                            <th class="px-4 py-3 text-xs font-black uppercase tracking-wider text-slate-500">Sesi</th>
+                            <th class="px-4 py-3 text-xs font-black uppercase tracking-wider text-slate-500">Jam</th>
+                        </tr></thead>
+                        <tbody class="divide-y divide-slate-100">
+                            @foreach($recap['missing_journal_rows'] as $row)
+                                <tr>
+                                    <td class="px-4 py-3 font-bold text-slate-900">{{ $row['teacher_name'] }}<span class="block mt-0.5 text-xs font-semibold text-slate-500">{{ $row['niy'] ?: 'NIY belum tercatat' }}</span></td>
+                                    <td class="px-4 py-3"><span class="font-semibold text-slate-900">{{ $row['classroom_name'] }}</span><span class="block mt-0.5 text-xs font-semibold text-slate-500">{{ $row['subject_name'] }}</span></td>
+                                    <td class="px-4 py-3">{{ $row['date_label'] }}</td>
+                                    <td class="px-4 py-3">{{ $row['session_name'] }}</td>
+                                    <td class="px-4 py-3">{{ $row['session_time'] }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        @endif
     </div>
 </x-layouts.portal>

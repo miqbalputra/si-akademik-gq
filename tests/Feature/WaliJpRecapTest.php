@@ -135,7 +135,9 @@ class WaliJpRecapTest extends TestCase
             ->get(route('wali.jp-recap.index', $query))
             ->assertOk()
             ->assertSee('JP Terealisasi')
-            ->assertSee('Rekap JP Terealisasi per Guru');
+            ->assertSee('Rekap JP Terealisasi per Guru')
+            ->assertSee('Daftar Jurnal Kosong')
+            ->assertSee('Slot berikut tidak termasuk JP terealisasi');
 
         $excel = $this->actingAs($ctx['waliUser'])
             ->get(route('wali.jp-recap.export-excel', $query));
