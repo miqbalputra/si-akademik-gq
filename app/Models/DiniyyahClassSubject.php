@@ -57,6 +57,16 @@ class DiniyyahClassSubject extends Model
         return $this->hasMany(DiniyyahAssessmentSet::class);
     }
 
+    public function rpps(): HasMany
+    {
+        return $this->hasMany(Rpp::class, 'diniyyah_class_subject_id');
+    }
+
+    public function rppPromes(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(RppPromes::class, 'diniyyah_class_subject_id');
+    }
+
     /**
      * Opsi pencarian untuk Select Filament "Mapel Kelas": cocokkan nama kelas
      * (classroomTerm) atau nama mapel (subject), atau id eksak. Kembali array

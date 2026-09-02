@@ -84,6 +84,23 @@ return [
             ]) : [],
         ],
 
+        // Hanya dipakai sementara oleh perintah rpp:import-legacy. Isi dari
+        // backup MariaDB aplikasi RPP lama, bukan database aplikasi utama.
+        'legacy_rpp' => [
+            'driver' => env('LEGACY_RPP_DB_CONNECTION', 'mysql'),
+            'host' => env('LEGACY_RPP_DB_HOST', '127.0.0.1'),
+            'port' => env('LEGACY_RPP_DB_PORT', '3306'),
+            'database' => env('LEGACY_RPP_DB_DATABASE', 'rpp_legacy'),
+            'username' => env('LEGACY_RPP_DB_USERNAME', 'root'),
+            'password' => env('LEGACY_RPP_DB_PASSWORD', ''),
+            'charset' => env('LEGACY_RPP_DB_CHARSET', 'utf8mb4'),
+            'collation' => env('LEGACY_RPP_DB_COLLATION', 'utf8mb4_unicode_ci'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => true,
+            'engine' => null,
+        ],
+
         'pgsql' => [
             'driver' => 'pgsql',
             'url' => env('DB_URL'),

@@ -17,6 +17,7 @@ use App\Http\Controllers\GuruDiniyyahSubstituteJournalController;
 use App\Http\Controllers\ReportCardController;
 use App\Http\Controllers\SchoolCalendarController;
 use App\Http\Controllers\SchoolEventRecapExportController;
+use App\Http\Controllers\GuruRppController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -121,7 +122,33 @@ Route::middleware('auth')->prefix('guru')->name('guru.')->group(function () {
     Route::post('/tasmi-wali/reminder/dismiss', [\App\Http\Controllers\WaliKelasTasmiReminderController::class, 'dismiss'])
         ->name('tasmi-wali.reminder.dismiss');
     Route::get('/tasmi-wali/{tasmi_record}', [\App\Http\Controllers\WaliKelasTasmiController::class, 'show'])->name('tasmi-wali.show');
+
+    // Perangkat pembelajaran RPP Diniyyah — seluruh pilihan kelas/mapel
+    // dibatasi oleh penugasan Diniyyah aktif milik guru login.
+    Route::prefix('rpp')->name('rpp.')->group(function () {
+        Route::get('/', [GuruRppController::class, 'index'])->name('index');
+        Route::get('/buat', [GuruRppController::class, 'create'])->name('create');
+        Route::post('/', [GuruRppController::class, 'store'])->name('store');
+        Route::post('/draft-ai', [GuruRppController::class, 'aiDraft'])->name('ai-draft');
+        Route::post('/bantuan', [GuruRppController::class, 'requestHelp'])->name('help');
+        Route::get('/referensi', [GuruRppController::class, 'references'])->name('references');
+        Route::get('/promes', [GuruRppController::class, 'promes'])->name('promes');
+        Route::get('/sampah', [GuruRppController::class, 'trash'])->name('trash');
+        Route::post('/sampah/{rpp}/pulihkan', [GuruRppController::class, 'restore'])->name('restore');
+        Route::get('/{rpp}', [GuruRppController::class, 'show'])->name('show');
+        Route::get('/{rpp}/edit', [GuruRppController::class, 'edit'])->name('edit');
+        Route::put('/{rpp}', [GuruRppController::class, 'update'])->name('update');
+        Route::delete('/{rpp}', [GuruRppController::class, 'destroy'])->name('destroy');
+        Route::post('/{rpp}/duplikat', [GuruRppController::class, 'duplicate'])->name('duplicate');
+        Route::get('/{rpp}/ekspor/{type}', [GuruRppController::class, 'downloadExport'])->whereIn('type', ['pdf', 'png', 'docx'])->name('export');
+        Route::get('/{rpp}/bagikan/{type}', [GuruRppController::class, 'share'])->whereIn('type', ['pdf', 'png', 'docx'])->name('share');
+        Route::get('/{rpp}/berkas/{file}', [GuruRppController::class, 'downloadFile'])->name('file');
+    });
 });
+
+Route::get('/rpp/shared/{export}', [GuruRppController::class, 'sharedDownload'])
+    ->middleware('signed')
+    ->name('rpp.shared-download');
 
 // Laporan pengawasan Tasmi' lintas PJ untuk Kabag Tahfidz dan admin.
 Route::middleware('auth')->prefix('admin/tasmi-report')->name('admin.tasmi-report.')->group(function () {

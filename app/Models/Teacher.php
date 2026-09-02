@@ -59,6 +59,11 @@ class Teacher extends Model
         return $this->hasMany(TasmiRecord::class, 'examiner_teacher_id');
     }
 
+    public function rpps(): HasMany
+    {
+        return $this->hasMany(Rpp::class);
+    }
+
     /**
      * Cek apakah guru ditugaskan sebagai PJ Tasmi' pada periode tertentu (atau periode aktif).
      */

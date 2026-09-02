@@ -53,6 +53,14 @@
         ]);
     }
 
+    $guruLearningItems = $hasLinkedTeacher ? [
+        ['label' => 'RPP Saya', 'href' => route('guru.rpp.index'), 'match' => ['guru.rpp.index', 'guru.rpp.show', 'guru.rpp.edit']],
+        ['label' => 'Buat RPP', 'href' => route('guru.rpp.create'), 'match' => ['guru.rpp.create']],
+        ['label' => 'Referensi RPP', 'href' => route('guru.rpp.references'), 'match' => ['guru.rpp.references']],
+        ['label' => 'Promes Saya', 'href' => route('guru.rpp.promes'), 'match' => ['guru.rpp.promes']],
+        ['label' => 'Sampah RPP', 'href' => route('guru.rpp.trash'), 'match' => ['guru.rpp.trash']],
+    ] : [];
+
     $waliTodayItems = [
         ['label' => 'Tahfidz', 'href' => route('wali.tahfidz'), 'match' => ['wali.tahfidz']],
         ['label' => 'Kalender', 'href' => route('wali.calendar'), 'match' => ['wali.calendar']],
@@ -76,6 +84,7 @@
     $portalNavGroups = $isGuruPortal
         ? [
             ['label' => 'Kegiatan', 'items' => $guruTodayItems],
+            ['label' => 'Perangkat Pembelajaran', 'items' => $guruLearningItems],
             ['label' => 'Kelas & Santri', 'items' => $guruClassItems],
             ['label' => 'Laporan & Arsip', 'items' => $guruArchiveItems],
         ]

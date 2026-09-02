@@ -7,6 +7,7 @@ WORKDIR /app
 # sqlite pdo_sqlite is kept for local/dev parity; pdo_pgsql/pgsql for production.
 RUN install-php-extensions \
     pdo_sqlite \
+    pdo_mysql \
     pdo_pgsql \
     pgsql \
     pcntl \
@@ -17,7 +18,7 @@ RUN install-php-extensions \
     bcmath
 
 # Install Node.js and npm for frontend assets build
-RUN apk add --no-cache nodejs npm git
+RUN apk add --no-cache nodejs npm git chromium
 
 # Copy composer from official image
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer

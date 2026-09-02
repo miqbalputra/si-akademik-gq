@@ -47,6 +47,23 @@ return [
             'report' => false,
         ],
 
+        // Dokumen RPP bersifat privat. Development boleh memakai disk local;
+        // produksi memakai kredensial S3-compatible Cloudflare R2.
+        'rpp' => [
+            'driver' => env('RPP_FILESYSTEM_DISK', 'local'),
+            'root' => storage_path('app/private/rpp'),
+            'serve' => false,
+            'visibility' => 'private',
+            'throw' => false,
+            'report' => false,
+            'key' => env('RPP_R2_ACCESS_KEY_ID'),
+            'secret' => env('RPP_R2_SECRET_ACCESS_KEY'),
+            'region' => env('RPP_R2_REGION', 'auto'),
+            'bucket' => env('RPP_R2_BUCKET'),
+            'endpoint' => env('RPP_R2_ENDPOINT'),
+            'use_path_style_endpoint' => env('RPP_R2_USE_PATH_STYLE_ENDPOINT', true),
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

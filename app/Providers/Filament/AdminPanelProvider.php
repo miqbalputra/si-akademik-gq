@@ -43,6 +43,7 @@ class AdminPanelProvider extends PanelProvider
                 NavigationGroup::make('Data Sekolah')->collapsible(),
                 NavigationGroup::make('Struktur Kelas')->collapsible(),
                 NavigationGroup::make('Diniyyah')->collapsible(),
+                NavigationGroup::make('Kurikulum & RPP')->collapsible(),
                 NavigationGroup::make('Tahfidz')->collapsible(),
                 NavigationGroup::make('Leger & Rapor')->collapsible(),
                 NavigationGroup::make('Pengaturan')->collapsible(),

@@ -51,6 +51,11 @@ class DiniyyahTeacherAssignment extends Model
         return $this->hasMany(DiniyyahScheduleChangeLog::class, 'diniyyah_teacher_assignment_id');
     }
 
+    public function rpps(): HasMany
+    {
+        return $this->hasMany(Rpp::class, 'diniyyah_teacher_assignment_id');
+    }
+
     /**
      * Apakah penugasan ini boleh dihapus. Penugasan yang sudah memiliki jurnal
      * kelas TIDAK boleh dihapus, karena FK jurnal→assignment cascadeOnDelete

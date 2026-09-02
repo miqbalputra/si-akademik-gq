@@ -131,6 +131,10 @@ class PanelNotification extends Model
             'school_event_deleted' => 'Agenda dibatalkan',
             'event_rsvp' => 'Respon wali santri',
             'schedule_changed' => 'Jadwal mengajar diubah',
+            'rpp_created' => 'RPP baru',
+            'rpp_reminder' => 'Pengingat RPP',
+            'rpp_help' => 'Bantuan RPP',
+            'rpp_broadcast' => 'Pesan RPP',
         ];
     }
 }

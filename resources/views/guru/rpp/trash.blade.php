@@ -1,0 +1,5 @@
+<x-layouts.portal title="Sampah RPP" portalLabel="Portal Guru" breadcrumb="Sampah RPP">
+    <header class="portal-page-header"><div><p class="school-index">Perangkat Pembelajaran</p><h1 class="text-slate-900">Sampah RPP</h1><p class="mt-2 text-sm text-slate-500">RPP di sini dapat dipulihkan oleh pemiliknya.</p></div><a class="btn btn-outline" href="{{ route('guru.rpp.index') }}">Kembali</a></header>
+    @if(session('success'))<div class="mb-5 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">{{ session('success') }}</div>@endif
+    <section class="ui-card rounded-2xl p-5"><div class="space-y-3">@forelse($rpps as $rpp)<div class="flex items-center justify-between rounded-xl border p-4"><div><strong>{{ $rpp->materi }}</strong><p class="text-sm text-slate-500">Dihapus {{ $rpp->deleted_at->diffForHumans() }}</p></div><form method="POST" action="{{ route('guru.rpp.restore', $rpp->id) }}">@csrf<button class="btn btn-outline btn-sm">Pulihkan</button></form></div>@empty<p class="text-slate-500">Sampah RPP kosong.</p>@endforelse</div><div class="mt-5">{{ $rpps->links() }}</div></section>
+</x-layouts.portal>

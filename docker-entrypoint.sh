@@ -20,6 +20,10 @@ php artisan migrate --force || true
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
+
+# Jalankan worker untuk ekspor RPP dan pekerjaan latar lain. Coolify tetap
+# mengelola lifecycle proses utama FrankenPHP; worker diberi opsi retry aman.
+php artisan queue:work --tries=2 --timeout=120 --sleep=2 &
 php artisan event:cache
 
 # Hand off to Octane (FrankenPHP). Exec so the process replaces the shell
