@@ -1,6 +1,6 @@
 @php
     $isManagement = $scope === 'management';
-    $portalLabel = $isManagement ? 'Portal Manajemen' : 'Portal Guru';
+    $portalLabel = $portalLabel ?? ($isManagement ? 'Portal Kabag Tahfidz' : 'Portal Guru');
     $breadcrumb = $isManagement ? 'Laporan Tasmi\'' : ($scope === 'homeroom' ? "Tasmi' Kelas Saya" : "Riwayat Tasmi'");
     $summary = $report['summary'];
     $records = $report['records'];

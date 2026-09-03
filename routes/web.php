@@ -19,6 +19,8 @@ use App\Http\Controllers\SchoolCalendarController;
 use App\Http\Controllers\SchoolEventRecapExportController;
 use App\Http\Controllers\GuruRppController;
 use App\Http\Controllers\WorkspaceSelectionController;
+use App\Http\Controllers\KabagTahfidzDashboardController;
+use App\Http\Controllers\KabagDiniyyahDashboardController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -44,6 +46,11 @@ Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
 Route::middleware('auth')->prefix('pilih-ruang-kerja')->name('workspace.')->group(function () {
     Route::get('/', [WorkspaceSelectionController::class, 'create'])->name('choose');
     Route::post('/', [WorkspaceSelectionController::class, 'store'])->name('select');
+});
+
+Route::middleware('auth')->group(function () {
+    Route::get('/kabag/tahfidz', KabagTahfidzDashboardController::class)->name('kabag-tahfidz.dashboard');
+    Route::get('/kabag/diniyyah', KabagDiniyyahDashboardController::class)->name('kabag-diniyyah.dashboard');
 });
 
 // Notifikasi pusat — bell icon di pojok kanan atas (semua role).

@@ -23,7 +23,7 @@ class DiniyyahTeachingScheduleResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-calendar-days';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Akademik Diniyyah';
+    protected static string|\UnitEnum|null $navigationGroup = 'Diniyyah';
 
     protected static ?string $modelLabel = 'Jadwal Mengajar';
     protected static ?string $pluralModelLabel = 'Jadwal Mengajar';

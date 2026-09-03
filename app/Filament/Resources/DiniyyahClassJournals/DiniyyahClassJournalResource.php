@@ -28,7 +28,7 @@ class DiniyyahClassJournalResource extends Resource
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-book-open';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Akademik Diniyyah';
+    protected static string|\UnitEnum|null $navigationGroup = 'Diniyyah';
 
     protected static ?string $navigationLabel = 'Jurnal KBM';
 

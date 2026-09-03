@@ -56,7 +56,7 @@ class WorkspaceSelectionTest extends TestCase
         $this->post(route('logout'));
 
         $this->post(route('login.store'), ['email' => $kabag->email, 'password' => 'password'])
-            ->assertRedirect(route('admin.tasmi-report.index'));
+            ->assertRedirect(route('kabag-tahfidz.dashboard'));
     }
 
     public function test_workspace_choice_validates_the_role_owned_by_user(): void
@@ -70,7 +70,7 @@ class WorkspaceSelectionTest extends TestCase
 
         $this->actingAs($dualRole)
             ->post(route('workspace.select'), ['workspace' => WorkspaceRedirectService::KABAG_TAHFIDZ])
-            ->assertRedirect(route('admin.tasmi-report.index'));
+            ->assertRedirect(route('kabag-tahfidz.dashboard'));
     }
 
     public function test_dual_role_user_can_keep_using_intended_tasmi_report_url_after_login(): void

@@ -11,6 +11,7 @@ class WorkspaceRedirectService
 {
     public const GURU = 'guru';
     public const KABAG_TAHFIDZ = 'kabag_tahfidz';
+    public const KABAG_DINIYYAH = 'kabag_diniyyah';
     public const MANAGEMENT = 'management';
     public const WALI = 'wali';
 
@@ -33,13 +34,21 @@ class WorkspaceRedirectService
             $workspaces[self::KABAG_TAHFIDZ] = [
                 'label' => 'Kabag Tahfidz',
                 'description' => "Pantau hasil Tasmi' seluruh kelas dan PJ, lalu ekspor laporannya.",
-                'destination' => route('admin.tasmi-report.index'),
+                'destination' => route('kabag-tahfidz.dashboard'),
             ];
         }
 
-        if ($user->hasAnyRole(['admin', 'kabag_diniyyah', 'kepala_sekolah'])) {
+        if ($user->hasRole('kabag_diniyyah')) {
+            $workspaces[self::KABAG_DINIYYAH] = [
+                'label' => 'Kabag Diniyyah',
+                'description' => 'Pantau, validasi, dan kelola alur pembelajaran Diniyyah.',
+                'destination' => route('kabag-diniyyah.dashboard'),
+            ];
+        }
+
+        if ($user->hasAnyRole(['admin', 'kepala_sekolah'])) {
             $workspaces[self::MANAGEMENT] = [
-                'label' => 'Manajemen Akademik',
+                'label' => $user->hasRole('admin') ? 'Manajemen Admin' : 'Manajemen Akademik',
                 'description' => 'Kelola data akademik, kurikulum, dan laporan sekolah.',
                 'destination' => url('/admin'),
             ];

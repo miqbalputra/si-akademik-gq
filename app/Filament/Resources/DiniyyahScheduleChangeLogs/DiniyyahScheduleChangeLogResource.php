@@ -24,7 +24,7 @@ class DiniyyahScheduleChangeLogResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedClock;
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Akademik Diniyyah';
+    protected static string|\UnitEnum|null $navigationGroup = 'Diniyyah';
 
     protected static ?string $modelLabel = 'Riwayat Perubahan Jadwal';
 

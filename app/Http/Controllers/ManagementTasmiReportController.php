@@ -32,11 +32,12 @@ class ManagementTasmiReportController extends Controller
             'scope' => 'management',
             'pageTitle' => "Laporan Pengawasan Tasmi'",
             'pageDescription' => "Seluruh hasil Tasmi' dari semua PJ, kelas, dan semester.",
-            'backUrl' => url('/admin'),
-            'backLabel' => 'Dashboard Admin',
+            'backUrl' => route('kabag-tahfidz.dashboard'),
+            'backLabel' => 'Dashboard Kabag Tahfidz',
             'exportRoute' => 'admin.tasmi-report.export',
             'resetRoute' => 'admin.tasmi-report.index',
             'canEdit' => false,
+            'portalLabel' => 'Portal Kabag Tahfidz',
         ]);
     }
 
@@ -56,7 +57,7 @@ class ManagementTasmiReportController extends Controller
             'auditLogs' => $auditLogs,
             'backUrl' => route('admin.tasmi-report.index'),
             'backLabel' => "Laporan Tasmi'",
-            'portalLabel' => 'Portal Manajemen',
+            'portalLabel' => 'Portal Kabag Tahfidz',
             'breadcrumb' => "Detail Laporan Tasmi'",
             'readOnly' => true,
         ]);
