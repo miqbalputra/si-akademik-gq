@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
+use App\Services\WorkspaceRedirectService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,7 +17,7 @@ class AuthenticatedSessionController extends Controller
         return view('auth.login');
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, WorkspaceRedirectService $workspaceRedirects): RedirectResponse
     {
         $data = $request->validate([
             'login' => ['nullable', 'string', 'required_without:email'],
@@ -37,7 +37,7 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended($this->homePathFor($request->user()));
+        return $workspaceRedirects->redirectAfterLogin($request, $request->user());
     }
 
     public function destroy(Request $request): RedirectResponse
@@ -48,22 +48,5 @@ class AuthenticatedSessionController extends Controller
         $request->session()->regenerateToken();
 
         return redirect()->route('login');
-    }
-
-    private function homePathFor(User $user): string
-    {
-        if ($user->hasRole('guru')) {
-            return route('guru.dashboard', absolute: false);
-        }
-
-        if ($user->hasRole('wali_santri')) {
-            return route('wali.dashboard', absolute: false);
-        }
-
-        if ($user->hasAnyRole(['admin', 'kabag_diniyyah', 'kepala_sekolah'])) {
-            return '/admin';
-        }
-
-        return '/';
     }
 }

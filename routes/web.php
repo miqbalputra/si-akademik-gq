@@ -18,6 +18,7 @@ use App\Http\Controllers\ReportCardController;
 use App\Http\Controllers\SchoolCalendarController;
 use App\Http\Controllers\SchoolEventRecapExportController;
 use App\Http\Controllers\GuruRppController;
+use App\Http\Controllers\WorkspaceSelectionController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -39,6 +40,11 @@ Route::get('/auth/google/callback', [GoogleController::class, 'handleGoogleCallb
 Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
     ->middleware('auth')
     ->name('logout');
+
+Route::middleware('auth')->prefix('pilih-ruang-kerja')->name('workspace.')->group(function () {
+    Route::get('/', [WorkspaceSelectionController::class, 'create'])->name('choose');
+    Route::post('/', [WorkspaceSelectionController::class, 'store'])->name('select');
+});
 
 // Notifikasi pusat — bell icon di pojok kanan atas (semua role).
 Route::middleware('auth')->prefix('notifications')->name('notifications.')->group(function () {

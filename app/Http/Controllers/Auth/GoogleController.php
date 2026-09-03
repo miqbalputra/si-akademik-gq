@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\WorkspaceRedirectService;
 use Exception;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,7 +18,7 @@ class GoogleController extends Controller
         return Socialite::driver('google')->redirect();
     }
 
-    public function handleGoogleCallback(Request $request): RedirectResponse
+    public function handleGoogleCallback(Request $request, WorkspaceRedirectService $workspaceRedirects): RedirectResponse
     {
         try {
             $googleUser = Socialite::driver('google')->user();
@@ -72,15 +73,6 @@ class GoogleController extends Controller
         Auth::login($user);
         $request->session()->regenerate();
 
-        // Redirect ke dashboard yang sesuai berdasarkan role
-        if ($user->hasRole('wali_santri')) {
-            return redirect()->route('wali.dashboard');
-        } elseif ($user->hasAnyRole(['admin', 'kabag_diniyyah', 'kepala_sekolah', 'kabag_tahfidz'])) {
-            return redirect('/admin');
-        } elseif ($user->hasRole('guru')) {
-            return redirect()->route('guru.diniyyah-scores.index');
-        }
-
-        return redirect('/');
+        return $workspaceRedirects->redirectAfterLogin($request, $user);
     }
 }

@@ -87,6 +87,13 @@
                     <span class="mt-3 block text-sm font-black text-slate-900">Buka kalender</span>
                     <span class="mt-1 block text-xs font-medium text-slate-500">Lihat jadwal dan agenda terdekat.</span>
                 </a>
+                @if(auth()->user()?->hasRole('kabag_tahfidz'))
+                    <a href="{{ route('admin.tasmi-report.index') }}" class="group rounded-2xl border border-violet-100 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-violet-200 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600">
+                        <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-50 text-violet-700" aria-hidden="true">◫</span>
+                        <span class="mt-3 block text-sm font-black text-slate-900">Monitoring Tasmi' Semua Kelas</span>
+                        <span class="mt-1 block text-xs font-medium text-slate-500">Pantau hasil lintas kelas dan PJ Tasmi'.</span>
+                    </a>
+                @endif
             </div>
         </section>
 

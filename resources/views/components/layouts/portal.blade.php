@@ -60,6 +60,10 @@
         ['label' => 'Promes Saya', 'href' => route('guru.rpp.promes'), 'match' => ['guru.rpp.promes']],
         ['label' => 'Sampah RPP', 'href' => route('guru.rpp.trash'), 'match' => ['guru.rpp.trash']],
     ] : [];
+    $guruCoordinationItems = [];
+    if ($isGuruPortal && $portalUser?->hasRole('kabag_tahfidz')) {
+        $guruCoordinationItems[] = ['label' => "Monitoring Tasmi' Semua Kelas", 'href' => route('admin.tasmi-report.index'), 'match' => ['admin.tasmi-report.*']];
+    }
 
     $waliTodayItems = [
         ['label' => 'Tahfidz', 'href' => route('wali.tahfidz'), 'match' => ['wali.tahfidz']],
@@ -82,12 +86,13 @@
     ];
 
     $portalNavGroups = $isGuruPortal
-        ? [
+        ? array_values(array_filter([
             ['label' => 'Kegiatan', 'items' => $guruTodayItems],
             ['label' => 'Perangkat Pembelajaran', 'items' => $guruLearningItems],
             ['label' => 'Kelas & Santri', 'items' => $guruClassItems],
+            ['label' => 'Koordinasi Tahfidz', 'items' => $guruCoordinationItems],
             ['label' => 'Laporan & Arsip', 'items' => $guruArchiveItems],
-        ]
+        ], fn (array $group): bool => $group['items'] !== []))
         : ($isWaliPortal
             ? [
                 ['label' => 'Kegiatan Hari Ini', 'items' => $waliTodayItems],
