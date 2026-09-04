@@ -41,6 +41,7 @@ class GuruRppController extends Controller
 
     public function create(Request $request): View
     {
+        $this->ensureWritable();
         $this->teacher($request);
         $assignments = $this->access->activeAssignments($request->user());
         $draft = $request->session()->pull('rpp.ai_draft');
@@ -50,6 +51,7 @@ class GuruRppController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        $this->ensureWritable();
         $this->teacher($request);
         $method = $request->input('input_method', 'manual');
         abort_unless(in_array($method, ['manual', 'ai', 'upload'], true), 422);
@@ -129,13 +131,14 @@ class GuruRppController extends Controller
     {
         abort_unless($request->user()->can('view', $rpp), 403);
         $rpp->load(['classSubject.subject', 'classSubject.classroomTerm.academicTerm.academicYear', 'teacher', 'meetings', 'assessment', 'files', 'exports']);
-        $canManage = $this->access->canManage($request->user(), $rpp);
+        $canManage = ! config('rpp_sync.enabled') && $this->access->canManage($request->user(), $rpp);
 
         return view('guru.rpp.show', compact('rpp', 'canManage'));
     }
 
     public function edit(Request $request, Rpp $rpp): View
     {
+        $this->ensureWritable();
         abort_unless($request->user()->can('update', $rpp), 403);
         abort_unless($rpp->isStructured(), 422, 'RPP PDF unggahan tidak memiliki form terstruktur untuk diedit.');
         $rpp->load(['meetings', 'assessment']);
@@ -145,6 +148,7 @@ class GuruRppController extends Controller
 
     public function update(Request $request, Rpp $rpp): RedirectResponse
     {
+        $this->ensureWritable();
         abort_unless($request->user()->can('update', $rpp), 403);
         abort_unless($rpp->isStructured(), 422);
         $data = $request->validate([
@@ -179,6 +183,7 @@ class GuruRppController extends Controller
 
     public function destroy(Request $request, Rpp $rpp): RedirectResponse
     {
+        $this->ensureWritable();
         abort_unless($request->user()->can('delete', $rpp), 403);
         $rpp->delete();
         return redirect()->route('guru.rpp.index')->with('success', 'RPP dipindahkan ke sampah.');
@@ -186,6 +191,7 @@ class GuruRppController extends Controller
 
     public function trash(Request $request): View
     {
+        $this->ensureWritable();
         $teacher = $this->teacher($request);
         $rpps = Rpp::onlyTrashed()->with(['classSubject.subject', 'classSubject.classroomTerm'])->where('teacher_id', $teacher->id)->latest('deleted_at')->paginate(15);
         return view('guru.rpp.trash', compact('rpps'));
@@ -193,6 +199,7 @@ class GuruRppController extends Controller
 
     public function restore(Request $request, int $rpp): RedirectResponse
     {
+        $this->ensureWritable();
         $record = Rpp::onlyTrashed()->findOrFail($rpp);
         abort_unless($request->user()->can('restore', $record), 403);
         $record->restore();
@@ -212,6 +219,7 @@ class GuruRppController extends Controller
 
     public function duplicate(Request $request, Rpp $rpp): RedirectResponse
     {
+        $this->ensureWritable();
         $teacher = $this->teacher($request);
         abort_unless($rpp->isStructured() && $rpp->teacher_id !== $teacher->id, 422, 'RPP ini tidak dapat diduplikasi.');
         $assignment = $this->access->assignmentFor($request->user(), $rpp->diniyyah_class_subject_id);
@@ -231,6 +239,7 @@ class GuruRppController extends Controller
 
     public function aiDraft(Request $request, RppAiService $ai): RedirectResponse
     {
+        $this->ensureWritable();
         $this->teacher($request);
         $request->validate(['foto_materi' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120']]);
         $request->session()->put('rpp.ai_draft', $ai->draftFromImage($request->file('foto_materi')));
@@ -239,6 +248,7 @@ class GuruRppController extends Controller
 
     public function requestHelp(Request $request): RedirectResponse
     {
+        $this->ensureWritable();
         $this->teacher($request);
         $data = $request->validate(['message' => ['required', 'string', 'max:2000']]);
         $user = $request->user();
@@ -288,6 +298,11 @@ class GuruRppController extends Controller
     {
         abort_unless($request->user()->hasRole('guru') && $request->user()->teacher, 403, 'Akses RPP hanya untuk guru dengan profil aktif.');
         return $request->user()->teacher;
+    }
+
+    private function ensureWritable(): void
+    {
+        abort_unless(! config('rpp_sync.enabled'), 403, 'RPP dikelola melalui Project RPP dan hanya dapat dibaca di aplikasi sekolah.');
     }
 
     private function filename(Rpp $rpp, string $type): string

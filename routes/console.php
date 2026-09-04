@@ -11,3 +11,4 @@ Artisan::command('inspire', function () {
 // Memerlukan scheduler aplikasi/cron (`php artisan schedule:run`) di produksi.
 // Guard dijalankan tiap pagi WIB setelah jadwal mengajar tersedia.
 Schedule::command('rpp:send-reminders')->dailyAt('06:30')->timezone('Asia/Jakarta')->withoutOverlapping();
+Schedule::command('rpp:sync-source')->everyFiveMinutes()->withoutOverlapping();

@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-#[Fillable(['diniyyah_class_subject_id', 'diniyyah_teacher_assignment_id', 'teacher_id', 'created_by', 'no_rpp', 'materi', 'alokasi_waktu', 'tujuan_pembelajaran', 'tanggal_pengesahan', 'input_method', 'ai_assisted', 'legacy_source_id', 'legacy_status', 'legacy_metadata'])]
+#[Fillable(['diniyyah_class_subject_id', 'diniyyah_teacher_assignment_id', 'teacher_id', 'created_by', 'no_rpp', 'materi', 'alokasi_waktu', 'tujuan_pembelajaran', 'tanggal_pengesahan', 'input_method', 'ai_assisted', 'legacy_source_id', 'legacy_status', 'legacy_metadata', 'source_updated_at', 'source_payload_hash', 'source_synced_at'])]
 class Rpp extends Model
 {
     use HasFactory, SoftDeletes;
@@ -21,6 +21,8 @@ class Rpp extends Model
             'tanggal_pengesahan' => 'date',
             'ai_assisted' => 'boolean',
             'legacy_metadata' => 'array',
+            'source_updated_at' => 'datetime',
+            'source_synced_at' => 'datetime',
         ];
     }
 
