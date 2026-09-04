@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AdminMonthlyJpReportController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\AttendanceController;
@@ -197,6 +198,11 @@ Route::middleware('auth')->prefix('admin/diniyyah-journals')->name('admin.diniyy
 // Export CSV rekap JP per guru diniyyah (asli/pengganti/tafsir) untuk admin/kabag/kepala_sekolah.
 Route::middleware('auth')->prefix('admin/rekap-jurnal-guru')->name('admin.rekap-jurnal-guru.')->group(function () {
     Route::get('/export', RekapJurnalGuruExportController::class)->name('export');
+});
+
+Route::middleware('auth')->prefix('admin/rekap-jp-bulanan')->name('admin.monthly-jp-recap.')->group(function () {
+    Route::get('/', [AdminMonthlyJpReportController::class, 'index'])->name('index');
+    Route::get('/export/{format}', [AdminMonthlyJpReportController::class, 'export'])->whereIn('format', ['xlsx', 'pdf'])->name('export');
 });
 
 Route::middleware('auth')->group(function () {

@@ -76,6 +76,14 @@ class RekapJurnalGuru extends Page
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('monthlyPayrollReport')
+                ->label('Laporan Penggajian Bulanan')
+                ->icon('heroicon-o-banknotes')
+                ->url(fn (): string => route('admin.monthly-jp-recap.index', [
+                    'academic_term_id' => $this->academicTermId,
+                    'month' => now('Asia/Jakarta')->month,
+                    'year' => now('Asia/Jakarta')->year,
+                ])),
             Action::make('openFullReport')
                 ->label('Laporan Full Data')
                 ->icon('heroicon-o-table-cells')
