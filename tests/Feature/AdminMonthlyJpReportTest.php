@@ -13,10 +13,15 @@ use App\Models\DiniyyahSubject;
 use App\Models\DiniyyahTeacherAssignment;
 use App\Models\DiniyyahTeachingSchedule;
 use App\Models\School;
+use App\Models\TafsirJournalNormalization;
 use App\Models\Teacher;
 use App\Models\User;
+use App\Services\AdminMonthlyJpPdfRenderer;
 use App\Services\AdminMonthlyJpReportService;
+use App\Services\RekapJurnalGuruService;
+use App\Services\TafsirJournalAuditService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Log;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -31,7 +36,9 @@ class AdminMonthlyJpReportTest extends TestCase
         DiniyyahClassJournal::create(['diniyyah_teacher_assignment_id' => $ctx['regular']->id, 'date' => '2026-08-05', 'session_hour' => '1', 'material' => 'Fiqih', 'jp_count' => 1]);
         DiniyyahClassJournal::create(['diniyyah_teacher_assignment_id' => $ctx['substituteSlot']->id, 'substitute_teacher_id' => $ctx['substitute']->id, 'date' => '2026-08-05', 'session_hour' => '2', 'material' => 'Digantikan', 'jp_count' => 1]);
         foreach ($ctx['tafsir'] as $assignment) {
-            DiniyyahClassJournal::create(['diniyyah_teacher_assignment_id' => $assignment->id, 'date' => '2026-08-05', 'session_hour' => 'tafsir', 'session_starts_at' => '08:00:00', 'session_ends_at' => '09:00:00', 'material' => 'Tafsir bersama', 'jp_count' => 1]);
+            // Jurnal lama diisi dari form reguler: sesi kelas "1", bukan
+            // penanda mesin "tafsir". Laporan tetap wajib menggabungkannya.
+            DiniyyahClassJournal::create(['diniyyah_teacher_assignment_id' => $assignment->id, 'date' => '2026-08-05', 'session_hour' => '1', 'session_starts_at' => '08:00:00', 'session_ends_at' => '09:00:00', 'material' => 'Tafsir bersama', 'jp_count' => 1]);
         }
 
         $report = app(AdminMonthlyJpReportService::class)->build($ctx['term']->id, 8, 2026);
@@ -60,6 +67,103 @@ class AdminMonthlyJpReportTest extends TestCase
         }
         $this->actingAs($ctx['admin'])->get(route('admin.monthly-jp-recap.export', ['format' => 'pdf', 'academic_term_id' => $ctx['term']->id, 'month' => 8, 'year' => 2026]))->assertOk()->assertHeader('Content-Type', 'application/pdf');
         $this->actingAs($ctx['teacherUser'])->get(route('admin.monthly-jp-recap.index'))->assertForbidden();
+    }
+
+    public function test_admin_can_approve_a_complete_legacy_tafsir_group_and_credit_goes_to_substitute(): void
+    {
+        $ctx = $this->context();
+        foreach ($ctx['tafsir'] as $assignment) {
+            DiniyyahClassJournal::create([
+                'diniyyah_teacher_assignment_id' => $assignment->id,
+                'substitute_teacher_id' => $ctx['substitute']->id,
+                'date' => '2026-08-05',
+                'session_hour' => '1',
+                'material' => 'Tafsir pengganti',
+                'jp_count' => 1,
+            ]);
+        }
+
+        $audit = app(TafsirJournalAuditService::class)->candidates($ctx['term']->id, '2026-08-05', '2026-08-05');
+        $candidate = $audit->sole();
+        $this->assertTrue($candidate['can_normalize']);
+        $this->assertSame('Guru Ganti', $candidate['effective_teacher_name']);
+        $this->assertSame(2, $candidate['jp_before']);
+        $this->assertSame(1, $candidate['jp_after']);
+
+        $this->actingAs($ctx['admin'])->post(route('admin.monthly-jp-recap.tafsir-normalizations.store'), [
+            'academic_term_id' => $ctx['term']->id,
+            'date' => '2026-08-05',
+            'schedule_id' => $candidate['schedule_ids'][0],
+        ])->assertSessionHas('success');
+
+        $this->assertSame(2, DiniyyahClassJournal::where('session_hour', 'tafsir')->count());
+        $this->assertSame(2, TafsirJournalNormalization::count());
+        $normalized = app(TafsirJournalAuditService::class)->candidates($ctx['term']->id, '2026-08-05', '2026-08-05')->sole();
+        $this->assertTrue($normalized['can_revert']);
+
+        $this->actingAs($ctx['admin'])->post(route('admin.monthly-jp-recap.tafsir-normalizations.revert'), [
+            'academic_term_id' => $ctx['term']->id,
+            'date' => '2026-08-05',
+            'schedule_id' => $normalized['schedule_ids'][0],
+        ])->assertSessionHas('success');
+        $this->assertSame(0, DiniyyahClassJournal::where('session_hour', 'tafsir')->count());
+        $this->assertSame(2, TafsirJournalNormalization::whereNotNull('reverted_at')->count());
+
+        $recap = app(RekapJurnalGuruService::class)->build($ctx['term']->id, '2026-08-05', '2026-08-05');
+        $byTeacher = $recap['teachers']->keyBy('teacher_id');
+        $this->assertSame(1, $byTeacher[$ctx['substitute']->id]['total_jp']);
+        $this->assertArrayNotHasKey($ctx['teacher']->id, $byTeacher->all());
+    }
+
+    public function test_incomplete_or_mixed_effective_tafsir_groups_cannot_be_normalized(): void
+    {
+        $ctx = $this->context();
+        DiniyyahClassJournal::create(['diniyyah_teacher_assignment_id' => $ctx['tafsir'][0]->id, 'date' => '2026-08-05', 'session_hour' => '1', 'material' => 'Belum lengkap', 'jp_count' => 1]);
+
+        $candidate = app(TafsirJournalAuditService::class)->candidates($ctx['term']->id, '2026-08-05', '2026-08-05')->sole();
+        $this->assertFalse($candidate['can_normalize']);
+        $this->assertSame('Jurnal kelas belum lengkap atau ganda', $candidate['status']);
+
+        $this->actingAs($ctx['admin'])->post(route('admin.monthly-jp-recap.tafsir-normalizations.store'), [
+            'academic_term_id' => $ctx['term']->id,
+            'date' => '2026-08-05',
+            'schedule_id' => $candidate['schedule_ids'][0],
+        ])->assertSessionHasErrors('tafsir_audit');
+        $this->assertSame('1', DiniyyahClassJournal::sole()->session_hour);
+        $this->assertSame(0, TafsirJournalNormalization::count());
+
+        // Lengkapi semua kelas, tetapi dengan dua guru efektif. Kondisi ini
+        // tidak boleh dipaksa menjadi satu kredit melalui normalisasi massal.
+        DiniyyahClassJournal::create(['diniyyah_teacher_assignment_id' => $ctx['tafsir'][1]->id, 'substitute_teacher_id' => $ctx['substitute']->id, 'date' => '2026-08-05', 'session_hour' => '1', 'material' => 'Guru berbeda', 'jp_count' => 1]);
+        $mixed = app(TafsirJournalAuditService::class)->candidates($ctx['term']->id, '2026-08-05', '2026-08-05')->sole();
+        $this->assertFalse($mixed['can_normalize']);
+        $this->assertSame('Guru efektif berbeda', $mixed['status']);
+        $this->actingAs($ctx['admin'])->post(route('admin.monthly-jp-recap.tafsir-normalizations.store'), [
+            'academic_term_id' => $ctx['term']->id,
+            'date' => '2026-08-05',
+            'schedule_id' => $mixed['schedule_ids'][0],
+        ])->assertSessionHasErrors('tafsir_audit');
+        $this->assertSame(2, DiniyyahClassJournal::where('session_hour', '1')->count());
+
+        $this->actingAs($ctx['teacherUser'])->post(route('admin.monthly-jp-recap.tafsir-normalizations.store'), [
+            'academic_term_id' => $ctx['term']->id,
+            'date' => '2026-08-05',
+            'schedule_id' => $candidate['schedule_ids'][0],
+        ])->assertForbidden();
+    }
+
+    public function test_pdf_failure_is_logged_and_returns_to_report_with_a_clear_error(): void
+    {
+        $ctx = $this->context();
+        Log::shouldReceive('error')->once()->withArgs(fn (string $message, array $context) => $message === 'Admin monthly JP PDF export failed.' && $context['month'] === 8);
+        $renderer = \Mockery::mock(AdminMonthlyJpPdfRenderer::class);
+        $renderer->shouldReceive('render')->once()->andThrow(new \RuntimeException('Renderer gagal'));
+        $this->app->instance(AdminMonthlyJpPdfRenderer::class, $renderer);
+
+        $this->from(route('admin.monthly-jp-recap.index'))->actingAs($ctx['admin'])
+            ->get(route('admin.monthly-jp-recap.export', ['format' => 'pdf', 'academic_term_id' => $ctx['term']->id, 'month' => 8, 'year' => 2026]))
+            ->assertRedirect(route('admin.monthly-jp-recap.index'))
+            ->assertSessionHasErrors('pdf');
     }
 
     private function context(): array

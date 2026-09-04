@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\AcademicTerm;
 use App\Models\DiniyyahClassJournal;
+use App\Models\DiniyyahTeachingSchedule;
 use Illuminate\Support\Collection;
 
 /**
@@ -18,6 +19,8 @@ use Illuminate\Support\Collection;
  */
 class RekapJurnalGuruService
 {
+    public function __construct(private readonly TafsirScheduleGroupingService $tafsirGroups) {}
+
     /** @return array<string, mixed> */
     public function build(?int $academicTermId, ?string $dateFrom, ?string $dateUntil): array
     {
@@ -44,7 +47,23 @@ class RekapJurnalGuruService
             ->orderBy('session_hour')
             ->get();
 
-        $teachers = $this->aggregate($journals);
+        // Jurnal Tafsir lama pernah tersimpan dengan nama sesi kelas (misalnya
+        // "1"), sehingga label jurnal saja tidak cukup untuk menentukan JP.
+        // Jadwal aktif adalah sumber kebenaran untuk mengenali sesi serentak.
+        $schedules = DiniyyahTeachingSchedule::query()->with([
+            'teacherAssignment.teacher',
+            'teacherAssignment.classSubject.subject',
+            'teacherAssignment.classSubject.classroomTerm.classroom',
+            'classSession',
+        ])
+            ->when($resolvedTermId, function ($q, $id): void {
+                $q->whereHas('teacherAssignment.classSubject.classroomTerm', function ($qq) use ($id): void {
+                    $qq->where('academic_term_id', $id);
+                });
+            })
+            ->get();
+
+        $teachers = $this->aggregate($journals, $schedules);
         $teachers = $teachers->sortBy('name')->values();
 
         return [
@@ -68,10 +87,11 @@ class RekapJurnalGuruService
      * @param  Collection<int, DiniyyahClassJournal>  $journals
      * @return Collection<int, array<string, mixed>>
      */
-    private function aggregate(Collection $journals): Collection
+    private function aggregate(Collection $journals, Collection $schedules): Collection
     {
         $teachers = collect();
-        $tafsirSeen = []; // "teacherId|date" => true
+        $tafsirSeen = [];
+        $tafsirJournalKeys = $this->tafsirJournalKeys($journals, $schedules);
 
         foreach ($journals as $journal) {
             $credited = $journal->effectiveTeacher();
@@ -93,15 +113,16 @@ class RekapJurnalGuruService
 
             $dateStr = $journal->date?->toDateString();
 
-            if ($journal->session_hour === 'tafsir') {
+            $tafsirKey = $tafsirJournalKeys[$journal->id] ?? null;
+            if ($tafsirKey !== null || strtolower((string) $journal->session_hour) === 'tafsir') {
                 // Dedup per kelompok waktu. Dua sesi Tafsir serentak pada hari
                 // yang sama tetapi jam berbeda harus tetap dihitung 2 JP.
                 // Jurnal lama tanpa snapshot jam tetap kompatibel sebagai satu
                 // kelompok legacy pada tanggal tersebut.
-                $timeKey = ($journal->session_starts_at && $journal->session_ends_at)
+                $timeKey = $tafsirKey ?? (($journal->session_starts_at && $journal->session_ends_at)
                     ? $journal->session_starts_at.'|'.$journal->session_ends_at
-                    : 'legacy-tafsir';
-                $key = $tid.'|'.$dateStr.'|'.$timeKey;
+                    : 'legacy-tafsir');
+                $key = $tafsirKey ?? $tid.'|'.$dateStr.'|'.$timeKey;
                 if (isset($tafsirSeen[$key])) {
                     $teachers->put($tid, $row);
 
@@ -123,5 +144,34 @@ class RekapJurnalGuruService
         }
 
         return $teachers;
+    }
+
+    /**
+     * Map jurnal ke identitas sesi Tafsir serentak yang tervalidasi jadwal.
+     *
+     * @param  Collection<int, DiniyyahClassJournal>  $journals
+     * @param  Collection<int, DiniyyahTeachingSchedule>  $schedules
+     * @return array<int, string>
+     */
+    private function tafsirJournalKeys(Collection $journals, Collection $schedules): array
+    {
+        $keys = [];
+
+        foreach ($journals->groupBy(fn (DiniyyahClassJournal $journal) => $journal->date?->toDateString()) as $date => $dayJournals) {
+            if (! $date) {
+                continue;
+            }
+
+            foreach ($this->tafsirGroups->simultaneousGroupsForDate($schedules, $date) as $group) {
+                foreach ($dayJournals->filter(fn (DiniyyahClassJournal $journal) => $group['schedules']->contains(fn ($schedule) => $this->tafsirGroups->journalMatchesSchedule($journal, $schedule))) as $journal) {
+                    $teacherId = $journal->effectiveTeacher()?->id;
+                    if ($teacherId) {
+                        $keys[$journal->id] = implode('|', [$teacherId, $date, $group['starts_at'], $group['ends_at']]);
+                    }
+                }
+            }
+        }
+
+        return $keys;
     }
 }

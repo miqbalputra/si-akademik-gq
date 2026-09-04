@@ -1,27 +1,41 @@
 <?php
 
 use App\Http\Controllers\AdminMonthlyJpReportController;
+use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\GoogleController;
-use App\Http\Controllers\AttendanceController;
-use App\Http\Controllers\DiniyyahLedgerController;
-use App\Http\Controllers\DiniyyahMonitoringController;
 use App\Http\Controllers\DiniyyahJournalExportController;
 use App\Http\Controllers\DiniyyahJournalReportController;
-use App\Http\Controllers\RekapJurnalGuruExportController;
+use App\Http\Controllers\DiniyyahLedgerController;
+use App\Http\Controllers\DiniyyahMonitoringController;
 use App\Http\Controllers\GuardianDashboardController;
-use App\Http\Controllers\GuardianTahfidzController;
-use App\Http\Controllers\GuruTahfidzController;
 use App\Http\Controllers\GuardianSchoolEventResponseController;
+use App\Http\Controllers\GuardianTahfidzController;
+use App\Http\Controllers\GuruAttendanceReportController;
+use App\Http\Controllers\GuruDashboardController;
+use App\Http\Controllers\GuruDiniyyahJournalController;
 use App\Http\Controllers\GuruDiniyyahScoreController;
 use App\Http\Controllers\GuruDiniyyahSubstituteJournalController;
+use App\Http\Controllers\GuruDiniyyahSubstituteTafsirJournalController;
+use App\Http\Controllers\GuruDiniyyahTafsirJournalController;
+use App\Http\Controllers\GuruJadwalController;
+use App\Http\Controllers\GuruJournalReminderController;
+use App\Http\Controllers\GuruRppController;
+use App\Http\Controllers\GuruTahfidzController;
+use App\Http\Controllers\GuruTasmiController;
+use App\Http\Controllers\KabagDiniyyahDashboardController;
+use App\Http\Controllers\KabagTahfidzDashboardController;
+use App\Http\Controllers\ManagementTasmiReportController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\RekapJurnalGuruExportController;
 use App\Http\Controllers\ReportCardController;
 use App\Http\Controllers\SchoolCalendarController;
 use App\Http\Controllers\SchoolEventRecapExportController;
-use App\Http\Controllers\GuruRppController;
+use App\Http\Controllers\WaliClassJournalMonitoringController;
+use App\Http\Controllers\WaliJpRecapController;
+use App\Http\Controllers\WaliKelasTasmiController;
+use App\Http\Controllers\WaliKelasTasmiReminderController;
 use App\Http\Controllers\WorkspaceSelectionController;
-use App\Http\Controllers\KabagTahfidzDashboardController;
-use App\Http\Controllers\KabagDiniyyahDashboardController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -56,28 +70,28 @@ Route::middleware('auth')->group(function () {
 
 // Notifikasi pusat — bell icon di pojok kanan atas (semua role).
 Route::middleware('auth')->prefix('notifications')->name('notifications.')->group(function () {
-    Route::get('/', [\App\Http\Controllers\NotificationController::class, 'index'])->name('index');
-    Route::get('/feed', [\App\Http\Controllers\NotificationController::class, 'feed'])->name('feed');
-    Route::post('/{notification}/read', [\App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('read');
-    Route::post('/read-all', [\App\Http\Controllers\NotificationController::class, 'markAllRead'])->name('read-all');
-    Route::delete('/{notification}', [\App\Http\Controllers\NotificationController::class, 'archive'])->name('archive');
+    Route::get('/', [NotificationController::class, 'index'])->name('index');
+    Route::get('/feed', [NotificationController::class, 'feed'])->name('feed');
+    Route::post('/{notification}/read', [NotificationController::class, 'markAsRead'])->name('read');
+    Route::post('/read-all', [NotificationController::class, 'markAllRead'])->name('read-all');
+    Route::delete('/{notification}', [NotificationController::class, 'archive'])->name('archive');
 });
 
 Route::middleware('auth')->prefix('guru')->name('guru.')->group(function () {
-    Route::get('/', [\App\Http\Controllers\GuruDashboardController::class, 'index'])->name('dashboard');
-    Route::get('/performa', [\App\Http\Controllers\GuruDashboardController::class, 'performa'])->name('performa');
-    Route::get('/performa/export/{format}', [\App\Http\Controllers\GuruDashboardController::class, 'performaExport'])
+    Route::get('/', [GuruDashboardController::class, 'index'])->name('dashboard');
+    Route::get('/performa', [GuruDashboardController::class, 'performa'])->name('performa');
+    Route::get('/performa/export/{format}', [GuruDashboardController::class, 'performaExport'])
         ->whereIn('format', ['xlsx', 'pdf'])
         ->name('performa.export');
-    Route::get('/presensi-saya', [\App\Http\Controllers\GuruAttendanceReportController::class, 'index'])
+    Route::get('/presensi-saya', [GuruAttendanceReportController::class, 'index'])
         ->middleware('throttle:20,1')
         ->name('attendance-report.index');
-    Route::get('/presensi-saya/export/{format}', [\App\Http\Controllers\GuruAttendanceReportController::class, 'export'])
+    Route::get('/presensi-saya/export/{format}', [GuruAttendanceReportController::class, 'export'])
         ->whereIn('format', ['xlsx', 'pdf'])
         ->name('attendance-report.export');
-    Route::post('/journal-reminder/snooze', [\App\Http\Controllers\GuruJournalReminderController::class, 'snooze'])
+    Route::post('/journal-reminder/snooze', [GuruJournalReminderController::class, 'snooze'])
         ->name('journal-reminder.snooze');
-    Route::get('/jadwal/riwayat', [\App\Http\Controllers\GuruJadwalController::class, 'riwayat'])->name('jadwal.riwayat');
+    Route::get('/jadwal/riwayat', [GuruJadwalController::class, 'riwayat'])->name('jadwal.riwayat');
     Route::get('/diniyyah-scores', [GuruDiniyyahScoreController::class, 'index'])->name('diniyyah-scores.index');
     Route::get('/diniyyah-scores/{assessmentSet}', [GuruDiniyyahScoreController::class, 'edit'])->name('diniyyah-scores.edit');
     Route::put('/diniyyah-scores/{assessmentSet}', [GuruDiniyyahScoreController::class, 'update'])->name('diniyyah-scores.update');
@@ -89,16 +103,16 @@ Route::middleware('auth')->prefix('guru')->name('guru.')->group(function () {
     Route::put('/tahfidz/{halaqah}/single', [GuruTahfidzController::class, 'updateSingle'])->name('tahfidz.update-single');
     Route::get('/tahfidz/{halaqah}/uas', [GuruTahfidzController::class, 'uasIndex'])->name('tahfidz.uas');
     Route::put('/tahfidz/{halaqah}/uas', [GuruTahfidzController::class, 'uasUpdate'])->name('tahfidz.uas.update');
-    Route::get('/diniyyah-journals', [\App\Http\Controllers\GuruDiniyyahJournalController::class, 'index'])->name('diniyyah-journals.index');
-    Route::post('/diniyyah-journals', [\App\Http\Controllers\GuruDiniyyahJournalController::class, 'store'])->name('diniyyah-journals.store');
-    Route::get('/diniyyah-journals/riwayat', [\App\Http\Controllers\GuruDiniyyahJournalController::class, 'riwayat'])->name('diniyyah-journals.riwayat');
+    Route::get('/diniyyah-journals', [GuruDiniyyahJournalController::class, 'index'])->name('diniyyah-journals.index');
+    Route::post('/diniyyah-journals', [GuruDiniyyahJournalController::class, 'store'])->name('diniyyah-journals.store');
+    Route::get('/diniyyah-journals/riwayat', [GuruDiniyyahJournalController::class, 'riwayat'])->name('diniyyah-journals.riwayat');
     Route::get('/diniyyah-journals/laporan', [DiniyyahJournalReportController::class, 'guru'])->name('diniyyah-journals.report');
     Route::get('/diniyyah-journals/laporan/export/{format}', [DiniyyahJournalReportController::class, 'guruExport'])
         ->whereIn('format', ['xlsx', 'pdf'])
         ->name('diniyyah-journals.report.export');
-    Route::get('/diniyyah-journals/{diniyyah_journal}/edit', [\App\Http\Controllers\GuruDiniyyahJournalController::class, 'edit'])->name('diniyyah-journals.edit');
-    Route::put('/diniyyah-journals/{diniyyah_journal}', [\App\Http\Controllers\GuruDiniyyahJournalController::class, 'update'])->name('diniyyah-journals.update');
-    Route::delete('/diniyyah-journals/{diniyyah_journal}', [\App\Http\Controllers\GuruDiniyyahJournalController::class, 'destroy'])->name('diniyyah-journals.destroy');
+    Route::get('/diniyyah-journals/{diniyyah_journal}/edit', [GuruDiniyyahJournalController::class, 'edit'])->name('diniyyah-journals.edit');
+    Route::put('/diniyyah-journals/{diniyyah_journal}', [GuruDiniyyahJournalController::class, 'update'])->name('diniyyah-journals.update');
+    Route::delete('/diniyyah-journals/{diniyyah_journal}', [GuruDiniyyahJournalController::class, 'destroy'])->name('diniyyah-journals.destroy');
 
     // Menu "Jurnal Guru Pengganti" — semua guru (akun terhubung Teacher) dapat
     // mengisi jurnal menggantikan guru asli yang berhalangan.
@@ -108,34 +122,34 @@ Route::middleware('auth')->prefix('guru')->name('guru.')->group(function () {
 
     // Menu "Jurnal Pengganti Tafsir" — pengganti menggantikan guru Tafsir asli
     // untuk beberapa kelas sekaligus (sesi Kamis 09:50-10:20).
-    Route::get('/diniyyah-substitute-tafsir-journals', [\App\Http\Controllers\GuruDiniyyahSubstituteTafsirJournalController::class, 'index'])->name('diniyyah-substitute-tafsir-journals.index');
-    Route::post('/diniyyah-substitute-tafsir-journals', [\App\Http\Controllers\GuruDiniyyahSubstituteTafsirJournalController::class, 'store'])->name('diniyyah-substitute-tafsir-journals.store');
+    Route::get('/diniyyah-substitute-tafsir-journals', [GuruDiniyyahSubstituteTafsirJournalController::class, 'index'])->name('diniyyah-substitute-tafsir-journals.index');
+    Route::post('/diniyyah-substitute-tafsir-journals', [GuruDiniyyahSubstituteTafsirJournalController::class, 'store'])->name('diniyyah-substitute-tafsir-journals.store');
 
     // Menu "Jurnal Tafsir" — input serentak 1 materi → 1 jurnal per kelas Tafsir.
-    Route::get('/diniyyah-tafsir-journals', [\App\Http\Controllers\GuruDiniyyahTafsirJournalController::class, 'index'])->name('diniyyah-tafsir-journals.index');
-    Route::post('/diniyyah-tafsir-journals', [\App\Http\Controllers\GuruDiniyyahTafsirJournalController::class, 'store'])->name('diniyyah-tafsir-journals.store');
+    Route::get('/diniyyah-tafsir-journals', [GuruDiniyyahTafsirJournalController::class, 'index'])->name('diniyyah-tafsir-journals.index');
+    Route::post('/diniyyah-tafsir-journals', [GuruDiniyyahTafsirJournalController::class, 'store'])->name('diniyyah-tafsir-journals.store');
 
     // Menu "Tasmi'" — khusus guru yang ditugaskan sebagai PJ Tasmi' (tasmi_examiner_assignments).
     // Ustadz hanya melihat kelas ikhwan, ustadzah hanya melihat kelas akhwat.
-    Route::get('/tasmi', [\App\Http\Controllers\GuruTasmiController::class, 'index'])->name('tasmi.index');
-    Route::get('/tasmi/create', [\App\Http\Controllers\GuruTasmiController::class, 'create'])->name('tasmi.create');
-    Route::post('/tasmi', [\App\Http\Controllers\GuruTasmiController::class, 'store'])->name('tasmi.store');
-    Route::get('/tasmi/records', [\App\Http\Controllers\GuruTasmiController::class, 'records'])->name('tasmi.records');
-    Route::get('/tasmi/records/export/{format}', [\App\Http\Controllers\GuruTasmiController::class, 'export'])
+    Route::get('/tasmi', [GuruTasmiController::class, 'index'])->name('tasmi.index');
+    Route::get('/tasmi/create', [GuruTasmiController::class, 'create'])->name('tasmi.create');
+    Route::post('/tasmi', [GuruTasmiController::class, 'store'])->name('tasmi.store');
+    Route::get('/tasmi/records', [GuruTasmiController::class, 'records'])->name('tasmi.records');
+    Route::get('/tasmi/records/export/{format}', [GuruTasmiController::class, 'export'])
         ->whereIn('format', ['xlsx', 'pdf'])
         ->name('tasmi.export');
-    Route::get('/tasmi/{tasmi_record}/edit', [\App\Http\Controllers\GuruTasmiController::class, 'edit'])->name('tasmi.edit');
-    Route::put('/tasmi/{tasmi_record}', [\App\Http\Controllers\GuruTasmiController::class, 'update'])->name('tasmi.update');
-    Route::delete('/tasmi/{tasmi_record}', [\App\Http\Controllers\GuruTasmiController::class, 'destroy'])->name('tasmi.destroy');
+    Route::get('/tasmi/{tasmi_record}/edit', [GuruTasmiController::class, 'edit'])->name('tasmi.edit');
+    Route::put('/tasmi/{tasmi_record}', [GuruTasmiController::class, 'update'])->name('tasmi.update');
+    Route::delete('/tasmi/{tasmi_record}', [GuruTasmiController::class, 'destroy'])->name('tasmi.destroy');
 
     // Menu "Tasmi' Kelas Saya" — wali kelas (homeroom teacher) lihat data tasmi' santri di kelasnya (read-only).
-    Route::get('/tasmi-wali', [\App\Http\Controllers\WaliKelasTasmiController::class, 'index'])->name('tasmi-wali.index');
-    Route::get('/tasmi-wali/export/{format}', [\App\Http\Controllers\WaliKelasTasmiController::class, 'export'])
+    Route::get('/tasmi-wali', [WaliKelasTasmiController::class, 'index'])->name('tasmi-wali.index');
+    Route::get('/tasmi-wali/export/{format}', [WaliKelasTasmiController::class, 'export'])
         ->whereIn('format', ['xlsx', 'pdf'])
         ->name('tasmi-wali.export');
-    Route::post('/tasmi-wali/reminder/dismiss', [\App\Http\Controllers\WaliKelasTasmiReminderController::class, 'dismiss'])
+    Route::post('/tasmi-wali/reminder/dismiss', [WaliKelasTasmiReminderController::class, 'dismiss'])
         ->name('tasmi-wali.reminder.dismiss');
-    Route::get('/tasmi-wali/{tasmi_record}', [\App\Http\Controllers\WaliKelasTasmiController::class, 'show'])->name('tasmi-wali.show');
+    Route::get('/tasmi-wali/{tasmi_record}', [WaliKelasTasmiController::class, 'show'])->name('tasmi-wali.show');
 
     // Perangkat pembelajaran RPP Diniyyah — seluruh pilihan kelas/mapel
     // dibatasi oleh penugasan Diniyyah aktif milik guru login.
@@ -166,11 +180,11 @@ Route::get('/rpp/shared/{export}', [GuruRppController::class, 'sharedDownload'])
 
 // Laporan pengawasan Tasmi' lintas PJ untuk Kabag Tahfidz dan admin.
 Route::middleware('auth')->prefix('admin/tasmi-report')->name('admin.tasmi-report.')->group(function () {
-    Route::get('/', [\App\Http\Controllers\ManagementTasmiReportController::class, 'index'])->name('index');
-    Route::get('/export/{format}', [\App\Http\Controllers\ManagementTasmiReportController::class, 'export'])
+    Route::get('/', [ManagementTasmiReportController::class, 'index'])->name('index');
+    Route::get('/export/{format}', [ManagementTasmiReportController::class, 'export'])
         ->whereIn('format', ['xlsx', 'pdf'])
         ->name('export');
-    Route::get('/{tasmi_record}', [\App\Http\Controllers\ManagementTasmiReportController::class, 'show'])->name('show');
+    Route::get('/{tasmi_record}', [ManagementTasmiReportController::class, 'show'])->name('show');
 });
 
 Route::middleware('auth')->prefix('attendance')->name('attendance.')->group(function () {
@@ -203,6 +217,8 @@ Route::middleware('auth')->prefix('admin/rekap-jurnal-guru')->name('admin.rekap-
 Route::middleware('auth')->prefix('admin/rekap-jp-bulanan')->name('admin.monthly-jp-recap.')->group(function () {
     Route::get('/', [AdminMonthlyJpReportController::class, 'index'])->name('index');
     Route::get('/export/{format}', [AdminMonthlyJpReportController::class, 'export'])->whereIn('format', ['xlsx', 'pdf'])->name('export');
+    Route::post('/tafsir-normalizations', [AdminMonthlyJpReportController::class, 'normalizeTafsir'])->name('tafsir-normalizations.store');
+    Route::post('/tafsir-normalizations/revert', [AdminMonthlyJpReportController::class, 'revertTafsirNormalization'])->name('tafsir-normalizations.revert');
 });
 
 Route::middleware('auth')->group(function () {
@@ -216,13 +232,13 @@ Route::middleware('auth')->group(function () {
     Route::get('/wali', [GuardianDashboardController::class, 'index'])->name('wali.dashboard');
     Route::get('/wali/calendar', [SchoolCalendarController::class, 'guardian'])->name('wali.calendar');
     Route::get('/wali/tahfidz', [GuardianTahfidzController::class, 'index'])->name('wali.tahfidz');
-    Route::get('/wali/diniyyah-journals', [\App\Http\Controllers\WaliClassJournalMonitoringController::class, 'index'])->name('wali.diniyyah-journals.index');
-    Route::get('/wali/diniyyah-journals/export-pdf', [\App\Http\Controllers\WaliClassJournalMonitoringController::class, 'exportPdf'])->name('wali.diniyyah-journals.export-pdf');
-    Route::get('/wali/diniyyah-journals/export-excel', [\App\Http\Controllers\WaliClassJournalMonitoringController::class, 'exportExcel'])->name('wali.diniyyah-journals.export-excel');
-    Route::get('/wali/rekap-jp', [\App\Http\Controllers\WaliJpRecapController::class, 'index'])->name('wali.jp-recap.index');
-    Route::post('/wali/rekap-jp/confirm', [\App\Http\Controllers\WaliJpRecapController::class, 'confirm'])->name('wali.jp-recap.confirm');
-    Route::get('/wali/rekap-jp/export-pdf', [\App\Http\Controllers\WaliJpRecapController::class, 'exportPdf'])->name('wali.jp-recap.export-pdf');
-    Route::get('/wali/rekap-jp/export-excel', [\App\Http\Controllers\WaliJpRecapController::class, 'exportExcel'])->name('wali.jp-recap.export-excel');
+    Route::get('/wali/diniyyah-journals', [WaliClassJournalMonitoringController::class, 'index'])->name('wali.diniyyah-journals.index');
+    Route::get('/wali/diniyyah-journals/export-pdf', [WaliClassJournalMonitoringController::class, 'exportPdf'])->name('wali.diniyyah-journals.export-pdf');
+    Route::get('/wali/diniyyah-journals/export-excel', [WaliClassJournalMonitoringController::class, 'exportExcel'])->name('wali.diniyyah-journals.export-excel');
+    Route::get('/wali/rekap-jp', [WaliJpRecapController::class, 'index'])->name('wali.jp-recap.index');
+    Route::post('/wali/rekap-jp/confirm', [WaliJpRecapController::class, 'confirm'])->name('wali.jp-recap.confirm');
+    Route::get('/wali/rekap-jp/export-pdf', [WaliJpRecapController::class, 'exportPdf'])->name('wali.jp-recap.export-pdf');
+    Route::get('/wali/rekap-jp/export-excel', [WaliJpRecapController::class, 'exportExcel'])->name('wali.jp-recap.export-excel');
     Route::post('/wali/events/{event}/response', [GuardianSchoolEventResponseController::class, 'store'])->name('wali.events.response');
     Route::get('/school-events/{event}/recap/export', SchoolEventRecapExportController::class)->name('school-events.recap.export');
 });
