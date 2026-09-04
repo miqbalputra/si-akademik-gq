@@ -53,6 +53,7 @@ class PortalShellNavigationTest extends TestCase
             ->assertSee('Laporan &amp; Arsip', false)
             ->assertSee('Input Nilai')
             ->assertSee('Jurnal Pengganti')
+            ->assertSee('Pengganti Tafsir')
             ->assertSee('Performa Jurnal Saya')
             ->assertSee('Presensi Saya')
             ->assertDontSee('Tasmi\' Kelas Saya')
@@ -67,7 +68,8 @@ class PortalShellNavigationTest extends TestCase
         $this->actingAs($user)
             ->get(route('guru.dashboard'))
             ->assertOk()
-            ->assertDontSee(route('guru.diniyyah-substitute-journals.index'), false);
+            ->assertDontSee(route('guru.diniyyah-substitute-journals.index'), false)
+            ->assertDontSee(route('guru.diniyyah-substitute-tafsir-journals.index'), false);
     }
 
     private function userWithRole(string $role): User

@@ -34,6 +34,8 @@
     if ($hasLinkedTeacher) {
         array_splice($guruTodayItems, 1, 0, [[
             'label' => 'Jurnal Pengganti', 'href' => route('guru.diniyyah-substitute-journals.index'), 'match' => ['guru.diniyyah-substitute-journals.*', 'guru.diniyyah-substitute-tafsir-journals.*'],
+        ], [
+            'label' => 'Pengganti Tafsir', 'href' => route('guru.diniyyah-substitute-tafsir-journals.index'), 'match' => ['guru.diniyyah-substitute-tafsir-journals.*'],
         ]]);
     }
     if ($hasSimultaneousTafsirSchedule ?? false) {
