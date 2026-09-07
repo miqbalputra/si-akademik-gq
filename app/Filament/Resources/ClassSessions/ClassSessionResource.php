@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\ClassSessions;
 
+use App\Filament\Concerns\HasRoleBasedResourceAccess;
 use App\Filament\Resources\ClassSessions\Pages\CreateClassSession;
 use App\Filament\Resources\ClassSessions\Pages\EditClassSession;
 use App\Filament\Resources\ClassSessions\Pages\ListClassSessions;
@@ -16,6 +17,8 @@ use Filament\Tables\Table;
 
 class ClassSessionResource extends Resource
 {
+    use HasRoleBasedResourceAccess;
+
     protected static ?string $model = ClassSession::class;
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-clock';
@@ -26,6 +29,12 @@ class ClassSessionResource extends Resource
     protected static ?string $pluralModelLabel = 'Jam Pelajaran / Sesi';
 
     protected static ?string $recordTitleAttribute = 'session_name';
+
+    // Sesi adalah bagian dari konfigurasi jadwal Diniyyah. Kabag Tahfidz
+    // tidak boleh memperoleh akses hanya karena dapat masuk ke panel Filament.
+    protected const VIEW_ROLES = ['admin', 'kabag_diniyyah', 'kepala_sekolah'];
+
+    protected const MANAGE_ROLES = ['admin', 'kabag_diniyyah'];
 
     public static function form(Schema $schema): Schema
     {

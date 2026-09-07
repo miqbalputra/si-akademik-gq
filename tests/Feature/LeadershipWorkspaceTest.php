@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Filament\Resources\ClassSessions\ClassSessionResource;
 use App\Models\User;
 use App\Services\WorkspaceRedirectService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -21,11 +22,14 @@ class LeadershipWorkspaceTest extends TestCase
             ->assertSee('Dashboard Kabag Tahfidz')
             ->assertSee("Laporan Tasmi'")
             ->assertSee('Penempatan Halaqah')
+            ->assertSee('Aspek Penilaian UAS')
             ->assertDontSee('Monitoring Nilai')
             ->assertDontSee('Leger &amp; Rapor', false);
         $this->actingAs($user)->get(route('kabag-diniyyah.dashboard'))->assertForbidden();
         $this->actingAs($user)->get(route('diniyyah.monitoring.index'))->assertForbidden();
         $this->actingAs($user)->get(\App\Filament\Resources\Rpps\RppResource::getUrl())->assertForbidden();
+        $this->actingAs($user)->get(ClassSessionResource::getUrl())->assertForbidden();
+        $this->assertFalse(ClassSessionResource::canCreate());
     }
 
     public function test_kabag_diniyyah_gets_operational_dashboard_and_cannot_open_tahfidz_dashboard(): void
@@ -40,6 +44,8 @@ class LeadershipWorkspaceTest extends TestCase
         $this->actingAs($user)->get(route('diniyyah.monitoring.index'))->assertOk();
         $this->actingAs($user)->get(\App\Filament\Resources\DiniyyahTeacherAssignments\DiniyyahTeacherAssignmentResource::getUrl())->assertOk();
         $this->actingAs($user)->get(\App\Filament\Resources\Rpps\RppResource::getUrl())->assertOk();
+        $this->actingAs($user)->get(ClassSessionResource::getUrl())->assertOk();
+        $this->assertTrue(ClassSessionResource::canCreate());
         $this->actingAs($user)->get(route('kabag-tahfidz.dashboard'))->assertForbidden();
     }
 

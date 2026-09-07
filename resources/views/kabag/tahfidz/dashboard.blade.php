@@ -31,7 +31,8 @@
                         ['Penempatan Halaqah', 'Tempatkan santri ke halaqah dengan papan koordinasi.', \App\Filament\Pages\HalaqahPlacementBoard::getUrl()],
                         ['Halaqah', 'Kelola halaqah, pembina, pendamping, dan anggota.', \App\Filament\Resources\TahfidzHalaqahs\TahfidzHalaqahResource::getUrl()],
                         ['Pekan Tahfidz', 'Atur periode pekanan untuk pemantauan hafalan.', \App\Filament\Resources\TahfidzWeeks\TahfidzWeekResource::getUrl()],
-                        ['Konfigurasi UAS Tahfidz', 'Atur jadwal dan aspek penilaian UAS Tahfidz.', \App\Filament\Resources\TahfidzUasDays\TahfidzUasDayResource::getUrl()],
+                        ['Jadwal UAS Tahfidz', 'Atur hari dan jadwal pelaksanaan UAS Tahfidz.', \App\Filament\Resources\TahfidzUasDays\TahfidzUasDayResource::getUrl()],
+                        ['Aspek Penilaian UAS', 'Atur aspek dan bobot penilaian UAS Tahfidz.', \App\Filament\Resources\TahfidzUasCategories\TahfidzUasCategoryResource::getUrl()],
                     ];
                 @endphp
                 @foreach($actions as [$label, $description, $href])
