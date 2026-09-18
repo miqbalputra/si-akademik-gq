@@ -35,6 +35,10 @@ class DiniyyahWorkflowStats extends StatsOverviewWidget
             Stat::make('Rapor Published', number_format(ReportCard::where('status', 'published')->count()))
                 ->icon(Heroicon::OutlinedDocumentCheck)
                 ->description('Sudah terlihat oleh wali'),
+            Stat::make('Pengingat Jurnal KBM', 'Buka laporan')
+                ->icon(Heroicon::OutlinedBellAlert)
+                ->description('Rekap guru dengan jurnal KBM kosong')
+                ->url(route('admin.journal-reminders.index')),
         ];
     }
 }
