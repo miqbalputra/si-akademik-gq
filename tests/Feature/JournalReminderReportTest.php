@@ -77,6 +77,7 @@ class JournalReminderReportTest extends TestCase
             ->assertOk()
             ->assertSee('Pengingat Pengisian Jurnal KBM')
             ->assertSee($ctx['teacher']->name)
+            ->assertSee('Unduh JPG')
             ->assertSee('2 jurnal kosong');
         $this->actingAs($ctx['kabag'])->get(route('admin.journal-reminders.index', $query))->assertOk();
         $this->actingAs($ctx['guruUser'])->get(route('admin.journal-reminders.index', $query))->assertForbidden();
@@ -97,12 +98,47 @@ class JournalReminderReportTest extends TestCase
 
         $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIW2Nk+M/wHwAF/gL+gV/7AAAAAElFTkSuQmCC');
         $renderer = Mockery::mock(JournalReminderImageRenderer::class);
-        $renderer->shouldReceive('render')->once()->andReturn($png);
+        $renderer->shouldReceive('render')->once()->with(Mockery::type('array'), 'png')->andReturn($png);
         $this->app->instance(JournalReminderImageRenderer::class, $renderer);
 
         $response = $this->actingAs($ctx['admin'])->get(route('admin.journal-reminders.export', ['format' => 'png'] + $query));
         $response->assertOk()->assertHeader('Content-Type', 'image/png');
         $this->assertStringStartsWith("\x89PNG\r\n\x1a\n", $response->getContent());
+    }
+
+    public function test_teacher_can_be_exported_as_a_single_jpg_or_png_from_the_same_export_link(): void
+    {
+        $ctx = $this->context();
+        $query = [
+            'academic_term_id' => $ctx['term']->id,
+            'date_from' => '2026-08-05',
+            'date_until' => '2026-08-05',
+            'teacher_id' => $ctx['teacher']->id,
+        ];
+        $jpg = "\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00";
+        $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIW2Nk+M/wHwAF/gL+gV/7AAAAAElFTkSuQmCC');
+        $renderer = Mockery::mock(JournalReminderImageRenderer::class);
+        $renderer->shouldReceive('render')
+            ->once()
+            ->with(Mockery::on(fn (array $report): bool => $report['teachers']->count() === 1
+                && $report['teachers']->first()['teacher_id'] === $ctx['teacher']->id
+                && $report['stats']['total_missing'] === 2), 'jpg')
+            ->andReturn($jpg);
+        $renderer->shouldReceive('render')
+            ->once()
+            ->with(Mockery::on(fn (array $report): bool => $report['teachers']->count() === 1
+                && $report['teachers']->first()['teacher_id'] === $ctx['teacher']->id
+                && $report['stats']['total_missing'] === 2), 'png')
+            ->andReturn($png);
+        $this->app->instance(JournalReminderImageRenderer::class, $renderer);
+
+        $jpgResponse = $this->actingAs($ctx['admin'])->get(route('admin.journal-reminders.export', ['format' => 'jpg'] + $query));
+        $pngResponse = $this->actingAs($ctx['admin'])->get(route('admin.journal-reminders.export', ['format' => 'png'] + $query));
+
+        $jpgResponse->assertOk()->assertHeader('Content-Type', 'image/jpeg');
+        $this->assertStringStartsWith("\xff\xd8\xff", $jpgResponse->getContent());
+        $pngResponse->assertOk()->assertHeader('Content-Type', 'image/png');
+        $this->assertStringStartsWith("\x89PNG\r\n\x1a\n", $pngResponse->getContent());
     }
 
     public function test_default_range_is_current_month_to_today_and_future_dates_are_excluded(): void
@@ -132,7 +168,7 @@ class JournalReminderReportTest extends TestCase
         $ctx = $this->context();
         $query = ['academic_term_id' => $ctx['term']->id, 'date_from' => '2026-08-05', 'date_until' => '2026-08-05'];
         $renderer = Mockery::mock(JournalReminderImageRenderer::class);
-        $renderer->shouldReceive('render')->once()->andThrow(new RuntimeException('Unduhan PNG memerlukan ekstensi GD.'));
+        $renderer->shouldReceive('render')->once()->with(Mockery::type('array'), 'png')->andThrow(new RuntimeException('Unduhan PNG/JPG memerlukan ekstensi GD.'));
         $this->app->instance(JournalReminderImageRenderer::class, $renderer);
 
         $this->from(route('admin.journal-reminders.index', $query))

@@ -9,10 +9,15 @@ class JournalReminderImageRenderer
     private const WIDTH = 1440;
 
     /** @param array<string, mixed> $report */
-    public function render(array $report): string
+    public function render(array $report, string $format = 'png'): string
     {
-        if (! function_exists('imagecreatetruecolor')) {
-            throw new RuntimeException('Unduhan PNG memerlukan ekstensi GD. Hubungi admin server untuk mengaktifkannya.');
+        $encoder = match ($format) {
+            'png' => 'imagepng',
+            'jpg' => 'imagejpeg',
+            default => throw new RuntimeException('Format gambar tidak didukung.'),
+        };
+        if (! function_exists('imagecreatetruecolor') || ! function_exists($encoder)) {
+            throw new RuntimeException('Unduhan gambar PNG/JPG memerlukan ekstensi GD. Hubungi admin server untuk mengaktifkannya.');
         }
 
         $font = $this->fontPath();
@@ -52,9 +57,15 @@ class JournalReminderImageRenderer
         }
 
         ob_start();
-        imagepng($image, null, 8);
+        $rendered = $format === 'png'
+            ? imagepng($image, null, 8)
+            : imagejpeg($image, null, 90);
         $content = (string) ob_get_clean();
         imagedestroy($image);
+
+        if (! $rendered || $content === '') {
+            throw new RuntimeException('Gambar pengingat belum dapat dibuat. Silakan coba lagi.');
+        }
 
         return $content;
     }

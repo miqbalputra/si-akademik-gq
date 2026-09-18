@@ -50,11 +50,40 @@ class JournalReminderReportService
             'end' => $source['end'],
             'generated_at' => now('Asia/Jakarta'),
             'teachers' => $teachers,
+            'attendance_unverified_teacher_ids' => $unverifiedReminderTeachers->all(),
             'stats' => [
                 'teachers_to_remind' => $teachers->count(),
                 'total_missing' => $missing->count(),
                 'attendance_unverified_teachers' => $unverifiedReminderTeachers->count(),
             ],
         ];
+    }
+
+    /**
+     * Limit a ready-made report to one teacher without recalculating schedules.
+     *
+     * @param  array<string, mixed>  $report
+     * @return array<string, mixed>|null
+     */
+    public function forTeacher(array $report, int $teacherId): ?array
+    {
+        $teachers = $report['teachers']
+            ->filter(fn (array $teacher): bool => $teacher['teacher_id'] === $teacherId)
+            ->values();
+
+        if ($teachers->isEmpty()) {
+            return null;
+        }
+
+        $report['teachers'] = $teachers;
+        $report['stats'] = [
+            'teachers_to_remind' => $teachers->count(),
+            'total_missing' => (int) $teachers->sum('missing_count'),
+            'attendance_unverified_teachers' => collect($report['attendance_unverified_teacher_ids'] ?? [])
+                ->intersect($teachers->pluck('teacher_id'))
+                ->count(),
+        ];
+
+        return $report;
     }
 }

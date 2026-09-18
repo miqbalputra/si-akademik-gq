@@ -28,10 +28,16 @@ class JournalReminderReportController extends Controller
     public function export(Request $request, string $format, JournalReminderReportService $service, JournalReminderPdfRenderer $pdf, JournalReminderImageRenderer $image)
     {
         $this->authorize($request);
-        abort_unless(in_array($format, ['pdf', 'png'], true), 404);
+        abort_unless(in_array($format, ['pdf', 'png', 'jpg'], true), 404);
         $filters = $this->filters($request);
         $report = $service->build($filters['term']->id, $filters['start'], $filters['end']);
-        $filename = $this->filename($report);
+        $teacherId = $request->validate([
+            'teacher_id' => ['nullable', 'integer', 'exists:teachers,id'],
+        ])['teacher_id'] ?? null;
+        if ($teacherId) {
+            $report = $service->forTeacher($report, (int) $teacherId) ?? abort(404);
+        }
+        $filename = $this->filename($report, $teacherId ? (int) $teacherId : null);
 
         try {
             if ($format === 'pdf') {
@@ -44,11 +50,11 @@ class JournalReminderReportController extends Controller
                 ]);
             }
 
-            $content = $image->render($report);
+            $content = $image->render($report, $format);
 
             return response($content, 200, [
-                'Content-Type' => 'image/png',
-                'Content-Disposition' => 'attachment; filename="'.$filename.'.png"',
+                'Content-Type' => $format === 'jpg' ? 'image/jpeg' : 'image/png',
+                'Content-Disposition' => 'attachment; filename="'.$filename.'.'.$format.'"',
                 'Content-Length' => (string) strlen($content),
             ]);
         } catch (Throwable $exception) {
@@ -113,8 +119,14 @@ class JournalReminderReportController extends Controller
     }
 
     /** @param array<string, mixed> $report */
-    private function filename(array $report): string
+    private function filename(array $report, ?int $teacherId = null): string
     {
-        return Str::slug('pengingat-jurnal-kbm-'.$report['start']->format('Ymd').'-'.$report['end']->format('Ymd'));
+        $name = 'pengingat-jurnal-kbm';
+        if ($teacherId) {
+            $teacher = $report['teachers']->first();
+            $name .= '-'.($teacher['teacher_name'] ?? 'guru-'.$teacherId).'-'.($teacher['niy'] ?? $teacherId);
+        }
+
+        return Str::slug($name.'-'.$report['start']->format('Ymd').'-'.$report['end']->format('Ymd'));
     }
 }

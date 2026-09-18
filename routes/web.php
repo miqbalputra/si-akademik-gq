@@ -226,7 +226,7 @@ Route::middleware('auth')->prefix('admin/rekap-jp-bulanan')->name('admin.monthly
 Route::middleware('auth')->prefix('admin/pengingat-jurnal')->name('admin.journal-reminders.')->group(function () {
     Route::get('/', [JournalReminderReportController::class, 'index'])->name('index');
     Route::get('/export/{format}', [JournalReminderReportController::class, 'export'])
-        ->whereIn('format', ['pdf', 'png'])
+        ->whereIn('format', ['pdf', 'png', 'jpg'])
         ->name('export');
 });
 
