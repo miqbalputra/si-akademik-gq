@@ -8,6 +8,7 @@
             @php
                 $actions = [
                     ['Monitoring Input Nilai', 'Pantau kelengkapan dan validasi set penilaian guru.', route('diniyyah.monitoring.index')],
+                    ['Pengingat Jurnal KBM', 'Siapkan rekap guru yang belum mengisi jurnal untuk dibagikan.', route('admin.journal-reminders.index')],
                     ['Jurnal KBM', 'Audit pelaksanaan pembelajaran dan materi tiap kelas.', \App\Filament\Resources\DiniyyahClassJournals\DiniyyahClassJournalResource::getUrl()],
                     ['Jadwal Mengajar', 'Kelola sesi dan jadwal pembelajaran Diniyyah.', \App\Filament\Resources\DiniyyahTeachingSchedules\DiniyyahTeachingScheduleResource::getUrl()],
                     ['Penugasan Guru', 'Atur guru pengampu untuk mapel dan kelas.', \App\Filament\Resources\DiniyyahTeacherAssignments\DiniyyahTeacherAssignmentResource::getUrl()],

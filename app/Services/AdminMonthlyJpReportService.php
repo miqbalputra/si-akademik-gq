@@ -26,11 +26,29 @@ class AdminMonthlyJpReportService
     /** @return array<string, mixed> */
     public function build(?int $academicTermId, int $month, int $year): array
     {
+        $start = Carbon::create($year, $month, 1, 0, 0, 0, 'Asia/Jakarta')->startOfMonth();
+        $end = $start->copy()->endOfMonth();
+
+        return $this->buildForRange($academicTermId, $start, $end);
+    }
+
+    /**
+     * Build the schedule-based report for an explicit calendar range.
+     *
+     * The monthly payroll screen and the journal reminder must use exactly the
+     * same source-of-truth rules for schedules, Tafsir, holidays, agendas, and
+     * attendance exemptions.
+     *
+     * @return array<string, mixed>
+     */
+    public function buildForRange(?int $academicTermId, Carbon|string $start, Carbon|string $end): array
+    {
         $term = $academicTermId
             ? AcademicTerm::with('academicYear')->findOrFail($academicTermId)
             : AcademicTerm::with('academicYear')->where('is_active', true)->firstOrFail();
-        $start = Carbon::create($year, $month, 1, 0, 0, 0, 'Asia/Jakarta')->startOfMonth();
-        $end = $start->copy()->endOfMonth();
+        $start = $this->asJakartaDate($start)->startOfDay();
+        $end = $this->asJakartaDate($end)->endOfDay();
+
         if ($end->isFuture()) {
             $end = now('Asia/Jakarta')->endOfDay();
         }
@@ -49,7 +67,9 @@ class AdminMonthlyJpReportService
             'substituteTeacher',
         ])->whereHas('teacherAssignment.classSubject.classroomTerm', fn ($query) => $query->where('academic_term_id', $term->id))
             ->whereBetween('date', [$start->toDateString(), $end->toDateString()])->get();
-        $holidays = SchoolHoliday::query()->whereBetween('holiday_date', [$start->toDateString(), $end->toDateString()])
+        $holidays = SchoolHoliday::query()
+            ->whereDate('holiday_date', '>=', $start->toDateString())
+            ->whereDate('holiday_date', '<=', $end->toDateString())
             ->get()->keyBy(fn ($holiday) => $holiday->holiday_date->toDateString());
         $attendance = $this->attendanceStatusClient->statusesForTeachers(
             $schedules->map(fn ($schedule) => $schedule->teacherAssignment?->teacher)->filter()->unique('id')->values(), $start, $end, true,
@@ -109,7 +129,9 @@ class AdminMonthlyJpReportService
         $realized = $realized->sortBy(fn (array $row) => [$row['date'], $row['session_time'], $row['teacher_name']])->values();
         $missing = $missing->sortBy(fn (array $row) => [$row['date'], $row['session_time'], $row['teacher_name']])->values();
 
-        return compact('term', 'month', 'year', 'start', 'end', 'teachers', 'realized', 'missing') + [
+        return compact('term', 'start', 'end', 'teachers', 'realized', 'missing', 'attendance') + [
+            'month' => $start->month,
+            'year' => $start->year,
             'stats' => [
                 'total_teachers' => $teachers->count(),
                 'total_jp' => (int) $teachers->sum('total_jp'),
@@ -221,7 +243,7 @@ class AdminMonthlyJpReportService
         $row['classes'] = [...$row['classes'], ...$classes];
         $row['subjects'] = [...$row['subjects'], ...$subjects];
         $summary->put($teacher->id, $row);
-        $missing->push(['teacher_name' => $teacher->name, 'niy' => $teacher->niy, 'date' => $date->toDateString(), 'date_label' => $date->translatedFormat('l, d F Y'), 'session' => $session, 'session_time' => $this->timeLabel($time), 'classes' => collect($classes)->filter()->unique()->values()->all(), 'subjects' => collect($subjects)->filter()->unique()->values()->all(), 'status' => $status]);
+        $missing->push(['teacher_id' => $teacher->id, 'teacher_name' => $teacher->name, 'niy' => $teacher->niy, 'date' => $date->toDateString(), 'date_label' => $date->translatedFormat('l, d F Y'), 'session' => $session, 'session_time' => $this->timeLabel($time), 'classes' => collect($classes)->filter()->unique()->values()->all(), 'subjects' => collect($subjects)->filter()->unique()->values()->all(), 'status' => $status]);
     }
 
     private function detailRow($journal, array $classes, array $subjects, int $jp, bool $tafsir): array
@@ -271,5 +293,12 @@ class AdminMonthlyJpReportService
         $values = collect([$time['starts_at'] ?? null, $time['ends_at'] ?? null])->filter()->map(fn ($value) => substr((string) $value, 0, 5));
 
         return $values->isNotEmpty() ? $values->implode(' - ') : '-';
+    }
+
+    private function asJakartaDate(Carbon|string $date): Carbon
+    {
+        return $date instanceof Carbon
+            ? $date->copy()->setTimezone('Asia/Jakarta')
+            : Carbon::parse($date, 'Asia/Jakarta');
     }
 }

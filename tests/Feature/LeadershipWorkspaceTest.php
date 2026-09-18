@@ -40,6 +40,7 @@ class LeadershipWorkspaceTest extends TestCase
             ->assertOk()
             ->assertSee('Dashboard Kabag Diniyyah')
             ->assertSee('Monitoring Input Nilai')
+            ->assertSee('Pengingat Jurnal KBM')
             ->assertSee('Monitoring RPP');
         $this->actingAs($user)->get(route('diniyyah.monitoring.index'))->assertOk();
         $this->actingAs($user)->get(\App\Filament\Resources\DiniyyahTeacherAssignments\DiniyyahTeacherAssignmentResource::getUrl())->assertOk();

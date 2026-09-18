@@ -23,6 +23,7 @@ use App\Http\Controllers\GuruJournalReminderController;
 use App\Http\Controllers\GuruRppController;
 use App\Http\Controllers\GuruTahfidzController;
 use App\Http\Controllers\GuruTasmiController;
+use App\Http\Controllers\JournalReminderReportController;
 use App\Http\Controllers\KabagDiniyyahDashboardController;
 use App\Http\Controllers\KabagTahfidzDashboardController;
 use App\Http\Controllers\ManagementTasmiReportController;
@@ -219,6 +220,14 @@ Route::middleware('auth')->prefix('admin/rekap-jp-bulanan')->name('admin.monthly
     Route::get('/export/{format}', [AdminMonthlyJpReportController::class, 'export'])->whereIn('format', ['xlsx', 'pdf'])->name('export');
     Route::post('/tafsir-normalizations', [AdminMonthlyJpReportController::class, 'normalizeTafsir'])->name('tafsir-normalizations.store');
     Route::post('/tafsir-normalizations/revert', [AdminMonthlyJpReportController::class, 'revertTafsirNormalization'])->name('tafsir-normalizations.revert');
+});
+
+// Rekap yang siap dibagikan untuk mengingatkan guru dengan jurnal KBM kosong.
+Route::middleware('auth')->prefix('admin/pengingat-jurnal')->name('admin.journal-reminders.')->group(function () {
+    Route::get('/', [JournalReminderReportController::class, 'index'])->name('index');
+    Route::get('/export/{format}', [JournalReminderReportController::class, 'export'])
+        ->whereIn('format', ['pdf', 'png'])
+        ->name('export');
 });
 
 Route::middleware('auth')->group(function () {
