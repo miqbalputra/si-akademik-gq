@@ -30,6 +30,7 @@ class TafsirScheduleGroupingService
 
         return $schedules
             ->filter(fn ($schedule): bool => $this->isTafsirSchedule($schedule))
+            ->filter(fn ($schedule): bool => ! method_exists($schedule, 'appliesOn') || $schedule->appliesOn($date))
             ->filter(fn ($schedule): bool => (int) ($schedule->day_of_week ?? 0) === $dayOfWeek)
             ->filter(fn ($schedule): bool => $this->assignmentActiveOn($schedule->teacherAssignment ?? null, $date))
             ->map(function ($schedule) use ($dayOfWeek) {

@@ -44,7 +44,7 @@ class N8nIntegrationController extends Controller
 
         // Ambil semua jadwal hari ini dahulu agar kelompok Tafsir serentak tidak
         // terpecah hanya karena data kelas lain tidak ikut query awal.
-        $allDaySchedules = DiniyyahTeachingSchedule::with([
+        $allDaySchedules = DiniyyahTeachingSchedule::query()->forDate($currentDate)->with([
                 'teacherAssignment.teacher',
                 'teacherAssignment.classSubject.subject',
                 'teacherAssignment.classSubject.classroomTerm.classroom',

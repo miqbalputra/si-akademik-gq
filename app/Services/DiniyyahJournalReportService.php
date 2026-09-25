@@ -351,7 +351,7 @@ class DiniyyahJournalReportService
             return collect();
         }
 
-        $schedules = DiniyyahTeachingSchedule::query()
+        $schedules = DiniyyahTeachingSchedule::query()->overlappingRange($start, $end)
             ->with([
                 'teacherAssignment.teacher',
                 'teacherAssignment.classSubject.subject',
@@ -398,7 +398,8 @@ class DiniyyahJournalReportService
                 continue;
             }
             $daySchedules = $schedules->where('day_of_week', $date->dayOfWeekIso)
-                ->filter(fn ($schedule): bool => $this->assignmentActiveOn($schedule->teacherAssignment, $date));
+                ->filter(fn ($schedule): bool => $schedule->appliesOn($date)
+                    && $this->assignmentActiveOn($schedule->teacherAssignment, $date));
 
             $dayJournals = $journals->filter(fn (DiniyyahClassJournal $journal): bool => $journal->date?->toDateString() === $dateString);
             $tafsirGroups = $this->tafsirScheduleGroupingService->simultaneousGroupsForDate($daySchedules, $date);

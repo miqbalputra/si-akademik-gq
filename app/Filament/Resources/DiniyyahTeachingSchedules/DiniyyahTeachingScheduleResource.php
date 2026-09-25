@@ -14,6 +14,8 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Carbon;
 
 class DiniyyahTeachingScheduleResource extends Resource
 {
@@ -42,6 +44,11 @@ class DiniyyahTeachingScheduleResource extends Resource
         return DiniyyahTeachingSchedulesTable::configure($table);
     }
 
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->forDate(Carbon::now('Asia/Jakarta')->toDateString());
+    }
+
     public static function getRelations(): array
     {
         return [
@@ -53,8 +60,6 @@ class DiniyyahTeachingScheduleResource extends Resource
     {
         return [
             'index' => ListDiniyyahTeachingSchedules::route('/'),
-            'create' => CreateDiniyyahTeachingSchedule::route('/create'),
-            'edit' => EditDiniyyahTeachingSchedule::route('/{record}/edit'),
         ];
     }
 }

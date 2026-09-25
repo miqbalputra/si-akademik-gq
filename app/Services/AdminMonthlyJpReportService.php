@@ -41,7 +41,7 @@ class AdminMonthlyJpReportService
      *
      * @return array<string, mixed>
      */
-    public function buildForRange(?int $academicTermId, Carbon|string $start, Carbon|string $end): array
+    public function buildForRange(?int $academicTermId, Carbon|string $start, Carbon|string $end, ?Collection $scheduleOverride = null, bool $includeFuture = false): array
     {
         $term = $academicTermId
             ? AcademicTerm::with('academicYear')->findOrFail($academicTermId)
@@ -49,11 +49,11 @@ class AdminMonthlyJpReportService
         $start = $this->asJakartaDate($start)->startOfDay();
         $end = $this->asJakartaDate($end)->endOfDay();
 
-        if ($end->isFuture()) {
+        if (! $includeFuture && $end->isFuture()) {
             $end = now('Asia/Jakarta')->endOfDay();
         }
 
-        $schedules = DiniyyahTeachingSchedule::query()->with([
+        $schedules = $scheduleOverride ?? DiniyyahTeachingSchedule::query()->overlappingRange($start, $end)->with([
             'teacherAssignment.teacher',
             'teacherAssignment.classSubject.subject',
             'teacherAssignment.classSubject.classroomTerm.classroom',
@@ -87,13 +87,15 @@ class AdminMonthlyJpReportService
 
         for ($date = $start->copy(); $date->lte($end); $date->addDay()) {
             $dateString = $date->toDateString();
-            $daySchedules = $schedules->filter(fn ($schedule) => (int) $schedule->day_of_week === $date->dayOfWeekIso && $this->assignmentActiveOn($schedule->teacherAssignment, $date));
+            $daySchedules = $schedules->filter(fn ($schedule) => $schedule->appliesOn($date)
+                && (int) $schedule->day_of_week === $date->dayOfWeekIso
+                && $this->assignmentActiveOn($schedule->teacherAssignment, $date));
             if ($daySchedules->isEmpty()) {
                 continue;
             }
             $dayJournals = $journals->filter(fn ($journal) => $journal->date?->toDateString() === $dateString);
             $holiday = $holidays->get($dateString);
-            $groups = $this->tafsirGroups->simultaneousGroupsForDate($schedules, $date);
+            $groups = $this->tafsirGroups->simultaneousGroupsForDate($daySchedules, $date);
             $groupedScheduleIds = [];
 
             foreach ($groups as $group) {

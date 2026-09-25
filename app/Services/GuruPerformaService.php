@@ -225,7 +225,7 @@ class GuruPerformaService
     ): array {
         $today = Carbon::now('Asia/Jakarta')->toDateString();
 
-        $schedules = DiniyyahTeachingSchedule::with([
+        $schedules = DiniyyahTeachingSchedule::query()->overlappingRange($startDate, $endDate)->with([
             'teacherAssignment.classSubject.subject',
             'teacherAssignment.classSubject.classroomTerm.classroom',
             'classSession',
@@ -304,7 +304,7 @@ class GuruPerformaService
 
             $dayOfWeek = $date->dayOfWeekIso;
             $daySchedules = $schedules->where('day_of_week', $dayOfWeek)
-                ->filter(fn ($s) => $this->assignmentActiveOn($s->teacherAssignment, $date));
+                ->filter(fn ($s) => $s->appliesOn($date) && $this->assignmentActiveOn($s->teacherAssignment, $date));
 
             if ($daySchedules->isEmpty()) {
                 $date->addDay();

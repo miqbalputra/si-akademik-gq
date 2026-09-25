@@ -43,6 +43,11 @@ class DiniyyahTeacherAssignment extends Model
 
     public function schedules(): HasMany
     {
+        return $this->hasMany(DiniyyahTeachingSchedule::class, 'diniyyah_teacher_assignment_id')->visibleVersions();
+    }
+
+    public function allScheduleVersions(): HasMany
+    {
         return $this->hasMany(DiniyyahTeachingSchedule::class, 'diniyyah_teacher_assignment_id');
     }
 
@@ -57,15 +62,13 @@ class DiniyyahTeacherAssignment extends Model
     }
 
     /**
-     * Apakah penugasan ini boleh dihapus. Penugasan yang sudah memiliki jurnal
-     * kelas TIDAK boleh dihapus, karena FK jurnal→assignment cascadeOnDelete
-     * (hard delete, tanpa soft delete) akan menghapus seluruh jurnal secara
-     * permanen — satu-satunya jalur hilangnya data jurnal. Lihat policy
-     * {@see \App\Policies\DiniyyahTeacherAssignmentPolicy::delete()}.
+     * Apakah penugasan ini boleh dihapus. Assignment yang memiliki jurnal
+     * atau pernah memiliki jadwal tidak boleh dihapus karena FK cascade dapat
+     * menghapus data historis. Lihat policy model ini untuk guard Filament.
      */
     public function isDeletable(): bool
     {
-        return ! $this->journals()->exists();
+        return ! $this->journals()->exists() && ! $this->allScheduleVersions()->exists();
     }
 
     /**

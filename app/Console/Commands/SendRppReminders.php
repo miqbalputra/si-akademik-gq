@@ -16,7 +16,7 @@ class SendRppReminders extends Command
     public function handle(NotificationDispatcher $notifications): int
     {
         $date = Carbon::parse($this->option('date') ?: now('Asia/Jakarta')->toDateString(), 'Asia/Jakarta');
-        $schedules = DiniyyahTeachingSchedule::with('teacherAssignment.teacher.user')->where('day_of_week', $date->dayOfWeekIso)->get();
+        $schedules = DiniyyahTeachingSchedule::query()->forDate($date)->with('teacherAssignment.teacher.user')->where('day_of_week', $date->dayOfWeekIso)->get();
         $sent = 0;
         foreach ($schedules as $schedule) {
             $assignment = $schedule->teacherAssignment;

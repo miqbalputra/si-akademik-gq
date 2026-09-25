@@ -51,7 +51,7 @@ class GuruDiniyyahSubstituteTafsirJournalController extends Controller
         $fallbackGenderGroup = ! $this->hasActiveScheduleFor($teacher, $selectedDate)
             ? $this->teacherGenderGroup($teacher)
             : null;
-        $schedules = $this->othersTafsirSchedulesFor($teacher, $fallbackGenderGroup);
+        $schedules = $this->othersTafsirSchedulesFor($teacher, $fallbackGenderGroup, $selectedDate);
         $agendaEvents = $this->noKbmAgendaService->eventsForRange(
             $schedules
                 ->map(fn ($schedule) => $schedule->teacherAssignment?->classSubject?->classroomTerm)
@@ -111,7 +111,7 @@ class GuruDiniyyahSubstituteTafsirJournalController extends Controller
         $fallbackGenderGroup = ! $this->hasActiveScheduleFor($teacher, $validated['date'])
             ? $this->teacherGenderGroup($teacher)
             : null;
-        $schedules = $this->othersTafsirSchedulesFor($teacher, $fallbackGenderGroup);
+        $schedules = $this->othersTafsirSchedulesFor($teacher, $fallbackGenderGroup, $validated['date']);
         $group = $this->tafsirScheduleGroupingService->groupContainingAssignments(
             $this->tafsirScheduleGroupingService->simultaneousGroupsForDate($schedules, $validated['date']),
             $validated['assignments'],
@@ -200,9 +200,9 @@ class GuruDiniyyahSubstituteTafsirJournalController extends Controller
     }
 
     /** Semua schedule Tafsir milik guru lain dengan relasi yang dibutuhkan. */
-    private function othersTafsirSchedulesFor($teacher, ?string $genderGroup = null)
+    private function othersTafsirSchedulesFor($teacher, ?string $genderGroup = null, ?string $date = null)
     {
-        return DiniyyahTeachingSchedule::with([
+        return DiniyyahTeachingSchedule::query()->when($date, fn ($query, string $date) => $query->forDate($date))->with([
             'teacherAssignment.classSubject.subject',
             'teacherAssignment.classSubject.classroomTerm.classroom',
             'teacherAssignment.teacher',

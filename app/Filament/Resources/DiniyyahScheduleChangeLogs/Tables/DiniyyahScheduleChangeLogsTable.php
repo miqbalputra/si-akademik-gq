@@ -36,14 +36,57 @@ class DiniyyahScheduleChangeLogsTable
                         'created' => 'success',
                         'updated' => 'warning',
                         'deleted' => 'danger',
+                        'correction' => 'warning',
+                        'approved' => 'success',
                         default => 'gray',
                     })
                     ->formatStateUsing(fn (string $state): string => match ($state) {
                         'created' => 'Dibuat',
                         'updated' => 'Diubah',
                         'deleted' => 'Dihapus',
+                        'correction' => 'Koreksi kesalahan',
+                        'approved' => 'Perubahan disetujui',
                         default => $state,
                     }),
+                TextColumn::make('effective_from')
+                    ->label('Mulai berlaku')
+                    ->date('d M Y')
+                    ->placeholder('-')
+                    ->toggleable(),
+                TextColumn::make('effective_until')
+                    ->label('Sampai')
+                    ->date('d M Y')
+                    ->placeholder('Tanpa batas')
+                    ->toggleable(),
+                TextColumn::make('reason')
+                    ->label('Alasan')
+                    ->wrap()
+                    ->placeholder('-')
+                    ->toggleable(),
+                TextColumn::make('request_reference')
+                    ->label('Referensi')
+                    ->wrap()
+                    ->placeholder('-')
+                    ->toggleable(),
+                TextColumn::make('old_values')
+                    ->label('Nilai Lama')
+                    ->getStateUsing(fn ($record): string => $record->old_values ? (json_encode($record->old_values, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) ?: '-') : '-')
+                    ->wrap()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('new_values')
+                    ->label('Nilai Baru')
+                    ->getStateUsing(fn ($record): string => $record->new_values ? (json_encode($record->new_values, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) ?: '-') : '-')
+                    ->wrap()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('reviewed_at')
+                    ->label('Ditinjau')
+                    ->dateTime('d M Y H:i')
+                    ->placeholder('Belum ditinjau')
+                    ->toggleable(),
+                TextColumn::make('reviewer.name')
+                    ->label('Ditinjau Oleh')
+                    ->placeholder('-')
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('entity_type')
                     ->label('Jenis')
                     ->badge()

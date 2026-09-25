@@ -2,9 +2,6 @@
 
 namespace App\Filament\Resources\DiniyyahTeachingSchedules\Tables;
 
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -43,6 +40,23 @@ class DiniyyahTeachingSchedulesTable
                     ->label('Jam Pelajaran')
                     ->searchable()
                     ->sortable(),
+                TextColumn::make('version_status')
+                    ->label('Status')
+                    ->badge()
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                        'legacy' => 'Legacy · belum ditinjau',
+                        'active' => 'Berlaku',
+                        default => $state,
+                    })
+                    ->color(fn (string $state): string => $state === 'legacy' ? 'warning' : 'success'),
+                TextColumn::make('effective_from')
+                    ->label('Mulai berlaku')
+                    ->date('d M Y')
+                    ->placeholder('Perilaku lama'),
+                TextColumn::make('effective_until')
+                    ->label('Sampai')
+                    ->date('d M Y')
+                    ->placeholder('Tanpa batas'),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -65,13 +79,7 @@ class DiniyyahTeachingSchedulesTable
                         7 => 'Minggu',
                     ]),
             ])
-            ->recordActions([
-                EditAction::make(),
-            ])
-            ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
-            ]);
+            ->recordActions([])
+            ->toolbarActions([]);
     }
 }

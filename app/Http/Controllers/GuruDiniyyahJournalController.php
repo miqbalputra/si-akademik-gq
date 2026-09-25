@@ -31,14 +31,23 @@ class GuruDiniyyahJournalController extends Controller
             abort(403, 'Akses ditolak. Akun Anda tidak terhubung dengan data Guru.');
         }
 
+        // Default hari ini menggunakan tanggal WIB dan semua jadwal di bawah
+        // harus mengikuti versi yang berlaku pada tanggal jurnal terpilih.
+        $selectedDate = $request->query('date', Carbon::now('Asia/Jakarta')->toDateString());
+
         // Active assignments for this teacher. eager-load `schedules.classSession` agar
         // pengecekan jadwal (hari & sesi) di kelas terpilih tidak menambah query (N+1).
         $assignments = DiniyyahTeacherAssignment::with(['classSubject.subject', 'classSubject.classroomTerm.classroom', 'schedules.classSession'])
             ->where('teacher_id', $teacher->id)
             ->get();
-        $assignments->each(fn ($assignment) => $assignment->schedules
-            ->each(fn ($schedule) => $schedule->setRelation('teacherAssignment', $assignment)));
-        $teacherSchedules = DiniyyahTeachingSchedule::with([
+        $assignments->each(function ($assignment) use ($selectedDate): void {
+            $schedules = $assignment->schedules
+                ->filter(fn ($schedule) => $schedule->appliesOn($selectedDate))
+                ->values();
+            $schedules->each(fn ($schedule) => $schedule->setRelation('teacherAssignment', $assignment));
+            $assignment->setRelation('schedules', $schedules);
+        });
+        $teacherSchedules = DiniyyahTeachingSchedule::query()->forDate($selectedDate)->with([
             'teacherAssignment.classSubject.subject',
             'teacherAssignment.classSubject.classroomTerm.classroom',
             'classSession',
@@ -48,10 +57,6 @@ class GuruDiniyyahJournalController extends Controller
         $classes = $assignments->pluck('classSubject.classroomTerm')->unique('id');
 
         $selectedClassroomTermId = $request->query('classroom_term_id');
-        // Default "hari ini" dalam WIB — app tz=UTC, jadi date('Y-m-d') bisa meleset
-        // ke kemarin di larut malam WIB. Lihat memori app-timezone-utc-vs-wib.
-        $selectedDate = $request->query('date', Carbon::now('Asia/Jakarta')->toDateString());
-
         $students = collect();
         $dailyAbsences = [];
         $existingJournals = collect();
@@ -392,7 +397,7 @@ class GuruDiniyyahJournalController extends Controller
             ->where('diniyyah_teacher_assignment_id', $assignment->id)
             ->exists();
         if ($assignmentHasSchedules) {
-            $scheduled = DiniyyahTeachingSchedule::query()
+            $scheduled = DiniyyahTeachingSchedule::query()->forDate($validated['date'])
                 ->where('diniyyah_teacher_assignment_id', $assignment->id)
                 ->where('day_of_week', $dayOfWeek)
                 ->whereHas('classSession', fn ($q) => $q->where('session_name', $validated['session_hour']))
@@ -405,7 +410,7 @@ class GuruDiniyyahJournalController extends Controller
             }
         }
 
-        $teacherSchedules = DiniyyahTeachingSchedule::with([
+        $teacherSchedules = DiniyyahTeachingSchedule::query()->forDate($validated['date'])->with([
             'teacherAssignment.classSubject.subject',
             'teacherAssignment.classSubject.classroomTerm.classroom',
             'classSession',

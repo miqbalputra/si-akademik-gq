@@ -100,7 +100,7 @@ class WaliClassJournalMonitoringController extends Controller
         abort_unless($classroomTermIds->isNotEmpty(), 403, 'Anda tidak memiliki penugasan wali kelas pada periode ini.');
             
         // Get schedules
-        $schedules = \App\Models\DiniyyahTeachingSchedule::with([
+        $schedules = \App\Models\DiniyyahTeachingSchedule::query()->overlappingRange($startDate, $endDate)->with([
             'teacherAssignment.teacher', 
             'teacherAssignment.classSubject.subject', 
             'teacherAssignment.classSubject.classroomTerm.classroom',
@@ -123,7 +123,7 @@ class WaliClassJournalMonitoringController extends Controller
             ->values();
         $globalTafsirSchedules = $tafsirTeacherIds->isEmpty()
             ? collect()
-            : \App\Models\DiniyyahTeachingSchedule::with([
+            : \App\Models\DiniyyahTeachingSchedule::query()->overlappingRange($startDate, $endDate)->with([
                 'teacherAssignment.teacher',
                 'teacherAssignment.classSubject.subject',
                 'teacherAssignment.classSubject.classroomTerm.classroom',
@@ -207,7 +207,8 @@ class WaliClassJournalMonitoringController extends Controller
                 $dateStr = $date->format('Y-m-d');
                 $dayOfWeek = $date->dayOfWeekIso;
                 
-                $daySchedules = $schedules->where('day_of_week', $dayOfWeek);
+                $daySchedules = $schedules->where('day_of_week', $dayOfWeek)
+                    ->filter(fn ($schedule): bool => $schedule->appliesOn($date));
                 
                 // Skip if no schedules on this day
                 if ($daySchedules->isEmpty()) {

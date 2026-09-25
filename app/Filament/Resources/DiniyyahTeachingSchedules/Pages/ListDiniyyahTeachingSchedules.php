@@ -3,7 +3,8 @@
 namespace App\Filament\Resources\DiniyyahTeachingSchedules\Pages;
 
 use App\Filament\Resources\DiniyyahTeachingSchedules\DiniyyahTeachingScheduleResource;
-use Filament\Actions\CreateAction;
+use App\Filament\Pages\DiniyyahScheduleVersionManager;
+use Filament\Actions\Action;
 use Filament\Resources\Pages\ListRecords;
 
 class ListDiniyyahTeachingSchedules extends ListRecords
@@ -13,7 +14,10 @@ class ListDiniyyahTeachingSchedules extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            CreateAction::make(),
+            Action::make('manage_versions')
+                ->label('Kelola versi & koreksi jadwal')
+                ->icon('heroicon-o-calendar-days')
+                ->url(DiniyyahScheduleVersionManager::getUrl()),
         ];
     }
 }

@@ -44,7 +44,7 @@ class GuruDiniyyahTafsirJournalController extends Controller
 
         $tafsirAssignments = $this->tafsirAssignmentsFor($teacher);
         $selectedDate = $request->query('date', $this->defaultTafsirDate());
-        $schedules = $this->tafsirSchedulesFor($teacher);
+        $schedules = $this->tafsirSchedulesFor($teacher, $selectedDate);
         $requestedAssignmentIds = collect($request->query('assignment_ids', []))
             ->map(fn ($id) => (int) $id)
             ->filter()
@@ -113,7 +113,7 @@ class GuruDiniyyahTafsirJournalController extends Controller
             abort(403, 'Akses ditolak. Akun Anda tidak terhubung dengan data Guru.');
         }
 
-        $schedules = $this->tafsirSchedulesFor($teacher);
+        $schedules = $this->tafsirSchedulesFor($teacher, $validated['date']);
         if ($schedules->isEmpty()) {
             return redirect()->route('guru.diniyyah-tafsir-journals.index')
                 ->with('error', 'Anda belum memiliki penugasan Tafsir. Minta admin menambahkannya di menu Diniyyah (subject Tafsir Al Quran + penugasan ke kelas Anda).');
@@ -218,9 +218,9 @@ class GuruDiniyyahTafsirJournalController extends Controller
             ->values();
     }
 
-    private function tafsirSchedulesFor($teacher)
+    private function tafsirSchedulesFor($teacher, ?string $date = null)
     {
-        return DiniyyahTeachingSchedule::with([
+        return DiniyyahTeachingSchedule::query()->when($date, fn ($query, string $date) => $query->forDate($date))->with([
             'teacherAssignment.classSubject.subject',
             'teacherAssignment.classSubject.classroomTerm.classroom',
             'classSession',

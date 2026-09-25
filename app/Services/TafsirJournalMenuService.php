@@ -23,20 +23,31 @@ class TafsirJournalMenuService
         $schedules = $this->tafsirSchedulesFor($teacher);
 
         return $schedules
-            ->pluck('day_of_week')
-            ->map(fn ($day): int => (int) $day)
-            ->filter(fn (int $day): bool => $day >= 1 && $day <= 7)
-            ->unique()
-            ->contains(function (int $dayOfWeek) use ($schedules, $referenceDate): bool {
-                $nextMeetingDate = $referenceDate->copy()->startOfWeek()->addDays($dayOfWeek - 1);
+            ->filter(fn ($schedule): bool => $this->tafsirScheduleGroupingService->isTafsirSchedule($schedule))
+            ->contains(function ($schedule) use ($schedules, $referenceDate): bool {
+                $notBefore = $referenceDate->copy();
+                if ($schedule->version_status === DiniyyahTeachingSchedule::STATUS_ACTIVE
+                    && $schedule->effective_from
+                    && $schedule->effective_from->gt($notBefore)) {
+                    $notBefore = $schedule->effective_from->copy()->startOfDay();
+                }
 
-                if ($nextMeetingDate->lt($referenceDate)) {
+                $dayOfWeek = (int) $schedule->day_of_week;
+                if ($dayOfWeek < 1 || $dayOfWeek > 7) {
+                    return false;
+                }
+
+                $nextMeetingDate = $notBefore->copy()->startOfWeek()->addDays($dayOfWeek - 1);
+                if ($nextMeetingDate->lt($notBefore)) {
                     $nextMeetingDate->addWeek();
+                }
+                if ($schedule->effective_until && $schedule->effective_until->lt($nextMeetingDate)) {
+                    return false;
                 }
 
                 return $this->tafsirScheduleGroupingService
                     ->simultaneousGroupsForDate($schedules, $nextMeetingDate)
-                    ->isNotEmpty();
+                    ->contains(fn (array $group): bool => $group['schedules']->contains(fn ($item) => (int) $item->id === (int) $schedule->id));
             });
     }
 

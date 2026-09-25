@@ -148,8 +148,9 @@ class RingkasanPenugasanGuru extends Page implements HasTable
                     }),
                 TextColumn::make('schedules_list')
                     ->label('Jadwal')
-                    ->getStateUsing(function (DiniyyahTeacherAssignment $record) use ($days): array {
+                    ->getStateUsing(function (DiniyyahTeacherAssignment $record) use ($days, $today): array {
                         return $record->schedules
+                            ->filter(fn ($schedule) => $schedule->appliesOn($today))
                             ->filter(fn ($s) => $s->classSession && ! $s->classSession->is_break)
                             ->sortBy('day_of_week')
                             ->map(function ($s) use ($days): string {

@@ -66,8 +66,13 @@ class GuruDiniyyahSubstituteJournalController extends Controller
                 $query->whereNull('ends_at')->orWhereDate('ends_at', '>=', $selectedDate);
             })
             ->get();
-        $allAssignments->each(fn ($assignment) => $assignment->schedules
-            ->each(fn ($schedule) => $schedule->setRelation('teacherAssignment', $assignment)));
+        $allAssignments->each(function ($assignment) use ($selectedDate): void {
+            $schedules = $assignment->schedules
+                ->filter(fn ($schedule) => $schedule->appliesOn($selectedDate))
+                ->values();
+            $schedules->each(fn ($schedule) => $schedule->setRelation('teacherAssignment', $assignment));
+            $assignment->setRelation('schedules', $schedules);
+        });
         $allSchedules = $allAssignments->flatMap(fn ($assignment) => $assignment->schedules)->values();
 
         // Daftar kelas yang punya assignment diniyyah aktif (bisa digantikan).
@@ -158,7 +163,8 @@ class GuruDiniyyahSubstituteJournalController extends Controller
 
                             // Jika assignment memiliki slot Tafsir serentak yang
                             // diketahui, tetap arahkan ke menu Tafsir khusus.
-                            $matchingSchedule = $assignment->schedules->first(fn ($schedule) => (int) $schedule->day_of_week === $dayOfWeek
+                            $matchingSchedule = $assignment->schedules->first(fn ($schedule) => $schedule->appliesOn($selectedDate)
+                                && (int) $schedule->day_of_week === $dayOfWeek
                                 && (string) ($schedule->classSession?->session_name ?? '') === (string) $slot->session_name
                             );
                             if ($matchingSchedule && in_array((int) $matchingSchedule->id, $simultaneousScheduleIds, true)) {
@@ -179,7 +185,7 @@ class GuruDiniyyahSubstituteJournalController extends Controller
                 } else {
                     foreach ($classAssignments as $assignment) {
                         foreach ($assignment->schedules as $schedule) {
-                            if ((int) $schedule->day_of_week !== $dayOfWeek) {
+                            if (! $schedule->appliesOn($selectedDate) || (int) $schedule->day_of_week !== $dayOfWeek) {
                                 continue;
                             }
                             if (in_array((int) $schedule->id, $simultaneousScheduleIds, true)) {
@@ -299,7 +305,7 @@ class GuruDiniyyahSubstituteJournalController extends Controller
                 ->where('diniyyah_teacher_assignment_id', $assignment->id)
                 ->exists();
             if ($assignmentHasSchedules) {
-                $scheduled = DiniyyahTeachingSchedule::query()
+                $scheduled = DiniyyahTeachingSchedule::query()->forDate($validated['date'])
                     ->where('diniyyah_teacher_assignment_id', $assignment->id)
                     ->where('day_of_week', $dayOfWeek)
                     ->whereHas('classSession', fn ($q) => $q->where('session_name', $validated['session_hour']))
@@ -313,7 +319,7 @@ class GuruDiniyyahSubstituteJournalController extends Controller
             }
         }
 
-        $allSchedules = DiniyyahTeachingSchedule::with([
+        $allSchedules = DiniyyahTeachingSchedule::query()->forDate($validated['date'])->with([
             'teacherAssignment.classSubject.subject',
             'teacherAssignment.classSubject.classroomTerm.classroom',
             'classSession',
@@ -437,7 +443,7 @@ class GuruDiniyyahSubstituteJournalController extends Controller
 
     private function hasActiveScheduleFor(Teacher $teacher, string $date): bool
     {
-        return DiniyyahTeachingSchedule::query()
+        return DiniyyahTeachingSchedule::query()->forDate($date)
             ->whereHas('teacherAssignment', function ($query) use ($teacher, $date): void {
                 $query->where('teacher_id', $teacher->id)
                     ->where(function ($query) use ($date): void {

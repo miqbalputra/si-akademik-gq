@@ -26,7 +26,7 @@ class TafsirJournalAuditService
     {
         $start = Carbon::parse($start, 'Asia/Jakarta')->startOfDay();
         $end = Carbon::parse($end, 'Asia/Jakarta')->endOfDay();
-        $schedules = $this->schedulesForTerm($academicTermId);
+        $schedules = $this->schedulesForTerm($academicTermId, $start, $end);
         $journals = $this->journalsForTerm($academicTermId, $start, $end);
         $normalizations = TafsirJournalNormalization::query()
             ->whereIn('diniyyah_class_journal_id', $journals->pluck('id'))
@@ -136,14 +136,15 @@ class TafsirJournalAuditService
     }
 
     /** @return Collection<int, DiniyyahTeachingSchedule> */
-    private function schedulesForTerm(int $termId): Collection
+    private function schedulesForTerm(int $termId, Carbon $start, Carbon $end): Collection
     {
         return DiniyyahTeachingSchedule::query()->with([
             'teacherAssignment.teacher',
             'teacherAssignment.classSubject.subject',
             'teacherAssignment.classSubject.classroomTerm.classroom',
             'classSession',
-        ])->whereHas('teacherAssignment.classSubject.classroomTerm', fn ($query) => $query->where('academic_term_id', $termId))->get();
+        ])->overlappingRange($start, $end)
+            ->whereHas('teacherAssignment.classSubject.classroomTerm', fn ($query) => $query->where('academic_term_id', $termId))->get();
     }
 
     /** @return Collection<int, DiniyyahClassJournal> */

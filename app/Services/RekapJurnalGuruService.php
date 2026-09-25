@@ -50,7 +50,9 @@ class RekapJurnalGuruService
         // Jurnal Tafsir lama pernah tersimpan dengan nama sesi kelas (misalnya
         // "1"), sehingga label jurnal saja tidak cukup untuk menentukan JP.
         // Jadwal aktif adalah sumber kebenaran untuk mengenali sesi serentak.
-        $schedules = DiniyyahTeachingSchedule::query()->with([
+        $scheduleStart = $dateFrom ?? $journals->min(fn ($journal) => $journal->date?->toDateString()) ?? '0001-01-01';
+        $scheduleEnd = $dateUntil ?? $journals->max(fn ($journal) => $journal->date?->toDateString()) ?? now('Asia/Jakarta')->toDateString();
+        $schedules = DiniyyahTeachingSchedule::query()->overlappingRange($scheduleStart, $scheduleEnd)->with([
             'teacherAssignment.teacher',
             'teacherAssignment.classSubject.subject',
             'teacherAssignment.classSubject.classroomTerm.classroom',

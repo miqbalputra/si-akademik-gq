@@ -18,6 +18,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'old_values',
     'new_values',
     'changed_by',
+    'change_type',
+    'effective_from',
+    'effective_until',
+    'reason',
+    'request_reference',
+    'reviewed_at',
+    'reviewed_by',
 ])]
 class DiniyyahScheduleChangeLog extends Model
 {
@@ -33,6 +40,9 @@ class DiniyyahScheduleChangeLog extends Model
         'old_values' => 'array',
         'new_values' => 'array',
         'created_at' => 'datetime',
+        'effective_from' => 'date',
+        'effective_until' => 'date',
+        'reviewed_at' => 'datetime',
     ];
 
     public function teacher(): BelongsTo
@@ -58,5 +68,10 @@ class DiniyyahScheduleChangeLog extends Model
     public function changer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'changed_by');
+    }
+
+    public function reviewer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reviewed_by');
     }
 }
