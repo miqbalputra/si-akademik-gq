@@ -103,6 +103,7 @@ class JournalReminderReportTest extends TestCase
 
         $response = $this->actingAs($ctx['admin'])->get(route('admin.journal-reminders.export', ['format' => 'png'] + $query));
         $response->assertOk()->assertHeader('Content-Type', 'image/png');
+        $this->assertStringEndsWith('.png"', $response->headers->get('Content-Disposition'));
         $this->assertStringStartsWith("\x89PNG\r\n\x1a\n", $response->getContent());
     }
 
@@ -136,9 +137,140 @@ class JournalReminderReportTest extends TestCase
         $pngResponse = $this->actingAs($ctx['admin'])->get(route('admin.journal-reminders.export', ['format' => 'png'] + $query));
 
         $jpgResponse->assertOk()->assertHeader('Content-Type', 'image/jpeg');
+        $this->assertStringEndsWith('.jpg"', $jpgResponse->headers->get('Content-Disposition'));
         $this->assertStringStartsWith("\xff\xd8\xff", $jpgResponse->getContent());
         $pngResponse->assertOk()->assertHeader('Content-Type', 'image/png');
+        $this->assertStringEndsWith('.png"', $pngResponse->headers->get('Content-Disposition'));
         $this->assertStringStartsWith("\x89PNG\r\n\x1a\n", $pngResponse->getContent());
+    }
+
+    public function test_image_layout_keeps_all_four_columns_and_wraps_long_cell_values(): void
+    {
+        $longSubject = str_repeat('MapelDenganNamaPanjang', 10);
+        $report = [
+            'term' => (object) ['academicYear' => (object) ['name' => '2026/2027'], 'name' => 'Ganjil'],
+            'start' => Carbon::parse('2026-08-05', 'Asia/Jakarta'),
+            'end' => Carbon::parse('2026-08-05', 'Asia/Jakarta'),
+            'generated_at' => Carbon::parse('2026-08-05 09:00:00', 'Asia/Jakarta'),
+            'teachers' => collect([[
+                'teacher_name' => 'Ustadz Ahmad',
+                'niy' => 'G-001',
+                'missing_count' => 1,
+                'rows' => collect([[
+                    'date_label' => 'Rabu, 05 Agustus 2026',
+                    'session' => 'Tafsir serentak tingkat lanjutan',
+                    'session_time' => '08:00 - 09:00',
+                    'classes' => ['Kelas Tafsir A dan B', 'Kelas Ulumul Hadits Lanjutan'],
+                    'subjects' => [$longSubject],
+                ]]),
+            ]]),
+            'stats' => [
+                'teachers_to_remind' => 1,
+                'total_missing' => 1,
+                'attendance_unverified_teachers' => 0,
+            ],
+        ];
+
+        $renderer = new JournalReminderImageRenderer;
+        $layoutMethod = new \ReflectionMethod($renderer, 'buildLayout');
+        $layoutMethod->setAccessible(true);
+        $layout = $layoutMethod->invoke($renderer, $report, [
+            'regular' => resource_path('fonts/NotoSans-Regular.ttf'),
+            'bold' => resource_path('fonts/NotoSans-Bold.ttf'),
+        ]);
+        $columns = (new \ReflectionClass($renderer))->getConstant('COLUMNS');
+        $rowBlock = collect($layout['blocks'])->firstWhere('kind', 'table_row');
+
+        $this->assertSame(['Tanggal', 'Sesi / Jam', 'Kelas', 'Mapel'], array_column($columns, 'label'));
+        $this->assertNotNull($rowBlock);
+        $this->assertGreaterThan(1, count($rowBlock['cells']['classes']['lines']));
+        $this->assertGreaterThan(1, count($rowBlock['cells']['subjects']['lines']));
+        $this->assertSame(
+            'Kelas Tafsir A dan B, Kelas Ulumul Hadits Lanjutan',
+            preg_replace('/\s+/u', ' ', trim(implode(' ', $rowBlock['cells']['classes']['lines']))),
+        );
+        $this->assertSame($longSubject, implode('', $rowBlock['cells']['subjects']['lines']));
+        $this->assertSame(
+            'Rabu, 05 Agustus 2026',
+            preg_replace('/\s+/u', ' ', implode(' ', $rowBlock['cells']['date']['lines'])),
+        );
+        $this->assertSame(
+            'Tafsir serentak tingkat lanjutan',
+            preg_replace('/\s+/u', ' ', implode(' ', $rowBlock['cells']['session']['main'])),
+        );
+        $this->assertSame(['08:00 - 09:00'], $rowBlock['cells']['session']['time']);
+        $this->assertGreaterThan(80, $rowBlock['height']);
+    }
+
+    public function test_image_layout_keeps_the_empty_report_message(): void
+    {
+        $report = [
+            'term' => (object) ['academicYear' => (object) ['name' => '2026/2027'], 'name' => 'Ganjil'],
+            'start' => Carbon::parse('2026-08-05', 'Asia/Jakarta'),
+            'end' => Carbon::parse('2026-08-05', 'Asia/Jakarta'),
+            'generated_at' => Carbon::parse('2026-08-05 09:00:00', 'Asia/Jakarta'),
+            'teachers' => collect(),
+            'stats' => [
+                'teachers_to_remind' => 0,
+                'total_missing' => 0,
+                'attendance_unverified_teachers' => 0,
+            ],
+        ];
+        $renderer = new JournalReminderImageRenderer;
+        $layoutMethod = new \ReflectionMethod($renderer, 'buildLayout');
+        $layoutMethod->setAccessible(true);
+        $layout = $layoutMethod->invoke($renderer, $report, [
+            'regular' => resource_path('fonts/NotoSans-Regular.ttf'),
+            'bold' => resource_path('fonts/NotoSans-Bold.ttf'),
+        ]);
+        $emptyBlock = collect($layout['blocks'])->first(fn (array $block): bool => $block['kind'] === 'text' && in_array('Semua jurnal pada rentang ini sudah lengkap.', $block['lines'], true)
+        );
+
+        $this->assertNotNull($emptyBlock);
+        $this->assertSame([], collect($layout['blocks'])->whereIn('kind', ['teacher', 'table_header', 'table_row'])->all());
+        $this->assertGreaterThanOrEqual(900, $layout['height']);
+    }
+
+    public function test_image_renderer_produces_png_and_jpeg_with_bundled_font_when_gd_is_available(): void
+    {
+        if (! function_exists('imagecreatetruecolor') || ! function_exists('imagettftext') || ! function_exists('imagettfbbox')) {
+            $this->markTestSkipped('PHP GD with FreeType is not installed in this environment.');
+        }
+
+        $report = [
+            'term' => (object) ['academicYear' => (object) ['name' => '2026/2027'], 'name' => 'Ganjil'],
+            'start' => Carbon::parse('2026-08-05', 'Asia/Jakarta'),
+            'end' => Carbon::parse('2026-08-05', 'Asia/Jakarta'),
+            'generated_at' => Carbon::parse('2026-08-05 09:00:00', 'Asia/Jakarta'),
+            'teachers' => collect([[
+                'teacher_name' => 'Ustadz Ahmad',
+                'niy' => 'G-001',
+                'missing_count' => 1,
+                'rows' => collect([[
+                    'date_label' => 'Rabu, 05 Agustus 2026',
+                    'session' => 'Jam 1',
+                    'session_time' => '08:00 - 09:00',
+                    'classes' => ['Kelas Fiqih'],
+                    'subjects' => ['Fiqih'],
+                ]]),
+            ]]),
+            'stats' => [
+                'teachers_to_remind' => 1,
+                'total_missing' => 1,
+                'attendance_unverified_teachers' => 0,
+            ],
+        ];
+
+        $renderer = new JournalReminderImageRenderer;
+        foreach (['png' => 'image/png', 'jpg' => 'image/jpeg'] as $format => $expectedMime) {
+            $content = $renderer->render($report, $format);
+            $image = getimagesizefromstring($content);
+
+            $this->assertIsArray($image);
+            $this->assertSame($expectedMime, $image['mime']);
+            $this->assertSame(1440, $image[0]);
+            $this->assertGreaterThanOrEqual(900, $image[1]);
+        }
     }
 
     public function test_default_range_is_current_month_to_today_and_future_dates_are_excluded(): void
