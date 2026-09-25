@@ -209,7 +209,33 @@
             {{-- ===== Desktop matrix (hidden on mobile) ===== --}}
             <div class="hidden md:block">
             <div class="attendance-sticky-head" data-attendance-sticky-header aria-hidden="true">
-                <div class="attendance-sticky-head-content" data-attendance-sticky-header-content></div>
+                <div class="attendance-sticky-head-content" data-attendance-sticky-header-content>
+                    <table class="text-left text-sm whitespace-nowrap" style="width: max-content; min-width: 0; table-layout: fixed;">
+                        <colgroup>
+                            <col style="width: var(--attendance-student-column-width)">
+                            @foreach ($days as $day)
+                                <col style="width: 70px">
+                            @endforeach
+                            <col style="width: 64px">
+                            <col style="width: 64px">
+                            <col style="width: 64px">
+                        </colgroup>
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                                <th class="px-6 py-4">Santri</th>
+                                @foreach ($days as $day)
+                                    <th class="px-3 py-2 text-center min-w-[70px]">
+                                        <span class="block font-black text-slate-700 text-sm">{{ $day->format('d') }}</span>
+                                        <span class="block text-[8px] font-bold mt-0.5 text-slate-400">{{ $day->locale('id')->translatedFormat('l') }}</span>
+                                    </th>
+                                @endforeach
+                                <th class="px-4 py-2 text-center">S</th>
+                                <th class="px-4 py-2 text-center">I</th>
+                                <th class="px-4 py-2 text-center">A</th>
+                            </tr>
+                        </thead>
+                    </table>
+                </div>
                 <div class="attendance-sticky-name"><span>Santri</span><span class="attendance-sticky-month">{{ $selectedMonthLabel }}</span></div>
             </div>
             <div class="overflow-x-auto pb-20" data-attendance-scroll-area>
@@ -405,25 +431,10 @@
                     },
 
                     initializeStickyAttendanceHeader() {
-                        const sourceTable = this.$root.querySelector('[data-attendance-table]');
                         const headerContent = this.$root.querySelector('[data-attendance-sticky-header-content]');
                         const scrollArea = this.$root.querySelector('[data-attendance-scroll-area]');
-                        const sourceHead = sourceTable?.querySelector('thead');
 
-                        if (!sourceTable || !sourceHead || !headerContent || !scrollArea) return;
-
-                        const stickyTable = sourceTable.cloneNode(false);
-                        stickyTable.removeAttribute('data-attendance-table');
-                        stickyTable.setAttribute('aria-hidden', 'true');
-                        stickyTable.style.width = 'max-content';
-                        stickyTable.style.minWidth = '0';
-                        stickyTable.style.tableLayout = 'fixed';
-
-                        const columns = sourceTable.querySelector('colgroup');
-                        const stickyHead = sourceHead.cloneNode(true);
-                        stickyHead.classList.remove('attendance-semantic-head');
-                        stickyTable.append(columns.cloneNode(true), stickyHead);
-                        headerContent.replaceChildren(stickyTable);
+                        if (!headerContent || !scrollArea) return;
 
                         const synchronizeHorizontalScroll = () => {
                             headerContent.style.transform = `translateX(-${scrollArea.scrollLeft}px)`;
