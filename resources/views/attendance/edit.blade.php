@@ -21,6 +21,64 @@
             border: 1px solid rgba(255, 255, 255, 0.6);
             box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
         }
+
+        :root { --attendance-sticky-top: 4.6rem; --attendance-student-column-width: clamp(17rem, 24vw, 26rem); }
+        .attendance-grid-card { overflow: visible; }
+        .attendance-sticky-head {
+            position: sticky;
+            top: var(--attendance-sticky-top);
+            z-index: 30;
+            overflow: hidden;
+            border-bottom: 1px solid #e2e8f0;
+            border-radius: 2rem 2rem 0 0;
+            background: rgb(248 250 252 / .97);
+            box-shadow: 0 6px 12px -10px rgb(15 23 42 / .45);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        .attendance-sticky-head-content { width: max-content; will-change: transform; }
+        .attendance-sticky-head-content table { width: max-content; min-width: 100%; table-layout: fixed; }
+        .attendance-sticky-head-content thead th:first-child { position: static !important; left: auto !important; }
+        .attendance-sticky-name {
+            position: absolute;
+            inset: 0 auto 0 0;
+            z-index: 2;
+            display: flex;
+            width: var(--attendance-student-column-width);
+            align-items: center;
+            justify-content: space-between;
+            gap: .75rem;
+            border-right: 1px solid #e2e8f0;
+            background: #f8fafc;
+            padding: .75rem 1.5rem;
+            color: #64748b;
+            font-size: .625rem;
+            font-weight: 700;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+        }
+        .attendance-sticky-month { color: #94a3b8; font-size: .625rem; letter-spacing: 0; text-transform: none; }
+        .attendance-semantic-head {
+            position: absolute !important;
+            width: 1px !important;
+            height: 1px !important;
+            overflow: hidden !important;
+            clip: rect(0, 0, 0, 0) !important;
+            clip-path: inset(50%) !important;
+            white-space: nowrap !important;
+        }
+        @media (max-width: 767px) {
+            .attendance-day-picker {
+                position: sticky;
+                top: var(--attendance-sticky-top);
+                z-index: 30;
+                border-radius: 2rem 2rem 0 0;
+                background: rgb(255 255 255 / .98);
+                box-shadow: 0 6px 12px -10px rgb(15 23 42 / .45);
+                backdrop-filter: blur(12px);
+                -webkit-backdrop-filter: blur(12px);
+            }
+        }
     </style>
     @endpush
 
@@ -146,13 +204,26 @@
                 }
             }
         @endphp
-        <div x-data="attendanceManager('{{ route('attendance.update-single', $classroomTerm) }}')" x-init="selectedDay = '{{ $defaultSelectedDay }}'" class="rounded-[2rem] glass-card shadow-sm overflow-hidden animate-fade-in-up relative" style="animation-delay: 200ms;">
+        <div x-data="attendanceManager('{{ route('attendance.update-single', $classroomTerm) }}')" x-init="selectedDay = '{{ $defaultSelectedDay }}'" class="attendance-grid-card rounded-[2rem] glass-card shadow-sm animate-fade-in-up relative" style="animation-delay: 200ms;">
 
             {{-- ===== Desktop matrix (hidden on mobile) ===== --}}
             <div class="hidden md:block">
-            <div class="overflow-x-auto pb-20">
-                <table class="w-full text-left text-sm whitespace-nowrap">
-                    <thead>
+            <div class="attendance-sticky-head" data-attendance-sticky-header aria-hidden="true">
+                <div class="attendance-sticky-head-content" data-attendance-sticky-header-content></div>
+                <div class="attendance-sticky-name"><span>Santri</span><span class="attendance-sticky-month">{{ $selectedMonthLabel }}</span></div>
+            </div>
+            <div class="overflow-x-auto pb-20" data-attendance-scroll-area>
+                <table class="w-full text-left text-sm whitespace-nowrap" data-attendance-table style="width: max-content; min-width: 0; table-layout: fixed;">
+                    <colgroup>
+                        <col style="width: var(--attendance-student-column-width)">
+                        @foreach ($days as $day)
+                            <col style="width: 70px">
+                        @endforeach
+                        <col style="width: 64px">
+                        <col style="width: 64px">
+                        <col style="width: 64px">
+                    </colgroup>
+                    <thead class="attendance-semantic-head">
                         <tr class="bg-slate-50 border-b border-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-500">
                             <th class="sticky left-0 z-20 bg-slate-50 px-6 py-4">Santri</th>
                             @foreach ($days as $day)
@@ -215,20 +286,22 @@
             {{-- ===== Mobile view: Per Hari ===== --}}
             <div class="md:hidden pb-20">
                 {{-- Day picker strip --}}
-                <div class="flex items-center gap-2 overflow-x-auto px-4 pt-4 pb-3 border-b border-slate-100">
-                    <span class="shrink-0 text-[10px] font-bold uppercase tracking-wider text-slate-400 mr-1">Hari</span>
-                    @foreach ($days as $day)
-                        <button
-                            type="button"
-                            id="day-{{ $day->toDateString() }}"
-                            @click="selectedDay = '{{ $day->toDateString() }}'"
-                            :class="selectedDay === '{{ $day->toDateString() }}' ? 'bg-amber-600 text-white border-amber-600 shadow-md' : 'bg-white text-slate-700 border-slate-200 hover:border-amber-300'"
-                            class="shrink-0 min-w-[3.25rem] rounded-2xl border-2 px-3 py-2 text-center transition-all"
-                        >
-                            <span class="block text-sm font-black leading-none">{{ $day->format('d') }}</span>
-                            <span class="block text-[8px] font-bold mt-0.5 opacity-80">{{ $day->locale('id')->translatedFormat('D') }}</span>
-                        </button>
-                    @endforeach
+                <div class="attendance-day-picker border-b border-slate-100 px-4 pt-4 pb-3">
+                    <div class="flex items-center gap-2 overflow-x-auto">
+                        <span class="shrink-0 text-[10px] font-bold uppercase tracking-wider text-slate-400 mr-1">Tanggal · {{ $selectedMonthLabel }}</span>
+                        @foreach ($days as $day)
+                            <button
+                                type="button"
+                                id="day-{{ $day->toDateString() }}"
+                                @click="selectedDay = '{{ $day->toDateString() }}'"
+                                :class="selectedDay === '{{ $day->toDateString() }}' ? 'bg-amber-600 text-white border-amber-600 shadow-md' : 'bg-white text-slate-700 border-slate-200 hover:border-amber-300'"
+                                class="shrink-0 min-w-[3.25rem] rounded-2xl border-2 px-3 py-2 text-center transition-all"
+                            >
+                                <span class="block text-sm font-black leading-none">{{ $day->format('d') }}</span>
+                                <span class="block text-[8px] font-bold mt-0.5 opacity-80">{{ $day->locale('id')->translatedFormat('D') }}</span>
+                            </button>
+                        @endforeach
+                    </div>
                 </div>
 
                 <div class="flex flex-col gap-3 border-b border-slate-100 bg-slate-50/70 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
@@ -321,11 +394,52 @@
                     init() {
                         // Initialize totals on mount
                         setTimeout(() => this.recalculateTotals(), 100);
+                        this.initializeStickyAttendanceHeader();
+                        this.updateAttendanceStickyOffset();
+                        window.addEventListener('resize', () => this.updateAttendanceStickyOffset(), { passive: true });
                         // Scroll the selected day chip into view (mobile strip)
                         this.$nextTick(() => {
                             document.getElementById('day-' + this.selectedDay)
                                 ?.scrollIntoView({ inline: 'center', block: 'nearest' });
                         });
+                    },
+
+                    initializeStickyAttendanceHeader() {
+                        const sourceTable = this.$root.querySelector('[data-attendance-table]');
+                        const headerContent = this.$root.querySelector('[data-attendance-sticky-header-content]');
+                        const scrollArea = this.$root.querySelector('[data-attendance-scroll-area]');
+                        const sourceHead = sourceTable?.querySelector('thead');
+
+                        if (!sourceTable || !sourceHead || !headerContent || !scrollArea) return;
+
+                        const stickyTable = sourceTable.cloneNode(false);
+                        stickyTable.removeAttribute('data-attendance-table');
+                        stickyTable.setAttribute('aria-hidden', 'true');
+                        stickyTable.style.width = 'max-content';
+                        stickyTable.style.minWidth = '0';
+                        stickyTable.style.tableLayout = 'fixed';
+
+                        const columns = sourceTable.querySelector('colgroup');
+                        const stickyHead = sourceHead.cloneNode(true);
+                        stickyHead.classList.remove('attendance-semantic-head');
+                        stickyTable.append(columns.cloneNode(true), stickyHead);
+                        headerContent.replaceChildren(stickyTable);
+
+                        const synchronizeHorizontalScroll = () => {
+                            headerContent.style.transform = `translateX(-${scrollArea.scrollLeft}px)`;
+                        };
+
+                        scrollArea.addEventListener('scroll', synchronizeHorizontalScroll, { passive: true });
+                        synchronizeHorizontalScroll();
+                    },
+
+                    updateAttendanceStickyOffset() {
+                        const portalHeader = document.querySelector('.school-header');
+                        const headerHeight = portalHeader?.getBoundingClientRect().height;
+
+                        if (headerHeight) {
+                            document.documentElement.style.setProperty('--attendance-sticky-top', `${headerHeight}px`);
+                        }
                     },
 
                     async updateAttendance(enrollmentId, date) {
