@@ -199,6 +199,37 @@ class WaliJpRecapTest extends TestCase
         }
     }
 
+    public function test_recap_keeps_a_valid_journal_from_a_day_without_an_active_schedule(): void
+    {
+        $ctx = $this->context();
+        $journal = DiniyyahClassJournal::create([
+            'diniyyah_teacher_assignment_id' => $ctx['assignment']->id,
+            // Kamis bukan hari jadwal assignment pada konteks ini (hanya Rabu).
+            // Ini merepresentasikan jurnal lama atau jurnal setelah jadwal diubah.
+            'date' => '2026-08-06', 'session_hour' => '2', 'material' => 'Jurnal lama yang tetap valid', 'jp_count' => 1,
+        ]);
+        $query = ['classroom_term_id' => $ctx['classroomTerm']->id, 'month' => 8, 'year' => 2026];
+
+        $excel = $this->actingAs($ctx['waliUser'])
+            ->get(route('wali.jp-recap.export-excel', $query));
+        $excel->assertOk();
+
+        $path = tempnam(sys_get_temp_dir(), 'wali-jp-legacy-journal-');
+        file_put_contents($path, $excel->getContent());
+
+        try {
+            $workbook = IOFactory::load($path);
+            $realized = $workbook->getSheetByName('JP Terealisasi');
+
+            $this->assertSame('Guru Mapel', $realized->getCell('B8')->getValue());
+            $this->assertSame(1, $realized->getCell('G8')->getValue());
+        } finally {
+            @unlink($path);
+        }
+
+        $this->assertDatabaseHas('diniyyah_class_journals', ['id' => $journal->id]);
+    }
+
     private function context(): array
     {
         Role::firstOrCreate(['name' => 'guru', 'guard_name' => 'web']);

@@ -209,9 +209,15 @@ class WaliClassJournalMonitoringController extends Controller
                 
                 $daySchedules = $schedules->where('day_of_week', $dayOfWeek)
                     ->filter(fn ($schedule): bool => $schedule->appliesOn($date));
-                
-                // Skip if no schedules on this day
-                if ($daySchedules->isEmpty()) {
+
+                // Jurnal lama atau jurnal yang dicatat setelah perubahan jadwal
+                // tetap merupakan JP terealisasi. Jangan hanya membangun hari
+                // yang punya jadwal aktif; jika tidak, jurnal valid pada hari
+                // tanpa slot jadwal saat ini hilang dari Rekap JP Wali.
+                $dayJournals = $journals->filter(function ($journal) use ($dateStr) {
+                    return $journal->date->format('Y-m-d') === $dateStr;
+                });
+                if ($daySchedules->isEmpty() && $dayJournals->isEmpty()) {
                     continue;
                 }
                 
@@ -244,11 +250,6 @@ class WaliClassJournalMonitoringController extends Controller
                     'holiday_name' => $holiday ? $holiday->title : null,
                     'items' => []
                 ];
-                
-                // Get all journals for this specific date
-                $dayJournals = $journals->filter(function($j) use ($dateStr) {
-                    return $j->date->format('Y-m-d') === $dateStr;
-                });
                 
                 $matchedJournalIds = [];
                 
