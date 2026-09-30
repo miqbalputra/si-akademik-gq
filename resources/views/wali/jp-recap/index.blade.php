@@ -67,7 +67,7 @@
             <div class="border-b border-slate-100 bg-slate-50 px-5 py-4 sm:px-6">
                 <p class="text-xs font-black uppercase tracking-[.14em] text-slate-500">{{ $classroomTerm->name }} · {{ $periodStart->translatedFormat('F Y') }}</p>
                 <h2 class="mt-1 text-lg font-black text-slate-900">Rekap JP Terealisasi per Guru</h2>
-                <p class="mt-1 text-xs font-semibold text-slate-500">JP terealisasi adalah total jurnal bulanan guru di semua kelas, selaras dengan Performa Guru. Jurnal kosong dan ceklist tetap khusus kelas yang dipilih.</p>
+                <p class="mt-1 text-xs font-semibold text-slate-500">JP terealisasi hanya menghitung jurnal pada kelas yang dipilih. Jurnal kosong dan ceklist wali juga khusus kelas ini.</p>
             </div>
             <div class="overflow-x-auto">
                 <table class="min-w-[980px] w-full text-left text-sm">

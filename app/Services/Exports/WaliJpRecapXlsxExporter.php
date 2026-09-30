@@ -26,7 +26,7 @@ class WaliJpRecapXlsxExporter
     {
         $headers = ['No', 'Guru', 'Mapel/Tugas', 'JP Asli', 'JP Pengganti', 'JP Tafsir', 'JP Terealisasi', 'Verifikasi'];
         $period = $data['periodStart']->translatedFormat('F Y');
-        $this->theme->title($sheet, 'REKAP JP BULANAN GURU', $data['classroomTerm']->name.' · '.$period.' · JP total semua kelas; jurnal kosong dan verifikasi khusus kelas terpilih.', count($headers));
+        $this->theme->title($sheet, 'REKAP JP TEREALISASI GURU PER KELAS', $data['classroomTerm']->name.' · '.$period.' · JP, jurnal kosong, dan verifikasi khusus kelas terpilih.', count($headers));
         $sheet->setCellValue('A5', 'Wali Kelas');
         $sheet->setCellValue('B5', $data['teacher']->name);
         $this->theme->tableHeader($sheet, 7, $headers);

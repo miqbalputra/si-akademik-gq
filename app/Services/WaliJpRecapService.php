@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\ClassroomTerm;
-use App\Models\DiniyyahClassJournal;
 use App\Models\DiniyyahTeacherAssignment;
 use App\Models\HomeroomMonthlyJpConfirmation;
 use App\Models\Teacher;
@@ -77,51 +76,13 @@ class WaliJpRecapService
                 continue;
             }
             $this->seedTeacher($teachers, $credited, $row['subject_name'] ?? null);
-        }
-
-        // JP terealisasi harus mengikuti Performa Guru: total jurnal bulanan
-        // guru efektif di seluruh kelas. Baris yang tampil tetap dibatasi oleh
-        // kelas pilihan; kelas itu menentukan guru yang masuk rekap, bukan
-        // membatasi jurnal bulanan yang dihitung untuk guru tersebut.
-        $teacherIds = $teachers->keys()->map(fn ($id): int => (int) $id)->filter()->values();
-        $journals = $teacherIds->isEmpty()
-            ? collect()
-            : DiniyyahClassJournal::query()
-                ->with([
-                    'teacherAssignment.teacher',
-                    'teacherAssignment.classSubject.subject',
-                    'teacherAssignment.classSubject.classroomTerm.classroom',
-                    'substituteTeacher',
-                ])
-                ->whereBetween('date', [
-                    $periodStart->copy()->startOfMonth()->toDateString(),
-                    $periodStart->copy()->endOfMonth()->toDateString(),
-                ])
-                ->where(function ($query) use ($teacherIds): void {
-                    $query->whereIn('substitute_teacher_id', $teacherIds)
-                        ->orWhere(function ($query) use ($teacherIds): void {
-                            $query->whereNull('substitute_teacher_id')
-                                ->whereHas('teacherAssignment', fn ($assignmentQuery) => $assignmentQuery->whereIn('teacher_id', $teacherIds));
-                        });
-                })
-                ->orderBy('date')
-                ->orderBy('session_starts_at')
-                ->get();
-
-        $tafsirSeen = [];
-        foreach ($journals as $journal) {
-            $credited = $journal->effectiveTeacher();
-            if (! $credited || ! $teachers->has((int) $credited->id)) {
-                continue;
-            }
-
             $teacherId = (int) $credited->id;
             $teacherRow = $teachers->get($teacherId);
             $isTafsir = strtolower(trim((string) $journal->session_hour)) === 'tafsir';
 
             if ($isTafsir) {
                 $timeKey = ($journal->session_starts_at && $journal->session_ends_at)
-                    ? substr((string) $journal->session_starts_at, 0, 8).'|'.substr((string) $journal->session_ends_at, 0, 8)
+                    ? $journal->session_starts_at.'|'.$journal->session_ends_at
                     : 'legacy';
                 $key = $teacherId.'|'.$journal->date?->toDateString().'|'.$timeKey;
                 if (isset($tafsirSeen[$key])) {
@@ -134,10 +95,10 @@ class WaliJpRecapService
                 continue;
             }
 
-            $teacherRow['total_jp'] += (int) $journal->jp_count;
+            $teacherRow['total_jp'] += max(0, (int) $journal->jp_count);
             if ($journal->substitute_teacher_id !== null) {
                 $teacherRow['sesi_pengganti']++;
-                $teacherRow['pengganti_dari'][] = $journal->teacherAssignment?->teacher?->name ?? '-';
+                $teacherRow['pengganti_dari'][] = $row['teacher_name'] ?? '-';
             } else {
                 $teacherRow['sesi_asli']++;
             }
