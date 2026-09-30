@@ -16,13 +16,13 @@
     </style>
 </head>
 <body>
-    <h1>REKAP JP TEREALISASI GURU PER KELAS</h1>
+    <h1>REKAP JP BULANAN GURU</h1>
     <div class="meta">
         <strong>Kelas:</strong> {{ $classroomTerm->name }} &nbsp; | &nbsp;
         <strong>Periode:</strong> {{ $periodStart->translatedFormat('F Y') }} &nbsp; | &nbsp;
         <strong>Wali Kelas:</strong> {{ $teacher->name }}
     </div>
-    <p class="note">JP terealisasi dihitung dari jurnal yang benar-benar terisi dan dapat digunakan sebagai dasar data penggajian.</p>
+    <p class="note">JP terealisasi adalah total jurnal bulanan guru di semua kelas, selaras dengan Performa Guru. Daftar jurnal kosong dan ceklist verifikasi tetap khusus kelas yang dipilih.</p>
 
     <table>
         <thead>
