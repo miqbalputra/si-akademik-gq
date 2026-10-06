@@ -8,15 +8,20 @@ use App\Filament\Concerns\HasRoleBasedResourceAccess;
 use App\Models\DiniyyahClassJournal;
 use App\Models\DiniyyahTeacherAssignment;
 use App\Support\SessionTimetable;
+use App\Services\DiniyyahJournalValidationWorkflow;
+use DomainException;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms;
 use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -110,12 +115,21 @@ class DiniyyahClassJournalResource extends Resource
                     ->label('JP')
                     ->numeric()
                     ->sortable(),
+                Tables\Columns\TextColumn::make('status')
+                    ->label('Status Validasi')
+                    ->badge()
+                    ->formatStateUsing(fn (string $state): string => $state === 'validated' ? 'Tervalidasi' : 'Draf')
+                    ->color(fn (string $state): string => $state === 'validated' ? 'success' : 'gray')
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                Tables\Filters\SelectFilter::make('status')
+                    ->options(['draft' => 'Draf', 'validated' => 'Tervalidasi']),
+                TrashedFilter::make(),
                 Tables\Filters\SelectFilter::make('guru')
                     ->relationship('teacherAssignment.teacher', 'name')
                     ->label('Guru'),
@@ -151,7 +165,44 @@ class DiniyyahClassJournalResource extends Resource
             ])
             ->actions([
                 ViewAction::make(),
-                EditAction::make(),
+                EditAction::make()->visible(fn (DiniyyahClassJournal $record): bool => $record->status !== 'validated'),
+                RestoreAction::make(),
+                Action::make('validate')
+                    ->label('Validasi')
+                    ->icon('heroicon-o-check-badge')
+                    ->color('success')
+                    ->authorize(fn (): bool => self::currentUserCanManageResource())
+                    ->visible(fn (DiniyyahClassJournal $record): bool => self::currentUserCanManageResource() && $record->status === 'draft')
+                    ->requiresConfirmation()
+                    ->action(function (DiniyyahClassJournal $record): void {
+                        try {
+                            app(DiniyyahJournalValidationWorkflow::class)->validate($record, auth()->user());
+                            \Filament\Notifications\Notification::make()->title('Jurnal berhasil divalidasi')->success()->send();
+                        } catch (DomainException $exception) {
+                            \Filament\Notifications\Notification::make()->title($exception->getMessage())->danger()->send();
+                        }
+                    }),
+                Action::make('revokeValidation')
+                    ->label('Batalkan Validasi')
+                    ->icon('heroicon-o-arrow-uturn-left')
+                    ->color('warning')
+                    ->authorize(fn (): bool => self::currentUserCanManageResource())
+                    ->visible(fn (DiniyyahClassJournal $record): bool => self::currentUserCanManageResource() && $record->status === 'validated')
+                    ->requiresConfirmation()
+                    ->form([
+                        Forms\Components\Textarea::make('reason')
+                            ->label('Alasan pembatalan')
+                            ->required()
+                            ->maxLength(1000),
+                    ])
+                    ->action(function (DiniyyahClassJournal $record, array $data): void {
+                        try {
+                            app(DiniyyahJournalValidationWorkflow::class)->revoke($record, auth()->user(), $data['reason']);
+                            \Filament\Notifications\Notification::make()->title('Validasi dibatalkan. Jurnal dapat diperbaiki.')->success()->send();
+                        } catch (DomainException $exception) {
+                            \Filament\Notifications\Notification::make()->title($exception->getMessage())->danger()->send();
+                        }
+                    }),
             ])
             ->headerActions([
                 Action::make('exportAllJournalsExcel')
@@ -169,7 +220,8 @@ class DiniyyahClassJournalResource extends Resource
             ])
             ->bulkActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    DeleteBulkAction::make()->authorizeIndividualRecords('delete'),
+                    RestoreBulkAction::make(),
                 ]),
             ]);
     }

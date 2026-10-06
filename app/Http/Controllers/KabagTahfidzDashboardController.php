@@ -22,7 +22,7 @@ class KabagTahfidzDashboardController extends Controller
             $termId,
             fn ($query) => $query->where('academic_term_id', $termId),
             fn ($query) => $query->whereRaw('1 = 0'),
-        );
+        )->whereHas('student', fn ($query) => $query->where('status', 'active'));
 
         $predicateCounts = collect(TasmiRecord::predicateOptions())->mapWithKeys(
             fn (string $label, string $predicate) => [$predicate => (clone $records)->where('predicate', $predicate)->count()]
@@ -32,7 +32,7 @@ class KabagTahfidzDashboardController extends Controller
             'term' => $term,
             'summary' => [
                 'halaqahs' => $termId ? TahfidzHalaqah::query()->where('academic_term_id', $termId)->where('status', 'active')->count() : 0,
-                'members' => $termId ? TahfidzHalaqahMember::query()->where('status', 'active')->whereHas('halaqah', fn ($query) => $query->where('academic_term_id', $termId))->count() : 0,
+                'members' => $termId ? TahfidzHalaqahMember::query()->where('status', 'active')->whereHas('student', fn ($query) => $query->where('status', 'active'))->whereHas('halaqah', fn ($query) => $query->where('academic_term_id', $termId))->count() : 0,
                 'examiners' => $termId ? TasmiExaminerAssignment::query()->where('academic_term_id', $termId)->where('status', 'active')->count() : 0,
                 'tasmi_records' => (clone $records)->count(),
                 'predicates' => $predicateCounts,

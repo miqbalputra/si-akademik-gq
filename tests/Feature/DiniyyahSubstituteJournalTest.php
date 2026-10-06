@@ -150,7 +150,7 @@ class DiniyyahSubstituteJournalTest extends TestCase
             ->delete(route('guru.diniyyah-substitute-journals.destroy', $journal))
             ->assertRedirect();
 
-        $this->assertDatabaseMissing('diniyyah_class_journals', ['id' => $journal->id]);
+        $this->assertSoftDeleted('diniyyah_class_journals', ['id' => $journal->id]);
     }
 
     private function makeContext(): array

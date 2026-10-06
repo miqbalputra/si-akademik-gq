@@ -29,6 +29,8 @@ class AuthenticatedSessionController extends Controller
         $login = $data['login'] ?? $data['email'];
         $field = filter_var($login, FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
 
+        Auth::guard('admin')->logout();
+
         if (! Auth::attempt([$field => $login, 'password' => $data['password']], $request->boolean('remember'))) {
             throw ValidationException::withMessages([
                 'login' => 'Email/Username atau password tidak sesuai.',

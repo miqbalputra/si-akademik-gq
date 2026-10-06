@@ -31,8 +31,8 @@ class LeadershipWorkspaceTest extends TestCase
             ->assertDontSee('Leger &amp; Rapor', false);
         $this->actingAs($user)->get(route('kabag-diniyyah.dashboard'))->assertForbidden();
         $this->actingAs($user)->get(route('diniyyah.monitoring.index'))->assertForbidden();
-        $this->actingAs($user)->get(RppResource::getUrl())->assertForbidden();
-        $this->actingAs($user)->get(ClassSessionResource::getUrl())->assertForbidden();
+        $this->actingAs($user, 'admin')->get(RppResource::getUrl())->assertForbidden();
+        $this->actingAs($user, 'admin')->get(ClassSessionResource::getUrl())->assertForbidden();
         $this->assertFalse(ClassSessionResource::canCreate());
     }
 
@@ -47,9 +47,9 @@ class LeadershipWorkspaceTest extends TestCase
             ->assertSee('Pengingat Jurnal KBM')
             ->assertSee('Monitoring RPP');
         $this->actingAs($user)->get(route('diniyyah.monitoring.index'))->assertOk();
-        $this->actingAs($user)->get(DiniyyahTeacherAssignmentResource::getUrl())->assertOk();
-        $this->actingAs($user)->get(RppResource::getUrl())->assertOk();
-        $this->actingAs($user)->get(ClassSessionResource::getUrl())->assertOk();
+        $this->actingAs($user, 'admin')->get(DiniyyahTeacherAssignmentResource::getUrl())->assertOk();
+        $this->actingAs($user, 'admin')->get(RppResource::getUrl())->assertOk();
+        $this->actingAs($user, 'admin')->get(ClassSessionResource::getUrl())->assertOk();
         $this->assertTrue(ClassSessionResource::canCreate());
         $this->actingAs($user)->get(route('kabag-tahfidz.dashboard'))->assertForbidden();
     }
@@ -70,7 +70,7 @@ class LeadershipWorkspaceTest extends TestCase
             ->assertSee('Ganti Ruang')
             ->assertSee('Kabag Tahfidz')
             ->assertSee('Kabag Diniyyah');
-        $this->actingAs($user)->get('/admin')
+        $this->actingAs($user, 'admin')->get('/admin')
             ->assertOk()
             ->assertSee('Buka Portal Guru')
             ->assertSee('Buka Kabag Tahfidz')
@@ -81,7 +81,7 @@ class LeadershipWorkspaceTest extends TestCase
     {
         $admin = $this->userWithRoles(['admin']);
 
-        $this->actingAs($admin)->get('/admin')->assertOk();
+        $this->actingAs($admin, 'admin')->get('/admin')->assertOk();
 
         Livewire::test(DiniyyahWorkflowStats::class)
             ->assertSee('Pengingat Jurnal KBM')

@@ -27,7 +27,7 @@ class AttendanceIntegrationStatusPageTest extends TestCase
             $user = User::factory()->create();
             $user->assignRole($role);
 
-            $this->actingAs($user);
+            $this->actingAs($user, 'admin');
 
             $this->assertTrue(AttendanceIntegrationStatus::canAccess());
             $this->get('/admin/attendance-integration-status')
@@ -43,7 +43,7 @@ class AttendanceIntegrationStatusPageTest extends TestCase
             $user = User::factory()->create();
             $user->assignRole($role);
 
-            $this->actingAs($user);
+            $this->actingAs($user, 'admin');
 
             $this->assertFalse(AttendanceIntegrationStatus::canAccess());
         }
@@ -74,7 +74,7 @@ class AttendanceIntegrationStatusPageTest extends TestCase
         $admin = User::factory()->create();
         $admin->assignRole('admin');
 
-        $this->actingAs($admin)
+        $this->actingAs($admin, 'admin')
             ->get('/admin/teachers')
             ->assertOk()
             ->assertSee('Terhubung')

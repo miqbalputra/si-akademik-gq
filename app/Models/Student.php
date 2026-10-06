@@ -27,6 +27,16 @@ class Student extends Model
         return $this->hasMany(ClassEnrollment::class);
     }
 
+    public function departures(): HasMany
+    {
+        return $this->hasMany(StudentDeparture::class)->latest('effective_date')->latest('id');
+    }
+
+    public function latestDeparture(): HasOne
+    {
+        return $this->hasOne(StudentDeparture::class)->latestOfMany('id');
+    }
+
     public function tahfidzHalaqahMembers(): HasMany
     {
         return $this->hasMany(TahfidzHalaqahMember::class);

@@ -9,6 +9,7 @@ use App\Models\TahfidzUasScore;
 use App\Models\TahfidzWeek;
 use App\Models\TahfidzWeeklyScore;
 use App\Services\TahfidzSabaqParser;
+use App\Services\SurahAyatReference;
 use App\Services\TahfidzScoreCalculator;
 use App\Services\TahfidzUasCalculator;
 use Illuminate\Contracts\View\View;
@@ -94,7 +95,11 @@ class GuruTahfidzController extends Controller
             'scores' => ['array'],
             'scores.*' => ['array'],
             'scores.*.*' => ['array'],
-            'scores.*.*.surah_ayat' => ['nullable', 'string', 'max:255'],
+            'scores.*.*.surah_ayat' => ['nullable', 'string', 'max:255', function (string $attribute, mixed $value, \Closure $fail): void {
+                if (! app(SurahAyatReference::class)->isValid($value)) {
+                    $fail('Format surah dan ayat tidak valid atau rentang ayat melewati jumlah ayat surah.');
+                }
+            }],
             'scores.*.*.sabaq_amount' => ['nullable', 'string', 'max:255'],
             'scores.*.*.score' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'scores.*.*.category' => ['nullable', 'string'],
@@ -158,7 +163,11 @@ class GuruTahfidzController extends Controller
         $validated = $request->validate([
             'week_id' => ['required', 'exists:tahfidz_weeks,id'],
             'member_id' => ['required', 'exists:tahfidz_halaqah_members,id'],
-            'surah_ayat' => ['nullable', 'string', 'max:255'],
+            'surah_ayat' => ['nullable', 'string', 'max:255', function (string $attribute, mixed $value, \Closure $fail): void {
+                if (! app(SurahAyatReference::class)->isValid($value)) {
+                    $fail('Format surah dan ayat tidak valid atau rentang ayat melewati jumlah ayat surah.');
+                }
+            }],
             'sabaq_amount' => ['nullable', 'string', 'max:255'],
             'score' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'category' => ['nullable', 'string'],

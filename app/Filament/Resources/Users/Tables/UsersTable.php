@@ -3,8 +3,12 @@
 namespace App\Filament\Resources\Users\Tables;
 
 use Filament\Actions\EditAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\RestoreBulkAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 
 class UsersTable
@@ -33,6 +37,10 @@ class UsersTable
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('deleted_at')
+                    ->label('Dinonaktifkan')
+                    ->dateTime()
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 SelectFilter::make('roles')
@@ -40,9 +48,16 @@ class UsersTable
                     ->multiple()
                     ->relationship('roles', 'name')
                     ->preload(),
+                TrashedFilter::make(),
             ])
             ->recordActions([
                 EditAction::make(),
+            ])
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make()->label('Nonaktifkan terpilih')->authorizeIndividualRecords('delete'),
+                    RestoreBulkAction::make()->label('Aktifkan kembali terpilih'),
+                ]),
             ]);
     }
 }

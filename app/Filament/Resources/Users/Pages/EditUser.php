@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Users\Pages;
 
 use App\Filament\Resources\Users\UserResource;
 use Filament\Actions\DeleteAction;
+use Filament\Actions\RestoreAction;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Validation\ValidationException;
 
@@ -17,8 +18,8 @@ class EditUser extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            // Hapus akun dijaga oleh UserPolicy::delete (admin tak bisa hapus akun sendiri).
-            DeleteAction::make(),
+            DeleteAction::make()->label('Nonaktifkan akun'),
+            RestoreAction::make()->label('Aktifkan kembali akun'),
         ];
     }
 
@@ -49,7 +50,18 @@ class EditUser extends EditRecord
 
     protected function afterSave(): void
     {
-        $this->record->syncRoles($this->rolesData ?? []);
+        $oldRoles = $this->record->roles()->pluck('name')->sort()->values()->all();
+        $newRoles = array_values(array_unique($this->rolesData ?? []));
+        sort($newRoles);
+        $this->record->syncRoles($newRoles);
+
+        if ($oldRoles !== $newRoles) {
+            activity('security')
+                ->performedOn($this->record)
+                ->causedBy(auth()->user())
+                ->withProperties(['old_roles' => $oldRoles, 'new_roles' => $newRoles])
+                ->log('user_roles_updated');
+        }
 
         // Sync email ke profil Guru/Wali yang terhubung agar login + Google tetap konsisten.
         if ($this->record->teacher) {

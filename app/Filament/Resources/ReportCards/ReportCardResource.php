@@ -15,6 +15,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class ReportCardResource extends Resource
 {
@@ -48,6 +49,15 @@ class ReportCardResource extends Resource
     public static function table(Table $table): Table
     {
         return ReportCardsTable::configure($table);
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+
+        return auth()->user()?->hasRole('admin')
+            ? $query
+            : $query->whereHas('student', fn (Builder $studentQuery): Builder => $studentQuery->where('status', 'active'));
     }
 
     public static function getRelations(): array

@@ -9,11 +9,13 @@ use App\Models\Classroom;
 use App\Models\ClassroomTerm;
 use App\Models\School;
 use App\Models\Student;
+use App\Models\StudentDeparture;
 use App\Models\Teacher;
 use App\Models\TasmiExaminerAssignment;
 use App\Models\TasmiRecord;
 use App\Models\User;
 use App\Services\TasmiService;
+use App\Services\StudentDepartureWorkflow;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -459,13 +461,60 @@ class TasmiFeatureTest extends TestCase
         $resp->assertSee('Mumtaz');
     }
 
+    public function test_archived_student_tasmi_history_is_hidden_and_direct_changes_are_blocked(): void
+    {
+        $ctx = $this->makeContext('male');
+        TasmiExaminerAssignment::create([
+            'academic_term_id' => $ctx['term']->id,
+            'teacher_id' => $ctx['teacher']->id,
+            'status' => 'active',
+        ]);
+        $record = TasmiRecord::create([
+            'academic_term_id' => $ctx['term']->id,
+            'classroom_term_id' => $ctx['classroomTerm']->id,
+            'class_enrollment_id' => $ctx['enrollment']->id,
+            'student_id' => $ctx['student']->id,
+            'examiner_teacher_id' => $ctx['teacher']->id,
+            'exam_type' => '1_juz',
+            'juz_start' => 30,
+            'juz_end' => 30,
+            'exam_date' => '2026-08-15',
+            'predicate' => 'maqbul',
+            'input_by' => $ctx['user']->id,
+            'input_at' => now(),
+        ]);
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+
+        app(StudentDepartureWorkflow::class)->depart($ctx['student'], [
+            'type' => StudentDeparture::TYPE_LEFT,
+            'effective_date' => '2026-10-01',
+            'reason' => 'Keluar.',
+        ], $admin);
+
+        $this->actingAs($ctx['user'], 'web')
+            ->get(route('guru.tasmi.records'))
+            ->assertOk()
+            ->assertDontSee('Santri Contoh');
+        $this->get(route('guru.tasmi.edit', $record))->assertNotFound();
+        $this->put(route('guru.tasmi.update', $record), [
+            'exam_type' => '1_juz',
+            'juz_start' => 30,
+            'juz_end' => 30,
+            'exam_date' => '2026-08-15',
+            'predicate' => 'mumtaz',
+        ])->assertNotFound();
+        $this->delete(route('guru.tasmi.destroy', $record))->assertNotFound();
+        $this->assertDatabaseHas('tasmi_records', ['id' => $record->id, 'deleted_at' => null]);
+    }
+
     public function test_admin_can_access_tasmi_record_resource(): void
     {
         $admin = User::factory()->create(['name' => 'Admin']);
         $admin->assignRole('admin');
         $ctx = $this->makeContext();
 
-        $resp = $this->actingAs($admin)->get('/admin/tasmi-records');
+        $resp = $this->actingAs($admin, 'admin')->get('/admin/tasmi-records');
 
         $resp->assertOk();
         $resp->assertSee('Record Tasmi\'');
@@ -476,7 +525,7 @@ class TasmiFeatureTest extends TestCase
         $kabag = User::factory()->create(['name' => 'Kabag Tahfidz']);
         $kabag->assignRole('kabag_tahfidz');
 
-        $resp = $this->actingAs($kabag)->get('/admin/tasmi-examiner-assignments');
+        $resp = $this->actingAs($kabag, 'admin')->get('/admin/tasmi-examiner-assignments');
 
         $resp->assertOk();
         $resp->assertSee('PJ Tasmi\'');
@@ -486,7 +535,7 @@ class TasmiFeatureTest extends TestCase
     {
         $ctx = $this->makeContext();
         // guru biasa tidak bisa masuk Filament panel
-        $resp = $this->actingAs($ctx['user'])->get('/admin/tasmi-records');
+        $resp = $this->actingAs($ctx['user'], 'admin')->get('/admin/tasmi-records');
         $resp->assertForbidden();
     }
 }

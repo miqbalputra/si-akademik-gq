@@ -95,7 +95,7 @@ class PlacementBoardTest extends TestCase
         $ct = $this->makeClassroomTerm($term, 'Kelas A');
         $student = $this->makeStudent('Ahmad', 'N001');
 
-        \Livewire\Livewire::actingAs($this->admin())
+        \Livewire\Livewire::actingAs($this->admin(), 'admin')
             ->test(ClassPlacementBoard::class)
             ->set('academicTermId', $term->id)
             ->call('assignToClass', $student->id, $ct->id)
@@ -116,7 +116,7 @@ class PlacementBoardTest extends TestCase
         $b = $this->makeClassroomTerm($term, 'Kelas B');
         $student = $this->makeStudent('Ahmad', 'N001');
 
-        $page = \Livewire\Livewire::actingAs($this->admin())->test(ClassPlacementBoard::class)
+        $page = \Livewire\Livewire::actingAs($this->admin(), 'admin')->test(ClassPlacementBoard::class)
             ->set('academicTermId', $term->id);
 
         $page->call('assignToClass', $student->id, $a->id);
@@ -136,7 +136,7 @@ class PlacementBoardTest extends TestCase
         $a = $this->makeClassroomTerm($term, 'Kelas A');
         $student = $this->makeStudent('Ahmad', 'N001');
 
-        $page = \Livewire\Livewire::actingAs($this->admin())->test(ClassPlacementBoard::class)
+        $page = \Livewire\Livewire::actingAs($this->admin(), 'admin')->test(ClassPlacementBoard::class)
             ->set('academicTermId', $term->id);
 
         $page->call('assignToClass', $student->id, $a->id);
@@ -151,7 +151,7 @@ class PlacementBoardTest extends TestCase
 
     public function test_non_admin_forbidden_on_class_board(): void
     {
-        $this->actingAs($this->userWithRole('kepala_sekolah'))
+        $this->actingAs($this->userWithRole('kepala_sekolah'), 'admin')
             ->get('/admin/class-placement-board')
             ->assertForbidden();
     }
@@ -164,7 +164,7 @@ class PlacementBoardTest extends TestCase
         $h = $this->makeHalaqah($term, 'Halaqah 1');
         $student = $this->makeStudent('Ahmad', 'N001');
 
-        \Livewire\Livewire::actingAs($this->admin())
+        \Livewire\Livewire::actingAs($this->admin(), 'admin')
             ->test(HalaqahPlacementBoard::class)
             ->set('academicTermId', $term->id)
             ->call('assignToHalaqah', $student->id, $h->id)
@@ -191,7 +191,7 @@ class PlacementBoardTest extends TestCase
             'status' => 'active',
         ]);
 
-        \Livewire\Livewire::actingAs($this->admin())
+        \Livewire\Livewire::actingAs($this->admin(), 'admin')
             ->test(HalaqahPlacementBoard::class)
             ->set('academicTermId', $term->id)
             ->call('assignToHalaqah', $student->id, $h->id);
@@ -211,7 +211,7 @@ class PlacementBoardTest extends TestCase
         $h2 = $this->makeHalaqah($term, 'Halaqah 2');
         $student = $this->makeStudent('Ahmad', 'N001');
 
-        $page = \Livewire\Livewire::actingAs($this->admin())->test(HalaqahPlacementBoard::class)
+        $page = \Livewire\Livewire::actingAs($this->admin(), 'admin')->test(HalaqahPlacementBoard::class)
             ->set('academicTermId', $term->id);
 
         $page->call('assignToHalaqah', $student->id, $h1->id);
@@ -242,7 +242,7 @@ class PlacementBoardTest extends TestCase
         $h1 = $this->makeHalaqah($term, 'Halaqah 1');
         $student = $this->makeStudent('Ahmad', 'N001');
 
-        $page = \Livewire\Livewire::actingAs($this->admin())->test(HalaqahPlacementBoard::class)
+        $page = \Livewire\Livewire::actingAs($this->admin(), 'admin')->test(HalaqahPlacementBoard::class)
             ->set('academicTermId', $term->id);
 
         $page->call('assignToHalaqah', $student->id, $h1->id);
@@ -269,7 +269,7 @@ class PlacementBoardTest extends TestCase
         $h1 = $this->makeHalaqah($term, 'Halaqah 1');
         $student = $this->makeStudent('Ahmad', 'N001');
 
-        $page = \Livewire\Livewire::actingAs($this->admin())->test(HalaqahPlacementBoard::class)
+        $page = \Livewire\Livewire::actingAs($this->admin(), 'admin')->test(HalaqahPlacementBoard::class)
             ->set('academicTermId', $term->id);
 
         $page->call('assignToHalaqah', $student->id, $h1->id);
@@ -296,7 +296,7 @@ class PlacementBoardTest extends TestCase
         $h2 = $this->makeHalaqah($term, 'Halaqah 2');
         $student = $this->makeStudent('Ahmad', 'N001');
 
-        $page = \Livewire\Livewire::actingAs($this->admin())->test(HalaqahPlacementBoard::class)
+        $page = \Livewire\Livewire::actingAs($this->admin(), 'admin')->test(HalaqahPlacementBoard::class)
             ->set('academicTermId', $term->id);
 
         $page->call('assignToHalaqah', $student->id, $h1->id);
@@ -322,7 +322,7 @@ class PlacementBoardTest extends TestCase
 
     public function test_kepala_sekolah_forbidden_on_halaqah_board(): void
     {
-        $this->actingAs($this->userWithRole('kepala_sekolah'))
+        $this->actingAs($this->userWithRole('kepala_sekolah'), 'admin')
             ->get('/admin/halaqah-placement-board')
             ->assertForbidden();
     }
@@ -331,7 +331,7 @@ class PlacementBoardTest extends TestCase
     {
         $this->makeTerm(); // agar mount() menemukan periode aktif
 
-        $this->actingAs($this->userWithRole('kabag_tahfidz'))
+        $this->actingAs($this->userWithRole('kabag_tahfidz'), 'admin')
             ->get('/admin/halaqah-placement-board')
             ->assertOk();
     }
@@ -340,7 +340,7 @@ class PlacementBoardTest extends TestCase
     {
         $this->makeTerm();
 
-        $this->actingAs($this->admin())
+        $this->actingAs($this->admin(), 'admin')
             ->get('/admin/class-placement-board')
             ->assertOk();
     }

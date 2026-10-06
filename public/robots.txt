@@ -1,2 +1,13 @@
 User-agent: *
-Disallow:
+Disallow: /admin
+Disallow: /guru
+Disallow: /wali
+Disallow: /attendance
+Disallow: /report-cards
+Disallow: /diniyyah
+Disallow: /notifications
+Disallow: /login
+Disallow: /forgot-password
+Disallow: /reset-password/
+
+Sitemap: https://edu.griyaquran.web.id/sitemap.xml

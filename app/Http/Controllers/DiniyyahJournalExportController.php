@@ -73,6 +73,7 @@ class DiniyyahJournalExportController extends Controller
             'teacherAssignment.classSubject.subject',
             'teacherAssignment.classSubject.classroomTerm.classroom',
             'absences.classEnrollment.student',
+            'absences' => fn ($query) => $query->whereHas('classEnrollment.student'),
         ]);
 
         if ($from = $request->input('date_from')) {
@@ -112,6 +113,7 @@ class DiniyyahJournalExportController extends Controller
             $activeEnrollmentCount = ClassEnrollment::query()
                 ->where('classroom_term_id', $journal->teacherAssignment->classSubject->classroom_term_id)
                 ->where('status', 'active')
+                ->forVisibleStudents()
                 ->count();
             $hadir = max(0, $activeEnrollmentCount - $absenceTotal);
 

@@ -3,16 +3,18 @@
 namespace App\Services;
 
 use App\Models\ReportCard;
+use App\Models\ReportCardRevisionLog;
 use App\Models\User;
 use App\Services\NotificationDispatcher;
 use DomainException;
+use Illuminate\Support\Facades\DB;
 
 class ReportCardWorkflow
 {
     public function lock(ReportCard $reportCard, User $user): void
     {
-        if ($reportCard->status === 'published') {
-            throw new DomainException('Rapor yang sudah published tidak bisa dikunci ulang.');
+        if ($reportCard->status !== 'draft') {
+            throw new DomainException('Hanya rapor draf yang dapat dikunci.');
         }
 
         $reportCard->update([
@@ -36,7 +38,69 @@ class ReportCardWorkflow
             'published_by' => $user->id,
         ]);
 
+        $revision = ReportCardRevisionLog::query()
+            ->where('report_card_id', $reportCard->id)
+            ->where('action', 'opened')
+            ->orderByDesc('revision_number')
+            ->first();
+
+        if ($revision && ! ReportCardRevisionLog::query()
+            ->where('report_card_id', $reportCard->id)
+            ->where('revision_number', $revision->revision_number)
+            ->where('action', 'published')
+            ->exists()) {
+            $reportCard->load(['lines', 'attendance', 'signatures']);
+            ReportCardRevisionLog::create([
+                'report_card_id' => $reportCard->id,
+                'revision_number' => $revision->revision_number,
+                'action' => 'published',
+                'reason' => $revision->reason,
+                'after_data' => $reportCard->toArray(),
+                'performed_by' => $user->id,
+                'performed_at' => now(),
+            ]);
+        }
+
         $this->notifyPublished($reportCard, $user);
+    }
+
+    public function openRevision(ReportCard $reportCard, User $user, string $reason): void
+    {
+        $reason = trim($reason);
+        if (! $user->hasAnyRole(['admin', 'kabag_diniyyah'])) {
+            throw new DomainException('Anda tidak berwenang membuka revisi rapor.');
+        }
+        if (mb_strlen($reason) < 10) {
+            throw new DomainException('Alasan revisi minimal 10 karakter.');
+        }
+
+        DB::transaction(function () use ($reportCard, $user, $reason): void {
+            $reportCard = ReportCard::query()->lockForUpdate()->with(['lines', 'attendance', 'signatures'])->findOrFail($reportCard->id);
+            if ($reportCard->status !== 'published') {
+                throw new DomainException('Revisi hanya dapat dibuka untuk rapor yang sudah terbit.');
+            }
+
+            $revisionNumber = (int) $reportCard->revisionLogs()->max('revision_number') + 1;
+            $beforeData = $reportCard->toArray();
+            $reportCard->authorizeRevisionTransition();
+            $reportCard->update([
+                'status' => 'draft',
+                'published_at' => null,
+                'published_by' => null,
+                'locked_at' => null,
+                'locked_by' => null,
+            ]);
+
+            ReportCardRevisionLog::create([
+                'report_card_id' => $reportCard->id,
+                'revision_number' => $revisionNumber,
+                'action' => 'opened',
+                'reason' => $reason,
+                'before_data' => $beforeData,
+                'performed_by' => $user->id,
+                'performed_at' => now(),
+            ]);
+        });
     }
 
     // ── Notifikasi ────────────────────────────────────────────────────────

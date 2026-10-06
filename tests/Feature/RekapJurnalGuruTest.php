@@ -30,7 +30,7 @@ class RekapJurnalGuruTest extends TestCase
     {
         $ctx = $this->makeContext();
 
-        $response = $this->actingAs($ctx['admin'])
+        $response = $this->actingAs($ctx['admin'], 'admin')
             ->get('/admin/rekap-jurnal-guru');
 
         $response->assertOk();
@@ -42,7 +42,7 @@ class RekapJurnalGuruTest extends TestCase
     {
         $ctx = $this->makeContext();
 
-        $this->actingAs($ctx['userA'])
+        $this->actingAs($ctx['userA'], 'admin')
             ->get('/admin/rekap-jurnal-guru')
             ->assertForbidden();
     }
@@ -149,7 +149,7 @@ class RekapJurnalGuruTest extends TestCase
             'jp_count' => 1,
         ]);
 
-        $response = $this->actingAs($ctx['admin'])
+        $response = $this->actingAs($ctx['admin'], 'admin')
             ->get(route('admin.rekap-jurnal-guru.export', [
                 'academic_term_id' => $ctx['term']->id,
             ]));
@@ -168,7 +168,7 @@ class RekapJurnalGuruTest extends TestCase
     {
         $ctx = $this->makeContext();
 
-        $this->actingAs($ctx['userA'])
+        $this->actingAs($ctx['userA'], 'admin')
             ->get(route('admin.rekap-jurnal-guru.export'))
             ->assertForbidden();
     }

@@ -13,6 +13,7 @@ use App\Models\School;
 use App\Models\Student;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -44,6 +45,13 @@ class GuardianReportCardAccessTest extends TestCase
             ->get(route('report-cards.show', $ownPublished))
             ->assertOk()
             ->assertSee($ownPublished->student->name);
+
+        $this->assertDatabaseHas('activity_log', [
+            'log_name' => 'report_cards',
+            'description' => 'report_card_viewed',
+            'subject_id' => $ownPublished->id,
+            'causer_id' => $guardianUser->id,
+        ]);
     }
 
     public function test_guardian_can_print_own_published_report_card(): void
@@ -143,8 +151,8 @@ class GuardianReportCardAccessTest extends TestCase
             'class_enrollment_id' => $enrollment->id,
             'student_id' => $student->id,
             'report_type' => 'diniyyah',
-            'status' => $status,
-            'published_at' => $status === 'published' ? now() : null,
+            'status' => 'draft',
+            'published_at' => null,
             'total_score' => 170,
             'average_score' => 85,
             'rank_in_class' => 1,
@@ -157,6 +165,13 @@ class GuardianReportCardAccessTest extends TestCase
             'score_numeric' => 85,
             'sort_order' => 10,
         ]);
+
+        if ($status === 'published') {
+            DB::table('report_cards')->where('id', $reportCard->id)->update([
+                'status' => 'published',
+                'published_at' => now(),
+            ]);
+        }
 
         return $reportCard->load('student');
     }

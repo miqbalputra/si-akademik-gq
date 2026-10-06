@@ -31,5 +31,11 @@ class CreateUser extends CreateRecord
     {
         // syncRoles (bukan relasi langsung) agar cache permission Spatie di-clear.
         $this->record->syncRoles($this->rolesData ?? []);
+
+        activity('security')
+            ->performedOn($this->record)
+            ->causedBy(auth()->user())
+            ->withProperties(['roles' => $this->rolesData ?? []])
+            ->log('user_account_created');
     }
 }

@@ -50,7 +50,7 @@ class DiniyyahJournalExportTest extends TestCase
             'jp_count' => 1,
         ]);
 
-        $response = $this->actingAs($ctx['admin'])
+        $response = $this->actingAs($ctx['admin'], 'admin')
             ->get(route('admin.diniyyah-journals.export', ['format' => 'excel']));
 
         $response->assertOk();
@@ -80,7 +80,7 @@ class DiniyyahJournalExportTest extends TestCase
             'jp_count' => 1,
         ]);
 
-        $response = $this->actingAs($ctx['admin'])
+        $response = $this->actingAs($ctx['admin'], 'admin')
             ->get(route('admin.diniyyah-journals.export', ['format' => 'csv']));
 
         $response->assertOk();
@@ -100,7 +100,7 @@ class DiniyyahJournalExportTest extends TestCase
             'jp_count' => 1,
         ]);
 
-        $response = $this->actingAs($ctx['admin'])
+        $response = $this->actingAs($ctx['admin'], 'admin')
             ->get(route('admin.diniyyah-journals.export', [
                 'format' => 'xlsx',
                 'academic_term_id' => $ctx['term']->id,
@@ -129,7 +129,7 @@ class DiniyyahJournalExportTest extends TestCase
             'jp_count' => 1,
         ]);
 
-        $response = $this->actingAs($ctx['admin'])
+        $response = $this->actingAs($ctx['admin'], 'admin')
             ->get(route('admin.diniyyah-journals.export', [
                 'format' => 'pdf',
                 'academic_term_id' => $ctx['term']->id,
@@ -159,7 +159,7 @@ class DiniyyahJournalExportTest extends TestCase
             'jp_count' => 1,
         ]);
 
-        $this->actingAs($ctx['userA'])
+        $this->actingAs($ctx['userA'], 'web')
             ->get(route('guru.diniyyah-journals.report'))
             ->assertOk()
             ->assertSee('Materi Guru Asli')
@@ -194,7 +194,7 @@ class DiniyyahJournalExportTest extends TestCase
     public function test_guru_is_forbidden_to_access_export(): void
     {
         $ctx = $this->makeContext();
-        $this->actingAs($ctx['userA'])
+        $this->actingAs($ctx['userA'], 'admin')
             ->get(route('admin.diniyyah-journals.export'))
             ->assertForbidden();
     }
@@ -219,7 +219,7 @@ class DiniyyahJournalExportTest extends TestCase
             'jp_count' => 1,
         ]);
 
-        $response = $this->actingAs($ctx['admin'])
+        $response = $this->actingAs($ctx['admin'], 'admin')
             ->get(route('admin.diniyyah-journals.export', ['format' => 'excel', 'tipe' => 'substitute']));
 
         $response->assertOk();
@@ -250,7 +250,7 @@ class DiniyyahJournalExportTest extends TestCase
             'jp_count' => 1,
         ]);
 
-        $response = $this->actingAs($ctx['admin'])
+        $response = $this->actingAs($ctx['admin'], 'admin')
             ->get(route('admin.diniyyah-journals.export', [
                 'format' => 'excel',
                 'date_from' => '2026-07-15',

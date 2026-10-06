@@ -26,6 +26,7 @@ class DiniyyahClassJournalsTable
                 TextColumn::make('jp_count')
                     ->numeric()
                     ->sortable(),
+                TextColumn::make('status')->label('Status Validasi')->badge(),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -44,7 +45,7 @@ class DiniyyahClassJournalsTable
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                DeleteBulkAction::make()->authorizeIndividualRecords('delete'),
                 ]),
             ]);
     }

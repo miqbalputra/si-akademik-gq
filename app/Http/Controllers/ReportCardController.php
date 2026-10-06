@@ -22,7 +22,7 @@ class ReportCardController extends Controller
     {
         abort_unless($request->user()->hasAnyRole(['admin', 'kabag_diniyyah']), 403);
 
-        $generator->generateFromLedgerSnapshot($snapshot, $request->user()->id);
+        $generator->generateFromLedgerSnapshot($snapshot, $request->user()->id, $request->user()->hasRole('admin'));
 
         return redirect()->route('diniyyah.ledger.show', $snapshot);
     }
@@ -64,6 +64,7 @@ class ReportCardController extends Controller
     public function show(Request $request, ReportCard $reportCard): View
     {
         Gate::authorize('view', $reportCard);
+        $this->recordAccess($request, $reportCard, 'viewed');
 
         $reportCard->load(['academicTerm.academicYear', 'classroomTerm', 'student', 'lines', 'attendance', 'signatures']);
 
@@ -73,6 +74,7 @@ class ReportCardController extends Controller
     public function print(Request $request, ReportCard $reportCard): View
     {
         Gate::authorize('view', $reportCard);
+        $this->recordAccess($request, $reportCard, 'printed');
 
         $reportCard->load(['academicTerm.academicYear', 'classroomTerm', 'student', 'lines', 'attendance', 'signatures']);
 
@@ -88,6 +90,7 @@ class ReportCardController extends Controller
     public function downloadPdf(Request $request, ReportCard $reportCard): Response|StreamedResponse
     {
         Gate::authorize('view', $reportCard);
+        $this->recordAccess($request, $reportCard, 'pdf_downloaded');
 
         $reportCard->load(['academicTerm.academicYear', 'classroomTerm', 'student', 'lines', 'attendance', 'signatures']);
 
@@ -120,11 +123,25 @@ class ReportCardController extends Controller
     public function generatePdf(Request $request, ReportCard $reportCard): RedirectResponse
     {
         Gate::authorize('view', $reportCard);
+        $this->recordAccess($request, $reportCard, 'pdf_generation_requested');
 
         GenerateReportCardPdf::dispatch($reportCard->id);
 
         return redirect()
             ->route('report-cards.show', $reportCard)
             ->with('status', 'Generate PDF rapor sedang diproses. File akan tersedia saat selesai.');
+    }
+
+    private function recordAccess(Request $request, ReportCard $reportCard, string $action): void
+    {
+        activity('report_cards')
+            ->performedOn($reportCard)
+            ->causedBy($request->user())
+            ->withProperties([
+                'action' => $action,
+                'student_id' => $reportCard->student_id,
+                'academic_term_id' => $reportCard->academic_term_id,
+            ])
+            ->log('report_card_'.$action);
     }
 }

@@ -1,7 +1,5 @@
-const CACHE_NAME = 'gq-edu-static-v3';
+const CACHE_NAME = 'gq-edu-static-v4';
 const STATIC_ASSETS = [
-    '/',
-    '/login',
     '/manifest.json',
     '/offline.html',
     '/icons/icon-192.svg',
@@ -12,7 +10,20 @@ const STATIC_ASSETS = [
     '/icons/icon-512-maskable.png',
 ];
 
-const PUBLIC_NAVIGATIONS = new Set(['/', '/login']);
+const PUBLIC_NAVIGATIONS = new Set(['/']);
+const PRIVATE_PATHS = [
+    '/admin', '/guru', '/wali', '/attendance', '/report-cards', '/diniyyah',
+    '/notifications', '/pilih-ruang-kerja', '/kabag',
+];
+
+function isCacheablePublicResponse(response) {
+    const cacheControl = response.headers.get('Cache-Control') || '';
+
+    return response.ok
+        && response.type === 'basic'
+        && /\bpublic\b/i.test(cacheControl)
+        && !/\b(private|no-store)\b/i.test(cacheControl);
+}
 
 // Install: cache static assets
 self.addEventListener('install', (event) => {
@@ -51,7 +62,7 @@ self.addEventListener('fetch', (event) => {
     // cache that can be reused by another browser session.
     const url = new URL(request.url);
     if (url.origin !== self.location.origin
-        || url.pathname.startsWith('/admin')
+        || PRIVATE_PATHS.some((path) => url.pathname === path || url.pathname.startsWith(`${path}/`))
         || url.pathname.startsWith('/livewire')
         || url.pathname.startsWith('/api')) {
         return;
@@ -71,7 +82,7 @@ self.addEventListener('fetch', (event) => {
         event.respondWith(
             fetch(request)
                 .then((response) => {
-                    if (response.ok && response.type === 'basic') {
+                    if (isCacheablePublicResponse(response)) {
                         const clone = response.clone();
                         caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
                     }

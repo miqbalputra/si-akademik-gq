@@ -13,9 +13,23 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
+    @auth<meta name="csrf-token" content="{{ csrf_token() }}">@endauth
     <title>Ruang GQ - Griya Qur'an Tunas Ilmu</title>
     <meta name="description" content="Aktivitas akademik Griya Qur'an untuk guru, wali santri, dan manajemen sekolah.">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Ruang GQ">
+    <meta property="og:locale" content="id_ID">
+    <meta property="og:title" content="Ruang GQ - Griya Qur'an Tunas Ilmu">
+    <meta property="og:description" content="Aktivitas akademik untuk guru, wali santri, dan manajemen sekolah.">
+    <meta property="og:url" content="{{ route('home') }}">
+    <meta property="og:image" content="{{ url('/images/og-ruang-gq.png') }}">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Ruang GQ, portal akademik Griya Qur'an Tunas Ilmu">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Ruang GQ - Griya Qur'an Tunas Ilmu">
+    <meta name="twitter:description" content="Aktivitas akademik untuk guru, wali santri, dan manajemen sekolah.">
+    <meta name="twitter:image" content="{{ url('/images/og-ruang-gq.png') }}">
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700,800" rel="stylesheet" />
     <link href="https://fonts.bunny.net/css?family=plus-jakarta-sans:500,600,700,800" rel="stylesheet" />

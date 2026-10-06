@@ -98,6 +98,7 @@ class DiniyyahJournalReportService
                 'teacherAssignment.classSubject.classroomTerm.classroom',
                 'teacherAssignment.classSubject.classroomTerm.academicTerm.academicYear',
                 'absences.classEnrollment.student',
+                'absences' => fn ($query) => $query->whereHas('classEnrollment.student'),
             ])
             ->when($teacherId, function (Builder $query, int $id): void {
                 $this->whereEffectiveTeacher($query, $id);
@@ -168,6 +169,7 @@ class DiniyyahJournalReportService
             : ClassEnrollment::query()
                 ->whereIn('classroom_term_id', $classroomTermIds)
                 ->where('status', 'active')
+                ->forVisibleStudents()
                 ->selectRaw('classroom_term_id, count(*) as aggregate')
                 ->groupBy('classroom_term_id')
                 ->pluck('aggregate', 'classroom_term_id');

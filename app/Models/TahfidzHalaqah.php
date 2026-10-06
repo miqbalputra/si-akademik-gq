@@ -38,7 +38,9 @@ class TahfidzHalaqah extends Model
 
     public function activeMembers(): HasMany
     {
-        return $this->hasMany(TahfidzHalaqahMember::class)->where('status', 'active');
+        return $this->hasMany(TahfidzHalaqahMember::class)
+            ->where('status', 'active')
+            ->whereHas('student', fn ($query) => $query->where('status', 'active'));
     }
 
     public function weeklyScores(): HasMany

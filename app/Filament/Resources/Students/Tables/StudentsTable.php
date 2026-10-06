@@ -2,11 +2,9 @@
 
 namespace App\Filament\Resources\Students\Tables;
 
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\Students\Actions\StudentDepartureActions;
+use App\Models\Student;
 use Filament\Actions\EditAction;
-use Filament\Actions\ForceDeleteBulkAction;
-use Filament\Actions\RestoreBulkAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
@@ -40,20 +38,29 @@ class StudentsTable
                 TextColumn::make('deleted_at')->label('Dihapus Pada')
                     ->dateTime()
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->visible(fn (): bool => auth()->user()?->hasRole('admin') ?? false),
+                TextColumn::make('latestDeparture.type')->label('Jenis Keluar')
+                    ->formatStateUsing(fn (?string $state): string => match ($state) {
+                        'transfer' => 'Pindah',
+                        'left' => 'Keluar',
+                        default => '—',
+                    })
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->visible(fn (): bool => auth()->user()?->hasRole('admin') ?? false),
+                TextColumn::make('latestDeparture.effective_date')->label('Tanggal Keluar')
+                    ->date()
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->visible(fn (): bool => auth()->user()?->hasRole('admin') ?? false),
             ])
             ->filters([
-                TrashedFilter::make(),
+                TrashedFilter::make()
+                    ->visible(fn (): bool => auth()->user()?->hasRole('admin') ?? false),
             ])
             ->recordActions([
-                EditAction::make(),
-            ])
-            ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                    ForceDeleteBulkAction::make(),
-                    RestoreBulkAction::make(),
-                ]),
+                EditAction::make()->visible(fn (Student $record): bool => ! $record->trashed()),
+                StudentDepartureActions::depart(),
+                StudentDepartureActions::restoreProfile(),
             ]);
     }
 }

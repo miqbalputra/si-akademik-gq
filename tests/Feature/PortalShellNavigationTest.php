@@ -27,7 +27,7 @@ class PortalShellNavigationTest extends TestCase
     {
         $user = $this->userWithRole('admin');
 
-        $this->actingAs($user)
+        $this->actingAs($user, 'admin')
             ->post(route('filament.admin.auth.logout'), ['_token' => csrf_token()])
             ->assertRedirect(route('login'));
 

@@ -41,6 +41,7 @@ class GuruTasmiController extends Controller
         $recentRecords = TasmiRecord::query()
             ->with(['student', 'classroomTerm.classroom'])
             ->where('examiner_teacher_id', $teacher->id)
+            ->whereHas('student', fn ($query) => $query->where('status', 'active'))
             ->when($assignment, fn ($q) => $q->where('academic_term_id', $assignment->academic_term_id))
             ->latest('exam_date')
             ->latest('id')
@@ -80,6 +81,7 @@ class GuruTasmiController extends Controller
                 ->with('student')
                 ->where('classroom_term_id', $selectedClassroomTerm->id)
                 ->where('status', 'active')
+                ->forVisibleStudents()
                 ->orderBy('roll_number')
                 ->orderBy('student_id')
                 ->get()
@@ -126,6 +128,7 @@ class GuruTasmiController extends Controller
             ->where('classroom_term_id', $classroomTerm->id)
             ->where('student_id', $validated['student_id'])
             ->where('status', 'active')
+            ->forVisibleStudents()
             ->first();
         abort_unless($enrollment, 403, 'Santri tidak terdaftar aktif di kelas yang dipilih.');
 
@@ -213,6 +216,7 @@ class GuruTasmiController extends Controller
 
         $isOwner = $tasmi_record->examiner_teacher_id === $teacher->id;
         abort_unless($isOwner, 403, 'Anda hanya bisa mengedit record tasmi\' yang Anda input sendiri.');
+        abort_unless($tasmi_record->student()->where('status', 'active')->exists(), 404);
 
         $tasmi_record->load(['student', 'classroomTerm.classroom', 'academicTerm']);
 
@@ -233,6 +237,7 @@ class GuruTasmiController extends Controller
 
         $isOwner = $tasmi_record->examiner_teacher_id === $teacher->id;
         abort_unless($isOwner, 403, 'Anda hanya bisa mengedit record tasmi\' yang Anda input sendiri.');
+        abort_unless($tasmi_record->student()->where('status', 'active')->exists(), 404);
 
         $validated = $this->validateUpdate($request, $tasmi_record);
         $validated['hijri_date'] = $this->tasmiService->hijriDateFor($validated['exam_date'])
@@ -265,6 +270,7 @@ class GuruTasmiController extends Controller
 
         $isOwner = $tasmi_record->examiner_teacher_id === $teacher->id;
         abort_unless($isOwner, 403, 'Anda hanya bisa menghapus record tasmi\' yang Anda input sendiri.');
+        abort_unless($tasmi_record->student()->where('status', 'active')->exists(), 404);
 
         $tasmi_record->delete();
 

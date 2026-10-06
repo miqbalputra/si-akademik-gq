@@ -30,6 +30,10 @@ class WorkspaceSelectionController extends Controller
             'workspace' => ['required', 'string', Rule::in(array_keys($available))],
         ]);
 
+        if ($validated['workspace'] === WorkspaceRedirectService::MANAGEMENT) {
+            $workspaces->switchToAdminGuard($request, $request->user());
+        }
+
         return redirect()->to($available[$validated['workspace']]['destination']);
     }
 }

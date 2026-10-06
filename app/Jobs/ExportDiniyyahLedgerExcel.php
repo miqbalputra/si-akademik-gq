@@ -34,7 +34,7 @@ class ExportDiniyyahLedgerExcel implements ShouldQueue
             $snapshotId = $filters['snapshot_id'] ?? null;
 
             $exporter = app(DiniyyahLedgerExporter::class);
-            $content = $exporter->export($snapshotId);
+            $content = $exporter->export($snapshotId, $exportRequest->requestedBy?->hasRole('admin') ?? false);
 
             $filename = 'exports/leger-diniyyah-'.now()->format('YmdHis').'.xlsx';
             Storage::disk('local')->put($filename, $content);

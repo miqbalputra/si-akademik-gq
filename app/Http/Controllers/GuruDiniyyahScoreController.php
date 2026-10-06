@@ -145,6 +145,7 @@ class GuruDiniyyahScoreController extends Controller
             ->with('student')
             ->where('classroom_term_id', $assessmentSet->classSubject->classroom_term_id)
             ->where('status', 'active')
+            ->forVisibleStudents()
             ->orderBy('roll_number')
             ->orderBy('student_id')
             ->get();
@@ -212,6 +213,7 @@ class GuruDiniyyahScoreController extends Controller
         $enrollmentIds = ClassEnrollment::query()
             ->where('classroom_term_id', $assessmentSet->classSubject->classroom_term_id)
             ->where('status', 'active')
+            ->forVisibleStudents()
             ->pluck('id')
             ->all();
 

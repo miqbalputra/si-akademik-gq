@@ -39,6 +39,7 @@ class ListDiniyyahTeacherAssignments extends ListRecords
                         ->disk('local')
                         ->directory('imports/teachers')
                         ->acceptedFileTypes(['text/csv', 'text/plain', 'application/vnd.ms-excel'])
+                        ->maxSize(10240)
                         ->required(),
                 ])
                 ->action(function (array $data): void {

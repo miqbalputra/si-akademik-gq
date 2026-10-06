@@ -199,7 +199,7 @@ class DiniyyahScheduleVersioningTest extends TestCase
         $admin = User::factory()->create(['name' => 'Admin Jadwal']);
         $admin->assignRole($adminRole);
 
-        $this->actingAs($admin)
+        $this->actingAs($admin, 'admin')
             ->get(DiniyyahScheduleVersionManager::getUrl())
             ->assertOk()
             ->assertSee('Jadwal berlaku per tanggal')

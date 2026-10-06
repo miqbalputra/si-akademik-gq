@@ -181,22 +181,22 @@ class SessionTimeMatrixTest extends TestCase
 
     public function test_matrix_page_requires_admin(): void
     {
-        $this->actingAs($this->userWithRole('guru'))
+        $this->actingAs($this->userWithRole('guru'), 'admin')
             ->get('/admin/session-time-matrix')
             ->assertForbidden();
 
-        $this->actingAs($this->admin())
+        $this->actingAs($this->admin(), 'admin')
             ->get('/admin/session-time-matrix')
             ->assertOk();
     }
 
     public function test_comparison_page_accessible_by_kabag_diniyyah(): void
     {
-        $this->actingAs($this->userWithRole('kabag_diniyyah'))
+        $this->actingAs($this->userWithRole('kabag_diniyyah'), 'admin')
             ->get('/admin/session-time-comparison')
             ->assertOk();
 
-        $this->actingAs($this->userWithRole('guru'))
+        $this->actingAs($this->userWithRole('guru'), 'admin')
             ->get('/admin/session-time-comparison')
             ->assertForbidden();
     }

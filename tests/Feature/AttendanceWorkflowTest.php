@@ -11,9 +11,11 @@ use App\Models\HomeroomAssignment;
 use App\Models\School;
 use App\Models\Student;
 use App\Models\StudentAttendance;
+use App\Models\StudentAttendanceChangeLog;
 use App\Models\Teacher;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Database\QueryException;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -76,6 +78,40 @@ class AttendanceWorkflowTest extends TestCase
             ->assertSee('Presensi');
     }
 
+    public function test_attendance_updates_preserve_the_original_inputter_and_audit_the_editor(): void
+    {
+        [$classroomTerm, $teacherUser, $enrollment] = $this->makeAttendanceClass();
+
+        $attendance = StudentAttendance::create([
+            'academic_term_id' => $classroomTerm->academic_term_id,
+            'classroom_term_id' => $classroomTerm->id,
+            'class_enrollment_id' => $enrollment->id,
+            'student_id' => $enrollment->student_id,
+            'attendance_date' => '2025-07-14',
+            'status' => StudentAttendance::STATUS_SICK,
+            'input_by' => $teacherUser->id,
+        ]);
+        $admin = User::factory()->create();
+        $admin->assignRole($this->role('admin'));
+
+        $this->actingAs($admin)
+            ->putJson(route('attendance.update-single', $classroomTerm), [
+                'class_enrollment_id' => $enrollment->id,
+                'date' => '2025-07-14',
+                'code' => 'A',
+            ])
+            ->assertOk()
+            ->assertJson(['success' => true]);
+
+        $this->assertSame($teacherUser->id, $attendance->fresh()->input_by);
+        $this->assertSame($admin->id, $attendance->fresh()->updated_by);
+        $this->assertSame(StudentAttendance::STATUS_ABSENT, $attendance->fresh()->status);
+        $log = StudentAttendanceChangeLog::query()->where('student_attendance_id', $attendance->id)->where('event', 'updated')->firstOrFail();
+        $this->assertSame(StudentAttendance::STATUS_SICK, $log->old_values['status']);
+        $this->assertSame(StudentAttendance::STATUS_ABSENT, $log->new_values['status']);
+        $this->assertSame($admin->id, $log->changed_by);
+    }
+
     public function test_weekend_days_are_not_rendered_in_attendance_grid(): void
     {
         [$classroomTerm, $teacherUser] = $this->makeAttendanceClass();
@@ -122,6 +158,52 @@ class AttendanceWorkflowTest extends TestCase
             ->get(route('attendance.edit', ['classroomTerm' => $classroomTerm, 'month' => '2025-07']))
             ->assertOk()
             ->assertSee('Santri 1');
+    }
+
+    public function test_a_student_cannot_receive_two_attendance_statuses_on_the_same_date(): void
+    {
+        [$firstClassroomTerm, , $firstEnrollment] = $this->makeAttendanceClass();
+        $secondYear = AcademicYear::create([
+            'school_id' => School::query()->value('id'),
+            'name' => '2026/2027',
+        ]);
+        $secondTerm = AcademicTerm::create([
+            'academic_year_id' => $secondYear->id,
+            'name' => 'Semester Ganjil',
+            'semester' => 'ganjil',
+        ]);
+        $secondClassroom = Classroom::create(['name' => 'M3 Akhwat']);
+        $secondClassroomTerm = ClassroomTerm::create([
+            'academic_term_id' => $secondTerm->id,
+            'classroom_id' => $secondClassroom->id,
+            'name' => 'M3 Akhwat',
+        ]);
+        $secondEnrollment = ClassEnrollment::create([
+            'academic_term_id' => $secondTerm->id,
+            'classroom_term_id' => $secondClassroomTerm->id,
+            'student_id' => $firstEnrollment->student_id,
+            'roll_number' => 1,
+        ]);
+
+        StudentAttendance::create([
+            'academic_term_id' => $firstEnrollment->academic_term_id,
+            'classroom_term_id' => $firstClassroomTerm->id,
+            'class_enrollment_id' => $firstEnrollment->id,
+            'student_id' => $firstEnrollment->student_id,
+            'attendance_date' => '2025-07-14',
+            'status' => StudentAttendance::STATUS_PRESENT,
+        ]);
+
+        $this->expectException(QueryException::class);
+
+        StudentAttendance::create([
+            'academic_term_id' => $secondEnrollment->academic_term_id,
+            'classroom_term_id' => $secondClassroomTerm->id,
+            'class_enrollment_id' => $secondEnrollment->id,
+            'student_id' => $secondEnrollment->student_id,
+            'attendance_date' => '2025-07-14',
+            'status' => StudentAttendance::STATUS_SICK,
+        ]);
     }
 
     public function test_unassigned_teacher_cannot_open_attendance_index_or_see_nav_item(): void

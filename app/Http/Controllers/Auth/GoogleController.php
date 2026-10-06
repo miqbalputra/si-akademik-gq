@@ -13,8 +13,10 @@ use Laravel\Socialite\Facades\Socialite;
 
 class GoogleController extends Controller
 {
-    public function redirectToGoogle(): RedirectResponse
+    public function redirectToGoogle(Request $request): RedirectResponse
     {
+        $request->session()->put('google_auth_guard', $request->query('guard') === 'admin' ? 'admin' : 'web');
+
         return Socialite::driver('google')->redirect();
     }
 
@@ -70,8 +72,21 @@ class GoogleController extends Controller
             ]);
         }
 
-        Auth::login($user);
+        $guard = $request->session()->pull('google_auth_guard', 'web');
+
+        if ($guard === 'admin' && ! $user->canAccessPanel(\Filament\Panel::make())) {
+            return redirect()->route('login')->withErrors([
+                'email' => 'Akun ini tidak memiliki akses ke portal admin.',
+            ]);
+        }
+
+        Auth::guard($guard === 'admin' ? 'web' : 'admin')->logout();
+        Auth::guard($guard)->login($user);
         $request->session()->regenerate();
+
+        if ($guard === 'admin') {
+            return redirect()->intended(url('/admin'));
+        }
 
         return $workspaceRedirects->redirectAfterLogin($request, $user);
     }

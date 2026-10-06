@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use DomainException;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,6 +12,21 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class DiniyyahClassJournalAbsence extends Model
 {
     use HasFactory;
+
+    protected static function booted(): void
+    {
+        static::saving(function (DiniyyahClassJournalAbsence $absence): void {
+            if ($absence->journal()->where('status', 'validated')->exists()) {
+                throw new DomainException('Presensi pada jurnal tervalidasi tidak dapat diubah sebelum validasi dibatalkan.');
+            }
+        });
+
+        static::deleting(function (DiniyyahClassJournalAbsence $absence): void {
+            if ($absence->journal()->where('status', 'validated')->exists()) {
+                throw new DomainException('Presensi pada jurnal tervalidasi tidak dapat dihapus sebelum validasi dibatalkan.');
+            }
+        });
+    }
 
     public function journal(): BelongsTo
     {

@@ -65,7 +65,7 @@ class AdminPanelAccessTest extends TestCase
         $this->seed(DemoSeeder::class);
         $admin = User::where('email', 'admin@example.com')->firstOrFail();
 
-        $this->actingAs($admin)
+        $this->actingAs($admin, 'admin')
             ->get('/admin/demo-flow')
             ->assertOk()
             ->assertSee('Alur Demo')
@@ -78,7 +78,7 @@ class AdminPanelAccessTest extends TestCase
         $this->seed(DemoSeeder::class);
         $admin = User::where('email', 'admin@example.com')->firstOrFail();
 
-        $this->actingAs($admin)
+        $this->actingAs($admin, 'admin')
             ->get('/admin/academic-calendar')
             ->assertOk()
             ->assertSee('Kalender Akademik')

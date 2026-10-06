@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\DiniyyahClassJournal;
+use App\Models\ReportCard;
 use App\Models\DiniyyahClassJournalAbsence;
 use App\Models\DiniyyahScore;
 use App\Models\DiniyyahTeacherAssignment;
@@ -14,6 +15,7 @@ use App\Models\TahfidzUasScore;
 use App\Models\TahfidzWeeklyScore;
 use App\Models\TasmiExaminerAssignment;
 use App\Models\TasmiRecord;
+use App\Models\User;
 use App\Observers\DiniyyahClassJournalAbsenceObserver;
 use App\Observers\DiniyyahClassJournalObserver;
 use App\Observers\DiniyyahScoreObserver;
@@ -26,6 +28,9 @@ use App\Observers\TahfidzUasScoreObserver;
 use App\Observers\TahfidzWeeklyScoreObserver;
 use App\Observers\TasmiExaminerAssignmentObserver;
 use App\Observers\TasmiRecordObserver;
+use App\Observers\UserObserver;
+use App\Policies\DiniyyahClassJournalPolicy;
+use App\Policies\ReportCardPolicy;
 use App\Services\GuruJournalReminderPreferenceService;
 use App\Services\GuruPerformaService;
 use App\Services\TasmiWaliReminderPreferenceService;
@@ -34,6 +39,7 @@ use Filament\Auth\Http\Responses\Contracts\LogoutResponse as LogoutResponseContr
 use Filament\Forms\Components\Field;
 use Filament\Tables\Columns\Column;
 use Illuminate\Support\Facades\View;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\View\View as BladeView;
 
@@ -52,6 +58,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Gate::policy(DiniyyahClassJournal::class, DiniyyahClassJournalPolicy::class);
+        Gate::policy(ReportCard::class, ReportCardPolicy::class);
+
         DiniyyahScore::observe(DiniyyahScoreObserver::class);
         DiniyyahClassJournal::observe(DiniyyahClassJournalObserver::class);
         DiniyyahClassJournalAbsence::observe(DiniyyahClassJournalAbsenceObserver::class);
@@ -64,6 +73,7 @@ class AppServiceProvider extends ServiceProvider
         TahfidzUasScore::observe(TahfidzUasScoreObserver::class);
         HomeroomAssignment::observe(HomeroomAssignmentObserver::class);
         SchoolEvent::observe(SchoolEventObserver::class);
+        User::observe(UserObserver::class);
 
         View::composer('components.layouts.portal', function (BladeView $view): void {
             $user = auth()->user();

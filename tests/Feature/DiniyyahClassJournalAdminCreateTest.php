@@ -10,6 +10,7 @@ use App\Models\Classroom;
 use App\Models\ClassSession;
 use App\Models\ClassroomTerm;
 use App\Models\DiniyyahClassJournal;
+use App\Models\DiniyyahClassJournalAbsence;
 use App\Models\DiniyyahClassSubject;
 use App\Models\DiniyyahSubject;
 use App\Models\DiniyyahTeacherAssignment;
@@ -18,6 +19,8 @@ use App\Models\School;
 use App\Models\Teacher;
 use App\Models\User;
 use App\Support\SessionTimetable;
+use App\Services\DiniyyahJournalValidationWorkflow;
+use DomainException;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -50,7 +53,7 @@ class DiniyyahClassJournalAdminCreateTest extends TestCase
         [$assignment] = $this->makeAssignmentWithSchedule($guru['teacher'], 'Fiqih', 1, '1'); // Senin sesi 1
 
         // Backfill tanggal Selasa (di luar jadwal Senin) — tanpa gate, harus berhasil.
-        \Livewire\Livewire::actingAs($admin)
+        \Livewire\Livewire::actingAs($admin, 'admin')
             ->test(CreateDiniyyahClassJournal::class)
             ->fillForm([
                 'diniyyah_teacher_assignment_id' => $assignment->id,
@@ -86,7 +89,7 @@ class DiniyyahClassJournalAdminCreateTest extends TestCase
         [$assignment] = $this->makeAssignmentWithSchedule($guru['teacher'], 'Fiqih', 1, '1');
 
         // Catat jurnal terlewat sekali (berhasil).
-        \Livewire\Livewire::actingAs($admin)
+        \Livewire\Livewire::actingAs($admin, 'admin')
             ->test(CreateDiniyyahClassJournal::class)
             ->fillForm([
                 'diniyyah_teacher_assignment_id' => $assignment->id,
@@ -99,7 +102,7 @@ class DiniyyahClassJournalAdminCreateTest extends TestCase
             ->assertHasNoFormErrors();
 
         // Submit kedua dengan (assignment, date, session) yang sama → ditolak.
-        \Livewire\Livewire::actingAs($admin)
+        \Livewire\Livewire::actingAs($admin, 'admin')
             ->test(CreateDiniyyahClassJournal::class)
             ->fillForm([
                 'diniyyah_teacher_assignment_id' => $assignment->id,
@@ -123,7 +126,7 @@ class DiniyyahClassJournalAdminCreateTest extends TestCase
         [$assignment] = $this->makeAssignmentWithSchedule($guruPemilik['teacher'], 'Fiqih', 1, '1');
 
         // Kasus tukar guru: admin isi substitute = guru lama yang mengajar tanggal itu.
-        \Livewire\Livewire::actingAs($admin)
+        \Livewire\Livewire::actingAs($admin, 'admin')
             ->test(CreateDiniyyahClassJournal::class)
             ->fillForm([
                 'diniyyah_teacher_assignment_id' => $assignment->id,
@@ -154,6 +157,84 @@ class DiniyyahClassJournalAdminCreateTest extends TestCase
 
         $this->assertSame('10:30:00', $data['session_starts_at']);
         $this->assertSame('11:00:00', $data['session_ends_at']);
+    }
+
+    public function test_validated_journal_and_its_attendance_cannot_be_changed_until_admin_revokes_validation(): void
+    {
+        $admin = $this->makeAdmin();
+        $guru = $this->makeGuru('Ustadz Ahmad');
+        [$assignment] = $this->makeAssignmentWithSchedule($guru['teacher'], 'Fiqih', 1, '1');
+        $journal = DiniyyahClassJournal::create([
+            'diniyyah_teacher_assignment_id' => $assignment->id,
+            'date' => self::SELASA_LAMA,
+            'session_hour' => '1',
+            'material' => 'Bab Thaharah',
+            'jp_count' => 1,
+        ]);
+        $workflow = app(DiniyyahJournalValidationWorkflow::class);
+        $workflow->validate($journal, $admin);
+
+        $this->actingAs($guru['user'])
+            ->get(route('guru.diniyyah-journals.edit', $journal))
+            ->assertForbidden();
+        $this->actingAs($guru['user'])
+            ->put(route('guru.diniyyah-journals.update', $journal), ['material' => 'Perubahan lewat route'])
+            ->assertForbidden();
+        $this->actingAs($guru['user'])
+            ->delete(route('guru.diniyyah-journals.destroy', $journal))
+            ->assertForbidden();
+
+        try {
+            $journal->update(['material' => 'Perubahan ilegal']);
+            $this->fail('Jurnal tervalidasi semestinya menolak perubahan.');
+        } catch (DomainException $exception) {
+            $this->assertStringContainsString('tervalidasi', $exception->getMessage());
+        }
+
+        try {
+            DiniyyahClassJournalAbsence::create([
+                'diniyyah_class_journal_id' => $journal->id,
+                'class_enrollment_id' => 1,
+                'status' => 'absent',
+            ]);
+            $this->fail('Presensi jurnal tervalidasi semestinya menolak perubahan.');
+        } catch (DomainException $exception) {
+            $this->assertStringContainsString('tervalidasi', $exception->getMessage());
+        }
+
+        $workflow->revoke($journal, $admin, 'Koreksi materi yang keliru');
+        $this->actingAs($guru['user'])
+            ->put(route('guru.diniyyah-journals.update', $journal), ['material' => 'Bab Thaharah revisi'])
+            ->assertRedirect();
+
+        $this->assertSame('draft', $journal->fresh()->status);
+        $this->assertSame('Bab Thaharah revisi', $journal->fresh()->material);
+        $this->assertDatabaseCount('diniyyah_class_journal_validation_logs', 2);
+        $this->assertDatabaseHas('diniyyah_class_journal_validation_logs', [
+            'diniyyah_class_journal_id' => $journal->id,
+            'action' => 'validation_revoked',
+            'reason' => 'Koreksi materi yang keliru',
+            'performed_by' => $admin->id,
+        ]);
+    }
+
+    public function test_draft_journal_delete_is_soft_deleted_and_can_be_restored(): void
+    {
+        $guru = $this->makeGuru('Ustadz Ahmad');
+        [$assignment] = $this->makeAssignmentWithSchedule($guru['teacher'], 'Fiqih', 1, '1');
+        $journal = DiniyyahClassJournal::create([
+            'diniyyah_teacher_assignment_id' => $assignment->id,
+            'date' => self::SELASA_LAMA,
+            'session_hour' => '1',
+            'material' => 'Bab Thaharah',
+            'jp_count' => 1,
+        ]);
+
+        $journal->delete();
+
+        $this->assertSoftDeleted('diniyyah_class_journals', ['id' => $journal->id]);
+        $journal->restore();
+        $this->assertNotSoftDeleted('diniyyah_class_journals', ['id' => $journal->id]);
     }
 
     public function test_role_gating_admin_kepala_guru(): void

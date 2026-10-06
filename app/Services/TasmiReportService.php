@@ -214,6 +214,6 @@ class TasmiReportService
             'academicTerm.academicYear',
             'inputBy',
             'lastUpdatedBy',
-        ]);
+        ])->whereHas('student', fn (Builder $query) => $query->where('status', 'active'));
     }
 }

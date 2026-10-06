@@ -121,12 +121,20 @@ DB_PASSWORD=change_me
 - Untuk leger besar (30+ santri) dengan queue aktif, export di-dispatch via queue job (`ExportDiniyyahLedgerExcel`) dan hasil disimpan di `storage/app/exports/`.
 - PDF rapor juga bisa di-generate async via queue (`GenerateReportCardPdf`), hasil disimpan di `storage/app/rapor/`.
 
+## Hardening Operasional
+
+- Image Docker mematikan `expose_php` dan tampilan error PHP, memaksa HTTPS saat `APP_ENV=production` (kecuali `FORCE_HTTPS` diatur eksplisit), memasang security headers, dan menjalankan queue worker serta Laravel scheduler. Nilai `FORCE_HTTPS=false` pada `.env.example` hanya untuk development lokal; set `FORCE_HTTPS=true` di production.
+- Di belakang reverse proxy, isi `TRUSTED_PROXIES` dengan alamat IP/CIDR proxy yang tepat. Jangan memakai `*` kecuali akses langsung ke origin dibatasi di jaringan.
+- Scheduler membuat backup PostgreSQL setiap hari pukul 02:15 WIB melalui `db:backup`. Atur `BACKUP_AWS_ACCESS_KEY_ID`, `BACKUP_AWS_SECRET_ACCESS_KEY`, `BACKUP_AWS_DEFAULT_REGION`, `BACKUP_AWS_BUCKET`, dan bila perlu `BACKUP_AWS_ENDPOINT`. Gunakan bucket privat dengan enkripsi at-rest aktif; arsip lama dibersihkan setelah `BACKUP_RETENTION_DAYS`.
+- Verifikasi upload manual dengan `php artisan db:backup`. Uji restore secara berkala di database staging memakai `pg_restore`; status sukses upload saja belum membuktikan arsip bisa dipulihkan.
+- Migrasi batas presensi santri per tanggal berhenti dengan pesan rekonsiliasi bila database sudah memiliki presensi ganda lintas kelas. Bersihkan duplikat sebelum deploy; migrasi tidak menghapus atau memilih status secara otomatis.
+
 ## Tahap Berikutnya
 
 Tahap berikutnya yang direkomendasikan:
 
 1. Siapkan modul tahfidz tahap 2 (schema sudah disiapkan placeholder).
-2. Aktivasi queue worker dan scheduler di production (Coolify).
+2. Isi kredensial penyimpanan backup dan alamat trusted proxy pada environment production.
 3. Generate PNG PWA icons di production (`php artisan pwa:generate-icons`).
 4. Integrasi `dashboard_metric_snapshots` untuk caching dashboard berat.
 5. Integrasi `panel_notifications` untuk notifikasi internal panel.

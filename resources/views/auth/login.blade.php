@@ -62,6 +62,7 @@
                         <input type="checkbox" name="remember" value="1" class="h-4 w-4 rounded border-slate-300 accent-brand-600"> Ingat saya di perangkat ini
                     </label>
                     <button type="submit" class="btn btn-primary btn-lg w-full">Masuk ke ruang saya <span aria-hidden="true">&rarr;</span></button>
+                    <a href="{{ route('password.request') }}" class="inline-flex text-sm font-semibold text-school-700 underline">Lupa kata sandi?</a>
                 </form>
 
                 <div class="my-7 flex items-center gap-3"><span class="h-px flex-1 bg-line"></span><span class="font-mono text-[10px] font-bold text-slate-500">ATAU</span><span class="h-px flex-1 bg-line"></span></div>

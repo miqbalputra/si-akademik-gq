@@ -33,6 +33,7 @@ class ListClassrooms extends ListRecords
                         ->disk('local')
                         ->directory('imports/class-enrollments')
                         ->acceptedFileTypes(['text/csv', 'text/plain', 'application/vnd.ms-excel'])
+                        ->maxSize(10240)
                         ->required(),
                 ])
                 ->action(function (array $data): void {

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\ReportCard;
 use App\Models\ReportCardSignature;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -136,17 +137,24 @@ class ReportCardExportAndSignaturesTest extends TestCase
             'student_id' => $student->id,
         ]);
 
-        return ReportCard::create([
+        $reportCard = ReportCard::create([
             'academic_term_id' => $term->id,
             'classroom_term_id' => $classroomTerm->id,
             'class_enrollment_id' => $enrollment->id,
             'student_id' => $student->id,
             'report_type' => 'diniyyah',
-            'status' => 'published',
+            'status' => 'draft',
             'total_score' => 85.00,
             'average_score' => 85.00,
             'rank_in_class' => 1,
+            'published_at' => null,
+        ]);
+
+        DB::table('report_cards')->where('id', $reportCard->id)->update([
+            'status' => 'published',
             'published_at' => now(),
         ]);
+
+        return $reportCard->fresh();
     }
 }

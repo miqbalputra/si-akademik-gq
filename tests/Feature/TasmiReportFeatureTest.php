@@ -167,12 +167,12 @@ class TasmiReportFeatureTest extends TestCase
         $firstRecord = $this->record($ctx, $first);
         $this->record($ctx, $second, ['examiner' => $ctx['otherPj'], 'input_by' => $ctx['otherPjUser'], 'exam_date' => '2026-08-16']);
 
-        $this->actingAs($ctx['kabag'])->get(route('admin.tasmi-report.index'))
+        $this->actingAs($ctx['kabag'], 'admin')->get(route('admin.tasmi-report.index'))
             ->assertOk()
             ->assertSee('Santri Laporan Satu')
             ->assertSee('Santri Laporan Dua');
-        $this->actingAs($ctx['kabag'])->get(route('admin.tasmi-report.show', $firstRecord))->assertOk()->assertSee('Riwayat perubahan');
-        $this->actingAs($ctx['kabag'])->get(route('admin.tasmi-report.export', 'pdf'))->assertOk()->assertHeader('content-type', 'application/pdf');
-        $this->actingAs($ctx['kabag'])->get('/admin/tasmi-records/create')->assertForbidden();
+        $this->actingAs($ctx['kabag'], 'admin')->get(route('admin.tasmi-report.show', $firstRecord))->assertOk()->assertSee('Riwayat perubahan');
+        $this->actingAs($ctx['kabag'], 'admin')->get(route('admin.tasmi-report.export', 'pdf'))->assertOk()->assertHeader('content-type', 'application/pdf');
+        $this->actingAs($ctx['kabag'], 'admin')->get('/admin/tasmi-records/create')->assertForbidden();
     }
 }

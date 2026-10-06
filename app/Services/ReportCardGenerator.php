@@ -13,16 +13,32 @@ class ReportCardGenerator
 {
     public function __construct(private readonly AttendanceRecapService $attendanceRecapService) {}
 
-    public function generateFromLedgerSnapshot(DiniyyahLedgerSnapshot $snapshot, ?int $generatedBy = null): int
+    public function generateFromLedgerSnapshot(DiniyyahLedgerSnapshot $snapshot, ?int $generatedBy = null, bool $includeArchivedStudents = false): int
     {
-        $snapshot->loadMissing('rows.cells');
+        $snapshot->loadMissing('rows.cells', 'rows.classEnrollment.student');
+        if (! $includeArchivedStudents) {
+            $visibleRows = $snapshot->rows
+                ->filter(fn ($row): bool => $row->classEnrollment?->student?->status === 'active')
+                ->values();
+            $visibleEnrollmentIds = $visibleRows->pluck('class_enrollment_id')->map(fn ($id): int => (int) $id)->all();
+            $snapshotData = $snapshot->snapshot_data ?? [];
+            if (array_key_exists('issues', $snapshotData)) {
+                $issues = collect($snapshotData['issues'])
+                    ->reject(fn (array $issue): bool => isset($issue['class_enrollment_id'])
+                        && ! in_array((int) $issue['class_enrollment_id'], $visibleEnrollmentIds, true));
+                $snapshotData['issues'] = $issues->values()->all();
+                $snapshotData['summary']['blocking_issues'] = $issues->where('level', 'blocking')->count();
+            }
+            $snapshot->setRelation('rows', $visibleRows);
+            $snapshot->snapshot_data = $snapshotData;
+        }
         $this->ensureSnapshotCanGenerateReportCards($snapshot);
 
-        return DB::transaction(function () use ($snapshot, $generatedBy) {
+        return DB::transaction(function () use ($snapshot, $generatedBy, $includeArchivedStudents) {
             $count = 0;
 
             foreach ($snapshot->rows->whereNotNull('rank_in_class') as $row) {
-                $this->generateFromLedgerRow($snapshot, $row, $generatedBy);
+                $this->generateFromLedgerRow($snapshot, $row, $generatedBy, $includeArchivedStudents);
                 $count++;
             }
 
@@ -33,7 +49,7 @@ class ReportCardGenerator
         });
     }
 
-    public function generateFromLedgerRow(DiniyyahLedgerSnapshot $snapshot, DiniyyahLedgerRow $row, ?int $generatedBy = null): ReportCard
+    public function generateFromLedgerRow(DiniyyahLedgerSnapshot $snapshot, DiniyyahLedgerRow $row, ?int $generatedBy = null, bool $includeArchivedStudents = false): ReportCard
     {
         $this->ensureSnapshotCanGenerateReportCards($snapshot);
 
@@ -42,6 +58,9 @@ class ReportCardGenerator
         }
 
         $row->loadMissing('classEnrollment.student');
+        if (! $includeArchivedStudents && $row->classEnrollment?->student?->status !== 'active') {
+            throw new DomainException('Rapor siswa arsip hanya dapat dibuat oleh admin.');
+        }
         $scoreCells = $row->cells()
             ->where('source_type', 'diniyyah_assessment_set')
             ->orderBy('sort_order')
@@ -62,6 +81,10 @@ class ReportCardGenerator
             'class_enrollment_id' => $row->class_enrollment_id,
             'report_type' => 'diniyyah',
         ]);
+
+        if ($reportCard && $reportCard->status !== 'draft') {
+            throw new DomainException('Rapor terkunci atau terbit tidak boleh ditimpa generator. Buka revisi tercatat terlebih dahulu.');
+        }
 
         $scoreData = [
             'classroom_term_id' => $snapshot->classroom_term_id,

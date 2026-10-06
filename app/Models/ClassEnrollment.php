@@ -7,11 +7,17 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Builder;
 
 #[Fillable(['academic_term_id', 'classroom_term_id', 'student_id', 'roll_number', 'status'])]
 class ClassEnrollment extends Model
 {
     use HasFactory;
+
+    public function scopeForVisibleStudents(Builder $query): Builder
+    {
+        return $query->whereHas('student', fn (Builder $studentQuery): Builder => $studentQuery->where('status', 'active'));
+    }
 
     public function academicTerm(): BelongsTo
     {

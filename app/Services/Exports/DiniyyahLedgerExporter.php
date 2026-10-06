@@ -9,11 +9,30 @@ class DiniyyahLedgerExporter
 {
     public function __construct(private readonly SpreadsheetTheme $theme) {}
 
-    public function export(?int $snapshotId): string
+    public function export(?int $snapshotId, bool $includeArchivedStudents = false): string
     {
-        $snapshot = DiniyyahLedgerSnapshot::with(['rows.cells', 'classroomTerm', 'academicTerm.academicYear'])->findOrFail($snapshotId);
+        $snapshot = DiniyyahLedgerSnapshot::with(['rows.cells', 'rows.classEnrollment.student', 'classroomTerm', 'academicTerm.academicYear'])->findOrFail($snapshotId);
+        if (! $includeArchivedStudents) {
+            $snapshot->setRelation('rows', $snapshot->rows
+                ->filter(fn ($row): bool => $row->classEnrollment?->student?->status === 'active')
+                ->values());
+        }
         $columns = collect($snapshot->snapshot_data['columns'] ?? []);
         $summary = $snapshot->snapshot_data['summary'] ?? [];
+        if (! $includeArchivedStudents) {
+            $visibleEnrollmentIds = $snapshot->rows
+                ->pluck('class_enrollment_id')
+                ->map(fn ($id): int => (int) $id)
+                ->all();
+            $issues = collect($snapshot->snapshot_data['issues'] ?? [])
+                ->reject(fn (array $issue): bool => isset($issue['class_enrollment_id'])
+                    && ! in_array((int) $issue['class_enrollment_id'], $visibleEnrollmentIds, true));
+            $completeRows = $snapshot->rows->filter(fn ($row): bool => $row->total_diniyyah_score !== null)->count();
+            $summary['total_students'] = $snapshot->rows->count();
+            $summary['complete_rows'] = $completeRows;
+            $summary['incomplete_rows'] = $snapshot->rows->count() - $completeRows;
+            $summary['blocking_issues'] = $issues->where('level', 'blocking')->count();
+        }
         $headers = array_merge(['No', 'Nama', 'NIS'], $columns->pluck('label')->all(), ['Total', 'Rata-rata', 'Peringkat']);
 
         $workbook = $this->theme->workbook();

@@ -47,7 +47,7 @@ class TahfidzHalaqahCreateTest extends TestCase
     {
         $term = $this->makePrerequisites();
 
-        $resp = $this->actingAs($this->admin())->get('/admin/tahfidz-halaqahs/create');
+        $resp = $this->actingAs($this->admin(), 'admin')->get('/admin/tahfidz-halaqahs/create');
 
         $resp->assertOk();
         $resp->assertSee('Periode Akademik');
@@ -59,7 +59,7 @@ class TahfidzHalaqahCreateTest extends TestCase
     {
         $this->makePrerequisites();
 
-        $resp = $this->actingAs($this->admin())->get('/admin/tahfidz-halaqahs');
+        $resp = $this->actingAs($this->admin(), 'admin')->get('/admin/tahfidz-halaqahs');
 
         $resp->assertOk();
         // Filament v5 ListRecords tidak otomatis merender tombol Create; harus
@@ -72,7 +72,7 @@ class TahfidzHalaqahCreateTest extends TestCase
         $u = User::create(['name' => 'KS', 'email' => 'ks@test.com', 'password' => bcrypt('x')]);
         $u->assignRole('kepala_sekolah');
 
-        $resp = $this->actingAs($u)->get('/admin/tahfidz-halaqahs/create');
+        $resp = $this->actingAs($u, 'admin')->get('/admin/tahfidz-halaqahs/create');
 
         // kepala_sekolah bisa melihat (VIEW_ROLES) tapi tidak boleh membuat (MANAGE_ROLES) -> 403
         $resp->assertForbidden();
@@ -82,7 +82,7 @@ class TahfidzHalaqahCreateTest extends TestCase
     {
         $term = $this->makePrerequisites();
 
-        \Livewire\Livewire::actingAs($this->admin())
+        \Livewire\Livewire::actingAs($this->admin(), 'admin')
             ->test(CreateTahfidzHalaqah::class)
             ->fillForm([
                 'academic_term_id' => $term->id,

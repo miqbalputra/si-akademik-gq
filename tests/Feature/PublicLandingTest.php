@@ -28,6 +28,15 @@ class PublicLandingTest extends TestCase
             ->assertSee('Ruang Guru')
             ->assertSee('Ruang Wali')
             ->assertSee('Kendali Akademik')
+            ->assertSee('property="og:image"', false)
+            ->assertSee('name="twitter:card" content="summary_large_image"', false);
+
+        $this->assertCacheControlDirectives(
+            $this->get('/')->headers->get('Cache-Control'),
+            ['public', 'max-age=0', 's-maxage=300', 'stale-while-revalidate=60'],
+        );
+
+        $this->get('/')
             ->assertDontSee('Product line')
             ->assertSee('href="'.route('login').'"', false)
             ->assertSee('href="'.route('guru.dashboard').'"', false)
@@ -52,5 +61,25 @@ class PublicLandingTest extends TestCase
                 ->assertSee('Buka ruang saya')
                 ->assertSee('href="'.$dashboardUrl.'"', false);
         }
+    }
+
+    public function test_authenticated_landing_is_never_publicly_cached(): void
+    {
+        Role::firstOrCreate(['name' => 'guru', 'guard_name' => 'web']);
+        $user = User::factory()->create();
+        $user->assignRole('guru');
+
+        $response = $this->actingAs($user)->get('/')->assertOk();
+
+        $this->assertCacheControlDirectives($response->headers->get('Cache-Control'), ['private', 'no-store', 'max-age=0']);
+    }
+
+    /** @param list<string> $expected */
+    private function assertCacheControlDirectives(?string $value, array $expected): void
+    {
+        $actual = array_map('trim', explode(',', (string) $value));
+        sort($actual);
+        sort($expected);
+        $this->assertSame($expected, $actual);
     }
 }

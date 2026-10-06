@@ -4,6 +4,7 @@ use App\Http\Controllers\AdminMonthlyJpReportController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\GoogleController;
+use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\DiniyyahJournalExportController;
 use App\Http\Controllers\DiniyyahJournalReportController;
 use App\Http\Controllers\DiniyyahLedgerController;
@@ -39,9 +40,17 @@ use App\Http\Controllers\WaliKelasTasmiReminderController;
 use App\Http\Controllers\WorkspaceSelectionController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::get('/', function (\Illuminate\Http\Request $request) {
+    $response = response()->view('welcome');
+
+    return $request->user()
+        ? $response->header('Cache-Control', 'private, no-store, max-age=0')
+        : $response->header('Cache-Control', 'public, max-age=0, s-maxage=300, stale-while-revalidate=60');
+})->name('home');
+
+Route::get('/app', function (\Illuminate\Http\Request $request, WorkspaceRedirectService $workspaces) {
+    return $workspaces->redirectAfterLogin($request, $request->user());
+})->middleware('auth:admin,web')->name('app.start');
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');
@@ -50,27 +59,39 @@ Route::middleware('guest')->group(function () {
     Route::post('/login', [AuthenticatedSessionController::class, 'store'])
         ->middleware('throttle:5,1')
         ->name('login.store');
+
+    Route::get('/forgot-password', [PasswordResetController::class, 'create'])->name('password.request');
+    Route::post('/forgot-password', [PasswordResetController::class, 'sendLink'])
+        ->middleware('throttle:5,1')
+        ->name('password.email');
+    Route::get('/reset-password/{token}', [PasswordResetController::class, 'edit'])->name('password.reset');
+    Route::post('/reset-password', [PasswordResetController::class, 'update'])
+        ->middleware('throttle:10,1')
+        ->name('password.update');
 });
 
-Route::get('/auth/google', [GoogleController::class, 'redirectToGoogle'])->name('auth.google');
-Route::get('/auth/google/callback', [GoogleController::class, 'handleGoogleCallback'])->name('auth.google.callback');
+Route::get('/auth/google', [GoogleController::class, 'redirectToGoogle'])->middleware('throttle:10,1')->name('auth.google');
+Route::get('/auth/google/callback', [GoogleController::class, 'handleGoogleCallback'])->middleware('throttle:10,1')->name('auth.google.callback');
 
 Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
-    ->middleware('auth')
+    ->middleware('auth:web')
     ->name('logout');
 
-Route::middleware('auth')->prefix('pilih-ruang-kerja')->name('workspace.')->group(function () {
+Route::middleware('auth:web')->prefix('pilih-ruang-kerja')->name('workspace.')->group(function () {
     Route::get('/', [WorkspaceSelectionController::class, 'create'])->name('choose');
     Route::post('/', [WorkspaceSelectionController::class, 'store'])->name('select');
 });
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth:web', 'role:kabag_tahfidz'])->group(function () {
     Route::get('/kabag/tahfidz', KabagTahfidzDashboardController::class)->name('kabag-tahfidz.dashboard');
+});
+
+Route::middleware(['auth:web', 'role:kabag_diniyyah'])->group(function () {
     Route::get('/kabag/diniyyah', KabagDiniyyahDashboardController::class)->name('kabag-diniyyah.dashboard');
 });
 
 // Notifikasi pusat — bell icon di pojok kanan atas (semua role).
-Route::middleware('auth')->prefix('notifications')->name('notifications.')->group(function () {
+Route::middleware('auth:web')->prefix('notifications')->name('notifications.')->group(function () {
     Route::get('/', [NotificationController::class, 'index'])->name('index');
     Route::get('/feed', [NotificationController::class, 'feed'])->name('feed');
     Route::post('/{notification}/read', [NotificationController::class, 'markAsRead'])->name('read');
@@ -78,7 +99,7 @@ Route::middleware('auth')->prefix('notifications')->name('notifications.')->grou
     Route::delete('/{notification}', [NotificationController::class, 'archive'])->name('archive');
 });
 
-Route::middleware('auth')->prefix('guru')->name('guru.')->group(function () {
+Route::middleware(['auth:web', 'role:guru'])->prefix('guru')->name('guru.')->group(function () {
     Route::get('/', [GuruDashboardController::class, 'index'])->name('dashboard');
     Route::get('/performa', [GuruDashboardController::class, 'performa'])->name('performa');
     Route::get('/performa/export/{format}', [GuruDashboardController::class, 'performaExport'])
@@ -93,10 +114,6 @@ Route::middleware('auth')->prefix('guru')->name('guru.')->group(function () {
     Route::post('/journal-reminder/snooze', [GuruJournalReminderController::class, 'snooze'])
         ->name('journal-reminder.snooze');
     Route::get('/jadwal/riwayat', [GuruJadwalController::class, 'riwayat'])->name('jadwal.riwayat');
-    Route::get('/diniyyah-scores', [GuruDiniyyahScoreController::class, 'index'])->name('diniyyah-scores.index');
-    Route::get('/diniyyah-scores/{assessmentSet}', [GuruDiniyyahScoreController::class, 'edit'])->name('diniyyah-scores.edit');
-    Route::put('/diniyyah-scores/{assessmentSet}', [GuruDiniyyahScoreController::class, 'update'])->name('diniyyah-scores.update');
-    Route::post('/diniyyah-scores/{assessmentSet}/submit', [GuruDiniyyahScoreController::class, 'submit'])->name('diniyyah-scores.submit');
     Route::get('/calendar', [SchoolCalendarController::class, 'guru'])->name('calendar');
     Route::get('/tahfidz', [GuruTahfidzController::class, 'index'])->name('tahfidz.index');
     Route::get('/tahfidz/{halaqah}', [GuruTahfidzController::class, 'show'])->name('tahfidz.show');
@@ -175,12 +192,24 @@ Route::middleware('auth')->prefix('guru')->name('guru.')->group(function () {
     });
 });
 
+// Score entry also supports management roles, with per-assessment authorization
+// enforced by DiniyyahAssessmentSetPolicy in the controller.
+Route::middleware(['auth:web', 'role:guru|admin|kabag_diniyyah'])
+    ->prefix('guru/diniyyah-scores')
+    ->name('guru.diniyyah-scores.')
+    ->group(function () {
+        Route::get('/', [GuruDiniyyahScoreController::class, 'index'])->name('index');
+        Route::get('/{assessmentSet}', [GuruDiniyyahScoreController::class, 'edit'])->name('edit');
+        Route::put('/{assessmentSet}', [GuruDiniyyahScoreController::class, 'update'])->name('update');
+        Route::post('/{assessmentSet}/submit', [GuruDiniyyahScoreController::class, 'submit'])->name('submit');
+    });
+
 Route::get('/rpp/shared/{export}', [GuruRppController::class, 'sharedDownload'])
     ->middleware('signed')
     ->name('rpp.shared-download');
 
 // Laporan pengawasan Tasmi' lintas PJ untuk Kabag Tahfidz dan admin.
-Route::middleware('auth')->prefix('admin/tasmi-report')->name('admin.tasmi-report.')->group(function () {
+Route::middleware('auth:admin')->prefix('admin/tasmi-report')->name('admin.tasmi-report.')->group(function () {
     Route::get('/', [ManagementTasmiReportController::class, 'index'])->name('index');
     Route::get('/export/{format}', [ManagementTasmiReportController::class, 'export'])
         ->whereIn('format', ['xlsx', 'pdf'])
@@ -188,14 +217,14 @@ Route::middleware('auth')->prefix('admin/tasmi-report')->name('admin.tasmi-repor
     Route::get('/{tasmi_record}', [ManagementTasmiReportController::class, 'show'])->name('show');
 });
 
-Route::middleware('auth')->prefix('attendance')->name('attendance.')->group(function () {
+Route::middleware('auth:web')->prefix('attendance')->name('attendance.')->group(function () {
     Route::get('/', [AttendanceController::class, 'index'])->name('index');
     Route::get('/{classroomTerm}', [AttendanceController::class, 'edit'])->name('edit');
     Route::put('/{classroomTerm}', [AttendanceController::class, 'update'])->name('update');
     Route::put('/{classroomTerm}/single', [AttendanceController::class, 'updateSingle'])->name('update-single');
 });
 
-Route::middleware('auth')->prefix('diniyyah')->name('diniyyah.')->group(function () {
+Route::middleware('auth:web')->prefix('diniyyah')->name('diniyyah.')->group(function () {
     Route::get('/monitoring', [DiniyyahMonitoringController::class, 'index'])->name('monitoring.index');
     Route::post('/assessment-sets/{assessmentSet}/approve', [DiniyyahMonitoringController::class, 'approve'])->name('assessment-sets.approve');
     Route::post('/assessment-sets/{assessmentSet}/revision', [DiniyyahMonitoringController::class, 'requestRevision'])->name('assessment-sets.revision');
@@ -205,17 +234,17 @@ Route::middleware('auth')->prefix('diniyyah')->name('diniyyah.')->group(function
 });
 
 // Ekspor lengkap seluruh jurnal diniyyah (reguler + pengganti) untuk admin/kabag/kepala_sekolah.
-Route::middleware('auth')->prefix('admin/diniyyah-journals')->name('admin.diniyyah-journals.')->group(function () {
+Route::middleware('auth:admin')->prefix('admin/diniyyah-journals')->name('admin.diniyyah-journals.')->group(function () {
     Route::get('/report', [DiniyyahJournalReportController::class, 'management'])->name('report');
     Route::get('/export', [DiniyyahJournalExportController::class, 'export'])->name('export');
 });
 
 // Export CSV rekap JP per guru diniyyah (asli/pengganti/tafsir) untuk admin/kabag/kepala_sekolah.
-Route::middleware('auth')->prefix('admin/rekap-jurnal-guru')->name('admin.rekap-jurnal-guru.')->group(function () {
+Route::middleware('auth:admin')->prefix('admin/rekap-jurnal-guru')->name('admin.rekap-jurnal-guru.')->group(function () {
     Route::get('/export', RekapJurnalGuruExportController::class)->name('export');
 });
 
-Route::middleware('auth')->prefix('admin/rekap-jp-bulanan')->name('admin.monthly-jp-recap.')->group(function () {
+Route::middleware('auth:admin')->prefix('admin/rekap-jp-bulanan')->name('admin.monthly-jp-recap.')->group(function () {
     Route::get('/', [AdminMonthlyJpReportController::class, 'index'])->name('index');
     Route::get('/export/{format}', [AdminMonthlyJpReportController::class, 'export'])->whereIn('format', ['xlsx', 'pdf'])->name('export');
     Route::post('/tafsir-normalizations', [AdminMonthlyJpReportController::class, 'normalizeTafsir'])->name('tafsir-normalizations.store');
@@ -223,14 +252,14 @@ Route::middleware('auth')->prefix('admin/rekap-jp-bulanan')->name('admin.monthly
 });
 
 // Rekap yang siap dibagikan untuk mengingatkan guru dengan jurnal KBM kosong.
-Route::middleware('auth')->prefix('admin/pengingat-jurnal')->name('admin.journal-reminders.')->group(function () {
+Route::middleware('auth:admin')->prefix('admin/pengingat-jurnal')->name('admin.journal-reminders.')->group(function () {
     Route::get('/', [JournalReminderReportController::class, 'index'])->name('index');
     Route::get('/export/{format}', [JournalReminderReportController::class, 'export'])
         ->whereIn('format', ['pdf', 'png', 'jpg'])
         ->name('export');
 });
 
-Route::middleware('auth')->group(function () {
+Route::middleware('auth:web')->group(function () {
     Route::post('/report-cards/generate/{snapshot}', [ReportCardController::class, 'generate'])->name('report-cards.generate');
     Route::post('/report-cards/ledger/{snapshot}/lock', [ReportCardController::class, 'lockFromLedgerSnapshot'])->name('report-cards.ledger.lock');
     Route::post('/report-cards/ledger/{snapshot}/publish', [ReportCardController::class, 'publishFromLedgerSnapshot'])->name('report-cards.ledger.publish');
@@ -238,16 +267,21 @@ Route::middleware('auth')->group(function () {
     Route::get('/report-cards/{reportCard}/download-pdf', [ReportCardController::class, 'downloadPdf'])->name('report-cards.download-pdf');
     Route::post('/report-cards/{reportCard}/generate-pdf', [ReportCardController::class, 'generatePdf'])->name('report-cards.generate-pdf');
     Route::get('/report-cards/{reportCard}', [ReportCardController::class, 'show'])->name('report-cards.show');
-    Route::get('/wali', [GuardianDashboardController::class, 'index'])->name('wali.dashboard');
-    Route::get('/wali/calendar', [SchoolCalendarController::class, 'guardian'])->name('wali.calendar');
-    Route::get('/wali/tahfidz', [GuardianTahfidzController::class, 'index'])->name('wali.tahfidz');
-    Route::get('/wali/diniyyah-journals', [WaliClassJournalMonitoringController::class, 'index'])->name('wali.diniyyah-journals.index');
-    Route::get('/wali/diniyyah-journals/export-pdf', [WaliClassJournalMonitoringController::class, 'exportPdf'])->name('wali.diniyyah-journals.export-pdf');
-    Route::get('/wali/diniyyah-journals/export-excel', [WaliClassJournalMonitoringController::class, 'exportExcel'])->name('wali.diniyyah-journals.export-excel');
-    Route::get('/wali/rekap-jp', [WaliJpRecapController::class, 'index'])->name('wali.jp-recap.index');
-    Route::post('/wali/rekap-jp/confirm', [WaliJpRecapController::class, 'confirm'])->name('wali.jp-recap.confirm');
-    Route::get('/wali/rekap-jp/export-pdf', [WaliJpRecapController::class, 'exportPdf'])->name('wali.jp-recap.export-pdf');
-    Route::get('/wali/rekap-jp/export-excel', [WaliJpRecapController::class, 'exportExcel'])->name('wali.jp-recap.export-excel');
-    Route::post('/wali/events/{event}/response', [GuardianSchoolEventResponseController::class, 'store'])->name('wali.events.response');
-    Route::get('/school-events/{event}/recap/export', SchoolEventRecapExportController::class)->name('school-events.recap.export');
+    Route::get('/wali', [GuardianDashboardController::class, 'index'])->middleware('role:wali_santri')->name('wali.dashboard');
+    Route::get('/wali/calendar', [SchoolCalendarController::class, 'guardian'])->middleware('role:wali_santri')->name('wali.calendar');
+    Route::get('/wali/tahfidz', [GuardianTahfidzController::class, 'index'])->middleware('role:wali_santri')->name('wali.tahfidz');
+    // These "wali kelas" views are teacher workspaces; guardian-facing portal
+    // pages below remain restricted to wali_santri accounts.
+    Route::get('/wali/diniyyah-journals', [WaliClassJournalMonitoringController::class, 'index'])->middleware('role:guru')->name('wali.diniyyah-journals.index');
+    Route::get('/wali/diniyyah-journals/export-pdf', [WaliClassJournalMonitoringController::class, 'exportPdf'])->middleware('role:guru')->name('wali.diniyyah-journals.export-pdf');
+    Route::get('/wali/diniyyah-journals/export-excel', [WaliClassJournalMonitoringController::class, 'exportExcel'])->middleware('role:guru')->name('wali.diniyyah-journals.export-excel');
+    Route::get('/wali/rekap-jp', [WaliJpRecapController::class, 'index'])->middleware('role:guru')->name('wali.jp-recap.index');
+    Route::post('/wali/rekap-jp/confirm', [WaliJpRecapController::class, 'confirm'])->middleware('role:guru')->name('wali.jp-recap.confirm');
+    Route::get('/wali/rekap-jp/export-pdf', [WaliJpRecapController::class, 'exportPdf'])->middleware('role:guru')->name('wali.jp-recap.export-pdf');
+    Route::get('/wali/rekap-jp/export-excel', [WaliJpRecapController::class, 'exportExcel'])->middleware('role:guru')->name('wali.jp-recap.export-excel');
+    Route::post('/wali/events/{event}/response', [GuardianSchoolEventResponseController::class, 'store'])->middleware('role:wali_santri')->name('wali.events.response');
 });
+
+Route::get('/school-events/{event}/recap/export', SchoolEventRecapExportController::class)
+    ->middleware('auth:admin')
+    ->name('school-events.recap.export');

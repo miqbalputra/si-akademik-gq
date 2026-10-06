@@ -8,13 +8,16 @@ use App\Models\ClassEnrollment;
 use App\Models\Classroom;
 use App\Models\ClassroomTerm;
 use App\Models\DiniyyahClassJournal;
+use App\Models\DiniyyahClassJournalAbsence;
 use App\Models\DiniyyahClassSubject;
 use App\Models\DiniyyahSubject;
 use App\Models\DiniyyahTeacherAssignment;
 use App\Models\School;
 use App\Models\Student;
+use App\Models\StudentDeparture;
 use App\Models\Teacher;
 use App\Models\User;
+use App\Services\StudentDepartureWorkflow;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -62,7 +65,39 @@ class DiniyyahJournalDestroyTest extends TestCase
             ->delete(route('guru.diniyyah-journals.destroy', $journal));
 
         $response->assertRedirect();
-        $this->assertDatabaseMissing('diniyyah_class_journals', ['id' => $journal->id]);
+        $this->assertSoftDeleted('diniyyah_class_journals', ['id' => $journal->id]);
+        $this->assertDatabaseHas('activity_log', [
+            'log_name' => 'academic-data',
+            'description' => 'diniyyah_journal_deleted',
+            'subject_id' => $journal->id,
+        ]);
+    }
+
+    public function test_editing_a_journal_does_not_delete_archived_student_absence_history(): void
+    {
+        $context = $this->makeJournalWithContext();
+        $adminRole = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
+        $admin = User::factory()->create();
+        $admin->assignRole($adminRole);
+
+        app(StudentDepartureWorkflow::class)->depart($context['student'], [
+            'type' => StudentDeparture::TYPE_LEFT,
+            'effective_date' => '2026-10-01',
+            'reason' => 'Keluar.',
+        ], $admin);
+
+        $this->actingAs($context['teacher']->user)
+            ->put(route('guru.diniyyah-journals.update', $context['journal']), [
+                'material' => 'Materi diperbarui setelah santri keluar',
+                'absences' => [],
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('diniyyah_class_journal_absences', [
+            'id' => $context['absence']->id,
+            'class_enrollment_id' => $context['enrollment']->id,
+            'status' => 'sick',
+        ]);
     }
 
     private function makeJournal(): DiniyyahClassJournal
@@ -96,6 +131,13 @@ class DiniyyahJournalDestroyTest extends TestCase
             'teacher_id' => $teacher->id,
             'assignment_role' => 'primary',
         ]);
+        $student = Student::create(['name' => 'Santri Jurnal', 'gender' => 'male', 'nis' => 'JURNAL-001']);
+        $enrollment = ClassEnrollment::create([
+            'academic_term_id' => $term->id,
+            'classroom_term_id' => $classroomTerm->id,
+            'student_id' => $student->id,
+            'roll_number' => 1,
+        ]);
         $journal = DiniyyahClassJournal::create([
             'diniyyah_teacher_assignment_id' => $assignment->id,
             'date' => '2026-07-09',
@@ -103,8 +145,19 @@ class DiniyyahJournalDestroyTest extends TestCase
             'material' => 'Bab 1',
             'jp_count' => 1,
         ]);
+        $absence = DiniyyahClassJournalAbsence::create([
+            'diniyyah_class_journal_id' => $journal->id,
+            'class_enrollment_id' => $enrollment->id,
+            'status' => 'sick',
+        ]);
 
-        return ['journal' => $journal, 'teacher' => $teacher];
+        return [
+            'journal' => $journal,
+            'teacher' => $teacher,
+            'student' => $student,
+            'enrollment' => $enrollment,
+            'absence' => $absence,
+        ];
     }
 
     private function makeTeacher(string $name): Teacher

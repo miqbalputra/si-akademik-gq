@@ -15,6 +15,7 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class StudentResource extends Resource
@@ -72,6 +73,61 @@ class StudentResource extends Resource
         return parent::getRecordRouteBindingEloquentQuery()
             ->withoutGlobalScopes([
                 SoftDeletingScope::class,
-            ]);
+            ])
+            ->when(
+                ! auth()->user()?->hasRole('admin'),
+                fn (Builder $query): Builder => $query->whereNull('students.deleted_at'),
+            );
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->when(
+                ! auth()->user()?->hasRole('admin'),
+                fn (Builder $query): Builder => $query->whereNull('students.deleted_at'),
+            );
+    }
+
+    public static function canView(Model $record): bool
+    {
+        return static::currentUserHasAnyRole(static::viewRoles())
+            && (! $record->trashed() || (auth()->user()?->hasRole('admin') ?? false));
+    }
+
+    public static function canEdit(Model $record): bool
+    {
+        return ! $record->trashed()
+            && static::currentUserHasAnyRole(static::manageRoles());
+    }
+
+    public static function canDelete(Model $record): bool
+    {
+        return false;
+    }
+
+    public static function canDeleteAny(): bool
+    {
+        return false;
+    }
+
+    public static function canForceDelete(Model $record): bool
+    {
+        return false;
+    }
+
+    public static function canForceDeleteAny(): bool
+    {
+        return false;
+    }
+
+    public static function canRestore(Model $record): bool
+    {
+        return false;
+    }
+
+    public static function canRestoreAny(): bool
+    {
+        return false;
     }
 }

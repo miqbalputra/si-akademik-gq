@@ -525,6 +525,7 @@ class GuruPerformaService
             : ClassEnrollment::query()
                 ->whereIn('classroom_term_id', $classroomTermIds)
                 ->where('status', 'active')
+                ->forVisibleStudents()
                 ->selectRaw('classroom_term_id, count(*) as aggregate')
                 ->groupBy('classroom_term_id')
                 ->pluck('aggregate', 'classroom_term_id');

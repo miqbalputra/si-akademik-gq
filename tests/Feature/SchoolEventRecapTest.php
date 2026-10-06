@@ -32,7 +32,7 @@ class SchoolEventRecapTest extends TestCase
     {
         [$admin, $event] = $this->makeEventContext();
 
-        $this->actingAs($admin)
+        $this->actingAs($admin, 'admin')
             ->get('/admin/school-events/'.$event->id.'/recap')
             ->assertOk()
             ->assertSee('Rekap Event Sekolah')
@@ -49,7 +49,7 @@ class SchoolEventRecapTest extends TestCase
     {
         [$admin, $event] = $this->makeEventContext();
 
-        $response = $this->actingAs($admin)
+        $response = $this->actingAs($admin, 'admin')
             ->get(route('school-events.recap.export', $event));
 
         $response->assertOk();
@@ -67,7 +67,7 @@ class SchoolEventRecapTest extends TestCase
     {
         [$admin, $event] = $this->makeEventContext();
 
-        $response = $this->actingAs($admin)
+        $response = $this->actingAs($admin, 'admin')
             ->get(route('school-events.recap.export', [
                 'event' => $event,
                 'status' => 'pending',

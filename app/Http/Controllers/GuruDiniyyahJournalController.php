@@ -70,6 +70,7 @@ class GuruDiniyyahJournalController extends Controller
             $students = ClassEnrollment::with('student')
                 ->where('classroom_term_id', $selectedClassroomTermId)
                 ->where('status', 'active')
+                ->forVisibleStudents()
                 ->get();
 
             $attendances = StudentAttendance::where('classroom_term_id', $selectedClassroomTermId)
@@ -255,6 +256,7 @@ class GuruDiniyyahJournalController extends Controller
         }
         abort_unless($diniyyah_journal->substitute_teacher_id === null, 403, 'Jurnal pengganti tidak dapat diedit dari menu ini.');
         abort_unless($diniyyah_journal->teacherAssignment->teacher_id === $teacher->id, 403);
+        abort_unless($diniyyah_journal->status !== 'validated', 403, 'Jurnal tervalidasi harus dibatalkan validasinya oleh admin sebelum diedit.');
 
         $diniyyah_journal->load([
             'teacherAssignment.classSubject.subject',
@@ -268,6 +270,7 @@ class GuruDiniyyahJournalController extends Controller
         $students = ClassEnrollment::with('student')
             ->where('classroom_term_id', $classroomTerm->id)
             ->where('status', 'active')
+            ->forVisibleStudents()
             ->get();
 
         $dailyAbsences = [];
@@ -280,7 +283,10 @@ class GuruDiniyyahJournalController extends Controller
             }
         }
 
-        $existingAbsences = $diniyyah_journal->absences->pluck('status', 'class_enrollment_id')->all();
+        $existingAbsences = $diniyyah_journal->absences
+            ->whereIn('class_enrollment_id', $students->pluck('id'))
+            ->pluck('status', 'class_enrollment_id')
+            ->all();
 
         $sessionLabel = SessionTimetable::label($diniyyah_journal->session_hour);
         $sessionTime = SessionTimetable::resolve(
@@ -325,12 +331,14 @@ class GuruDiniyyahJournalController extends Controller
         }
         abort_unless($diniyyah_journal->substitute_teacher_id === null, 403, 'Jurnal pengganti tidak dapat diedit dari menu ini.');
         abort_unless($diniyyah_journal->teacherAssignment->teacher_id === $teacher->id, 403);
+        abort_unless($diniyyah_journal->status !== 'validated', 403, 'Jurnal tervalidasi harus dibatalkan validasinya oleh admin sebelum diedit.');
 
         $classroomTerm = $diniyyah_journal->teacherAssignment->classSubject->classroomTerm;
 
         $validEnrollmentIds = ClassEnrollment::query()
             ->where('classroom_term_id', $classroomTerm->id)
             ->where('status', 'active')
+            ->forVisibleStudents()
             ->pluck('id')
             ->all();
 
@@ -340,10 +348,11 @@ class GuruDiniyyahJournalController extends Controller
         $diniyyah_journal->material = $validated['material'];
         $diniyyah_journal->save();
 
-        // Sync presensi: hapus semua absensi jurnal lalu buat ulang sesuai state form.
+        // Sync presensi roster aktif; catatan enrollment yang sudah tidak aktif
+        // (termasuk siswa arsip) tetap dipertahankan sebagai riwayat.
         // Form mengirim hidden input untuk daily-locked (status harian) + checkbox 'skipped'
         // untuk manual — replikasi state form, sama seperti create.
-        $diniyyah_journal->absences()->delete();
+        $diniyyah_journal->absences()->whereIn('class_enrollment_id', $validEnrollmentIds)->delete();
         foreach ($absences as $enrollmentId => $status) {
             $diniyyah_journal->absences()->create([
                 'class_enrollment_id' => $enrollmentId,
@@ -448,6 +457,7 @@ class GuruDiniyyahJournalController extends Controller
         $validEnrollmentIds = ClassEnrollment::query()
             ->where('classroom_term_id', $validated['classroom_term_id'])
             ->where('status', 'active')
+            ->forVisibleStudents()
             ->pluck('id')
             ->all();
 
@@ -527,6 +537,7 @@ class GuruDiniyyahJournalController extends Controller
         if ($diniyyah_journal->teacherAssignment->teacher_id !== $teacher->id) {
             abort(403);
         }
+        abort_unless($diniyyah_journal->status !== 'validated', 403, 'Jurnal tervalidasi harus dibatalkan validasinya oleh admin sebelum dihapus.');
 
         $classroomTermId = $diniyyah_journal->teacherAssignment->classSubject->classroom_term_id;
         $date = $diniyyah_journal->date->format('Y-m-d');

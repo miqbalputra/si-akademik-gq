@@ -18,7 +18,7 @@ RUN install-php-extensions \
     bcmath
 
 # Install Node.js and npm for frontend assets build
-RUN apk add --no-cache nodejs npm git chromium
+RUN apk add --no-cache nodejs npm git chromium postgresql-client
 
 # Copy composer from official image
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
@@ -27,6 +27,9 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 # no sqlite db, no logs, no scratch/debug scripts — secrets/runtime data are
 # injected by Coolify at runtime).
 COPY . /app
+
+# Do not advertise the PHP version or render runtime errors into production responses.
+COPY docker/php-security.ini /usr/local/etc/php/conf.d/99-security.ini
 
 # Install PHP dependencies (production, no dev tools)
 RUN composer install --optimize-autoloader --no-dev --no-interaction

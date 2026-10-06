@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['academic_term_id', 'classroom_term_id', 'class_enrollment_id', 'student_id', 'attendance_date', 'status', 'notes', 'input_by'])]
+#[Fillable(['academic_term_id', 'classroom_term_id', 'class_enrollment_id', 'student_id', 'attendance_date', 'status', 'notes', 'input_by', 'updated_by'])]
 class StudentAttendance extends Model
 {
     use HasFactory;
@@ -110,5 +110,10 @@ class StudentAttendance extends Model
     public function inputBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'input_by');
+    }
+
+    public function updatedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'updated_by');
     }
 }

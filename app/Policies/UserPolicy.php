@@ -31,4 +31,19 @@ class UserPolicy
         // Admin tak boleh menghapus akunnya sendiri (mencegah lockout).
         return $user->hasRole('admin') && $user->id !== $target->id;
     }
+
+    public function deleteAny(User $user): bool
+    {
+        return $user->hasRole('admin');
+    }
+
+    public function restore(User $user, User $target): bool
+    {
+        return $user->hasRole('admin') && $target->trashed();
+    }
+
+    public function restoreAny(User $user): bool
+    {
+        return $user->hasRole('admin');
+    }
 }

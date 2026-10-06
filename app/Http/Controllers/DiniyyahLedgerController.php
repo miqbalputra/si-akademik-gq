@@ -29,11 +29,29 @@ class DiniyyahLedgerController extends Controller
     {
         abort_unless($request->user()->hasAnyRole(['admin', 'kabag_diniyyah', 'kepala_sekolah']), 403);
 
-        $snapshot->load(['classroomTerm', 'academicTerm.academicYear', 'rows.cells']);
+        $snapshot->load(['classroomTerm', 'academicTerm.academicYear', 'rows.cells', 'rows.classEnrollment.student']);
         $columns = collect($snapshot->snapshot_data['columns'] ?? []);
         $summary = $snapshot->snapshot_data['summary'] ?? [];
         $issues = collect($snapshot->snapshot_data['issues'] ?? []);
-        $reportCardSummary = $reportCardBulkWorkflow->summaryForSnapshot($snapshot);
+
+        if (! $request->user()->hasRole('admin')) {
+            $visibleRows = $snapshot->rows
+                ->filter(fn ($row): bool => $row->classEnrollment?->student?->status === 'active')
+                ->values();
+            $visibleEnrollmentIds = $visibleRows->pluck('class_enrollment_id')->map(fn ($id) => (int) $id)->all();
+            $issues = $issues
+                ->reject(fn (array $issue): bool => isset($issue['class_enrollment_id'])
+                    && ! in_array((int) $issue['class_enrollment_id'], $visibleEnrollmentIds, true))
+                ->values();
+            $completeRows = $visibleRows->filter(fn ($row): bool => $row->total_diniyyah_score !== null)->count();
+            $snapshot->setRelation('rows', $visibleRows);
+            $summary['total_students'] = $visibleRows->count();
+            $summary['complete_rows'] = $completeRows;
+            $summary['incomplete_rows'] = $visibleRows->count() - $completeRows;
+            $summary['blocking_issues'] = $issues->where('level', 'blocking')->count();
+        }
+
+        $reportCardSummary = $reportCardBulkWorkflow->summaryForSnapshot($snapshot, $request->user()->hasRole('admin'));
 
         return view('diniyyah.ledger.show', compact('snapshot', 'columns', 'summary', 'issues', 'reportCardSummary'));
     }
@@ -48,7 +66,10 @@ class DiniyyahLedgerController extends Controller
     {
         abort_unless($request->user()->hasAnyRole(['admin', 'kabag_diniyyah', 'kepala_sekolah']), 403);
 
-        $studentCount = $snapshot->rows()->count();
+        $includeArchivedStudents = $request->user()->hasRole('admin');
+        $studentCount = $includeArchivedStudents
+            ? $snapshot->rows()->count()
+            : $snapshot->rows()->whereHas('classEnrollment.student', fn ($query) => $query->where('status', 'active'))->count();
 
         // For large ledgers (30+ students), use queue
         if ($studentCount > 30 && config('queue.default') !== 'sync') {
@@ -68,7 +89,7 @@ class DiniyyahLedgerController extends Controller
         }
 
         // Synchronous export for normal sizes
-        $content = $exporter->export($snapshot->id);
+        $content = $exporter->export($snapshot->id, $includeArchivedStudents);
         $filename = 'Leger-Diniyyah-' . str()->slug($snapshot->classroomTerm?->name ?? 'export') . '.xlsx';
 
         return response()->streamDownload(function () use ($content) {

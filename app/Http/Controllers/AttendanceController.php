@@ -27,7 +27,7 @@ class AttendanceController extends Controller
 
         $classroomTerms = ClassroomTerm::query()
             ->with(['academicTerm.academicYear', 'homeroomAssignments.teacher'])
-            ->withCount(['enrollments'])
+            ->withCount(['enrollments' => fn ($query) => $query->where('status', 'active')->forVisibleStudents()])
             ->when(! $this->canViewAllClasses($request->user()), function ($query) use ($request) {
                 $teacher = $request->user()->teacher;
 
@@ -78,13 +78,15 @@ class AttendanceController extends Controller
             ->with('student')
             ->where('classroom_term_id', $classroomTerm->id)
             ->where('status', 'active')
+            ->forVisibleStudents()
             ->orderBy('roll_number')
             ->orderBy('student_id')
             ->get();
 
         $attendances = StudentAttendance::query()
             ->whereIn('class_enrollment_id', $enrollments->pluck('id'))
-            ->whereBetween('attendance_date', [$startDate->toDateString(), $endDate->toDateString()])
+            ->whereDate('attendance_date', '>=', $startDate->toDateString())
+            ->whereDate('attendance_date', '<=', $endDate->toDateString())
             ->get()
             ->keyBy(fn (StudentAttendance $attendance) => $attendance->class_enrollment_id.'-'.$attendance->attendance_date->toDateString());
 
@@ -126,12 +128,14 @@ class AttendanceController extends Controller
         $enrollments = ClassEnrollment::query()
             ->where('classroom_term_id', $classroomTerm->id)
             ->where('status', 'active')
+            ->forVisibleStudents()
             ->get()
             ->keyBy('id');
 
         $existingAttendances = StudentAttendance::query()
             ->whereIn('class_enrollment_id', $enrollments->keys())
-            ->whereBetween('attendance_date', [$startDate->toDateString(), $endDate->toDateString()])
+            ->whereDate('attendance_date', '>=', $startDate->toDateString())
+            ->whereDate('attendance_date', '<=', $endDate->toDateString())
             ->get()
             ->keyBy(fn (StudentAttendance $attendance) => $attendance->class_enrollment_id.'-'.$attendance->attendance_date->toDateString());
 
@@ -143,19 +147,22 @@ class AttendanceController extends Controller
                     $code = $validated['attendance'][$enrollment->id][$date]
                         ?? StudentAttendance::codeFromStatus($existingAttendances->get($key)?->status);
 
-                    StudentAttendance::updateOrCreate(
-                        [
-                            'class_enrollment_id' => $enrollment->id,
-                            'attendance_date' => $date,
-                        ],
-                        [
-                            'academic_term_id' => $classroomTerm->academic_term_id,
-                            'classroom_term_id' => $classroomTerm->id,
-                            'student_id' => $enrollment->student_id,
-                            'status' => StudentAttendance::statusFromCode($code),
-                            'input_by' => $request->user()->id,
-                        ],
-                    );
+                    $attendance = $existingAttendances->get($key) ?? new StudentAttendance([
+                        'class_enrollment_id' => $enrollment->id,
+                        'attendance_date' => $date,
+                    ]);
+                    $attendance->fill([
+                        'academic_term_id' => $classroomTerm->academic_term_id,
+                        'classroom_term_id' => $classroomTerm->id,
+                        'student_id' => $enrollment->student_id,
+                        'status' => StudentAttendance::statusFromCode($code),
+                    ]);
+                    if ($attendance->exists) {
+                        $attendance->updated_by = $request->user()->id;
+                    } else {
+                        $attendance->input_by = $request->user()->id;
+                    }
+                    $attendance->save();
                 }
             }
         });
@@ -170,7 +177,7 @@ class AttendanceController extends Controller
         abort_unless($this->canUpdateClass($request->user(), $classroomTerm), 403);
 
         $validated = $request->validate([
-            'class_enrollment_id' => ['required', 'exists:class_enrollments,id'],
+            'class_enrollment_id' => ['required', Rule::exists('class_enrollments', 'id')->where('status', 'active')],
             'date' => ['required', 'date_format:Y-m-d'],
             'code' => ['required', 'string', Rule::in(StudentAttendance::acceptedCodes())],
         ]);
@@ -178,6 +185,8 @@ class AttendanceController extends Controller
         // Verify the enrollment belongs to this class
         $enrollment = ClassEnrollment::where('id', $validated['class_enrollment_id'])
             ->where('classroom_term_id', $classroomTerm->id)
+            ->where('status', 'active')
+            ->forVisibleStudents()
             ->firstOrFail();
 
         // Validasi tanggal presensi: harus hari sekolah, dalam rentang semester,
@@ -191,19 +200,25 @@ class AttendanceController extends Controller
 
         $status = StudentAttendance::statusFromCode($validated['code']);
 
-        StudentAttendance::updateOrCreate(
-            [
+        $attendance = StudentAttendance::query()
+            ->where('class_enrollment_id', $enrollment->id)
+            ->whereDate('attendance_date', $validated['date'])
+            ->first() ?? new StudentAttendance([
                 'class_enrollment_id' => $enrollment->id,
                 'attendance_date' => $validated['date'],
-            ],
-            [
-                'academic_term_id' => $classroomTerm->academic_term_id,
-                'classroom_term_id' => $classroomTerm->id,
-                'student_id' => $enrollment->student_id,
-                'status' => $status,
-                'input_by' => $request->user()->id,
-            ]
-        );
+            ]);
+        $attendance->fill([
+            'academic_term_id' => $classroomTerm->academic_term_id,
+            'classroom_term_id' => $classroomTerm->id,
+            'student_id' => $enrollment->student_id,
+            'status' => $status,
+        ]);
+        if ($attendance->exists) {
+            $attendance->updated_by = $request->user()->id;
+        } else {
+            $attendance->input_by = $request->user()->id;
+        }
+        $attendance->save();
 
         return response()->json([
             'success' => true,

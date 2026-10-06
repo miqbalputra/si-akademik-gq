@@ -165,7 +165,7 @@ class TahfidzIntegrationTest extends TestCase
         ]);
         $kabagUser->assignRole('kabag_tahfidz');
 
-        $response = $this->actingAs($kabagUser)->get('/admin');
+        $response = $this->actingAs($kabagUser, 'admin')->get('/admin');
 
         $response->assertOk();
     }

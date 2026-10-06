@@ -53,7 +53,7 @@ class AdminMonthlyJpReportTest extends TestCase
         $this->assertCount(3, collect($report['missing'])->where('session', 'Tafsir serentak'));
         $this->assertSame(3, $report['stats']['total_jp']);
 
-        $response = $this->actingAs($ctx['admin'])->get(route('admin.monthly-jp-recap.export', ['format' => 'xlsx', 'academic_term_id' => $ctx['term']->id, 'month' => 8, 'year' => 2026]));
+        $response = $this->actingAs($ctx['admin'], 'admin')->get(route('admin.monthly-jp-recap.export', ['format' => 'xlsx', 'academic_term_id' => $ctx['term']->id, 'month' => 8, 'year' => 2026]));
         $response->assertOk()->assertHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         $path = tempnam(sys_get_temp_dir(), 'admin-jp-');
         file_put_contents($path, $response->getContent());
@@ -65,8 +65,8 @@ class AdminMonthlyJpReportTest extends TestCase
         } finally {
             @unlink($path);
         }
-        $this->actingAs($ctx['admin'])->get(route('admin.monthly-jp-recap.export', ['format' => 'pdf', 'academic_term_id' => $ctx['term']->id, 'month' => 8, 'year' => 2026]))->assertOk()->assertHeader('Content-Type', 'application/pdf');
-        $this->actingAs($ctx['teacherUser'])->get(route('admin.monthly-jp-recap.index'))->assertForbidden();
+        $this->actingAs($ctx['admin'], 'admin')->get(route('admin.monthly-jp-recap.export', ['format' => 'pdf', 'academic_term_id' => $ctx['term']->id, 'month' => 8, 'year' => 2026]))->assertOk()->assertHeader('Content-Type', 'application/pdf');
+        $this->actingAs($ctx['teacherUser'], 'admin')->get(route('admin.monthly-jp-recap.index'))->assertForbidden();
     }
 
     public function test_admin_can_approve_a_complete_legacy_tafsir_group_and_credit_goes_to_substitute(): void
@@ -90,7 +90,7 @@ class AdminMonthlyJpReportTest extends TestCase
         $this->assertSame(2, $candidate['jp_before']);
         $this->assertSame(1, $candidate['jp_after']);
 
-        $this->actingAs($ctx['admin'])->post(route('admin.monthly-jp-recap.tafsir-normalizations.store'), [
+        $this->actingAs($ctx['admin'], 'admin')->post(route('admin.monthly-jp-recap.tafsir-normalizations.store'), [
             'academic_term_id' => $ctx['term']->id,
             'date' => '2026-08-05',
             'schedule_id' => $candidate['schedule_ids'][0],
@@ -101,7 +101,7 @@ class AdminMonthlyJpReportTest extends TestCase
         $normalized = app(TafsirJournalAuditService::class)->candidates($ctx['term']->id, '2026-08-05', '2026-08-05')->sole();
         $this->assertTrue($normalized['can_revert']);
 
-        $this->actingAs($ctx['admin'])->post(route('admin.monthly-jp-recap.tafsir-normalizations.revert'), [
+        $this->actingAs($ctx['admin'], 'admin')->post(route('admin.monthly-jp-recap.tafsir-normalizations.revert'), [
             'academic_term_id' => $ctx['term']->id,
             'date' => '2026-08-05',
             'schedule_id' => $normalized['schedule_ids'][0],
@@ -124,7 +124,7 @@ class AdminMonthlyJpReportTest extends TestCase
         $this->assertFalse($candidate['can_normalize']);
         $this->assertSame('Jurnal kelas belum lengkap atau ganda', $candidate['status']);
 
-        $this->actingAs($ctx['admin'])->post(route('admin.monthly-jp-recap.tafsir-normalizations.store'), [
+        $this->actingAs($ctx['admin'], 'admin')->post(route('admin.monthly-jp-recap.tafsir-normalizations.store'), [
             'academic_term_id' => $ctx['term']->id,
             'date' => '2026-08-05',
             'schedule_id' => $candidate['schedule_ids'][0],
@@ -138,14 +138,14 @@ class AdminMonthlyJpReportTest extends TestCase
         $mixed = app(TafsirJournalAuditService::class)->candidates($ctx['term']->id, '2026-08-05', '2026-08-05')->sole();
         $this->assertFalse($mixed['can_normalize']);
         $this->assertSame('Guru efektif berbeda', $mixed['status']);
-        $this->actingAs($ctx['admin'])->post(route('admin.monthly-jp-recap.tafsir-normalizations.store'), [
+        $this->actingAs($ctx['admin'], 'admin')->post(route('admin.monthly-jp-recap.tafsir-normalizations.store'), [
             'academic_term_id' => $ctx['term']->id,
             'date' => '2026-08-05',
             'schedule_id' => $mixed['schedule_ids'][0],
         ])->assertSessionHasErrors('tafsir_audit');
         $this->assertSame(2, DiniyyahClassJournal::where('session_hour', '1')->count());
 
-        $this->actingAs($ctx['teacherUser'])->post(route('admin.monthly-jp-recap.tafsir-normalizations.store'), [
+        $this->actingAs($ctx['teacherUser'], 'admin')->post(route('admin.monthly-jp-recap.tafsir-normalizations.store'), [
             'academic_term_id' => $ctx['term']->id,
             'date' => '2026-08-05',
             'schedule_id' => $candidate['schedule_ids'][0],
@@ -160,7 +160,7 @@ class AdminMonthlyJpReportTest extends TestCase
         $renderer->shouldReceive('render')->once()->andThrow(new \RuntimeException('Renderer gagal'));
         $this->app->instance(AdminMonthlyJpPdfRenderer::class, $renderer);
 
-        $this->from(route('admin.monthly-jp-recap.index'))->actingAs($ctx['admin'])
+        $this->from(route('admin.monthly-jp-recap.index'))->actingAs($ctx['admin'], 'admin')
             ->get(route('admin.monthly-jp-recap.export', ['format' => 'pdf', 'academic_term_id' => $ctx['term']->id, 'month' => 8, 'year' => 2026]))
             ->assertRedirect(route('admin.monthly-jp-recap.index'))
             ->assertSessionHasErrors('pdf');

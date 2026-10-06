@@ -6,6 +6,7 @@ use App\Models\DiniyyahClassJournal;
 use App\Models\DiniyyahTeacherAssignment;
 use App\Services\DiniyyahScoreCalculator;
 use App\Services\NotificationDispatcher;
+use Illuminate\Support\Facades\Auth;
 
 /**
  * Menghubungkan jurnal kelas diniyyah dengan komponen skor presensi
@@ -35,6 +36,18 @@ class DiniyyahClassJournalObserver
 
     public function deleted(DiniyyahClassJournal $journal): void
     {
+        activity('academic-data')
+            ->performedOn($journal)
+            ->causedBy(Auth::user())
+            ->withProperties([
+                'journal_id' => $journal->id,
+                'diniyyah_teacher_assignment_id' => $journal->diniyyah_teacher_assignment_id,
+                'date' => $journal->date?->toDateString(),
+                'session_hour' => $journal->session_hour,
+                'deleted_at' => $journal->deleted_at?->toIso8601String(),
+            ])
+            ->log('diniyyah_journal_deleted');
+
         $this->recalculate($journal);
         $this->notifyJournalDeleted($journal);
     }

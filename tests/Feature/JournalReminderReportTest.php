@@ -73,15 +73,15 @@ class JournalReminderReportTest extends TestCase
         $ctx = $this->context();
         $query = ['academic_term_id' => $ctx['term']->id, 'date_from' => '2026-08-05', 'date_until' => '2026-08-05'];
 
-        $this->actingAs($ctx['admin'])->get(route('admin.journal-reminders.index', $query))
+        $this->actingAs($ctx['admin'], 'admin')->get(route('admin.journal-reminders.index', $query))
             ->assertOk()
             ->assertSee('Pengingat Pengisian Jurnal KBM')
             ->assertSee($ctx['teacher']->name)
             ->assertSee('Unduh JPG')
             ->assertSee('2 jurnal kosong');
-        $this->actingAs($ctx['kabag'])->get(route('admin.journal-reminders.index', $query))->assertOk();
-        $this->actingAs($ctx['guruUser'])->get(route('admin.journal-reminders.index', $query))->assertForbidden();
-        $this->actingAs($ctx['headmaster'])->get(route('admin.journal-reminders.index', $query))->assertForbidden();
+        $this->actingAs($ctx['kabag'], 'admin')->get(route('admin.journal-reminders.index', $query))->assertOk();
+        $this->actingAs($ctx['guruUser'], 'admin')->get(route('admin.journal-reminders.index', $query))->assertForbidden();
+        $this->actingAs($ctx['headmaster'], 'admin')->get(route('admin.journal-reminders.index', $query))->assertForbidden();
     }
 
     public function test_downloads_are_pdf_and_png_and_date_range_is_bounded_to_the_term(): void
@@ -89,10 +89,10 @@ class JournalReminderReportTest extends TestCase
         $ctx = $this->context();
         $query = ['academic_term_id' => $ctx['term']->id, 'date_from' => '2026-07-20', 'date_until' => '2026-08-05'];
 
-        $this->actingAs($ctx['admin'])->get(route('admin.journal-reminders.index', $query))
+        $this->actingAs($ctx['admin'], 'admin')->get(route('admin.journal-reminders.index', $query))
             ->assertOk()
             ->assertSee('value="2026-08-01"', false);
-        $this->actingAs($ctx['admin'])->get(route('admin.journal-reminders.export', ['format' => 'pdf'] + $query))
+        $this->actingAs($ctx['admin'], 'admin')->get(route('admin.journal-reminders.export', ['format' => 'pdf'] + $query))
             ->assertOk()
             ->assertHeader('Content-Type', 'application/pdf');
 
@@ -101,7 +101,7 @@ class JournalReminderReportTest extends TestCase
         $renderer->shouldReceive('render')->once()->with(Mockery::type('array'), 'png')->andReturn($png);
         $this->app->instance(JournalReminderImageRenderer::class, $renderer);
 
-        $response = $this->actingAs($ctx['admin'])->get(route('admin.journal-reminders.export', ['format' => 'png'] + $query));
+        $response = $this->actingAs($ctx['admin'], 'admin')->get(route('admin.journal-reminders.export', ['format' => 'png'] + $query));
         $response->assertOk()->assertHeader('Content-Type', 'image/png');
         $this->assertStringEndsWith('.png"', $response->headers->get('Content-Disposition'));
         $this->assertStringStartsWith("\x89PNG\r\n\x1a\n", $response->getContent());
@@ -133,8 +133,8 @@ class JournalReminderReportTest extends TestCase
             ->andReturn($png);
         $this->app->instance(JournalReminderImageRenderer::class, $renderer);
 
-        $jpgResponse = $this->actingAs($ctx['admin'])->get(route('admin.journal-reminders.export', ['format' => 'jpg'] + $query));
-        $pngResponse = $this->actingAs($ctx['admin'])->get(route('admin.journal-reminders.export', ['format' => 'png'] + $query));
+        $jpgResponse = $this->actingAs($ctx['admin'], 'admin')->get(route('admin.journal-reminders.export', ['format' => 'jpg'] + $query));
+        $pngResponse = $this->actingAs($ctx['admin'], 'admin')->get(route('admin.journal-reminders.export', ['format' => 'png'] + $query));
 
         $jpgResponse->assertOk()->assertHeader('Content-Type', 'image/jpeg');
         $this->assertStringEndsWith('.jpg"', $jpgResponse->headers->get('Content-Disposition'));
@@ -280,11 +280,11 @@ class JournalReminderReportTest extends TestCase
         try {
             $ctx = $this->context();
 
-            $this->actingAs($ctx['admin'])->get(route('admin.journal-reminders.index', ['academic_term_id' => $ctx['term']->id]))
+            $this->actingAs($ctx['admin'], 'admin')->get(route('admin.journal-reminders.index', ['academic_term_id' => $ctx['term']->id]))
                 ->assertOk()
                 ->assertSee('value="2026-08-01"', false)
                 ->assertSee('value="2026-08-10"', false);
-            $this->actingAs($ctx['admin'])->get(route('admin.journal-reminders.index', [
+            $this->actingAs($ctx['admin'], 'admin')->get(route('admin.journal-reminders.index', [
                 'academic_term_id' => $ctx['term']->id,
                 'date_from' => '2026-08-09',
                 'date_until' => '2026-12-01',
@@ -304,7 +304,7 @@ class JournalReminderReportTest extends TestCase
         $this->app->instance(JournalReminderImageRenderer::class, $renderer);
 
         $this->from(route('admin.journal-reminders.index', $query))
-            ->actingAs($ctx['admin'])
+            ->actingAs($ctx['admin'], 'admin')
             ->get(route('admin.journal-reminders.export', ['format' => 'png'] + $query))
             ->assertRedirect(route('admin.journal-reminders.index', $query))
             ->assertSessionHasErrors('export');

@@ -68,6 +68,7 @@ class AttendanceShortcut extends Page
                             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                             'application/octet-stream',
                         ])
+                        ->maxSize(10240)
                         ->required(),
                 ])
                 ->action(function (array $data): void {

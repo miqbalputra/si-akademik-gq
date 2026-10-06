@@ -4,6 +4,7 @@ namespace App\Filament\Resources\ReportCards\Tables;
 
 use App\Services\ReportCardBulkWorkflow;
 use App\Services\ReportCardWorkflow;
+use Filament\Forms\Components\Textarea;
 use DomainException;
 use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
@@ -66,7 +67,34 @@ class ReportCardsTable
                             Notification::make()->title($exception->getMessage())->danger()->send();
                         }
                     }),
-                EditAction::make(),
+                Action::make('revise')
+                    ->label('Buka revisi')
+                    ->color('warning')
+                    ->authorize(fn (): bool => self::canManageReportCards())
+                    ->visible(fn ($record): bool => self::canManageReportCards() && $record->status === 'published')
+                    ->requiresConfirmation()
+                    ->form([
+                        Textarea::make('reason')->label('Alasan revisi')->required()->minLength(10)->maxLength(1000),
+                    ])
+                    ->action(function ($record, array $data): void {
+                        try {
+                            app(ReportCardWorkflow::class)->openRevision($record, auth()->user(), $data['reason']);
+                            Notification::make()->title('Revisi dibuka dan tercatat')->success()->send();
+                        } catch (DomainException $exception) {
+                            Notification::make()->title($exception->getMessage())->danger()->send();
+                        }
+                    }),
+                Action::make('revisionHistory')
+                    ->label('Riwayat revisi')
+                    ->icon('heroicon-o-clock')
+                    ->visible(fn ($record): bool => $record->revisionLogs()->exists())
+                    ->modalHeading('Riwayat revisi rapor')
+                    ->modalContent(fn ($record) => view('filament.resources.report-cards.revision-history', [
+                        'logs' => $record->revisionLogs()->with('performer')->get(),
+                    ]))
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Tutup'),
+                EditAction::make()->visible(fn ($record): bool => $record->status === 'draft'),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
@@ -96,7 +124,7 @@ class ReportCardsTable
                                 ->success()
                                 ->send();
                         }),
-                    DeleteBulkAction::make(),
+                    DeleteBulkAction::make()->authorizeIndividualRecords('delete'),
                 ]),
             ]);
     }

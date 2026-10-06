@@ -50,6 +50,60 @@ class ReportCardGeneratorTest extends TestCase
         ]);
     }
 
+    public function test_published_report_card_is_immutable_until_a_reasoned_revision_is_opened_and_audited(): void
+    {
+        [$snapshot] = $this->makeLedgerSnapshot();
+        $snapshot->load('rows.cells');
+        $manager = User::factory()->create();
+        Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
+        $manager->assignRole('admin');
+
+        app(ReportCardGenerator::class)->generateFromLedgerSnapshot($snapshot, $manager->id);
+        $reportCard = ReportCard::firstOrFail();
+        $workflow = app(ReportCardWorkflow::class);
+        $workflow->lock($reportCard, $manager);
+        $workflow->publish($reportCard, $manager);
+
+        try {
+            $reportCard->update(['total_score' => 1]);
+            $this->fail('Rapor terbit semestinya menolak perubahan langsung.');
+        } catch (DomainException $exception) {
+            $this->assertStringContainsString('Rapor terbit', $exception->getMessage());
+        }
+
+        try {
+            app(ReportCardGenerator::class)->generateFromLedgerSnapshot($snapshot, $manager->id);
+            $this->fail('Generator semestinya menolak menimpa rapor terbit.');
+        } catch (DomainException $exception) {
+            $this->assertStringContainsString('tidak boleh ditimpa', $exception->getMessage());
+        }
+
+        $this->assertSame('170.00', $reportCard->fresh()->total_score);
+        $workflow->openRevision($reportCard->fresh(), $manager, 'Koreksi nilai sesuai leger yang diperbarui');
+        $this->assertSame('draft', $reportCard->fresh()->status);
+
+        $snapshot->rows()->firstOrFail()->update([
+            'total_diniyyah_score' => 190,
+            'average_diniyyah_score' => 95,
+        ]);
+        app(ReportCardGenerator::class)->generateFromLedgerSnapshot($snapshot->fresh(), $manager->id);
+        $revised = $reportCard->fresh();
+        $this->assertSame('190.00', $revised->total_score);
+
+        $workflow->lock($revised, $manager);
+        $workflow->publish($revised, $manager);
+
+        $this->assertDatabaseHas('report_card_revision_logs', [
+            'report_card_id' => $reportCard->id,
+            'revision_number' => 1,
+            'action' => 'opened',
+            'reason' => 'Koreksi nilai sesuai leger yang diperbarui',
+        ]);
+        $publishedRevision = $reportCard->revisionLogs()->where('action', 'published')->firstOrFail();
+        $this->assertSame('190.00', $publishedRevision->after_data['total_score']);
+        $this->assertSame(1, $publishedRevision->revision_number);
+    }
+
     public function test_it_syncs_report_card_attendance_from_daily_attendance(): void
     {
         [$snapshot, $enrollment] = $this->makeLedgerSnapshot();

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use DomainException;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,6 +12,21 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class ReportCardLine extends Model
 {
     use HasFactory;
+
+    protected static function booted(): void
+    {
+        static::saving(function (ReportCardLine $line): void {
+            if ($line->reportCard()->where('status', '!=', 'draft')->exists()) {
+                throw new DomainException('Baris nilai rapor terkunci. Buka revisi rapor terlebih dahulu.');
+            }
+        });
+
+        static::deleting(function (ReportCardLine $line): void {
+            if ($line->reportCard()->where('status', '!=', 'draft')->exists()) {
+                throw new DomainException('Baris nilai rapor terkunci. Buka revisi rapor terlebih dahulu.');
+            }
+        });
+    }
 
     protected function casts(): array
     {

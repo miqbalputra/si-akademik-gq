@@ -109,6 +109,7 @@ class GuruDiniyyahSubstituteJournalController extends Controller
             $students = ClassEnrollment::with('student')
                 ->where('classroom_term_id', $selectedClassroomTermId)
                 ->where('status', 'active')
+                ->forVisibleStudents()
                 ->get();
 
             $attendances = StudentAttendance::where('classroom_term_id', $selectedClassroomTermId)
@@ -337,6 +338,7 @@ class GuruDiniyyahSubstituteJournalController extends Controller
         $validEnrollmentIds = ClassEnrollment::query()
             ->where('classroom_term_id', $validated['classroom_term_id'])
             ->where('status', 'active')
+            ->forVisibleStudents()
             ->pluck('id')
             ->all();
 
@@ -417,6 +419,7 @@ class GuruDiniyyahSubstituteJournalController extends Controller
             403,
             'Jurnal ini hanya dapat dihapus oleh guru pengganti yang mengisinya.'
         );
+        abort_unless($diniyyah_journal->status !== 'validated', 403, 'Jurnal tervalidasi harus dibatalkan validasinya oleh admin sebelum dihapus.');
 
         $classroomTermId = $diniyyah_journal->teacherAssignment->classSubject->classroom_term_id;
         $date = $diniyyah_journal->date->format('Y-m-d');

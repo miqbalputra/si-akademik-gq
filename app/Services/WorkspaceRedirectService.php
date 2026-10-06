@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Arr;
 
 class WorkspaceRedirectService
@@ -82,9 +83,15 @@ class WorkspaceRedirectService
 
     public function redirectAfterLogin(Request $request, User $user): RedirectResponse
     {
-        // Laravel menyimpan tujuan yang dilindungi middleware auth di session.
-        // Biarkan middleware tujuan menguji otorisasi per-rute setelah login.
+        // Admin panel and management exports use an independent session guard.
         if ($request->session()->has('url.intended')) {
+            $intended = (string) $request->session()->get('url.intended');
+            $path = parse_url($intended, PHP_URL_PATH) ?: '';
+
+            if (str_starts_with($path, '/admin') && $user->canAccessPanel(\Filament\Panel::make())) {
+                $this->switchToAdminGuard($request, $user);
+            }
+
             return redirect()->intended($this->defaultDestination($user));
         }
 
@@ -92,6 +99,20 @@ class WorkspaceRedirectService
             return redirect()->route('workspace.choose');
         }
 
-        return redirect()->to($this->defaultDestination($user));
+        $destination = $this->defaultDestination($user);
+
+        if (str_starts_with(parse_url($destination, PHP_URL_PATH) ?: '', '/admin')
+            && $user->canAccessPanel(\Filament\Panel::make())) {
+            $this->switchToAdminGuard($request, $user);
+        }
+
+        return redirect()->to($destination);
+    }
+
+    public function switchToAdminGuard(Request $request, User $user): void
+    {
+        Auth::guard('web')->logout();
+        Auth::guard('admin')->login($user);
+        $request->session()->regenerate();
     }
 }
