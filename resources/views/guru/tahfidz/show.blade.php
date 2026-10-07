@@ -6,10 +6,6 @@
         </a>
     </x-slot>
 
-    @push('scripts')
-        <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    @endpush
-
     <!-- Header Section -->
     <header class="animate-fade-in-up mb-8 rounded-3xl glass-card p-6 sm:p-8 relative overflow-hidden">
         <div class="absolute -right-10 -top-10 w-40 h-40 bg-amber-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20"></div>

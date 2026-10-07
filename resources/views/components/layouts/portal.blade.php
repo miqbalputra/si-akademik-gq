@@ -168,7 +168,7 @@
     @include('partials.pwa-head')
     @stack('head')
 </head>
-<body class="app-shell overflow-x-hidden text-slate-800 antialiased">
+<body class="app-shell overflow-x-clip text-slate-800 antialiased">
     @if(in_array($portalLabel ?? null, ['Portal Guru', 'Portal Wali Santri'], true))
         @include('partials.pwa-install-prompt')
     @endif

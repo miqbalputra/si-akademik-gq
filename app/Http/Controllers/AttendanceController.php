@@ -73,6 +73,11 @@ class AttendanceController extends Controller
         $days = collect(CarbonPeriod::create($startDate, $endDate))
             ->map(fn ($date) => CarbonImmutable::parse($date));
         $days = $this->schoolAttendanceDays($days, $schoolHolidays);
+        $todayWib = $this->wibNow()->toDateString();
+        $defaultSelectedDay = $days->first(fn (CarbonImmutable $day) => $day->toDateString() === $todayWib)?->toDateString()
+            ?? $days->filter(fn (CarbonImmutable $day) => $day->toDateString() < $todayWib)->last()?->toDateString()
+            ?? $days->first()?->toDateString()
+            ?? '';
 
         $enrollments = ClassEnrollment::query()
             ->with('student')
@@ -99,6 +104,7 @@ class AttendanceController extends Controller
             'studentTotals' => $studentTotals,
             'classTotals' => $classTotals,
             'days' => $days,
+            'defaultSelectedDay' => $defaultSelectedDay,
             'schoolHolidays' => $schoolHolidays,
             'selectedMonth' => $monthStart->format('Y-m'),
             'selectedMonthLabel' => $monthStart->locale('id')->translatedFormat('F Y'),
@@ -240,9 +246,15 @@ class AttendanceController extends Controller
 
     private function selectedMonth(Request $request, ClassroomTerm $classroomTerm): CarbonImmutable
     {
-        $month = $request->query('month')
-            ?: $classroomTerm->academicTerm?->starts_at?->format('Y-m')
-            ?: $this->wibNow()->format('Y-m');
+        $now = $this->wibNow();
+        $term = $classroomTerm->academicTerm;
+        $today = $now->toDateString();
+        $todayIsInsideTerm = (! $term?->starts_at || $term->starts_at->toDateString() <= $today)
+            && (! $term?->ends_at || $term->ends_at->toDateString() >= $today);
+        $defaultMonth = $todayIsInsideTerm
+            ? $now->format('Y-m')
+            : ($term?->starts_at?->format('Y-m') ?? $now->format('Y-m'));
+        $month = $request->query('month') ?: $defaultMonth;
 
         try {
             return CarbonImmutable::parse($month.'-01')->startOfMonth();

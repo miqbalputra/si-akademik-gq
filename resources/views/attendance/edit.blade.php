@@ -8,10 +8,6 @@
         </a>
     </x-slot>
 
-    @push('scripts')
-        <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
-    @endpush
-
     @push('styles')
     <style>
         .glass-card {
@@ -189,11 +185,6 @@
         <!-- Attendance Grid -->
         @php
             $initialAttendances = [];
-            $today = now()->setTimezone('Asia/Jakarta')->toDateString();
-            $defaultSelectedDay = $days->first(fn ($d) => $d->toDateString() === $today)?->toDateString()
-                ?? $days->filter(fn ($d) => $d->toDateString() < $today)->last()?->toDateString()
-                ?? $days->first()?->toDateString()
-                ?? '';
             foreach ($enrollments as $enrollment) {
                 foreach ($days as $day) {
                     $attendance = $attendances->get($enrollment->id.'-'.$day->toDateString());
@@ -204,7 +195,7 @@
                 }
             }
         @endphp
-        <div x-data="attendanceManager('{{ route('attendance.update-single', $classroomTerm) }}')" x-init="selectedDay = '{{ $defaultSelectedDay }}'" class="attendance-grid-card rounded-[2rem] glass-card shadow-sm animate-fade-in-up relative" style="animation-delay: 200ms;">
+        <div x-data="attendanceManager('{{ route('attendance.update-single', $classroomTerm) }}')" x-init="selectedDay = @js($defaultSelectedDay)" class="attendance-grid-card rounded-[2rem] glass-card shadow-sm animate-fade-in-up relative" style="animation-delay: 200ms;">
 
             {{-- ===== Desktop matrix (hidden on mobile) ===== --}}
             <div class="hidden md:block">
@@ -412,10 +403,12 @@
                     enrollmentIds: @js($enrollments->pluck('id')->values()->all()),
                     selectedDay: '',
                     studentTotals: {},
+                    pendingAttendanceSaves: {},
+                    savingAttendanceKeys: {},
+                    failedAttendanceSaves: {},
                     isSaving: false,
                     lastSaved: null,
                     saveError: null,
-                    retryPayload: null,
 
                     init() {
                         // Initialize totals on mount
@@ -454,47 +447,63 @@
                     },
 
                     async updateAttendance(enrollmentId, date) {
-                        const code = this.attendances[`${enrollmentId}_${date}`];
+                        const key = `${enrollmentId}_${date}`;
+                        this.pendingAttendanceSaves[key] = this.attendances[key];
+                        delete this.failedAttendanceSaves[key];
+
+                        // Collapse rapid changes to one cell into a serialized save of the latest value.
+                        if (this.savingAttendanceKeys[key]) return;
+
+                        this.savingAttendanceKeys[key] = true;
                         this.isSaving = true;
-                        this.saveError = null;
-                        this.retryPayload = { enrollmentId, date };
-                        
+                        if (Object.keys(this.failedAttendanceSaves).length === 0) this.saveError = null;
+
                         try {
                             const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') 
                                           || document.querySelector('input[name="_token"]')?.value;
 
-                            const response = await fetch(endpointUrl, {
-                                method: 'PUT',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'X-CSRF-TOKEN': token,
-                                    'Accept': 'application/json'
-                                },
-                                body: JSON.stringify({
-                                    class_enrollment_id: enrollmentId,
-                                    date: date,
-                                    code: code
-                                })
-                            });
+                            while (Object.prototype.hasOwnProperty.call(this.pendingAttendanceSaves, key)) {
+                                const code = this.pendingAttendanceSaves[key];
+                                delete this.pendingAttendanceSaves[key];
 
-                            if (!response.ok) throw new Error('Gagal menyimpan');
-                            
-                            this.lastSaved = new Date();
-                            this.recalculateTotals();
-                            this.retryPayload = null;
-                            
+                                const response = await fetch(endpointUrl, {
+                                    method: 'PUT',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-CSRF-TOKEN': token,
+                                        'Accept': 'application/json'
+                                    },
+                                    body: JSON.stringify({
+                                        class_enrollment_id: enrollmentId,
+                                        date,
+                                        code,
+                                    })
+                                });
+
+                                if (!response.ok) throw new Error(`Gagal menyimpan (${response.status})`);
+
+                                this.lastSaved = new Date();
+                                this.recalculateTotals();
+                            }
+
+                            delete this.failedAttendanceSaves[key];
+                            if (Object.keys(this.failedAttendanceSaves).length === 0) this.saveError = null;
                         } catch (error) {
                             console.error('Error saving attendance:', error);
+                            this.pendingAttendanceSaves[key] = this.attendances[key];
+                            this.failedAttendanceSaves[key] = { enrollmentId, date };
                             this.saveError = 'Gagal menyimpan. Periksa koneksi lalu coba lagi.';
                         } finally {
-                            this.isSaving = false;
+                            delete this.savingAttendanceKeys[key];
+                            this.isSaving = Object.keys(this.savingAttendanceKeys).length > 0;
                         }
                     },
 
                     async retryLastSave() {
-                        if (this.retryPayload) {
-                            await this.updateAttendance(this.retryPayload.enrollmentId, this.retryPayload.date);
-                        }
+                        const failed = Object.values(this.failedAttendanceSaves);
+                        this.failedAttendanceSaves = {};
+                        this.saveError = null;
+                        await Promise.all(failed.map(({ enrollmentId, date }) => this.updateAttendance(enrollmentId, date)));
                     },
 
                     async markSelectedDay(code) {
