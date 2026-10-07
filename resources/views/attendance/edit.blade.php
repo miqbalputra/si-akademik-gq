@@ -18,8 +18,9 @@
             box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
         }
 
-        :root { --attendance-sticky-top: 4.6rem; --attendance-student-column-width: clamp(17rem, 24vw, 26rem); }
+        :root { --attendance-sticky-top: 4.6rem; --attendance-student-column-width: clamp(16rem, 22vw, 20rem); }
         .attendance-grid-card { overflow: visible; }
+        .attendance-grid-table { width: var(--attendance-grid-width); min-width: var(--attendance-grid-width); table-layout: fixed; border-collapse: separate; border-spacing: 0; }
         .attendance-sticky-head {
             position: sticky;
             top: var(--attendance-sticky-top);
@@ -32,9 +33,12 @@
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
         }
-        .attendance-sticky-head-content { width: max-content; will-change: transform; }
-        .attendance-sticky-head-content table { width: max-content; min-width: 100%; table-layout: fixed; }
+        .attendance-sticky-head-content { width: var(--attendance-grid-width); will-change: transform; }
         .attendance-sticky-head-content thead th:first-child { position: static !important; left: auto !important; }
+        .attendance-today-heading { background: #fef3c7; box-shadow: inset 0 -3px 0 #d97706; }
+        .attendance-today-heading .attendance-day-number { color: #92400e; }
+        .attendance-today-label { display: block; margin-top: .15rem; color: #92400e; font-size: .55rem; font-weight: 900; line-height: 1; }
+        .attendance-today-cell { background: #fffbeb; box-shadow: inset 1px 0 #fde68a, inset -1px 0 #fde68a; }
         .attendance-sticky-name {
             position: absolute;
             inset: 0 auto 0 0;
@@ -54,15 +58,6 @@
             text-transform: uppercase;
         }
         .attendance-sticky-month { color: #94a3b8; font-size: .625rem; letter-spacing: 0; text-transform: none; }
-        .attendance-semantic-head {
-            position: absolute !important;
-            width: 1px !important;
-            height: 1px !important;
-            overflow: hidden !important;
-            clip: rect(0, 0, 0, 0) !important;
-            clip-path: inset(50%) !important;
-            white-space: nowrap !important;
-        }
         @media (max-width: 767px) {
             .attendance-day-picker {
                 position: sticky;
@@ -146,6 +141,9 @@
                 <span class="rounded-lg bg-emerald-100 px-2 py-1.5 border border-emerald-300 text-emerald-800">I Izin</span>
                 <span class="rounded-lg bg-red-100 px-2 py-1.5 border border-red-300 text-red-800">A Alpa</span>
                 <span class="rounded-lg bg-blue-100 px-2 py-1.5 border border-blue-300 text-blue-800">L Libur</span>
+                @if ($days->contains(fn ($day) => $day->toDateString() === $todayWib))
+                    <span class="rounded-lg border border-amber-300 bg-amber-50 px-2 py-1.5 text-amber-900">Hari ini: {{ \Carbon\CarbonImmutable::parse($todayWib)->locale('id')->translatedFormat('l, d F Y') }} WIB</span>
+                @endif
             </div>
         </section>
 
@@ -195,13 +193,13 @@
                 }
             }
         @endphp
-        <div x-data="attendanceManager('{{ route('attendance.update-single', $classroomTerm) }}')" x-init="selectedDay = @js($defaultSelectedDay)" class="attendance-grid-card rounded-[2rem] glass-card shadow-sm animate-fade-in-up relative" style="animation-delay: 200ms;">
+        <div x-data="attendanceManager('{{ route('attendance.update-single', $classroomTerm) }}')" x-init="selectedDay = @js($defaultSelectedDay)" class="attendance-grid-card rounded-[2rem] glass-card shadow-sm animate-fade-in-up relative" style="--attendance-grid-width: calc(var(--attendance-student-column-width) + {{ $days->count() * 70 + 192 }}px); animation-delay: 200ms;">
 
             {{-- ===== Desktop matrix (hidden on mobile) ===== --}}
             <div class="hidden md:block">
             <div class="attendance-sticky-head" data-attendance-sticky-header aria-hidden="true">
                 <div class="attendance-sticky-head-content" data-attendance-sticky-header-content>
-                    <table class="text-left text-sm whitespace-nowrap" style="width: max-content; min-width: 0; table-layout: fixed;">
+                    <table class="attendance-grid-table text-left text-sm whitespace-nowrap">
                         <colgroup>
                             <col style="width: var(--attendance-student-column-width)">
                             @foreach ($days as $day)
@@ -215,9 +213,10 @@
                             <tr class="bg-slate-50 border-b border-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-500">
                                 <th class="px-6 py-4">Santri</th>
                                 @foreach ($days as $day)
-                                    <th class="px-3 py-2 text-center min-w-[70px]">
-                                        <span class="block font-black text-slate-700 text-sm">{{ $day->format('d') }}</span>
+                                    <th @class(['px-2 py-2 text-center', 'attendance-today-heading' => $day->toDateString() === $todayWib]) @if ($day->toDateString() === $todayWib) data-attendance-today-header @endif>
+                                        <span class="attendance-day-number block font-black text-slate-700 text-sm">{{ $day->format('d') }}</span>
                                         <span class="block text-[8px] font-bold mt-0.5 text-slate-400">{{ $day->locale('id')->translatedFormat('l') }}</span>
+                                        @if ($day->toDateString() === $todayWib)<span class="attendance-today-label">Hari ini</span>@endif
                                     </th>
                                 @endforeach
                                 <th class="px-4 py-2 text-center">S</th>
@@ -230,7 +229,7 @@
                 <div class="attendance-sticky-name"><span>Santri</span><span class="attendance-sticky-month">{{ $selectedMonthLabel }}</span></div>
             </div>
             <div class="overflow-x-auto pb-20" data-attendance-scroll-area>
-                <table class="w-full text-left text-sm whitespace-nowrap" data-attendance-table style="width: max-content; min-width: 0; table-layout: fixed;">
+                <table class="attendance-grid-table text-left text-sm whitespace-nowrap" data-attendance-table aria-label="Presensi santri {{ $selectedMonthLabel }}">
                     <colgroup>
                         <col style="width: var(--attendance-student-column-width)">
                         @foreach ($days as $day)
@@ -240,20 +239,6 @@
                         <col style="width: 64px">
                         <col style="width: 64px">
                     </colgroup>
-                    <thead class="attendance-semantic-head">
-                        <tr class="bg-slate-50 border-b border-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                            <th class="sticky left-0 z-20 bg-slate-50 px-6 py-4">Santri</th>
-                            @foreach ($days as $day)
-                                <th class="px-3 py-2 text-center min-w-[70px]">
-                                    <span class="block font-black text-slate-700 text-sm">{{ $day->format('d') }}</span>
-                                    <span class="block text-[8px] font-bold mt-0.5 text-slate-400">{{ $day->locale('id')->translatedFormat('l') }}</span>
-                                </th>
-                            @endforeach
-                            <th class="px-4 py-2 text-center">S</th>
-                            <th class="px-4 py-2 text-center">I</th>
-                            <th class="px-4 py-2 text-center">A</th>
-                        </tr>
-                    </thead>
                     <tbody id="attendance-rows" class="divide-y divide-slate-100">
                         @foreach ($enrollments as $enrollment)
                             @php
@@ -269,8 +254,9 @@
                                         $attendance = $attendances->get($enrollment->id.'-'.$day->toDateString());
                                         $code = old('attendance.'.$enrollment->id.'.'.$day->toDateString(), \App\Models\StudentAttendance::codeFromStatus($attendance?->status));
                                     @endphp
-                                    <td class="px-2 py-3 text-center">
+                                    <td @class(['px-2 py-3 text-center', 'attendance-today-cell' => $day->toDateString() === $todayWib])>
                                         <select
+                                            aria-label="Presensi {{ $enrollment->student?->name }} pada {{ $day->locale('id')->translatedFormat('d F Y') }}"
                                             x-model="attendances['{{ $enrollment->id }}_{{ $day->toDateString() }}']"
                                             x-init="attendances['{{ $enrollment->id }}_{{ $day->toDateString() }}'] = '{{ $code }}'"
                                             @change="updateAttendance('{{ $enrollment->id }}', '{{ $day->toDateString() }}')"
@@ -418,6 +404,7 @@
                         window.addEventListener('resize', () => this.updateAttendanceStickyOffset(), { passive: true });
                         // Scroll the selected day chip into view (mobile strip)
                         this.$nextTick(() => {
+                            this.focusTodayColumn();
                             document.getElementById('day-' + this.selectedDay)
                                 ?.scrollIntoView({ inline: 'center', block: 'nearest' });
                         });
@@ -435,6 +422,20 @@
 
                         scrollArea.addEventListener('scroll', synchronizeHorizontalScroll, { passive: true });
                         synchronizeHorizontalScroll();
+                    },
+
+                    focusTodayColumn() {
+                        const scrollArea = this.$root.querySelector('[data-attendance-scroll-area]');
+                        const todayHeader = this.$root.querySelector('[data-attendance-today-header]');
+                        const table = todayHeader?.closest('table');
+                        const nameWidth = this.$root.querySelector('.attendance-sticky-name')?.offsetWidth ?? 0;
+
+                        if (!scrollArea?.clientWidth || !table || !todayHeader) return;
+
+                        const todayCenter = todayHeader.getBoundingClientRect().left
+                            - table.getBoundingClientRect().left + todayHeader.offsetWidth / 2;
+                        const visibleDateWidth = scrollArea.clientWidth - nameWidth;
+                        scrollArea.scrollLeft = Math.max(0, todayCenter - nameWidth - visibleDateWidth / 2);
                     },
 
                     updateAttendanceStickyOffset() {

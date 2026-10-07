@@ -167,6 +167,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @include('partials.pwa-head')
     @stack('head')
+    @stack('styles')
 </head>
 <body class="app-shell overflow-x-clip text-slate-800 antialiased">
     @if(in_array($portalLabel ?? null, ['Portal Guru', 'Portal Wali Santri'], true))

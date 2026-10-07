@@ -14,6 +14,7 @@ use App\Models\StudentAttendance;
 use App\Models\StudentAttendanceChangeLog;
 use App\Models\Teacher;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Database\QueryException;
 use Spatie\Permission\Models\Role;
@@ -22,6 +23,29 @@ use Tests\TestCase;
 class AttendanceWorkflowTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_desktop_attendance_header_marks_the_current_wib_date_and_loads_its_styles(): void
+    {
+        [$classroomTerm, $teacherUser] = $this->makeAttendanceClass();
+        $this->travelTo(CarbonImmutable::parse('2025-10-07 18:00:00', 'UTC'));
+
+        try {
+            $response = $this->actingAs($teacherUser)
+                ->get(route('attendance.edit', $classroomTerm))
+                ->assertOk()
+                ->assertSee('Presensi Oktober 2025')
+                ->assertSee('Hari ini: Rabu, 08 Oktober 2025 WIB');
+
+            $html = $response->getContent();
+            $this->assertStringContainsString('.attendance-grid-table {', $html);
+            $this->assertStringContainsString('--attendance-grid-width: calc(', $html);
+            $this->assertSame(1, substr_count($html, '<thead>'));
+            $this->assertSame(1, preg_match_all('/<th[^>]*data-attendance-today-header/', $html));
+            $this->assertSame(1, preg_match_all('/<td[^>]*attendance-today-cell/', $html));
+        } finally {
+            $this->travelBack();
+        }
+    }
 
     public function test_homeroom_teacher_can_input_monthly_attendance_grid(): void
     {

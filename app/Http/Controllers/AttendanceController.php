@@ -104,6 +104,7 @@ class AttendanceController extends Controller
             'studentTotals' => $studentTotals,
             'classTotals' => $classTotals,
             'days' => $days,
+            'todayWib' => $todayWib,
             'defaultSelectedDay' => $defaultSelectedDay,
             'schoolHolidays' => $schoolHolidays,
             'selectedMonth' => $monthStart->format('Y-m'),
