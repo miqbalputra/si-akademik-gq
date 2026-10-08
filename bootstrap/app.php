@@ -3,6 +3,7 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
 use Spatie\Permission\Middleware\RoleMiddleware;
 use App\Http\Middleware\ApplySecurityHeaders;
 use App\Http\Middleware\ResetDefaultGuard;
@@ -15,6 +16,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->redirectUsersTo(fn (Request $request): string => route('app.start'));
+
         $trustedProxies = array_values(array_filter(array_map(
             'trim',
             explode(',', (string) env('TRUSTED_PROXIES', '')),

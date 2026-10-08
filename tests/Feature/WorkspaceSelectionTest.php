@@ -15,19 +15,19 @@ class WorkspaceSelectionTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_password_login_for_guru_and_kabag_tahfidz_shows_workspace_choice(): void
+    public function test_password_login_for_guru_and_kabag_tahfidz_opens_default_dashboard(): void
     {
         $user = $this->userWithRoles(['guru', 'kabag_tahfidz']);
 
         $this->post(route('login.store'), [
             'email' => $user->email,
             'password' => 'password',
-        ])->assertRedirect(route('workspace.choose'));
+        ])->assertRedirect(route('guru.dashboard'));
 
         $this->assertAuthenticatedAs($user);
     }
 
-    public function test_google_login_for_guru_and_kabag_tahfidz_shows_workspace_choice(): void
+    public function test_google_login_for_guru_and_kabag_tahfidz_opens_default_dashboard(): void
     {
         $user = $this->userWithRoles(['guru', 'kabag_tahfidz']);
         $provider = \Mockery::mock(Provider::class);
@@ -40,7 +40,7 @@ class WorkspaceSelectionTest extends TestCase
         ]));
 
         $this->get(route('auth.google.callback'))
-            ->assertRedirect(route('workspace.choose'));
+            ->assertRedirect(route('guru.dashboard'));
 
         $this->assertAuthenticatedAs($user);
         $this->assertDatabaseHas('users', ['id' => $user->id, 'google_id' => 'google-dual-role-user']);
@@ -73,14 +73,14 @@ class WorkspaceSelectionTest extends TestCase
             ->assertRedirect(route('kabag-tahfidz.dashboard'));
     }
 
-    public function test_dual_role_user_can_keep_using_intended_tasmi_report_url_after_login(): void
+    public function test_dual_role_user_opens_default_dashboard_instead_of_intended_url_after_login(): void
     {
         $user = $this->userWithRoles(['guru', 'kabag_tahfidz']);
 
         $this->get(route('admin.tasmi-report.index'))->assertRedirect(route('login'));
 
         $this->post(route('login.store'), ['email' => $user->email, 'password' => 'password'])
-            ->assertRedirect(route('admin.tasmi-report.index'));
+            ->assertRedirect(route('guru.dashboard'));
     }
 
     public function test_monitoring_shortcut_only_appears_for_kabag_tahfidz_in_guru_portal(): void

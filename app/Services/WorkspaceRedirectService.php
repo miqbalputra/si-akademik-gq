@@ -83,20 +83,13 @@ class WorkspaceRedirectService
 
     public function redirectAfterLogin(Request $request, User $user): RedirectResponse
     {
-        // Admin panel and management exports use an independent session guard.
-        if ($request->session()->has('url.intended')) {
-            $intended = (string) $request->session()->get('url.intended');
-            $path = parse_url($intended, PHP_URL_PATH) ?: '';
+        // Every successful login starts at the account's dashboard. A stale
+        // intended URL must not return the user to the public landing page.
+        $request->session()->forget('url.intended');
 
-            if (str_starts_with($path, '/admin') && $user->canAccessPanel(\Filament\Panel::make())) {
-                $this->switchToAdminGuard($request, $user);
-            }
-
-            return redirect()->intended($this->defaultDestination($user));
-        }
-
-        if ($this->needsSelection($user)) {
-            return redirect()->route('workspace.choose');
+        // Keep an existing management session on its independent panel guard.
+        if (Auth::guard('admin')->id() === $user->getAuthIdentifier()) {
+            return redirect()->to(url('/admin'));
         }
 
         $destination = $this->defaultDestination($user);

@@ -85,7 +85,9 @@ class GoogleController extends Controller
         $request->session()->regenerate();
 
         if ($guard === 'admin') {
-            return redirect()->intended(url('/admin'));
+            $request->session()->forget('url.intended');
+
+            return redirect()->to(url('/admin'));
         }
 
         return $workspaceRedirects->redirectAfterLogin($request, $user);
