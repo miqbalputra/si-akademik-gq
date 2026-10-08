@@ -21,10 +21,10 @@
     <header class="fade-up" style="margin-bottom:28px;">
         <div style="display:inline-flex;align-items:center;gap:6px;background:var(--ui-brand-soft);border-radius:999px;padding:4px 12px;margin-bottom:12px;">
             <svg style="width:12px;height:12px;color:var(--ui-brand-ink);" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="var(--ui-brand-ink)"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" /></svg>
-            <span style="font-size:11px;font-weight:700;color:var(--ui-brand-ink);text-transform:uppercase;letter-spacing:.05em;">Modul Tasmi'</span>
+            <span style="font-size:12px;color:var(--ui-brand-ink);text-transform:uppercase;letter-spacing:normal;line-height:18px;font-weight:400;">Modul Tasmi'</span>
         </div>
-        <h1 style="font-size:26px;font-weight:700;color:var(--ui-heading);margin:0 0 6px;letter-spacing:-.02em;">Ujian Tasmi'</h1>
-        <p style="font-size:14px;color:var(--ui-muted);font-weight:500;margin:0;">
+        <h1 style="color:var(--ui-heading);margin:0 0 6px;letter-spacing:normal;font-size:20px;font-weight:600;line-height:28px;">Ujian Tasmi'</h1>
+        <p style="font-size:14px;color:var(--ui-muted);margin:0;line-height:20px;font-weight:400;">
             Anda ditugaskan sebagai PJ Tasmi'
             @if($academicTerm) — {{ $academicTerm->name }} @endif
             @if($genderScope === 'male') · Ujian ikhwan @elseif($genderScope === 'female') · Ujian akhwat @endif
@@ -32,7 +32,7 @@
     </header>
 
     @if (session('status'))
-        <div style="margin-bottom:20px;background:var(--ui-success-soft);border:1px solid var(--ui-success-line);border-radius:12px;padding:14px 18px;font-size:13px;font-weight:600;color:var(--ui-success-ink);display:flex;align-items:center;gap:8px;" class="fade-up">
+        <div style="margin-bottom:20px;background:var(--ui-success-soft);border:1px solid var(--ui-success-line);border-radius:12px;padding:14px 18px;font-size:14px;font-weight:500;color:var(--ui-success-ink);display:flex;align-items:center;gap:8px;line-height:20px;" class="fade-up">
             <svg style="width:16px;height:16px;flex-shrink:0;" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
             {{ session('status') }}
         </div>
@@ -47,8 +47,8 @@
                         <svg style="width:20px;height:20px;color:var(--ui-brand-ink);" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="var(--ui-brand-ink)"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
                     </div>
                     <div>
-                        <p style="font-size:14px;font-weight:600;color:var(--ui-heading);margin:0;">Input Tasmi' Baru</p>
-                        <p style="font-size:12px;color:var(--ui-muted);margin:2px 0 0;">Catat setoran ujian tasmi' santri.</p>
+                        <p style="font-size:14px;color:var(--ui-heading);margin:0;line-height:20px;font-weight:400;">Input Tasmi' Baru</p>
+                        <p style="font-size:12px;color:var(--ui-muted);margin:2px 0 0;line-height:18px;font-weight:400;">Catat setoran ujian tasmi' santri.</p>
                     </div>
                 </div>
             </a>
@@ -58,8 +58,8 @@
                         <svg style="width:20px;height:20px;color:var(--ui-warning-ink);" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="var(--ui-warning-ink)"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5" /></svg>
                     </div>
                     <div>
-                        <p style="font-size:14px;font-weight:600;color:var(--ui-heading);margin:0;">Riwayat &amp; Laporan</p>
-                        <p style="font-size:12px;color:var(--ui-muted);margin:2px 0 0;">Lihat, edit, dan audit data tasmi'.</p>
+                        <p style="font-size:14px;color:var(--ui-heading);margin:0;line-height:20px;font-weight:400;">Riwayat &amp; Laporan</p>
+                        <p style="font-size:12px;color:var(--ui-muted);margin:2px 0 0;line-height:18px;font-weight:400;">Lihat, edit, dan audit data tasmi'.</p>
                     </div>
                 </div>
             </a>
@@ -69,21 +69,21 @@
     {{-- Ringkasan kelas yang bisa diuji --}}
     <section style="margin-bottom:28px;" class="fade-up delay-2">
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
-            <h2 style="font-size:16px;font-weight:600;color:var(--ui-heading);white-space:nowrap;">Kelas yang Bisa Diuji</h2>
+            <h2 style="color:var(--ui-heading);white-space:nowrap;font-size:18px;font-weight:600;line-height:28px;">Kelas yang Bisa Diuji</h2>
             <div style="flex:1;height:1px;background:var(--ui-surface-muted);"></div>
         </div>
         @if($classroomTerms->isEmpty())
             <div class="empty-state">
                 <svg style="width:40px;height:40px;color:var(--ui-line-strong);margin:0 auto 12px;" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" /></svg>
-                <p style="color:var(--ui-soft);font-weight:600;font-size:14px;">Belum ada kelas @if($genderScope === 'male') ikhwan @elseif($genderScope === 'female') akhwat @endif yang aktif pada periode ini.</p>
+                <p style="color:var(--ui-soft);font-size:14px;line-height:20px;font-weight:400;">Belum ada kelas @if($genderScope === 'male') ikhwan @elseif($genderScope === 'female') akhwat @endif yang aktif pada periode ini.</p>
             </div>
         @else
             <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%, 200px),1fr));gap:12px;">
                 @foreach($classroomTerms as $ct)
                     <a href="{{ route('guru.tasmi.create', ['classroom_term_id' => $ct->id]) }}" class="card hover-card" style="padding:16px 18px;text-decoration:none;">
-                        <p style="font-size:14px;font-weight:600;color:var(--ui-heading);margin:0;">{{ $ct->classroom->name ?? $ct->name }}</p>
-                        <p style="font-size:12px;color:var(--ui-muted);margin:4px 0 0;">{{ $ct->classroom->gender_group === 'male' ? 'Ikhwan' : 'Akwat' }}</p>
-                        <span class="badge badge-amber" style="margin-top:10px;">Input tasmi' →</span>
+                        <p style="font-size:14px;color:var(--ui-heading);margin:0;line-height:20px;font-weight:400;">{{ $ct->classroom->name ?? $ct->name }}</p>
+                        <p style="font-size:12px;color:var(--ui-muted);margin:4px 0 0;line-height:18px;font-weight:400;">{{ $ct->classroom->gender_group === 'male' ? 'Ikhwan' : 'Akwat' }}</p>
+                        <span class="badge badge-amber text-theme-xs font-medium" style="margin-top:10px;">Input tasmi' →</span>
                     </a>
                 @endforeach
             </div>
@@ -93,30 +93,30 @@
     {{-- Riwayat terakhir --}}
     <section class="fade-up delay-3">
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
-            <h2 style="font-size:16px;font-weight:600;color:var(--ui-heading);white-space:nowrap;">Setoran Terakhir</h2>
+            <h2 style="color:var(--ui-heading);white-space:nowrap;font-size:18px;font-weight:600;line-height:28px;">Setoran Terakhir</h2>
             <div style="flex:1;height:1px;background:var(--ui-surface-muted);"></div>
-            <a href="{{ route('guru.tasmi.records') }}" style="font-size:12px;font-weight:700;color:var(--ui-brand-ink);">Lihat semua →</a>
+            <a href="{{ route('guru.tasmi.records') }}" style="color:var(--ui-brand-ink);font-size:14px;line-height:20px;font-weight:500;">Lihat semua →</a>
         </div>
         @if($recentRecords->isEmpty())
             <div class="empty-state">
-                <p style="color:var(--ui-soft);font-weight:600;font-size:14px;">Belum ada record tasmi' yang Anda input.</p>
+                <p style="color:var(--ui-soft);font-size:14px;line-height:20px;font-weight:400;">Belum ada record tasmi' yang Anda input.</p>
             </div>
         @else
             <div style="display:grid;gap:12px;">
                 @foreach($recentRecords as $record)
                     <a href="{{ route('guru.tasmi.edit', $record) }}" class="card hover-card" style="padding:16px 20px;text-decoration:none;display:flex;align-items:center;justify-content:space-between;gap:14px;">
                         <div style="display:flex;align-items:center;gap:14px;">
-                            <div style="width:38px;height:38px;background:var(--ui-brand-soft);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:var(--ui-brand-ink);">
+                            <div style="width:38px;height:38px;background:var(--ui-brand-soft);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--ui-brand-ink);line-height:18px;font-weight:400;">
                                 {{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($record->student->name, 0, 1)) }}
                             </div>
                             <div>
-                                <p style="font-size:14px;font-weight:600;color:var(--ui-heading);margin:0;">{{ $record->student->name }}</p>
-                                <p style="font-size:12px;color:var(--ui-muted);margin:2px 0 0;">
+                                <p style="font-size:14px;color:var(--ui-heading);margin:0;line-height:20px;font-weight:400;">{{ $record->student->name }}</p>
+                                <p style="font-size:12px;color:var(--ui-muted);margin:2px 0 0;line-height:18px;font-weight:400;">
                                     {{ $record->classroomTerm?->classroom?->name ?? '-' }} · {{ $record->exam_date?->locale('id')->translatedFormat('d M Y') }} · {{ $record->juz_range_label }}
                                 </p>
                             </div>
                         </div>
-                        <span class="badge predicate-{{ $record->predicate }}">{{ \App\Models\TasmiRecord::predicateLabel($record->predicate) }}</span>
+                        <span class="badge predicate-{{ $record->predicate }} text-theme-xs font-medium">{{ \App\Models\TasmiRecord::predicateLabel($record->predicate) }}</span>
                     </a>
                 @endforeach
             </div>

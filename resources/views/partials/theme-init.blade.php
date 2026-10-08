@@ -1,3 +1,4 @@
+@include('partials.typography-fonts')
 <script>
     (() => {
         const root = document.documentElement;

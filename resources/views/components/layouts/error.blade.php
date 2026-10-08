@@ -11,11 +11,11 @@
     @endif
     @include('partials.theme-palette')
     <style>
-        body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: var(--ui-canvas, #f9fafb); color: var(--ui-text, #344054); font: 16px/1.6 Outfit, system-ui, sans-serif; }
+        body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: var(--ui-canvas, #f9fafb); color: var(--ui-text, #344054); font: 16px/24px Outfit, sans-serif; }
         .error-card { width: min(90vw, 34rem); padding: 2rem; border: 1px solid var(--ui-line, #e4e7ec); border-radius: 1rem; background: var(--ui-surface, #fff); text-align: center; }
-        .error-code { margin: 0; color: var(--color-brand-500); font-size: 4.5rem; font-weight: 700; line-height: 1.2; }
-        .error-card h1 { color: var(--ui-heading, #101828); font-size: 1.5rem; }
-        .error-card a { display: inline-flex; margin-top: 1rem; border-radius: .625rem; padding: .7rem 1rem; background: var(--color-brand-500); color: var(--color-neon-ink); text-decoration: none; }
+        .error-code { margin: 0; color: var(--color-brand-500); font-size: 72px; font-weight: 700; line-height: 90px; }
+        .error-card h1 { color: var(--ui-heading, #101828); font-size: 20px; line-height: 28px; font-weight: 600; }
+        .error-card a { display: inline-flex; margin-top: 1rem; border-radius: .625rem; padding: .7rem 1rem; background: var(--color-brand-500); color: var(--color-neon-ink); text-decoration: none; font-size: 14px; line-height: 20px; font-weight: 500; }
     </style>
 </head>
 <body>

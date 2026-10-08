@@ -7,6 +7,7 @@ use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Actions\Action;
+use Filament\FontProviders\LocalFontProvider;
 use Filament\Navigation\NavigationGroup;
 use Filament\Pages\Dashboard;
 use Filament\Panel;
@@ -32,6 +33,7 @@ class AdminPanelProvider extends PanelProvider
             ->authGuard('admin')
             ->login(\App\Filament\Pages\Auth\Login::class)
             ->brandName('Ruang GQ')
+            ->font('Outfit', url: asset('fonts/outfit/outfit.css'), provider: LocalFontProvider::class)
             ->brandLogo(fn () => view('filament.brand-logo'))
             ->brandLogoHeight('2.25rem')
             ->favicon(null)

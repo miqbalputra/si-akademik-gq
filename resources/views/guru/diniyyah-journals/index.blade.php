@@ -2,27 +2,27 @@
     <header class="portal-page-header">
         <div>
             <p class="school-index">Catatan Pengajaran</p>
-            <h1 class="text-heading">Isi Jurnal Kelas</h1>
-            <p class="mt-2 text-sm font-medium text-muted">Pilih kelas dan tanggal, lalu catat materi serta presensi sesi mengajar.</p>
+            <h1 class="text-heading ui-page-title">Isi Jurnal Kelas</h1>
+            <p class="mt-2 text-theme-sm font-normal text-muted">Pilih kelas dan tanggal, lalu catat materi serta presensi sesi mengajar.</p>
         </div>
-        <a href="{{ route('guru.dashboard') }}" class="btn btn-outline btn-sm">Ke Dashboard</a>
+        <a href="{{ route('guru.dashboard') }}" class="btn btn-outline btn-sm text-theme-sm font-medium">Ke Dashboard</a>
     </header>
 
     @if(session('success'))
-        <div class="mb-6 p-4 rounded-xl bg-success-soft border border-success-line text-sm font-medium text-success-ink">
+        <div class="mb-6 p-4 rounded-xl bg-success-soft border border-success-line text-theme-sm font-medium text-success-ink">
             {{ session('success') }}
         </div>
     @endif
 
     @if(session('error'))
-        <div class="mb-6 p-4 rounded-xl bg-danger-soft border border-danger-line text-sm font-medium text-danger-ink">
+        <div class="mb-6 p-4 rounded-xl bg-danger-soft border border-danger-line text-theme-sm font-medium text-danger-ink">
             {{ session('error') }}
         </div>
     @endif
 
     <!-- Akses cepat ke Riwayat Jurnal Saya (halaman terpisah, on-demand) -->
     <div class="mb-6 flex justify-end">
-        <a href="{{ route('guru.diniyyah-journals.riwayat') }}" class="btn btn-primary">
+        <a href="{{ route('guru.diniyyah-journals.riwayat') }}" class="btn btn-primary text-theme-sm font-medium">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
             </svg>
@@ -34,8 +34,8 @@
     <section class="ui-card rounded-2xl p-5 sm:p-6 mb-6">
         <form method="GET" action="{{ route('guru.diniyyah-journals.index') }}" class="flex flex-col sm:flex-row gap-4 items-end" id="filter-form">
             <div class="flex-1 w-full">
-                <label for="classroom_term_id" class="block text-sm font-semibold text-body mb-1.5">Kelas</label>
-                <select id="classroom_term_id" name="classroom_term_id" class="form-input py-2.5" onchange="document.getElementById('filter-form').submit()">
+                <label for="classroom_term_id" class="block text-body mb-1.5 ui-form-label">Kelas</label>
+                <select id="classroom_term_id" name="classroom_term_id" class="form-input py-2.5 text-theme-sm font-normal" onchange="document.getElementById('filter-form').submit()">
                     <option value="">-- Pilih Kelas --</option>
                     @foreach($classes as $classTerm)
                         <option value="{{ $classTerm->id }}" {{ $selectedClassroomTermId == $classTerm->id ? 'selected' : '' }}>
@@ -45,12 +45,12 @@
                 </select>
             </div>
             <div class="flex-1 w-full">
-                <label for="date" class="block text-sm font-semibold text-body mb-1.5">Tanggal</label>
-                <input id="date" type="date" name="date" value="{{ $selectedDate }}" class="form-input py-2.5" onchange="document.getElementById('filter-form').submit()">
-                <p class="mt-1.5 text-xs font-bold text-body">{{ \Carbon\Carbon::parse($selectedDate)->locale('id')->translatedFormat('l, d F Y') }}</p>
+                <label for="date" class="block text-body mb-1.5 ui-form-label">Tanggal</label>
+                <input id="date" type="date" name="date" value="{{ $selectedDate }}" class="form-input py-2.5 text-theme-sm font-normal" onchange="document.getElementById('filter-form').submit()">
+                <p class="mt-1.5 text-theme-xs font-normal text-body">{{ \Carbon\Carbon::parse($selectedDate)->locale('id')->translatedFormat('l, d F Y') }}</p>
             </div>
             <div class="w-full sm:w-auto">
-                <button type="submit" class="btn btn-primary w-full sm:w-auto">Pilih</button>
+                <button type="submit" class="btn btn-primary w-full sm:w-auto text-theme-sm font-medium">Pilih</button>
             </div>
         </form>
     </section>
@@ -60,40 +60,40 @@
         <section class="ui-card rounded-2xl overflow-hidden mb-8">
             <div class="border-b border-line bg-school-50 px-4 py-4 text-center">
                 <p class="school-index justify-center">Rekap Kelas</p>
-                <h2 class="mt-2 font-semibold text-lg text-ink">Jurnal Kelas Pembelajaran Diniyyah</h2>
-                <p class="mt-1 text-sm font-bold text-muted">{{ \Carbon\Carbon::parse($selectedDate)->locale('id')->translatedFormat('l, d F Y') }}</p>
+                <h2 class="mt-2 text-ink ui-card-title">Jurnal Kelas Pembelajaran Diniyyah</h2>
+                <p class="mt-1 text-theme-sm font-normal text-muted">{{ \Carbon\Carbon::parse($selectedDate)->locale('id')->translatedFormat('l, d F Y') }}</p>
             </div>
             <!-- Desktop Table View -->
             <div class="hidden md:block overflow-x-auto w-full">
                 <table class="w-full text-left border-collapse min-w-[800px]">
                 <thead>
-                    <tr class="text-xs uppercase tracking-wider text-body font-bold border-b border-line">
-                        <th class="p-3 border-r border-line w-16 text-center">Jam</th>
-                        <th class="p-3 border-r border-line">Guru</th>
-                        <th class="p-3 border-r border-line">Mapel</th>
-                        <th class="p-3 border-r border-line w-1/3">Materi</th>
-                        <th class="p-3 border-r border-line">Tidak Hadir</th>
-                        <th class="p-3 text-center">Aksi</th>
+                    <tr class="text-theme-xs uppercase text-body font-normal border-b border-line">
+                        <th class="p-3 border-r border-line w-16 text-center text-theme-xs font-medium">Jam</th>
+                        <th class="p-3 border-r border-line text-theme-xs font-medium">Guru</th>
+                        <th class="p-3 border-r border-line text-theme-xs font-medium">Mapel</th>
+                        <th class="p-3 border-r border-line w-1/3 text-theme-xs font-medium">Materi</th>
+                        <th class="p-3 border-r border-line text-theme-xs font-medium">Tidak Hadir</th>
+                        <th class="p-3 text-center text-theme-xs font-medium">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse($existingJournals as $journal)
                         <tr class="border-b border-line {{ $journal->teacherAssignment->teacher_id === $teacher->id ? 'bg-school-50/70' : '' }}">
-                            <td class="p-3 border-r border-line text-center font-bold text-body">
+                            <td class="p-3 border-r border-line text-center font-medium text-body">
                                 @php
                                     $slot = $sessionSlots->firstWhere('session_name', $journal->session_hour);
                                     $slotStart = $journal->session_starts_at ?: $slot?->starts_at;
                                     $slotEnd = $journal->session_ends_at ?: $slot?->ends_at;
                                 @endphp
-                                <div class="font-bold text-heading text-base">{{ $journal->session_hour === 'tafsir' ? 'Tafsir' : $journal->session_hour }}</div>
+                                <div class="font-medium text-heading text-theme-sm">{{ $journal->session_hour === 'tafsir' ? 'Tafsir' : $journal->session_hour }}</div>
                                 @if($slotStart)
-                                    <div class="text-[10px] text-muted whitespace-nowrap">{{ \Carbon\Carbon::parse($slotStart)->format('H:i') }} - {{ \Carbon\Carbon::parse($slotEnd)->format('H:i') }}</div>
+                                    <div class="text-theme-xs text-muted whitespace-nowrap font-normal">{{ \Carbon\Carbon::parse($slotStart)->format('H:i') }} - {{ \Carbon\Carbon::parse($slotEnd)->format('H:i') }}</div>
                                 @endif
                             </td>
-                            <td class="p-3 border-r border-line text-sm text-body font-semibold">
+                            <td class="p-3 border-r border-line text-theme-sm text-body font-medium">
                                 {{ $journal->teacherAssignment->teacher->name }}
                                 @if($journal->substitute_teacher_id !== null)
-                                    <span class="block mt-1 text-[10px] font-bold {{ $journal->teacherAssignment->teacher_id === $teacher->id ? 'text-danger-ink bg-danger-soft-strong border-danger-line' : 'text-warning-ink bg-warning-soft-strong border-warning-line' }} border rounded px-1.5 py-0.5 w-fit">
+                                    <span class="block mt-1 text-theme-xs font-normal {{ $journal->teacherAssignment->teacher_id === $teacher->id ? 'text-danger-ink bg-danger-soft-strong border-danger-line' : 'text-warning-ink bg-warning-soft-strong border-warning-line' }} border rounded px-1.5 py-0.5 w-fit">
                                         @if($journal->teacherAssignment->teacher_id === $teacher->id)
                                             Anda sudah digantikan oleh {{ $journal->substituteTeacher->name }}
                                         @else
@@ -102,15 +102,15 @@
                                     </span>
                                 @endif
                             </td>
-                            <td class="p-3 border-r border-line text-sm text-body">{{ $journal->teacherAssignment->classSubject->subject->name }}</td>
-                            <td class="p-3 border-r border-line text-sm text-heading">{{ $journal->material }}</td>
-                            <td class="p-3 border-r border-line text-xs">
+                            <td class="p-3 border-r border-line text-theme-sm text-body">{{ $journal->teacherAssignment->classSubject->subject->name }}</td>
+                            <td class="p-3 border-r border-line text-theme-sm text-heading">{{ $journal->material }}</td>
+                            <td class="p-3 border-r border-line text-theme-sm">
                                 @if($journal->absences->isEmpty())
                                     <span class="text-soft italic">Nihil</span>
                                 @else
                                     <div class="flex flex-wrap gap-1">
                                         @foreach($journal->absences as $abs)
-                                            <span class="bg-warning-soft-strong text-warning-ink px-1.5 py-0.5 rounded font-bold">{{ $abs->classEnrollment->student->name }} ({{ $abs->status === 'skipped' ? 'Bolos Sesi' : \App\Support\UiLabel::absenceLabel($abs->status) }})</span>
+                                            <span class="bg-warning-soft-strong text-warning-ink px-1.5 py-0.5 rounded font-medium">{{ $abs->classEnrollment->student->name }} ({{ $abs->status === 'skipped' ? 'Bolos Sesi' : \App\Support\UiLabel::absenceLabel($abs->status) }})</span>
                                         @endforeach
                                     </div>
                                 @endif
@@ -118,10 +118,10 @@
                             <td class="p-3 text-center">
                                 @if($journal->substitute_teacher_id === null && $journal->teacherAssignment->teacher_id === $teacher->id)
                                     <div class="flex items-center justify-center gap-3">
-                                        <a href="{{ route('guru.diniyyah-journals.edit', $journal) }}" class="text-xs font-bold text-school-600 hover:text-school-800">Edit</a>
+                                        <a href="{{ route('guru.diniyyah-journals.edit', $journal) }}" class="text-theme-sm font-medium text-school-600 hover:text-school-800">Edit</a>
                                         <form action="{{ route('guru.diniyyah-journals.destroy', $journal) }}" method="POST" onsubmit="return confirm('Hapus jurnal jam ke-{{ $journal->session_hour }}?');">
                                             @csrf @method('DELETE')
-                                            <button type="submit" class="text-xs font-bold text-danger-ink hover:text-danger-ink">Hapus</button>
+                                            <button type="submit" class="text-danger-ink hover:text-danger-ink text-theme-sm font-medium">Hapus</button>
                                         </form>
                                     </div>
                                 @endif
@@ -150,14 +150,14 @@
                                         $slotEnd = $journal->session_ends_at ?: $slot?->ends_at;
                                     @endphp
                                     @if($slotStart)
-                                        <span class="text-[9px] text-muted whitespace-nowrap">{{ \Carbon\Carbon::parse($slotStart)->format('H:i') }} - {{ \Carbon\Carbon::parse($slotEnd)->format('H:i') }}</span>
+                                        <span class="text-theme-xs text-muted whitespace-nowrap font-normal">{{ \Carbon\Carbon::parse($slotStart)->format('H:i') }} - {{ \Carbon\Carbon::parse($slotEnd)->format('H:i') }}</span>
                                     @endif
                                 </div>
                                 <div>
-                                    <div class="font-bold text-heading text-sm">{{ $journal->teacherAssignment->classSubject->subject->name }}</div>
-                                    <div class="text-xs text-body mt-0.5">{{ $journal->teacherAssignment->teacher->name }}</div>
+                                    <div class="font-medium text-heading text-theme-sm">{{ $journal->teacherAssignment->classSubject->subject->name }}</div>
+                                    <div class="text-theme-xs text-body mt-0.5 font-normal">{{ $journal->teacherAssignment->teacher->name }}</div>
                                     @if($journal->substitute_teacher_id !== null)
-                                        <span class="inline-block mt-1 text-[10px] font-bold {{ $journal->teacherAssignment->teacher_id === $teacher->id ? 'text-danger-ink bg-danger-soft-strong border-danger-line' : 'text-warning-ink bg-warning-soft-strong border-warning-line' }} border rounded px-1.5 py-0.5">
+                                        <span class="inline-block mt-1 text-theme-xs font-normal {{ $journal->teacherAssignment->teacher_id === $teacher->id ? 'text-danger-ink bg-danger-soft-strong border-danger-line' : 'text-warning-ink bg-warning-soft-strong border-warning-line' }} border rounded px-1.5 py-0.5">
                                             @if($journal->teacherAssignment->teacher_id === $teacher->id)
                                                 Anda sudah digantikan oleh {{ $journal->substituteTeacher->name }}
                                             @else
@@ -170,7 +170,7 @@
                             
                             @if($journal->substitute_teacher_id === null && $journal->teacherAssignment->teacher_id === $teacher->id)
                                 <div class="flex flex-col items-end gap-2">
-                                    <a href="{{ route('guru.diniyyah-journals.edit', $journal) }}" class="inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-bold text-school-600 hover:bg-school-50 transition-colors">Edit</a>
+                                    <a href="{{ route('guru.diniyyah-journals.edit', $journal) }}" class="inline-flex items-center rounded-lg px-3 py-1.5 text-school-600 hover:bg-school-50 transition-colors text-theme-sm font-medium">Edit</a>
                                     <form action="{{ route('guru.diniyyah-journals.destroy', $journal) }}" method="POST" onsubmit="return confirm('Hapus jurnal jam ke-{{ $journal->session_hour }}?');">
                                         @csrf @method('DELETE')
                                         <button type="submit" class="p-2 text-danger-500 hover:text-danger-ink hover:bg-danger-soft rounded-lg transition-colors" title="Hapus">
@@ -184,20 +184,20 @@
                         </div>
                         
                         <div class="mt-3">
-                            <span class="text-[10px] font-bold text-soft uppercase tracking-wider block mb-1">Materi</span>
-                            <p class="text-sm text-body bg-surface-subtle p-3 rounded-lg border border-line">{{ $journal->material }}</p>
+                            <span class="text-theme-xs font-normal text-soft uppercase block mb-1">Materi</span>
+                            <p class="text-theme-sm text-body bg-surface-subtle p-3 rounded-lg border border-line">{{ $journal->material }}</p>
                         </div>
                         
                         <div class="mt-3">
-                            <span class="text-[10px] font-bold text-soft uppercase tracking-wider block mb-1">Santri Tidak Hadir</span>
+                            <span class="text-theme-xs font-normal text-soft uppercase block mb-1">Santri Tidak Hadir</span>
                             @if($journal->absences->isEmpty())
-                                <span class="text-xs font-medium text-success-ink bg-success-soft px-2.5 py-1 rounded-md border border-success-line">Nihil (Hadir Semua)</span>
+                                <span class="text-theme-xs font-normal text-success-ink bg-success-soft px-2.5 py-1 rounded-md border border-success-line">Nihil (Hadir Semua)</span>
                             @else
                                 <div class="flex flex-wrap gap-1.5">
                                     @foreach($journal->absences as $abs)
-                                        <span class="bg-warning-soft-strong border border-warning-line text-warning-ink px-2 py-1 rounded-md text-xs font-bold shadow-sm">
+                                        <span class="bg-warning-soft-strong border border-warning-line text-warning-ink px-2 py-1 rounded-md text-theme-xs font-normal shadow-sm">
                                             {{ $abs->classEnrollment->student->name }} 
-                                            <span class="text-[10px] font-normal opacity-80">({{ $abs->status === 'skipped' ? 'Bolos' : \App\Support\UiLabel::absenceLabel($abs->status) }})</span>
+                                            <span class="text-theme-xs font-normal opacity-80">({{ $abs->status === 'skipped' ? 'Bolos' : \App\Support\UiLabel::absenceLabel($abs->status) }})</span>
                                         </span>
                                     @endforeach
                                 </div>
@@ -217,13 +217,13 @@
         @endphp
         @if($agendaSlots->isNotEmpty())
             <section class="rounded-2xl border-2 border-info-line bg-info-soft p-5 sm:p-6" aria-labelledby="agenda-no-kbm-heading">
-                <p class="text-xs font-semibold uppercase tracking-[.14em] text-info-ink">Agenda tanpa KBM</p>
-                <h3 id="agenda-no-kbm-heading" class="mt-2 text-lg font-semibold text-info-ink">Anda tidak perlu mengisi jurnal pada slot berikut</h3>
+                <p class="text-theme-xs font-normal uppercase text-info-ink">Agenda tanpa KBM</p>
+                <h3 id="agenda-no-kbm-heading" class="mt-2 text-info-ink ui-card-title">Anda tidak perlu mengisi jurnal pada slot berikut</h3>
                 <div class="mt-3 space-y-2">
                     @foreach($agendaSlots as $agendaSlot)
-                        <div class="rounded-xl border border-info-line bg-surface px-3 py-2 text-sm font-semibold text-info-ink">
+                        <div class="rounded-xl border border-info-line bg-surface px-3 py-2 text-theme-sm font-medium text-info-ink">
                             {{ \App\Support\SessionTimetable::label($agendaSlot->session_name) }} · {{ $agendaSlot->subject_name }}
-                            <span class="block text-xs font-bold text-info-ink">{{ $agendaSlot->agenda['reason'] }}</span>
+                            <span class="block text-theme-xs font-normal text-info-ink">{{ $agendaSlot->agenda['reason'] }}</span>
                         </div>
                     @endforeach
                 </div>
@@ -235,11 +235,11 @@
         @if($classAssignments->isNotEmpty() && $sessionSlots->isNotEmpty() && $hasScheduleOnDay)
         <section class="ui-card rounded-2xl p-5 sm:p-6">
             <p class="school-index">Jurnal Baru</p>
-            <h3 class="mt-2 text-lg font-semibold text-heading mb-1">Isi Jam Pelajaran Anda</h3>
-            <p class="text-sm text-muted mb-5">Lengkapi sesi, mata pelajaran, materi, dan presensi santri untuk satu jam pelajaran.</p>
+            <h3 class="mt-2 text-heading mb-1 ui-card-title">Isi Jam Pelajaran Anda</h3>
+            <p class="text-theme-sm text-muted mb-5">Lengkapi sesi, mata pelajaran, materi, dan presensi santri untuk satu jam pelajaran.</p>
 
             @if(! $hasFillableSchedule)
-                <div class="mb-5 rounded-xl border border-success-line bg-success-soft px-4 py-3 text-sm font-bold text-success-ink">
+                <div class="mb-5 rounded-xl border border-success-line bg-success-soft px-4 py-3 text-theme-sm font-medium text-success-ink">
                     Semua slot pada tanggal ini sudah terisi. Tidak ada jurnal baru yang perlu ditambahkan.
                 </div>
             @endif
@@ -250,8 +250,8 @@
                 <input type="hidden" name="date" value="{{ $selectedDate }}">
 
                 <div>
-                    <label for="schedule_slot" class="block text-sm font-semibold text-body mb-1.5">Jadwal Mengajar (Sesi & Mapel)</label>
-                    <select id="schedule_slot" name="schedule_slot" @if($hasFillableSchedule) required @endif class="form-input">
+                    <label for="schedule_slot" class="block text-body mb-1.5 ui-form-label">Jadwal Mengajar (Sesi & Mapel)</label>
+                    <select id="schedule_slot" name="schedule_slot" @if($hasFillableSchedule) required @endif class="form-input text-theme-sm font-normal">
                         <option value="" disabled @selected(! $selectedScheduleSlot)>Pilih jadwal...</option>
                         @foreach($scheduledSlots as $slot)
                             @php
@@ -272,7 +272,7 @@
                             </option>
                         @endforeach
                     </select>
-                    <span id="session-time-hint" class="mt-1 block text-xs font-medium text-muted"></span>
+                    <span id="session-time-hint" class="mt-1 block text-theme-xs font-normal text-muted"></span>
                 </div>
                 {{-- Kontrak field lama dipertahankan: dua hidden ini diisi oleh skrip
                      dari pilihan "Jadwal Mengajar" di atas. --}}
@@ -281,19 +281,19 @@
 
                 @if($hasFillableSchedule)
                 <div class="mt-5">
-                    <label for="material" class="block text-sm font-semibold text-body mb-1.5">Materi</label>
-                    <textarea id="material" name="material" rows="3" required class="form-input" placeholder="Tuliskan materi yang diajarkan..."></textarea>
+                    <label for="material" class="block text-body mb-1.5 ui-form-label">Materi</label>
+                    <textarea id="material" name="material" rows="3" required class="form-input text-theme-sm font-normal" placeholder="Tuliskan materi yang diajarkan..."></textarea>
                 </div>
 
                 <div class="mt-5 bg-surface-subtle border border-line rounded-xl p-4">
-                    <h4 class="text-sm font-bold text-heading mb-1">Presensi Sesi Ini</h4>
-                    <p class="text-xs text-muted mb-3">Centang santri yang tidak hadir. Santri yang sudah absen harian oleh wali kelas otomatis tercatat.</p>
+                    <h4 class="text-theme-sm font-medium text-heading mb-1">Presensi Sesi Ini</h4>
+                    <p class="text-theme-xs text-muted mb-3 font-normal">Centang santri yang tidak hadir. Santri yang sudah absen harian oleh wali kelas otomatis tercatat.</p>
 
                     @include('guru.diniyyah-journals.partials._absence-grid')
                 </div>
 
                 <div class="mt-6 flex justify-end">
-                    <button type="submit" class="btn btn-primary w-full sm:w-auto">
+                    <button type="submit" class="btn btn-primary w-full sm:w-auto text-theme-sm font-medium">
                         Simpan Jurnal Jam Ini
                     </button>
                 </div>
@@ -327,10 +327,10 @@
             {{-- Matrix kelas punya sesi di hari ini, tapi guru tidak dijadwalkan mengajar
                  kelas ini di hari tsb → matikan form, beri peringatan berkonteks kelas. --}}
             <div class="glass-card rounded-2xl p-8 border border-warning-line bg-warning-soft text-center">
-                <p class="text-sm font-bold text-warning-ink">
+                <p class="text-theme-sm font-normal text-warning-ink">
                     Hari {{ \Carbon\Carbon::parse($selectedDate)->locale('id')->translatedFormat('l, d F Y') }} tidak ada jadwal mengajar untuk Anda di kelas {{ $selectedTerm?->name }}.
                 </p>
-                <p class="text-xs text-warning-ink mt-1">Pilih tanggal yang jatuh di hari mengajar Anda pada kelas ini.</p>
+                <p class="text-theme-xs text-warning-ink mt-1 font-normal">Pilih tanggal yang jatuh di hari mengajar Anda pada kelas ini.</p>
             </div>
         @elseif($classAssignments->isNotEmpty())
             <div class="glass-card rounded-2xl p-8 border border-line text-center text-muted font-medium">

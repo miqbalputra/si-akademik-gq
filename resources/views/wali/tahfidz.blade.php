@@ -5,24 +5,24 @@
         .student-tab { display:flex; flex-direction:column; align-items:center; border:1px solid var(--ui-line); border-radius:.875rem; background:var(--ui-surface); padding:1rem; text-decoration:none; transition:border-color .16s ease, background-color .16s ease, box-shadow .16s ease; }
         .student-tab:hover { border-color:var(--color-brand-300); box-shadow:0 8px 24px -18px rgb(16 24 40 / .28); }
         .student-tab.active { border-color:var(--color-brand-300); background:var(--color-brand-25); }
-        .student-tab .name { color:var(--ui-heading); font-size:.875rem; font-weight:600; }
-        .student-tab .nis { margin-top:.125rem; color:var(--ui-muted); font-size:.7rem; font-weight:500; }
+        .student-tab .name { color:var(--ui-heading); font-size:14px; line-height:20px; font-weight:500; }
+        .student-tab .nis { margin-top:.125rem; color:var(--ui-muted); font-size:12px; line-height:18px; font-weight:400; }
         .section-title { display:flex; align-items:center; gap:.75rem; margin-bottom:1rem; }
-        .section-title h2 { margin:0; color:var(--ui-heading); font-size:1rem; font-weight:650; white-space:nowrap; }
+        .section-title h2 { margin:0; color:var(--ui-heading); white-space:nowrap; font-size:18px; line-height:28px; font-weight:600; }
         .section-divider { height:1px; flex:1; background:var(--ui-line); }
         .stat-mini { border:1px solid var(--ui-line); border-radius:.875rem; background:var(--ui-surface); padding:1rem; text-align:center; }
-        .stat-mini .label { margin:0 0 .25rem; color:var(--ui-muted); font-size:.68rem; font-weight:600; letter-spacing:.02em; text-transform:none; }
-        .stat-mini .value { margin:0; color:var(--ui-heading); font-size:1.5rem; font-weight:700; }
-        .stat-mini .sub { margin-top:.125rem; color:var(--color-brand-600); font-size:.7rem; font-weight:600; }
+        .stat-mini .label { margin:0 0 .25rem; color:var(--ui-muted); letter-spacing:normal; text-transform:none; font-size:14px; line-height:20px; font-weight:400; }
+        .stat-mini .value { margin:0; color:var(--ui-heading); font-size:30px; line-height:38px; font-weight:700; }
+        .stat-mini .sub { margin-top:.125rem; color:var(--color-brand-600); font-size:12px; line-height:18px; font-weight:400; }
         .stat-mini-warning { border-color:var(--color-warning-200); background:var(--color-warning-50); }
         .chart-wrap { position:relative; min-width:0; border:1px solid var(--ui-line); border-radius:.875rem; background:var(--ui-surface); padding:1rem; }
         .chart-wrap canvas { display:block; max-width:100%; }
-        .chart-wrap .chart-label { margin:0 0 .75rem; color:var(--ui-text); font-size:.8rem; font-weight:600; }
-        .score-table { width:100%; border-collapse:collapse; font-size:.8125rem; }
-        .score-table th { border-bottom:1px solid var(--ui-line); background:var(--ui-surface-subtle); padding:.75rem 1rem; color:var(--ui-muted); font-size:.68rem; font-weight:600; letter-spacing:.04em; text-align:left; text-transform:uppercase; }
+        .chart-wrap .chart-label { margin:0 0 .75rem; color:var(--ui-text); font-size:16px; line-height:24px; font-weight:500; }
+        .score-table { width:100%; border-collapse:collapse; font-size:14px; line-height:20px; font-weight:400; }
+        .score-table th { border-bottom:1px solid var(--ui-line); background:var(--ui-surface-subtle); padding:.75rem 1rem; color:var(--ui-muted); letter-spacing:normal; text-align:left; text-transform:none; font-size:12px; line-height:18px; font-weight:500; }
         .score-table td { border-top:1px solid var(--ui-surface-muted); padding:.75rem 1rem; vertical-align:middle; }
         .score-table tr:hover td { background:var(--ui-surface-subtle); }
-        .score-badge { display:inline-block; border-radius:999px; background:var(--color-brand-50); padding:.125rem .625rem; color:var(--color-brand-700); font-size:.75rem; font-weight:600; }
+        .score-badge { display:inline-block; border-radius:999px; background:var(--color-brand-50); padding:.125rem .625rem; color:var(--color-brand-700); font-size:12px; line-height:18px; font-weight:500; }
         @keyframes fadeInUp { 0%{opacity:0;transform:translateY(14px)} 100%{opacity:1;transform:translateY(0)} }
         .fade-up { animation:fadeInUp .5s cubic-bezier(.16,1,.3,1) forwards; opacity:0; }
         .delay-1 { animation-delay:.1s; }
@@ -40,7 +40,7 @@
             <div>
                 <p class="eyebrow">Rekap Tahfidz</p>
                 <h1>Hafalan Al-Qur'an</h1>
-                <p class="mt-2 text-sm font-normal text-muted dark:text-muted">Pantau progres hafalan, nilai pekanan, manzil, dan UAS anak Anda.</p>
+                <p class="mt-2 text-theme-sm font-normal text-muted dark:text-muted">Pantau progres hafalan, nilai pekanan, manzil, dan UAS anak Anda.</p>
             </div>
         </header>
 
@@ -63,13 +63,13 @@
                     {{ substr($selectedStudent->name, 0, 1) }}
                 </div>
                 <div>
-                    <div class="text-sm font-semibold text-heading dark:text-white">{{ $selectedStudent->name }}</div>
-                    <div class="text-xs text-muted dark:text-muted">NIS: {{ $selectedStudent->nis }}</div>
+                    <div class="text-theme-sm font-medium text-heading dark:text-white">{{ $selectedStudent->name }}</div>
+                    <div class="text-theme-xs text-muted dark:text-muted font-normal">NIS: {{ $selectedStudent->nis }}</div>
                 </div>
             </div>
         @else
             <div class="empty-state fade-up">
-                <p class="text-sm font-medium text-muted dark:text-muted">Belum ada data anak yang terhubung dengan akun Anda.</p>
+                <p class="text-theme-sm font-normal text-muted dark:text-muted">Belum ada data anak yang terhubung dengan akun Anda.</p>
             </div>
         @endif
 
@@ -84,7 +84,7 @@
 
                 @if ($weeklyScores->isEmpty())
                     <div class="card p-8 text-center">
-                        <p class="text-sm font-medium text-muted dark:text-muted">Belum ada data pekanan untuk periode ini.</p>
+                        <p class="text-theme-sm font-normal text-muted dark:text-muted">Belum ada data pekanan untuk periode ini.</p>
                     </div>
                 @else
                     <div class="mb-5 grid gap-4 md:grid-cols-2">
@@ -105,24 +105,24 @@
                                     <th>Pekan</th>
                                     <th>Surat / Ayat</th>
                                     <th>Jml Baris</th>
-                                    <th style="text-align:center;">Nilai</th>
+                                    <th style="text-align:center;font-size:12px;font-weight:500;text-transform:none;line-height:18px;">Nilai</th>
                                     <th>Catatan</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach ($weeklyScores as $score)
                                     <tr>
-                                        <td class="font-semibold text-heading dark:text-white">{{ $score->week?->date_label ?? 'Pekan '.$score->week?->week_number }}</td>
+                                        <td class="font-medium text-heading dark:text-white">{{ $score->week?->date_label ?? 'Pekan '.$score->week?->week_number }}</td>
                                         <td class="text-body dark:text-body">{{ $score->surah_ayat ?? '—' }}</td>
                                         <td class="text-body dark:text-body">{{ $score->sabaq_amount ?? '—' }}</td>
                                         <td style="text-align:center;">
                                             @if ($score->score !== null)
-                                                <span class="score-badge">{{ $score->score }}</span>
+                                                <span class="score-badge text-theme-xs font-medium">{{ $score->score }}</span>
                                             @else
-                                                <span class="font-semibold text-soft dark:text-soft">—</span>
+                                                <span class="font-medium text-soft dark:text-soft">—</span>
                                             @endif
                                         </td>
-                                        <td class="text-xs text-muted dark:text-muted">{{ $score->notes ?? '—' }}</td>
+                                        <td class="text-muted dark:text-muted text-theme-sm">{{ $score->notes ?? '—' }}</td>
                                     </tr>
                                 @endforeach
                             </tbody>
@@ -156,20 +156,20 @@
                                 <tr>
                                     <th>Bulan</th>
                                     <th>Sabaq Sebulan</th>
-                                    <th style="text-align:center;">Rata-rata</th>
+                                    <th style="text-align:center;font-size:12px;font-weight:500;text-transform:none;line-height:18px;">Rata-rata</th>
                                     <th>Total Hafalan</th>
                                     <th>Manzil</th>
-                                    <th style="text-align:center;">Nilai Manzil</th>
+                                    <th style="text-align:center;font-size:12px;font-weight:500;text-transform:none;line-height:18px;">Nilai Manzil</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach ($monthlyRecaps as $recap)
                                     <tr>
-                                        <td class="font-semibold text-heading dark:text-white">{{ $recap->month_label ?? 'Bulan '.$recap->month_number }}</td>
+                                        <td class="font-medium text-heading dark:text-white">{{ $recap->month_label ?? 'Bulan '.$recap->month_number }}</td>
                                         <td class="text-body dark:text-body">{{ $recap->sabaq_monthly ?? '—' }}</td>
                                         <td style="text-align:center;">
                                             @if ($recap->average_score !== null)
-                                                <span class="score-badge">{{ $recap->average_score }}</span>
+                                                <span class="score-badge text-theme-xs font-medium">{{ $recap->average_score }}</span>
                                             @else
                                                 <span class="text-soft dark:text-soft">—</span>
                                             @endif
@@ -214,15 +214,15 @@
                             </div>
                             <div class="stat-mini">
                                 <p class="label">Juz Ujian</p>
-                                <p class="value" style="font-size:18px;">{{ $uasResult->juz_tested ?? '—' }}</p>
+                                <p class="value" style="font-size:18px;line-height:28px;">{{ $uasResult->juz_tested ?? '—' }}</p>
                             </div>
                         @endif
                     </div>
 
                     @if ($semesterRecap?->semester_notes)
                         <div class="mt-4 rounded-xl border border-warning-line bg-warning-soft p-4 dark:border-warning-800 dark:bg-warning-900/20">
-                            <p class="mb-1.5 text-xs font-semibold text-warning-ink dark:text-warning-300">Catatan Guru Tahfidz</p>
-                            <p class="m-0 text-sm leading-6 text-warning-ink dark:text-warning-200">{{ $semesterRecap->semester_notes }}</p>
+                            <p class="mb-1.5 text-theme-xs font-normal text-warning-ink dark:text-warning-300">Catatan Guru Tahfidz</p>
+                            <p class="m-0 text-theme-sm text-warning-ink dark:text-warning-200">{{ $semesterRecap->semester_notes }}</p>
                         </div>
                     @endif
                 </section>
@@ -253,25 +253,25 @@
             new Chart(ctxW, { type: 'line', data: {
                 labels: chartData.weekly.map(d => d.label),
                 datasets: [{ ...lineStyle, label: 'Nilai', data: chartData.weekly.map(d => d.value), borderColor: chartTheme('warning'), backgroundColor: chartTheme('warning', 0.08), fill: true }]
-            }, options: { ...chartDefaults, scales: { y: { min: 0, max: 100, ticks: { font: { family: 'Outfit', size: 11 } } }, x: { ticks: { font: { family: 'Outfit', size: 10 } } } } } });
+            }, options: { ...chartDefaults, scales: { y: { min: 0, max: 100, ticks: { font: { family: 'Outfit', size: 12 } } }, x: { ticks: { font: { family: 'Outfit', size: 12 } } } } } });
         }
         if (ctxB && chartData.baris.length > 0) {
             new Chart(ctxB, { type: 'bar', data: {
                 labels: chartData.baris.map(d => d.label),
                 datasets: [{ label: 'Baris', data: chartData.baris.map(d => d.value), backgroundColor: chartTheme('info', 0.75), borderRadius: 6 }]
-            }, options: { ...chartDefaults, scales: { x: { ticks: { font: { family: 'Outfit', size: 10 } } } } } });
+            }, options: { ...chartDefaults, scales: { x: { ticks: { font: { family: 'Outfit', size: 12 } } } } } });
         }
         if (ctxMA && chartData.monthly_avg.length > 0) {
             new Chart(ctxMA, { type: 'line', data: {
                 labels: chartData.monthly_avg.map(d => d.label),
                 datasets: [{ ...lineStyle, label: 'Rata-rata', data: chartData.monthly_avg.map(d => d.value), borderColor: chartTheme('success'), backgroundColor: chartTheme('success', 0.08), fill: true }]
-            }, options: { ...chartDefaults, scales: { y: { min: 0, max: 100 }, x: { ticks: { font: { family: 'Outfit', size: 10 } } } } } });
+            }, options: { ...chartDefaults, scales: { y: { min: 0, max: 100 }, x: { ticks: { font: { family: 'Outfit', size: 12 } } } } } });
         }
         if (ctxMN && chartData.manzil.length > 0) {
             new Chart(ctxMN, { type: 'bar', data: {
                 labels: chartData.manzil.map(d => d.label),
                 datasets: [{ label: 'Manzil', data: chartData.manzil.map(d => d.value), backgroundColor: chartTheme('primary', 0.75), borderRadius: 6 }]
-            }, options: { ...chartDefaults, scales: { y: { min: 0, max: 100 }, x: { ticks: { font: { family: 'Outfit', size: 10 } } } } } });
+            }, options: { ...chartDefaults, scales: { y: { min: 0, max: 100 }, x: { ticks: { font: { family: 'Outfit', size: 12 } } } } } });
         }
         };
         if (document.readyState === 'complete') initialiseCharts();

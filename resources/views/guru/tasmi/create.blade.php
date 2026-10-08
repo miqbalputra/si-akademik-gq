@@ -1,16 +1,16 @@
 <x-layouts.portal title="Input Tasmi'" portalLabel="Portal Guru" breadcrumb="Input Tasmi'">
     {{-- Header --}}
     <header class="fade-up" style="margin-bottom:24px;">
-        <a href="{{ route('guru.tasmi.index') }}" style="font-size:12px;font-weight:700;color:var(--ui-brand-ink);display:inline-flex;align-items:center;gap:4px;margin-bottom:10px;text-decoration:none;">
+        <a href="{{ route('guru.tasmi.index') }}" style="color:var(--ui-brand-ink);display:inline-flex;align-items:center;gap:4px;margin-bottom:10px;text-decoration:none;font-size:14px;line-height:20px;font-weight:500;">
             <svg style="width:14px;height:14px;" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" /></svg>
             Kembali ke dashboard Tasmi'
         </a>
-        <h1 style="font-size:24px;font-weight:700;color:var(--ui-heading);margin:0 0 4px;letter-spacing:-.02em;">Input Tasmi' Baru</h1>
-        <p style="font-size:14px;color:var(--ui-muted);font-weight:500;margin:0;">Pilih kelas → pilih santri → isi data setoran tasmi'.</p>
+        <h1 style="color:var(--ui-heading);margin:0 0 4px;letter-spacing:normal;font-size:20px;font-weight:600;line-height:28px;">Input Tasmi' Baru</h1>
+        <p style="font-size:14px;color:var(--ui-muted);margin:0;line-height:20px;font-weight:400;">Pilih kelas → pilih santri → isi data setoran tasmi'.</p>
     </header>
 
     @if ($errors->any())
-        <div style="margin-bottom:20px;background:var(--ui-danger-soft);border:1px solid var(--ui-danger-line);border-radius:12px;padding:14px 18px;font-size:13px;font-weight:600;color:var(--ui-danger-ink);" class="fade-up">
+        <div style="margin-bottom:20px;background:var(--ui-danger-soft);border:1px solid var(--ui-danger-line);border-radius:12px;padding:14px 18px;font-size:14px;font-weight:500;color:var(--ui-danger-ink);line-height:20px;" class="fade-up">
             @foreach ($errors->all() as $error)
                 <div>{{ $error }}</div>
             @endforeach
@@ -22,8 +22,8 @@
     <form method="GET" action="{{ route('guru.tasmi.create') }}" class="fade-up delay-1">
         <div class="card" style="padding:24px;margin-bottom:18px;">
             <div style="margin-bottom:20px;">
-                <label for="classroom_term_id" class="form-label">1. Pilih Kelas</label>
-                <select id="classroom_term_id" name="classroom_term_id" class="form-input" required onchange="this.form.submit()">
+                <label for="classroom_term_id" class="form-label ui-form-label">1. Pilih Kelas</label>
+                <select id="classroom_term_id" name="classroom_term_id" class="form-input text-theme-sm font-normal" required onchange="this.form.submit()">
                     <option value="">— Pilih kelas —</option>
                     @foreach($classroomTerms as $ct)
                         <option value="{{ $ct->id }}" @if((string)($selectedClassroomTerm->id ?? '') === (string)$ct->id) selected @endif>
@@ -43,8 +43,8 @@
             <div class="card" style="padding:24px;margin-bottom:18px;">
                 {{-- 2. Pilih Santri --}}
                 <div style="margin-bottom:20px;">
-                    <label for="student_id" class="form-label">2. Nama Santri</label>
-                    <select id="student_id" name="student_id" class="form-input" required>
+                    <label for="student_id" class="form-label ui-form-label">2. Nama Santri</label>
+                    <select id="student_id" name="student_id" class="form-input text-theme-sm font-normal" required>
                         <option value="">— Pilih santri —</option>
                         @foreach($students as $student)
                             <option value="{{ $student->id }}" @if((string)($selectedStudent->id ?? '') === (string)$student->id) selected @endif>
@@ -58,8 +58,8 @@
                 {{-- 3. Hari & Tanggal --}}
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%, 180px),1fr));gap:14px;margin-bottom:20px;">
                     <div>
-                        <label for="exam_day_label" class="form-label">3. Hari</label>
-                        <select id="exam_day_label" name="exam_day_label" class="form-input">
+                        <label for="exam_day_label" class="form-label ui-form-label">3. Hari</label>
+                        <select id="exam_day_label" name="exam_day_label" class="form-input text-theme-sm font-normal">
                             <option value="">— Pilih hari —</option>
                             @foreach($dayOptions as $value => $label)
                                 <option value="{{ $value }}" @selected(old('exam_day_label') === $value)>{{ $label }}</option>
@@ -67,31 +67,31 @@
                         </select>
                     </div>
                     <div>
-                        <label for="exam_date" class="form-label">Tanggal (Masehi) *</label>
-                        <input id="exam_date" name="exam_date" type="date" class="form-input" required value="{{ old('exam_date') }}" onchange="tasmiAutofillHijriDate()">
+                        <label for="exam_date" class="form-label ui-form-label">Tanggal (Masehi) *</label>
+                        <input id="exam_date" name="exam_date" type="date" class="form-input text-theme-sm font-normal" required value="{{ old('exam_date') }}" onchange="tasmiAutofillHijriDate()">
                     </div>
                     <div>
-                        <label for="hijri_date" class="form-label">Tanggal (Hijriyah)</label>
-                        <input id="hijri_date" name="hijri_date" type="text" class="form-input" readonly data-hijri-auto placeholder="Otomatis dari tanggal Masehi" maxlength="50" value="{{ old('hijri_date') }}">
+                        <label for="hijri_date" class="form-label ui-form-label">Tanggal (Hijriyah)</label>
+                        <input id="hijri_date" name="hijri_date" type="text" class="form-input text-theme-sm font-normal" readonly data-hijri-auto placeholder="Otomatis dari tanggal Masehi" maxlength="50" value="{{ old('hijri_date') }}">
                         <p class="form-hint">Terisi otomatis berdasarkan kalender Hijriyah dan zona waktu WIB.</p>
                     </div>
                 </div>
 
                 {{-- 4. Jenis Ujian & Juz --}}
                 <div style="margin-bottom:20px;">
-                    <label class="form-label">4. Jenis Ujian Tasmi'</label>
+                    <label class="form-label ui-form-label">4. Jenis Ujian Tasmi'</label>
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
                         @foreach($examTypeOptions as $value => $label)
-                            <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1.5px solid var(--ui-line);border-radius:10px;cursor:pointer;transition:all .2s;">
+                            <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1.5px solid var(--ui-line);border-radius:10px;cursor:pointer;transition:all .2s;font-size:14px;font-weight:500;text-transform:none;line-height:20px;">
                                 <input type="radio" name="exam_type" value="{{ $value }}" required @if(old('exam_type') === $value) checked @endif onchange="tasmiToggleJuzFields()">
-                                <span style="font-size:14px;font-weight:700;color:var(--ui-heading);">{{ $label }}</span>
+                                <span style="font-size:14px;font-weight:500;color:var(--ui-heading);line-height:20px;">{{ $label }}</span>
                             </label>
                         @endforeach
                     </div>
 
                     <div id="juz-one-block" style="display:none;margin-bottom:12px;">
-                        <label for="juz_single" class="form-label">Juz yang Diuji (1 - 30)</label>
-                        <select id="juz_single" name="juz_single" class="form-input" onchange="document.getElementById('juz_start').value=this.value; document.getElementById('juz_end').value=this.value;">
+                        <label for="juz_single" class="form-label ui-form-label">Juz yang Diuji (1 - 30)</label>
+                        <select id="juz_single" name="juz_single" class="form-input text-theme-sm font-normal" onchange="document.getElementById('juz_start').value=this.value; document.getElementById('juz_end').value=this.value;">
                             <option value="">— Pilih juz —</option>
                             @for($i = 1; $i <= 30; $i++)
                                 <option value="{{ $i }}">Juz {{ $i }}</option>
@@ -103,14 +103,14 @@
                     <div id="juz-five-block" style="display:none;margin-bottom:12px;">
                         <p class="form-label" style="margin-bottom:8px;">Rentang 5 Juz (dari juz X sampai juz Y)</p>
                         <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;">
-                            <select id="juz_start" name="juz_start" class="form-input" onchange="tasmiUpdateFiveEnd()">
+                            <select id="juz_start" name="juz_start" class="form-input text-theme-sm font-normal" onchange="tasmiUpdateFiveEnd()">
                                 <option value="">Dari juz</option>
                                 @for($i = 1; $i <= 26; $i++)
                                     <option value="{{ $i }}" @if(old('juz_start') == $i) selected @endif>Juz {{ $i }}</option>
                                 @endfor
                             </select>
-                            <span style="font-weight:700;color:var(--ui-text);">→</span>
-                            <select id="juz_end" name="juz_end" class="form-input">
+                            <span style="font-weight:500;color:var(--ui-text);">→</span>
+                            <select id="juz_end" name="juz_end" class="form-input text-theme-sm font-normal">
                                 <option value="">Sampai juz</option>
                                 @for($i = 5; $i <= 30; $i++)
                                     <option value="{{ $i }}" @if(old('juz_end') == $i) selected @endif>Juz {{ $i }}</option>
@@ -123,8 +123,8 @@
 
                 {{-- 5. Predikat --}}
                 <div style="margin-bottom:20px;">
-                    <label for="predicate" class="form-label">5. Predikat *</label>
-                    <select id="predicate" name="predicate" class="form-input" required>
+                    <label for="predicate" class="form-label ui-form-label">5. Predikat *</label>
+                    <select id="predicate" name="predicate" class="form-input text-theme-sm font-normal" required>
                         <option value="">— Pilih predikat —</option>
                         @foreach($predicateOptions as $value => $label)
                             <option value="{{ $value }}" @if(old('predicate') === $value) selected @endif>{{ $label }}</option>
@@ -134,22 +134,22 @@
 
                 {{-- 6. Catatan --}}
                 <div style="margin-bottom:8px;">
-                    <label for="notes" class="form-label">6. Catatan (opsional)</label>
-                    <textarea id="notes" name="notes" class="form-input" rows="3" maxlength="1000" placeholder="Catatan tambahan...">{{ old('notes') }}</textarea>
+                    <label for="notes" class="form-label ui-form-label">6. Catatan (opsional)</label>
+                    <textarea id="notes" name="notes" class="form-input text-theme-sm font-normal" rows="3" maxlength="1000" placeholder="Catatan tambahan...">{{ old('notes') }}</textarea>
                 </div>
             </div>
 
             <div style="display:flex;gap:10px;">
-                <button type="submit" class="btn btn-primary">
+                <button type="submit" class="btn btn-primary text-theme-sm font-medium">
                     <svg style="width:14px;height:14px;" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
                     Simpan Data Tasmi'
                 </button>
-                <a href="{{ route('guru.tasmi.index') }}" class="btn btn-outline">Batal</a>
+                <a href="{{ route('guru.tasmi.index') }}" class="btn btn-outline text-theme-sm font-medium">Batal</a>
             </div>
         </form>
     @else
         <div class="card fade-up delay-1" style="padding:24px;text-align:center;">
-            <p style="font-size:14px;color:var(--ui-muted);font-weight:600;margin:0;">Pilih kelas terlebih dahulu untuk menampilkan daftar santri.</p>
+            <p style="font-size:14px;color:var(--ui-muted);margin:0;line-height:20px;font-weight:400;">Pilih kelas terlebih dahulu untuk menampilkan daftar santri.</p>
         </div>
     @endif
 

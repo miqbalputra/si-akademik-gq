@@ -12,7 +12,7 @@
                     'warning' => ['label' => 'Peringatan', 'description' => 'Status yang memerlukan perhatian.'],
                     'danger' => ['label' => 'Bahaya', 'description' => 'Kesalahan dan tindakan berisiko.'],
                 ] as $key => $color)
-                    <label class="flex items-center gap-4 rounded-xl border border-line bg-surface p-4 shadow-sm dark:border-gray-800 dark:bg-surface">
+                    <label class="flex items-center gap-4 rounded-xl border border-line bg-surface p-4 shadow-sm dark:border-gray-800 dark:bg-surface ui-form-label">
                         <input
                             type="color"
                             wire:model.live.debounce.150ms="palette.{{ $key }}"
@@ -20,9 +20,9 @@
                             class="h-12 w-12 cursor-pointer rounded-lg border-0 bg-transparent p-0"
                         >
                         <span class="min-w-0 flex-1">
-                            <span class="block text-sm font-semibold text-heading dark:text-white/90">{{ $color['label'] }}</span>
-                            <span class="mt-1 block text-xs leading-5 text-muted dark:text-muted">{{ $color['description'] }}</span>
-                            <span class="mt-2 block font-mono text-xs font-medium text-body dark:text-body">{{ $palette[$key] ?? '#465FFF' }}</span>
+                            <span class="block text-theme-sm font-medium text-heading dark:text-white/90">{{ $color['label'] }}</span>
+                            <span class="mt-1 block text-theme-xs text-muted dark:text-muted font-normal">{{ $color['description'] }}</span>
+                            <span class="mt-2 block font-sans text-theme-xs font-normal text-body dark:text-body">{{ $palette[$key] ?? '#465FFF' }}</span>
                         </span>
                     </label>
                 @endforeach
@@ -31,7 +31,7 @@
 
         <x-filament::section heading="Pratinjau">
             <div class="flex flex-wrap items-center gap-3">
-                <button type="button" style="background-color: {{ $this->safeColor($palette['primary'] ?? '') }}; color:var(--ui-on-color)" class="inline-flex min-h-10 items-center rounded-lg px-4 text-sm font-semibold shadow-sm">
+                <button type="button" style="background-color: {{ $this->safeColor($palette['primary'] ?? '') }}; color:var(--ui-on-color)" class="inline-flex min-h-10 items-center rounded-lg px-4 shadow-sm text-theme-sm font-medium">
                     Tombol utama
                 </button>
                 @foreach ([
@@ -40,12 +40,12 @@
                     'warning' => 'Peringatan',
                     'danger' => 'Bahaya',
                 ] as $key => $label)
-                    <span style="border-color: {{ $this->safeColor($palette[$key] ?? '') }}; color: {{ $this->safeColor($palette[$key] ?? '') }}" class="rounded-full border px-3 py-1 text-xs font-semibold">
+                    <span style="border-color: {{ $this->safeColor($palette[$key] ?? '') }}; color: {{ $this->safeColor($palette[$key] ?? '') }}" class="rounded-full border px-3 py-1 text-theme-xs font-medium">
                         {{ $label }}
                     </span>
                 @endforeach
             </div>
-            <p class="mt-4 text-sm text-muted dark:text-muted">
+            <p class="mt-4 text-theme-sm text-muted dark:text-muted">
                 Nuansa terang dan gelap dibuat dari warna pilihan. Warna netral dan teks mengikuti tema TailAdmin.
             </p>
         </x-filament::section>

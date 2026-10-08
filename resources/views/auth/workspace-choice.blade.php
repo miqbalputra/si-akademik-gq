@@ -15,8 +15,8 @@
         <section class="w-full rounded-2xl border border-line bg-surface p-6 shadow-xl shadow-gray-950/10 sm:p-10">
             <a href="{{ url('/') }}" class="school-brand w-fit"><span class="school-mark">GQ</span><span><strong>Ruang GQ</strong><small>AKTIVITAS AKADEMIK</small></span></a>
             <p class="school-index mt-12">PILIH RUANG KERJA</p>
-            <h1 class="mt-4 text-3xl font-semibold tracking-tight text-heading sm:text-4xl">Assalamu'alaikum, {{ auth()->user()->name }}.</h1>
-            <p class="mt-3 max-w-2xl text-sm leading-6 text-body">Akun Anda memiliki lebih dari satu peran. Pilih kegiatan yang ingin dibuka sekarang.</p>
+            <h1 class="mt-4 text-heading ui-page-title">Assalamu'alaikum, {{ auth()->user()->name }}.</h1>
+            <p class="mt-3 max-w-2xl text-theme-sm text-body">Akun Anda memiliki lebih dari satu peran. Pilih kegiatan yang ingin dibuka sekarang.</p>
 
             @error('workspace')
                 <div class="inline-feedback inline-feedback-error mt-6" role="alert">Pilihan ruang kerja tidak tersedia untuk akun Anda.</div>
@@ -28,8 +28,8 @@
                     <button type="submit" name="workspace" value="{{ $key }}" class="group rounded-2xl border border-line bg-surface-subtle p-6 text-left transition hover:-translate-y-0.5 hover:border-success-line hover:bg-success-soft hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-success-600">
                         <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-success-soft-strong text-lg font-semibold text-success-ink" aria-hidden="true">→</span>
                         <span class="mt-5 block text-lg font-semibold text-heading">{{ $workspace['label'] }}</span>
-                        <span class="mt-2 block text-sm leading-6 text-body">{{ $workspace['description'] }}</span>
-                        <span class="mt-5 block text-xs font-semibold uppercase tracking-[.12em] text-success-ink">Buka ruang ini</span>
+                        <span class="mt-2 block text-theme-sm text-body">{{ $workspace['description'] }}</span>
+                        <span class="mt-5 block text-theme-sm font-medium text-success-ink">Buka ruang ini</span>
                     </button>
                 @endforeach
             </form>

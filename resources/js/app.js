@@ -11,7 +11,9 @@ function syncChartTheme() {
     const line = styles.getPropertyValue('--ui-line').trim();
     const surface = styles.getPropertyValue('--ui-surface').trim();
     const heading = styles.getPropertyValue('--ui-heading').trim();
-    Chart.defaults.font.family = 'Outfit, sans-serif';
+    Chart.defaults.font.family = styles.getPropertyValue('--font-outfit').trim() || 'Outfit, sans-serif';
+    Chart.defaults.font.size = 12;
+    Chart.defaults.font.lineHeight = 1.5;
     Chart.defaults.color = color;
     Chart.defaults.borderColor = line;
     Object.assign(Chart.defaults.plugins.tooltip, { backgroundColor: surface, titleColor: heading, bodyColor: color, borderColor: line, borderWidth: 1 });
@@ -28,6 +30,8 @@ function syncChartTheme() {
 }
 
 syncChartTheme();
+// Canvas labels drawn before the local variable font loads need one redraw.
+document.fonts?.ready.then(syncChartTheme);
 window.addEventListener('gq-theme-changed', syncChartTheme);
 
 const getCsrfToken = () => document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
@@ -356,19 +360,19 @@ function createNotificationElement(notification, readUrlTemplate, csrf) {
     }[notification.severity] ?? ['i', 'bg-surface-muted text-body'];
 
     const icon = document.createElement('span');
-    icon.className = `flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-semibold ${severity[1]}`;
+    icon.className = `flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-theme-xs font-medium ${severity[1]}`;
     icon.textContent = severity[0];
 
     const content = document.createElement('span');
     content.className = 'min-w-0 flex-1';
     const heading = document.createElement('span');
-    heading.className = 'block text-xs font-extrabold text-ink';
+    heading.className = 'block text-theme-sm font-medium text-ink';
     heading.textContent = `${notification.title ?? 'Notifikasi'}${notification.batch_count > 1 ? ` ×${notification.batch_count}` : ''}`;
     const body = document.createElement('span');
-    body.className = 'mt-1 block line-clamp-2 text-xs leading-5 text-muted';
+    body.className = 'mt-1 block line-clamp-2 text-theme-sm text-muted';
     body.textContent = notification.body ?? '';
     const timestamp = document.createElement('span');
-    timestamp.className = 'mt-1 block text-[11px] text-muted';
+    timestamp.className = 'mt-1 block text-theme-xs text-muted';
     timestamp.textContent = notification.created_at ?? '';
     content.append(heading, body, timestamp);
     item.append(icon, content);
@@ -416,7 +420,7 @@ function initNotifications() {
             list.replaceChildren();
             if (!notifications.length) {
                 const empty = document.createElement('p');
-                empty.className = 'px-5 py-8 text-center text-xs font-medium text-muted';
+                empty.className = 'px-5 py-8 text-center text-theme-sm text-muted';
                 empty.textContent = 'Tidak ada notifikasi baru.';
                 list.append(empty);
                 return;

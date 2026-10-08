@@ -5,6 +5,20 @@
         const key = 'ruang-gq-theme-{{ auth('admin')->id() ? (int) auth('admin')->id() : 'guest' }}';
         const paletteStyle = document.getElementById('gq-theme-palette');
 
+        // Filament loads its own Chart.js instance; use the shared font there too.
+        window.filamentChartJsGlobalPlugins = [
+            ...(window.filamentChartJsGlobalPlugins ?? []),
+            {
+                id: 'gq-outfit-typography',
+                beforeInit(chart) {
+                    chart.options.font = { ...chart.options.font, family: 'Outfit, sans-serif', size: 12, lineHeight: 1.5 };
+                    document.fonts?.ready.then(() => {
+                        if (chart.ctx) chart.update('none');
+                    });
+                },
+            },
+        ];
+
         window.addEventListener('gq-theme-palette-saved', (event) => {
             if (paletteStyle && typeof event.detail?.css === 'string' && event.detail.css.startsWith(':root{')) {
                 paletteStyle.textContent = event.detail.css;

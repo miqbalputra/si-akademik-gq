@@ -11,31 +11,31 @@
     <x-filament::section icon="heroicon-o-calendar-days" heading="Jadwal berlaku per tanggal"
         description="Susun satu pola mingguan untuk satu penugasan. Jadwal legacy tetap dipakai sampai ditinjau; koreksi hanya mengubah slot yang diharapkan pada tanggal yang dipilih.">
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%, 220px),1fr));gap:14px;">
-            <label style="display:grid;gap:6px;font-weight:600;">Penugasan (guru · kelas · mapel)
-                <select wire:model.live="assignmentId" style="{{ $selectStyle }}">
+            <label style="display:grid;gap:6px;font-size:14px;font-weight:500;text-transform:none;line-height:20px;">Penugasan (guru · kelas · mapel)
+                <select wire:model.live="assignmentId" style="{{ $selectStyle }};font-size:14px;font-weight:400;line-height:20px;">
                     @foreach ($assignments as $assignment)
                         <option value="{{ $assignment->id }}">{{ $assignmentLabel($assignment) }}</option>
                     @endforeach
                 </select>
             </label>
-            <label style="display:grid;gap:6px;font-weight:600;">Jenis perubahan
-                <select wire:model.live="changeType" style="{{ $selectStyle }}">
+            <label style="display:grid;gap:6px;font-size:14px;font-weight:500;text-transform:none;line-height:20px;">Jenis perubahan
+                <select wire:model.live="changeType" style="{{ $selectStyle }};font-size:14px;font-weight:400;line-height:20px;">
                     <option value="correction">Koreksi kesalahan</option>
                     <option value="approved">Perubahan disetujui</option>
                 </select>
             </label>
-            <label style="display:grid;gap:6px;font-weight:600;">Tanggal mulai berlaku
-                <input type="date" wire:model.live="effectiveFrom" style="{{ $inputStyle }}">
+            <label style="display:grid;gap:6px;font-size:14px;font-weight:500;text-transform:none;line-height:20px;">Tanggal mulai berlaku
+                <input type="date" wire:model.live="effectiveFrom" style="{{ $inputStyle }};font-size:14px;font-weight:400;line-height:20px;">
             </label>
-            <label style="display:grid;gap:6px;font-weight:600;">Tanggal akhir
-                <input type="date" wire:model.live="effectiveUntil" style="{{ $inputStyle }}">
-                <span style="font-size:12px;font-weight:400;color:var(--ui-muted);">Wajib untuk koreksi. Kosong pada perubahan disetujui berarti berlaku seterusnya.</span>
+            <label style="display:grid;gap:6px;font-size:14px;font-weight:500;text-transform:none;line-height:20px;">Tanggal akhir
+                <input type="date" wire:model.live="effectiveUntil" style="{{ $inputStyle }};font-size:14px;font-weight:400;line-height:20px;">
+                <span style="font-size:12px;color:var(--ui-muted);line-height:18px;font-weight:400;">Wajib untuk koreksi. Kosong pada perubahan disetujui berarti berlaku seterusnya.</span>
             </label>
-            <label style="display:grid;gap:6px;font-weight:600;">Alasan
-                <input type="text" wire:model.live="reason" maxlength="3000" placeholder="Contoh: hari dan sesi pada jadwal awal keliru" style="{{ $inputStyle }}">
+            <label style="display:grid;gap:6px;font-size:14px;font-weight:500;text-transform:none;line-height:20px;">Alasan
+                <input type="text" wire:model.live="reason" maxlength="3000" placeholder="Contoh: hari dan sesi pada jadwal awal keliru" style="{{ $inputStyle }};font-size:14px;font-weight:400;line-height:20px;">
             </label>
-            <label style="display:grid;gap:6px;font-weight:600;">Referensi pengajuan (opsional)
-                <input type="text" wire:model.live="requestReference" maxlength="120" placeholder="Nomor / tautan / nama pengajuan" style="{{ $inputStyle }}">
+            <label style="display:grid;gap:6px;font-size:14px;font-weight:500;text-transform:none;line-height:20px;">Referensi pengajuan (opsional)
+                <input type="text" wire:model.live="requestReference" maxlength="120" placeholder="Nomor / tautan / nama pengajuan" style="{{ $inputStyle }};font-size:14px;font-weight:400;line-height:20px;">
             </label>
         </div>
 
@@ -53,21 +53,21 @@
         <div style="overflow-x:auto;margin-top:16px;">
             <table style="width:100%;border-collapse:collapse;min-width:540px;">
                 <thead><tr style="background:var(--ui-surface-muted);text-align:left;">
-                    <th style="padding:10px;border-bottom:1px solid var(--ui-line-strong);">Hari</th>
-                    <th style="padding:10px;border-bottom:1px solid var(--ui-line-strong);">Sesi / Jam pelajaran</th>
-                    <th style="padding:10px;border-bottom:1px solid var(--ui-line-strong);width:90px;">Aksi</th>
+                    <th style="padding:10px;border-bottom:1px solid var(--ui-line-strong);font-size:12px;font-weight:500;text-transform:none;line-height:18px;">Hari</th>
+                    <th style="padding:10px;border-bottom:1px solid var(--ui-line-strong);font-size:12px;font-weight:500;text-transform:none;line-height:18px;">Sesi / Jam pelajaran</th>
+                    <th style="padding:10px;border-bottom:1px solid var(--ui-line-strong);width:90px;font-size:12px;font-weight:500;text-transform:none;line-height:18px;">Aksi</th>
                 </tr></thead>
                 <tbody>
                     @foreach ($weeklySlots as $index => $slot)
                         <tr wire:key="schedule-slot-{{ $index }}">
                             <td style="padding:8px;border-bottom:1px solid var(--ui-line);">
-                                <select wire:model.live="weeklySlots.{{ $index }}.day_of_week" style="{{ $selectStyle }}">
+                                <select wire:model.live="weeklySlots.{{ $index }}.day_of_week" style="{{ $selectStyle }};font-size:14px;font-weight:400;line-height:20px;">
                                     <option value="">Pilih hari</option>
                                     @foreach ($days as $day => $label)<option value="{{ $day }}">{{ $label }}</option>@endforeach
                                 </select>
                             </td>
                             <td style="padding:8px;border-bottom:1px solid var(--ui-line);">
-                                <select wire:model.live="weeklySlots.{{ $index }}.class_session_id" style="{{ $selectStyle }}">
+                                <select wire:model.live="weeklySlots.{{ $index }}.class_session_id" style="{{ $selectStyle }};font-size:14px;font-weight:400;line-height:20px;">
                                     <option value="">Pilih sesi</option>
                                     @foreach ($sessions as $session)
                                         <option value="{{ $session->id }}">Sesi {{ $session->session_name }}{{ $session->starts_at ? ' · '.substr($session->starts_at, 0, 5).'–'.substr($session->ends_at, 0, 5) : '' }}{{ $session->is_break ? ' · Istirahat' : '' }}</option>
@@ -85,14 +85,14 @@
         @error('slots') <p style="color:var(--ui-danger-ink);margin-top:8px;">{{ $message }}</p> @enderror
         <div style="margin-top:12px;"><x-filament::button color="gray" icon="heroicon-o-plus" wire:click="addSlot">Tambah sesi mingguan</x-filament::button></div>
 
-        <label style="display:grid;gap:6px;margin-top:20px;font-weight:600;">Tinjau satu log jadwal lama (opsional)
-            <select wire:model.live="legacyLogId" style="{{ $selectStyle }}">
+        <label style="display:grid;gap:6px;margin-top:20px;font-size:14px;font-weight:500;text-transform:none;line-height:20px;">Tinjau satu log jadwal lama (opsional)
+            <select wire:model.live="legacyLogId" style="{{ $selectStyle }};font-size:14px;font-weight:400;line-height:20px;">
                 <option value="">Tidak mengaitkan log lama</option>
                 @foreach ($pendingLogs as $log)
                     <option value="{{ $log->id }}">#{{ $log->id }} · {{ $log->created_at?->locale('id')->translatedFormat('d M Y') }} · {{ $log->change_summary }}</option>
                 @endforeach
             </select>
-            <span style="font-size:12px;font-weight:400;color:var(--ui-muted);">Log lama tidak menentukan tanggal berlaku otomatis. Pilih jenis dan tanggal di atas, lalu tandai log yang ditinjau.</span>
+            <span style="font-size:12px;color:var(--ui-muted);line-height:18px;font-weight:400;">Log lama tidak menentukan tanggal berlaku otomatis. Pilih jenis dan tanggal di atas, lalu tandai log yang ditinjau.</span>
         </label>
         @error('legacyLogId') <p style="color:var(--ui-danger-ink);margin-top:8px;">{{ $message }}</p> @enderror
     </x-filament::section>
@@ -106,7 +106,7 @@
         <x-filament::section style="margin-top:16px;" icon="heroicon-o-magnifying-glass" heading="Pratinjau laporan slot kosong" description="Periode perbandingan: {{ $preview['range_label'] }}. Jurnal terisi tetap dihitung sebagai terisi.">
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%, 260px),1fr));gap:18px;">
                 <div>
-                    <h3 style="font-weight:700;margin-bottom:8px;color:var(--ui-success-ink);">Slot kosong yang akan hilang ({{ count($preview['gone']) }})</h3>
+                    <h3 style="margin-bottom:8px;color:var(--ui-success-ink);font-size:18px;font-weight:600;line-height:28px;">Slot kosong yang akan hilang ({{ count($preview['gone']) }})</h3>
                     @forelse ($preview['gone'] as $row)
                         <div style="padding:10px 12px;margin-bottom:6px;border:1px solid var(--ui-success-line);border-radius:8px;background:var(--ui-success-soft);">
                             <strong>{{ $row['date_label'] }}</strong> · {{ $row['session'] }} @if($row['session_time']) ({{ $row['session_time'] }}) @endif<br>
@@ -115,7 +115,7 @@
                     @empty <p style="color:var(--ui-muted);">Tidak ada slot kosong yang hilang.</p> @endforelse
                 </div>
                 <div>
-                    <h3 style="font-weight:700;margin-bottom:8px;color:var(--ui-warning-ink);">Slot kosong yang akan muncul ({{ count($preview['appeared']) }})</h3>
+                    <h3 style="margin-bottom:8px;color:var(--ui-warning-ink);font-size:18px;font-weight:600;line-height:28px;">Slot kosong yang akan muncul ({{ count($preview['appeared']) }})</h3>
                     @forelse ($preview['appeared'] as $row)
                         <div style="padding:10px 12px;margin-bottom:6px;border:1px solid var(--color-warning-400);border-radius:8px;background:var(--ui-warning-soft);">
                             <strong>{{ $row['date_label'] }}</strong> · {{ $row['session'] }} @if($row['session_time']) ({{ $row['session_time'] }}) @endif<br>
@@ -134,11 +134,11 @@
         <div style="overflow-x:auto;">
             <table style="width:100%;border-collapse:collapse;min-width:860px;">
                 <thead><tr style="background:var(--ui-surface-muted);text-align:left;">
-                    <th style="padding:10px;border-bottom:1px solid var(--ui-line-strong);">Penugasan</th>
-                    <th style="padding:10px;border-bottom:1px solid var(--ui-line-strong);">Hari / Sesi</th>
-                    <th style="padding:10px;border-bottom:1px solid var(--ui-line-strong);">Berlaku</th>
-                    <th style="padding:10px;border-bottom:1px solid var(--ui-line-strong);">Status</th>
-                    <th style="padding:10px;border-bottom:1px solid var(--ui-line-strong);">Jenis / alasan</th>
+                    <th style="padding:10px;border-bottom:1px solid var(--ui-line-strong);font-size:12px;font-weight:500;text-transform:none;line-height:18px;">Penugasan</th>
+                    <th style="padding:10px;border-bottom:1px solid var(--ui-line-strong);font-size:12px;font-weight:500;text-transform:none;line-height:18px;">Hari / Sesi</th>
+                    <th style="padding:10px;border-bottom:1px solid var(--ui-line-strong);font-size:12px;font-weight:500;text-transform:none;line-height:18px;">Berlaku</th>
+                    <th style="padding:10px;border-bottom:1px solid var(--ui-line-strong);font-size:12px;font-weight:500;text-transform:none;line-height:18px;">Status</th>
+                    <th style="padding:10px;border-bottom:1px solid var(--ui-line-strong);font-size:12px;font-weight:500;text-transform:none;line-height:18px;">Jenis / alasan</th>
                 </tr></thead>
                 <tbody>
                     @forelse ($versions as $version)

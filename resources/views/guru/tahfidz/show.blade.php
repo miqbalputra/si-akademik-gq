@@ -1,7 +1,7 @@
 <x-layouts.portal title="{{ $halaqah->name }} — Input Pekanan" portalLabel="Portal Guru" breadcrumb="Input Tahfidz Pekanan">
     <x-slot name="navLinks">
-        <a href="{{ route('guru.tahfidz.uas', $halaqah) }}" class="btn btn-outline btn-sm hover:bg-surface-muted transition-colors">Mode UAS</a>
-        <a href="{{ route('guru.tahfidz.index') }}" class="btn btn-outline btn-sm hidden sm:inline-flex hover:bg-surface-muted transition-colors">
+        <a href="{{ route('guru.tahfidz.uas', $halaqah) }}" class="btn btn-outline btn-sm hover:bg-surface-muted transition-colors text-theme-sm font-medium">Mode UAS</a>
+        <a href="{{ route('guru.tahfidz.index') }}" class="btn btn-outline btn-sm hidden sm:inline-flex hover:bg-surface-muted transition-colors text-theme-sm font-medium">
             Daftar Halaqah
         </a>
     </x-slot>
@@ -12,11 +12,11 @@
         <div class="absolute -left-10 -bottom-10 w-40 h-40 bg-warning-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20"></div>
         <div class="relative flex items-start justify-between gap-4 flex-wrap z-10">
             <div>
-                <div class="inline-flex items-center gap-1.5 bg-gradient-to-r from-warning-soft-strong to-warning-soft-strong text-warning-ink rounded-full px-3 py-1 mb-3 text-[10px] font-semibold uppercase tracking-wider shadow-sm border border-warning-line">
+                <div class="inline-flex items-center gap-1.5 bg-gradient-to-r from-warning-soft-strong to-warning-soft-strong text-warning-ink rounded-full px-3 py-1 mb-3 shadow-sm border border-warning-line text-theme-xs font-medium">
                     Rekap Pekanan
                 </div>
-                <h1 class="text-3xl font-semibold text-heading leading-tight mb-1">{{ $halaqah->name }}</h1>
-                <p class="text-sm font-semibold text-muted flex items-center gap-2">
+                <h1 class="text-heading mb-1 ui-page-title">{{ $halaqah->name }}</h1>
+                <p class="text-theme-sm font-normal text-muted flex items-center gap-2">
                     <svg class="w-4 h-4 text-soft" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                     {{ $halaqah->teacher?->name }} &middot; {{ $halaqah->academicTerm?->name }}
                 </p>
@@ -25,7 +25,7 @@
     </header>
 
     @if (session('status'))
-        <div class="mb-6 bg-success-soft border border-success-line rounded-2xl p-4 text-sm font-semibold text-success-ink flex items-center gap-3 shadow-sm animate-fade-in-up">
+        <div class="mb-6 bg-success-soft border border-success-line rounded-2xl p-4 text-theme-sm font-medium text-success-ink flex items-center gap-3 shadow-sm animate-fade-in-up">
             <div class="flex-shrink-0 w-8 h-8 flex items-center justify-center bg-success-soft-strong rounded-full text-success-ink">
                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
             </div>
@@ -37,7 +37,7 @@
         <div class="flex flex-wrap gap-2 mb-6 animate-fade-in-up" style="animation-delay:50ms;">
             @foreach ($availableMonths as $month)
                 <a href="?month={{ $month['number'] }}" 
-                   class="px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 transform hover:-translate-y-0.5 {{ $selectedMonth === $month['number'] ? 'bg-gradient-to-r from-warning-500 to-warning-500 text-white shadow-lg shadow-warning-500/30 border-transparent' : 'bg-surface text-muted border border-line hover:border-warning-line hover:text-warning-ink hover:shadow-md' }}">
+                   class="px-5 py-2.5 rounded-xl font-medium text-theme-sm transition-all duration-300 transform hover:-translate-y-0.5 {{ $selectedMonth === $month['number'] ? 'bg-gradient-to-r from-warning-500 to-warning-500 text-white shadow-lg shadow-warning-500/30 border-transparent' : 'bg-surface text-muted border border-line hover:border-warning-line hover:text-warning-ink hover:shadow-md' }}">
                     {{ $month['label'] }}
                 </a>
             @endforeach
@@ -48,7 +48,7 @@
                 <div class="w-16 h-16 bg-surface-muted rounded-2xl flex items-center justify-center mb-4 text-soft">
                     <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" /></svg>
                 </div>
-                <p class="text-sm font-bold text-muted">Belum ada pekan untuk bulan ini. PJ Tahfidz perlu mengatur pekan terlebih dahulu.</p>
+                <p class="text-theme-sm font-normal text-muted">Belum ada pekan untuk bulan ini. PJ Tahfidz perlu mengatur pekan terlebih dahulu.</p>
             </div>
         @else
             {{-- Score Table --}}
@@ -58,24 +58,24 @@
                     <div class="flex items-center justify-center w-8 h-8 rounded-full bg-warning-soft-strong text-warning-ink">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" /></svg>
                     </div>
-                    <span class="text-xs font-bold text-body">Klik kotak pada tiap pekan untuk mengisi surah, jumlah sabaq, nilai, dan catatan hafalan santri.</span>
+                    <span class="text-theme-xs font-normal text-body">Klik kotak pada tiap pekan untuk mengisi surah, jumlah sabaq, nilai, dan catatan hafalan santri.</span>
                 </div>
                 
                 <div class="overflow-x-auto w-full pb-2">
-                    <table class="w-full text-sm text-left">
+                    <table class="w-full text-theme-sm text-left">
                         <thead>
                             <tr class="bg-surface-subtle/80 border-b-2 border-line">
-                                <th class="hidden sm:table-cell px-5 py-4 text-xs font-semibold text-soft uppercase tracking-wider sticky left-0 z-20 bg-surface-subtle/90 backdrop-blur-sm border-r border-line w-16">No</th>
-                                <th class="px-5 py-4 text-xs font-semibold text-soft uppercase tracking-wider sticky left-0 sm:left-16 z-20 bg-surface-subtle/90 backdrop-blur-sm border-r border-line min-w-[150px] sm:min-w-[200px] shadow-[4px_0_12px_rgba(0,0,0,0.02)]">Nama Santri</th>
+                                <th class="hidden sm:table-cell px-5 py-4 text-soft sticky left-0 z-20 bg-surface-subtle/90 backdrop-blur-sm border-r border-line w-16 text-theme-xs font-medium">No</th>
+                                <th class="px-5 py-4 text-soft sticky left-0 sm:left-16 z-20 bg-surface-subtle/90 backdrop-blur-sm border-r border-line min-w-[150px] sm:min-w-[200px] shadow-[4px_0_12px_rgba(0,0,0,0.02)] text-theme-xs font-medium">Nama Santri</th>
                                 @foreach ($monthWeeks as $week)
-                                    <th class="px-4 py-4 text-center text-[11px] font-semibold text-muted uppercase tracking-wider min-w-[180px] border-r border-line last:border-r-0">
+                                    <th class="px-4 py-4 text-center text-muted min-w-[180px] border-r border-line last:border-r-0 text-theme-xs font-medium">
                                         <div class="inline-flex flex-col items-center">
                                             <span class="text-warning-ink">{{ $week->date_label ?? 'Pekan '.$week->week_number }}</span>
-                                            <span class="text-[9px] text-soft mt-0.5 font-bold">Ketuk untuk isi</span>
+                                            <span class="text-theme-xs text-soft mt-0.5 font-normal">Ketuk untuk isi</span>
                                         </div>
                                     </th>
                                 @endforeach
-                                <th class="px-5 py-4 text-center text-xs font-semibold text-warning-ink uppercase tracking-wider bg-warning-soft/90 border-l border-warning-line min-w-[120px]">
+                                <th class="px-5 py-4 text-center text-warning-ink bg-warning-soft/90 border-l border-warning-line min-w-[120px] text-theme-xs font-medium">
                                     Rekap<br>Bulan Ini
                                 </th>
                             </tr>
@@ -83,8 +83,8 @@
                         <tbody class="divide-y divide-line">
                             @foreach ($members as $member)
                                 <tr class="group hover:bg-surface-subtle/50 transition-colors {{ $loop->even ? 'bg-surface-subtle/30' : 'bg-surface' }}">
-                                    <td class="hidden sm:table-cell px-5 py-4 text-xs font-bold text-soft sticky left-0 z-10 bg-inherit border-r border-line">{{ $loop->iteration }}</td>
-                                    <td class="px-5 py-4 font-bold text-heading sticky left-0 sm:left-16 z-10 bg-inherit border-r border-line shadow-[4px_0_12px_rgba(0,0,0,0.02)] group-hover:text-warning-ink transition-colors">
+                                    <td class="hidden sm:table-cell px-5 py-4 text-soft sticky left-0 z-10 bg-inherit border-r border-line text-theme-sm">{{ $loop->iteration }}</td>
+                                    <td class="px-5 py-4 font-medium text-heading sticky left-0 sm:left-16 z-10 bg-inherit border-r border-line shadow-[4px_0_12px_rgba(0,0,0,0.02)] group-hover:text-warning-ink transition-colors">
                                         {{ $member->student->name }}
                                     </td>
                                     @foreach ($monthWeeks as $week)
@@ -97,12 +97,12 @@
                                                 
                                                 <div x-html="summaryHtml" class="w-full flex flex-col items-center justify-center gap-1"></div>
                                                 <div class="mt-2 flex items-center gap-1" @click.stop>
-                                                    <select x-model="category" class="h-8 min-w-0 rounded-lg border border-line bg-surface px-1 text-[10px] font-bold text-body" aria-label="Jenis setoran">
+                                                    <select x-model="category" class="h-8 min-w-0 rounded-lg border border-line bg-surface px-1 text-body text-theme-sm font-normal" aria-label="Jenis setoran">
                                                         <option value="sabaq">Sabaq</option>
                                                         <option value="murojaah">Murojaah</option>
                                                     </select>
-                                                    <input x-model="score" type="number" min="0" max="100" inputmode="numeric" placeholder="Nilai" :disabled="category === 'murojaah'" class="h-8 w-14 rounded-lg border border-line bg-surface px-1 text-center text-[10px] font-semibold text-body disabled:bg-surface-muted" aria-label="Nilai cepat">
-                                                    <button type="button" @click="quickSave()" class="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-950 text-xs font-semibold text-white" aria-label="Simpan input cepat">✓</button>
+                                                    <input x-model="score" type="number" min="0" max="100" inputmode="numeric" placeholder="Nilai" :disabled="category === 'murojaah'" class="h-8 w-14 rounded-lg border border-line bg-surface px-1 text-center text-body disabled:bg-surface-muted text-theme-sm font-normal" aria-label="Nilai cepat">
+                                                    <button type="button" @click="quickSave()" class="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-950 text-white text-theme-sm font-medium" aria-label="Simpan input cepat">✓</button>
                                                 </div>
                                                 
                                                 <!-- Loading Indicator -->
@@ -139,8 +139,8 @@
                                                         
                                                         <div class="px-6 py-5 border-b border-line bg-surface-subtle/80 flex justify-between items-center sticky top-0 z-10 backdrop-blur-md">
                                                             <div>
-                                                                <h3 class="text-lg font-semibold text-heading leading-tight">Input Hafalan Pekanan</h3>
-                                                                <p class="text-xs font-bold text-muted mt-1">{{ $member->student->name }} &middot; <span class="text-warning-ink">{{ $week->date_label ?? 'Pekan '.$week->week_number }}</span></p>
+                                                                <h3 class="text-heading ui-card-title">Input Hafalan Pekanan</h3>
+                                                                <p class="text-theme-xs font-normal text-muted mt-1">{{ $member->student->name }} &middot; <span class="text-warning-ink">{{ $week->date_label ?? 'Pekan '.$week->week_number }}</span></p>
                                                             </div>
                                                             <button type="button" @click="cancelAndClose()" class="p-2 bg-surface rounded-full text-soft hover:text-body hover:bg-surface-muted transition-colors shadow-sm border border-line">
                                                                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
@@ -150,8 +150,8 @@
                                                         <div class="p-6 space-y-6 overflow-y-auto">
                                                             <div x-show="validationError" x-text="validationError" class="inline-feedback inline-feedback-error" role="alert"></div>
                                                             <div class="space-y-1.5">
-                                                                <label class="text-[10px] font-semibold text-muted uppercase tracking-wider">Jenis Setoran</label>
-                                                                <select x-model="category" class="w-full rounded-xl border border-line bg-surface px-4 py-2.5 text-sm font-bold text-body focus:border-warning-500 focus:outline-none focus:ring-2 focus:ring-warning-500/20">
+                                                                <label class="text-muted ui-form-label">Jenis Setoran</label>
+                                                                <select x-model="category" class="w-full rounded-xl border border-line bg-surface px-4 py-2.5 text-body focus:border-warning-500 focus:outline-none focus:ring-2 focus:ring-warning-500/20 text-theme-sm font-normal">
                                                                     <option value="sabaq">Sabaq — Hafalan baru</option>
                                                                     <option value="murojaah">Murojaah — Pengulangan</option>
                                                                 </select>
@@ -159,8 +159,8 @@
                                                             <!-- Dari -->
                                                             <div class="grid grid-cols-3 gap-4 bg-surface-subtle p-4 rounded-2xl border border-line">
                                                                 <div class="col-span-2 space-y-1.5">
-                                                                    <label class="text-[10px] font-semibold text-muted uppercase tracking-wider">Mulai Surat <span class="text-danger-500">*</span></label>
-                                                                    <select class="w-full px-4 py-2.5 bg-surface border border-line rounded-xl text-sm font-bold text-body focus:outline-none focus:ring-2 focus:ring-warning-500/20 focus:border-warning-500 transition-all shadow-sm" x-model="startSurah">
+                                                                    <label class="text-muted ui-form-label">Mulai Surat <span class="text-danger-500">*</span></label>
+                                                                    <select class="w-full px-4 py-2.5 bg-surface border border-line rounded-xl text-body focus:outline-none focus:ring-2 focus:ring-warning-500/20 focus:border-warning-500 transition-all shadow-sm text-theme-sm font-normal" x-model="startSurah">
                                                                         <option value="">- Pilih Surah -</option>
                                                                         <option value="-">- (Murojaah / Kosong)</option>
                                                                         <template x-for="surah in quranSurahs" :key="surah">
@@ -169,16 +169,16 @@
                                                                     </select>
                                                                 </div>
                                                                     <div class="space-y-1.5">
-                                                                        <label class="text-[10px] font-semibold text-muted uppercase tracking-wider">Ayat <span class="text-danger-500">*</span></label>
-                                                                        <input type="text" class="w-full px-4 py-2.5 bg-surface border border-line rounded-xl text-sm font-bold text-body focus:outline-none focus:ring-2 focus:ring-warning-500/20 focus:border-warning-500 transition-all shadow-sm disabled:opacity-50 disabled:bg-surface-muted" x-model="startAyat" x-on:input="startAyat = startAyat.replace(/[^0-9]/g, '')" :disabled="startSurah === '-'" placeholder="Mis: 1">
+                                                                        <label class="text-muted ui-form-label">Ayat <span class="text-danger-500">*</span></label>
+                                                                        <input type="text" class="w-full px-4 py-2.5 bg-surface border border-line rounded-xl text-body focus:outline-none focus:ring-2 focus:ring-warning-500/20 focus:border-warning-500 transition-all shadow-sm disabled:opacity-50 disabled:bg-surface-muted text-theme-sm font-normal" x-model="startAyat" x-on:input="startAyat = startAyat.replace(/[^0-9]/g, '')" :disabled="startSurah === '-'" placeholder="Mis: 1">
                                                                     </div>
                                                             </div>
                                                             
                                                             <!-- Sampai -->
                                                             <div class="grid grid-cols-3 gap-4 bg-surface-subtle p-4 rounded-2xl border border-line">
                                                                 <div class="col-span-2 space-y-1.5">
-                                                                    <label class="text-[10px] font-semibold text-muted uppercase tracking-wider">Sampai Surat <span class="text-danger-500">*</span></label>
-                                                                    <select class="w-full px-4 py-2.5 bg-surface border border-line rounded-xl text-sm font-bold text-body focus:outline-none focus:ring-2 focus:ring-warning-500/20 focus:border-warning-500 transition-all shadow-sm" x-model="endSurah">
+                                                                    <label class="text-muted ui-form-label">Sampai Surat <span class="text-danger-500">*</span></label>
+                                                                    <select class="w-full px-4 py-2.5 bg-surface border border-line rounded-xl text-body focus:outline-none focus:ring-2 focus:ring-warning-500/20 focus:border-warning-500 transition-all shadow-sm text-theme-sm font-normal" x-model="endSurah">
                                                                         <option value="">- Pilih Surah -</option>
                                                                         <option value="-">- (Murojaah / Kosong)</option>
                                                                         <template x-for="surah in quranSurahs" :key="surah">
@@ -187,37 +187,37 @@
                                                                     </select>
                                                                 </div>
                                                                     <div class="space-y-1.5">
-                                                                        <label class="text-[10px] font-semibold text-muted uppercase tracking-wider">Ayat <span class="text-danger-500">*</span></label>
-                                                                        <input type="text" class="w-full px-4 py-2.5 bg-surface border border-line rounded-xl text-sm font-bold text-body focus:outline-none focus:ring-2 focus:ring-warning-500/20 focus:border-warning-500 transition-all shadow-sm disabled:opacity-50 disabled:bg-surface-muted" x-model="endAyat" x-on:input="endAyat = endAyat.replace(/[^0-9]/g, '')" :disabled="endSurah === '-'" placeholder="Mis: 5">
+                                                                        <label class="text-muted ui-form-label">Ayat <span class="text-danger-500">*</span></label>
+                                                                        <input type="text" class="w-full px-4 py-2.5 bg-surface border border-line rounded-xl text-body focus:outline-none focus:ring-2 focus:ring-warning-500/20 focus:border-warning-500 transition-all shadow-sm disabled:opacity-50 disabled:bg-surface-muted text-theme-sm font-normal" x-model="endAyat" x-on:input="endAyat = endAyat.replace(/[^0-9]/g, '')" :disabled="endSurah === '-'" placeholder="Mis: 5">
                                                                     </div>
                                                             </div>
                                                             
                                                             <!-- Sabaq & Nilai -->
                                                             <div class="grid grid-cols-2 gap-4">
                                                                 <div class="space-y-1.5">
-                                                                    <label class="text-[10px] font-semibold text-muted uppercase tracking-wider">Jml Sabaq (Baris) <span class="text-danger-500">*</span></label>
+                                                                    <label class="text-muted ui-form-label">Jml Sabaq (Baris) <span class="text-danger-500">*</span></label>
                                                                     <div class="relative">
-                                                                        <input type="number" min="1" inputmode="numeric" class="w-full px-4 py-2.5 bg-surface border border-line rounded-xl text-sm font-bold text-body focus:outline-none focus:ring-2 focus:ring-warning-500/20 focus:border-warning-500 transition-all shadow-sm disabled:opacity-50 disabled:bg-surface-muted" x-model="baris" placeholder="Mis: 18" :disabled="category === 'murojaah'">
-                                                                        <div class="absolute -bottom-5 left-2 text-[10px] font-semibold text-warning-ink" x-text="formattedSabaq"></div>
+                                                                        <input type="number" min="1" inputmode="numeric" class="w-full px-4 py-2.5 bg-surface border border-line rounded-xl text-body focus:outline-none focus:ring-2 focus:ring-warning-500/20 focus:border-warning-500 transition-all shadow-sm disabled:opacity-50 disabled:bg-surface-muted text-theme-sm font-normal" x-model="baris" placeholder="Mis: 18" :disabled="category === 'murojaah'">
+                                                                        <div class="absolute -bottom-5 left-2 text-theme-xs font-normal text-warning-ink" x-text="formattedSabaq"></div>
                                                                     </div>
                                                                 </div>
                                                                     <div class="space-y-1.5">
-                                                                        <label class="text-[10px] font-semibold text-muted uppercase tracking-wider">Nilai (1-100) <span class="text-danger-500">*</span></label>
-                                                                        <input type="text" class="w-full px-4 py-2.5 bg-surface border border-line rounded-xl text-sm font-bold text-body focus:outline-none focus:ring-2 focus:ring-warning-500/20 focus:border-warning-500 transition-all shadow-sm disabled:opacity-50 disabled:bg-surface-muted" x-model="score" x-on:input="score = score.replace(/[^0-9]/g, '')" :disabled="category === 'murojaah'" placeholder="Mis: 85">
+                                                                        <label class="text-muted ui-form-label">Nilai (1-100) <span class="text-danger-500">*</span></label>
+                                                                        <input type="text" class="w-full px-4 py-2.5 bg-surface border border-line rounded-xl text-body focus:outline-none focus:ring-2 focus:ring-warning-500/20 focus:border-warning-500 transition-all shadow-sm disabled:opacity-50 disabled:bg-surface-muted text-theme-sm font-normal" x-model="score" x-on:input="score = score.replace(/[^0-9]/g, '')" :disabled="category === 'murojaah'" placeholder="Mis: 85">
                                                                     </div>
                                                             </div>
                                                             
                                                             <!-- Catatan -->
                                                             <div class="space-y-1.5 pt-2">
-                                                                <label class="text-[10px] font-semibold text-muted uppercase tracking-wider">Catatan Evaluasi (Opsional)</label>
-                                                                <input type="text" class="w-full px-4 py-2.5 bg-surface border border-line rounded-xl text-sm font-bold text-body focus:outline-none focus:ring-2 focus:ring-warning-500/20 focus:border-warning-500 transition-all shadow-sm" x-model="notes" placeholder="Tuliskan evaluasi hafalan santri...">
+                                                                <label class="text-muted ui-form-label">Catatan Evaluasi (Opsional)</label>
+                                                                <input type="text" class="w-full px-4 py-2.5 bg-surface border border-line rounded-xl text-body focus:outline-none focus:ring-2 focus:ring-warning-500/20 focus:border-warning-500 transition-all shadow-sm text-theme-sm font-normal" x-model="notes" placeholder="Tuliskan evaluasi hafalan santri...">
                                                             </div>
                                                         </div>
                                                         <div class="px-6 py-4 border-t border-line bg-surface-subtle/80 flex justify-between items-center mt-auto gap-2">
-                                                            <button type="button" @click="clearForm()" class="px-4 py-2 bg-danger-soft text-danger-ink rounded-xl text-xs font-bold hover:bg-danger-soft-strong transition-colors">Kosongkan</button>
+                                                            <button type="button" @click="clearForm()" class="px-4 py-2 bg-danger-soft text-danger-ink rounded-xl hover:bg-danger-soft-strong transition-colors text-theme-sm font-medium">Kosongkan</button>
                                                             <div class="flex gap-2">
-                                                                <button type="button" @click="cancelAndClose()" class="px-4 py-2.5 bg-surface text-body border border-line rounded-xl text-sm font-bold hover:bg-surface-subtle transition-colors">Batal</button>
-                                                                <button type="button" @click="closeAndSave()" class="px-6 py-2.5 bg-gray-900 text-white rounded-xl text-sm font-bold hover:bg-gray-800 transition-colors shadow-md shadow-gray-900/20">
+                                                                <button type="button" @click="cancelAndClose()" class="px-4 py-2.5 bg-surface text-body border border-line rounded-xl hover:bg-surface-subtle transition-colors text-theme-sm font-medium">Batal</button>
+                                                                <button type="button" @click="closeAndSave()" class="px-6 py-2.5 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-colors shadow-md shadow-gray-900/20 text-theme-sm font-medium">
                                                                     Simpan
                                                                 </button>
                                                             </div>
@@ -232,12 +232,12 @@
                                         @php $recap = $monthlyRecaps->get($member->id); @endphp
                                         @if($recap && ($recap->average_score !== null || $recap->sabaq_monthly_baris > 0))
                                             <div class="flex flex-col items-center justify-center gap-1">
-                                                <div class="text-[9px] font-semibold text-warning-ink/70 uppercase tracking-wider">Rata-rata</div>
-                                                <div class="text-sm font-semibold text-warning-ink">{{ $recap->average_score ?? '-' }}</div>
-                                                <div class="text-[9px] font-bold text-warning-ink mt-1 bg-warning-soft-strong/50 px-2 py-0.5 rounded-full border border-warning-line/50">{{ $recap->sabaq_monthly ?? '0 Baris' }}</div>
+                                                <div class="text-theme-xs font-normal text-warning-ink/70 uppercase">Rata-rata</div>
+                                                <div class="text-theme-sm font-medium text-warning-ink">{{ $recap->average_score ?? '-' }}</div>
+                                                <div class="text-warning-ink mt-1 bg-warning-soft-strong/50 px-2 py-0.5 rounded-full border border-warning-line/50 text-theme-xs font-medium">{{ $recap->sabaq_monthly ?? '0 Baris' }}</div>
                                             </div>
                                         @else
-                                            <div class="text-xs font-bold text-warning-ink/30">-</div>
+                                            <div class="text-theme-xs font-normal text-warning-ink/30">-</div>
                                         @endif
                                     </td>
                                 </tr>
@@ -248,8 +248,8 @@
             </div>
 
             <div class="sticky-action-bar mb-10 flex items-center justify-between gap-3 p-4 sm:p-5">
-                <div><p class="text-sm font-semibold text-heading">Simpan otomatis aktif</p><p class="mt-1 text-xs font-medium text-muted">Perubahan tersimpan setelah Anda menekan tombol simpan pada tiap kotak.</p></div>
-                <span class="status-badge status-badge-success">Tersinkron</span>
+                <div><p class="text-theme-sm font-medium text-heading">Simpan otomatis aktif</p><p class="mt-1 text-theme-xs font-normal text-muted">Perubahan tersimpan setelah Anda menekan tombol simpan pada tiap kotak.</p></div>
+                <span class="status-badge status-badge-success text-theme-xs font-medium">Tersinkron</span>
             </div>
         @endif
 
@@ -496,20 +496,20 @@
                             return `
                                 <div class="text-soft group-hover/box:text-warning-400 transition-colors flex flex-col items-center">
                                     <svg class="w-5 h-5 mb-1 opacity-50 group-hover/box:opacity-100" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
-                                    <span class="text-[10px] font-bold">Isi Data</span>
+                                    <span class="text-theme-xs font-normal">Isi Data</span>
                                 </div>
                             `;
                         }
                         
                         let parts = [];
                         if (this.combinedSurahAyat) {
-                            parts.push(`<span class="font-bold text-heading text-[11px] leading-tight break-words max-w-[150px] line-clamp-2">${this.combinedSurahAyat}</span>`);
+                            parts.push(`<span class="font-normal text-heading text-theme-xs break-words max-w-[150px] line-clamp-2">${this.combinedSurahAyat}</span>`);
                         }
                         if (this.formattedSabaq) {
-                            parts.push(`<span class="text-warning-ink font-bold text-[9px] uppercase tracking-wider">${this.formattedSabaq}</span>`);
+                            parts.push(`<span class="text-warning-ink font-normal text-theme-xs uppercase">${this.formattedSabaq}</span>`);
                         }
                         if (this.score) {
-                            parts.push(`<span class="inline-block mt-1 bg-gradient-to-r from-warning-soft-strong to-warning-soft-strong text-warning-ink px-2 py-0.5 rounded border border-warning-line text-[10px] font-semibold shadow-sm">Nilai: ${this.score}</span>`);
+                            parts.push(`<span class="inline-block mt-1 bg-gradient-to-r from-warning-soft-strong to-warning-soft-strong text-warning-ink px-2 py-0.5 rounded border border-warning-line text-theme-xs font-normal shadow-sm">Nilai: ${this.score}</span>`);
                         }
                         return parts.join('');
                     }

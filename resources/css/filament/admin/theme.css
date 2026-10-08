@@ -1,6 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap') layer(base);
 @import '../../../../vendor/filament/filament/resources/css/theme.css';
 @import '../../ui-tokens.css';
+@import '../../ui-typography.css';
 
 @source '../../../../app/Filament/**/*.php';
 @source '../../../../resources/views/filament/**/*.blade.php';
@@ -9,7 +9,6 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-    --font-sans: 'Outfit', ui-sans-serif, system-ui, sans-serif;
     --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
     --color-primary-50: #ecf3ff;
     --color-primary-100: #dde9ff;
@@ -37,17 +36,19 @@
     display: block;
     padding: 0 1rem .75rem;
     color: #98a2b3;
-    font-size: .62rem;
-    font-weight: 700;
-    letter-spacing: .1em;
+    font-size: 12px;
+    line-height: 18px;
+    font-weight: 400;
+    letter-spacing: normal;
     content: 'RUANG GQ · SEKOLAH';
 }
 
 .fi-sidebar-group-label {
     color: #667085;
-    font-size: .67rem;
-    font-weight: 700;
-    letter-spacing: .08em;
+    font-size: 12px;
+    line-height: 20px;
+    font-weight: 400;
+    letter-spacing: normal;
     text-transform: uppercase;
 }
 
@@ -76,32 +77,55 @@
 
 .fi-sidebar-item-active .fi-sidebar-item-icon { color: var(--color-primary-600); }
 .fi-topbar { border-bottom: 1px solid #e4e7ec; background: rgb(255 255 255 / .94); backdrop-filter: blur(12px); }
-.fi-page-header-heading { color: #101828; letter-spacing: -.035em; }
+.fi-header-heading { color: #101828; font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: normal; }
+.fi-header-subheading { font-size: 14px; line-height: 20px; font-weight: 400; letter-spacing: normal; }
+.fi-breadcrumbs li { font-size: 14px; line-height: 20px; font-weight: 400; letter-spacing: normal; }
 .fi-section, .fi-ta, .fi-wi-stats-overview-stat, .fi-modal-window {
     border-color: #e4e7ec;
     border-radius: .875rem;
     background: #fff;
     box-shadow: 0 1px 2px rgb(16 24 40 / .05);
 }
-.fi-section-header-heading, .fi-ta-header-heading { letter-spacing: -.02em; }
-.fi-btn { border-radius: .625rem; font-weight: 600; }
+.fi-section-header-heading { font-size: 16px; line-height: 24px; font-weight: 500; letter-spacing: normal; }
+.fi-ta-header-heading, .fi-wi-chart .fi-section-header-heading, .fi-wi-stats-overview .fi-section-header-heading, .fi-wi-account-welcome { font-size: 18px; line-height: 28px; font-weight: 600; letter-spacing: normal; }
+.fi-btn { border-radius: .625rem; font-size: 14px; line-height: 20px; font-weight: 500; }
+.fi-sidebar-item-label, .fi-dropdown-list-item-label { font-size: 14px; line-height: 20px; font-weight: 500; }
+.fi-input, .fi-select-input, .fi-fo-textarea { font-size: 14px; line-height: 20px; font-weight: 400; }
+.fi-ta-text-item { font-size: 14px; line-height: 20px; font-weight: 400; }
+.fi-ta-text-item:is(.fi-font-medium, .fi-font-semibold, .fi-font-bold) { font-weight: 500; }
+.fi-ta-text-item.fi-size-xs, .fi-ta-text-description { font-size: 12px; line-height: 18px; font-weight: 400; }
+:is(.fi-ta-cell-name, .fi-ta-cell-title, .fi-ta-cell-student-name, .fi-ta-cell-teacher-name, .fi-ta-cell-guardian-name, .fi-ta-cell-user-name, .fi-ta-cell-classroom-name, .fi-ta-cell-classroom-term-name, .fi-ta-cell-halaqah-name, .fi-ta-cell-subject-name) .fi-ta-text-item:not(.fi-size-xs) { font-weight: 500; }
+.fi-badge { font-size: 12px; line-height: 18px; font-weight: 500; }
+.fi-wi-stats-overview-stat-value { font-size: 30px; line-height: 38px; font-weight: 700; letter-spacing: normal; }
+.fi-wi-stats-overview-stat-label { font-size: 14px; line-height: 20px; font-weight: 400; }
+.fi-wi-stats-overview-stat-description { font-size: 12px; line-height: 18px; font-weight: 400; }
+.fi-modal-heading { font-size: 30px; line-height: 38px; font-weight: 600; letter-spacing: normal; }
+.fi-modal-description { font-size: 14px; line-height: 24px; font-weight: 400; }
+.fi-simple-header-heading { font-size: 30px; line-height: 38px; font-weight: 600; letter-spacing: normal; }
+@media (min-width: 640px) { .fi-simple-header-heading { font-size: 36px; line-height: 44px; } }
 .fi-input-wrp, .fi-select-input, .fi-fo-textarea { border-color: #d0d5dd; border-radius: .625rem; }
 .fi-input-wrp:focus-within, .fi-select-input:focus, .fi-fo-textarea:focus {
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary-500) 16%, transparent);
 }
-.fi-fo-field-wrp-label { color: var(--ui-text); font-size: .8rem; font-weight: 500; }
-.fi-ta-header-cell { border-bottom: 1px solid #e4e7ec; background: #f9fafb; color: #667085; font-size: .68rem; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; }
+.fi-fo-field-label, .fi-fo-field-label-content { color: var(--ui-text); font-size: 14px; line-height: 20px; font-weight: 500; }
+.fi-fo-field-wrp-helper-text, .fi-fo-field-wrp-error-message { font-size: 12px; line-height: 18px; font-weight: 400; }
+.fi-section-header-description, .fi-simple-header-subheading { font-size: 14px; line-height: 20px; font-weight: 400; }
+.fi-tabs-item, .fi-pagination-item-btn, .fi-pagination-overview, .fi-link { font-size: 14px; line-height: 20px; font-weight: 500; letter-spacing: normal; }
+.fi-in-entry-label { font-size: 14px; line-height: 20px; font-weight: 500; }
+.fi-in-text { font-size: 14px; line-height: 20px; font-weight: 400; }
+.fi-ta-header-cell, .fi-ta-header-cell-sort-btn { color: #667085; font-size: 12px; line-height: 18px; font-weight: 500; letter-spacing: normal; text-transform: none; }
+.fi-ta-header-cell { border-bottom: 1px solid #e4e7ec; background: #f9fafb; }
 .fi-ta-row:hover { background: #f9fafb; }
 .fi-simple-layout { min-height: 100vh; background: #f9fafb; }
 .fi-simple-main { border: 1px solid #e4e7ec; border-radius: 1rem; box-shadow: 0 12px 32px -24px rgb(16 24 40 / .35); }
 
-.fi-gq-auth-divider { display: flex; align-items: center; gap: .75rem; margin: 1.25rem 0; color: #667085; font-size: .68rem; font-weight: 600; letter-spacing: .08em; }
+.fi-gq-auth-divider { display: flex; align-items: center; gap: .75rem; margin: 1.25rem 0; color: #667085; font-size: 14px; line-height: 20px; font-weight: 400; letter-spacing: normal; }
 .fi-gq-auth-divider::before, .fi-gq-auth-divider::after { height: 1px; flex: 1; background: #e4e7ec; content: ''; }
-.fi-gq-google-login { display: inline-flex; width: 100%; align-items: center; justify-content: center; gap: .6rem; border: 1px solid #d0d5dd; border-radius: .625rem; background: #fff; padding: .72rem 1rem; color: #344054; font-size: .85rem; font-weight: 600; text-decoration: none; transition: background-color .16s ease, border-color .16s ease; }
+.fi-gq-google-login { display: inline-flex; width: 100%; align-items: center; justify-content: center; gap: .6rem; border: 1px solid #d0d5dd; border-radius: .625rem; background: #fff; padding: .72rem 1rem; color: #344054; font-size: 14px; line-height: 20px; font-weight: 400; text-decoration: none; transition: background-color .16s ease, border-color .16s ease; }
 .fi-gq-google-login:hover { border-color: #98a2b3; background: #f9fafb; }
 .fi-gq-notification { position: relative; }
 .fi-gq-notification-toggle { position: relative; display: inline-flex; width: 2.5rem; height: 2.5rem; align-items: center; justify-content: center; border: 1px solid #e4e7ec; border-radius: .625rem; background: #fff; color: #475467; }
-.fi-gq-notification-badge { position: absolute; top: -.35rem; right: -.35rem; min-width: 1rem; border-radius: 999px; background: var(--color-primary-600); padding: .1rem .25rem; color: #fff; font-size: .58rem; font-weight: 700; }
+.fi-gq-notification-badge { position: absolute; top: -.35rem; right: -.35rem; min-width: 1rem; border-radius: 999px; background: var(--color-primary-600); padding: .1rem .25rem; color: #fff; font-size: 12px; line-height: 18px; font-weight: 500; }
 .fi-gq-notification-panel { position: absolute; top: 3rem; right: 0; z-index: 60; width: min(23rem, calc(100vw - 1.5rem)); overflow: hidden; border: 1px solid #e4e7ec; border-radius: .875rem; background: #fff; box-shadow: 0 20px 44px -22px rgb(16 24 40 / .28); }
 .fi-gq-notification-item { display: flex; gap: .75rem; border-bottom: 1px solid #f2f4f7; padding: .85rem 1rem; text-decoration: none; }
 .fi-gq-notification-item:hover { background: #f9fafb; }
@@ -113,7 +137,7 @@
 .dark .fi-sidebar-item-button:hover { background: #1d2939; color: #f9fafb; }
 .dark .fi-sidebar-item-active > .fi-sidebar-item-button { border-color: #344054; background: #1d2939; color: var(--color-primary-300); }
 .dark .fi-sidebar-item-active .fi-sidebar-item-icon { color: var(--color-primary-300); }
-.dark .fi-page-header-heading { color: #f9fafb; }
+.dark .fi-header-heading { color: #f9fafb; }
 .dark .fi-section, .dark .fi-ta, .dark .fi-wi-stats-overview-stat, .dark .fi-modal-window, .dark .fi-simple-main { border-color: #344054; background: #101828; box-shadow: none; }
 .dark .fi-ta-header-cell { border-color: #344054; background: #1d2939; color: #d0d5dd; }
 .dark .fi-ta-row:hover { background: #1d2939; }

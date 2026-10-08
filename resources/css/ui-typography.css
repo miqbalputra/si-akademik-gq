@@ -1,0 +1,58 @@
+/* TailAdmin typography, shared by the Blade portals and the Filament theme. */
+@theme static {
+    --font-sans: 'Outfit', sans-serif;
+    --font-display: 'Outfit', sans-serif;
+    --font-outfit: 'Outfit', sans-serif;
+    --text-title-2xl: 72px;
+    --text-title-2xl--line-height: 90px;
+    --text-title-xl: 60px;
+    --text-title-xl--line-height: 72px;
+    --text-title-lg: 48px;
+    --text-title-lg--line-height: 60px;
+    --text-title-md: 36px;
+    --text-title-md--line-height: 44px;
+    --text-title-sm: 30px;
+    --text-title-sm--line-height: 38px;
+    --text-theme-xl: 20px;
+    --text-theme-xl--line-height: 30px;
+    --text-theme-sm: 14px;
+    --text-theme-sm--line-height: 20px;
+    --text-theme-xs: 12px;
+    --text-theme-xs--line-height: 18px;
+}
+
+@layer base {
+    body { font-family: var(--font-outfit); font-size: 16px; line-height: 24px; letter-spacing: normal; }
+    /* Native select appearance otherwise forces a platform-specific line height. */
+    select:not([multiple]) { appearance: none; }
+}
+
+@layer components {
+    .ui-page-title { font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: normal; }
+    .ui-card-title { font-size: 18px; line-height: 28px; font-weight: 600; letter-spacing: normal; }
+    .ui-form-title { font-size: 16px; line-height: 24px; font-weight: 500; letter-spacing: normal; }
+    .ui-auth-title, .ui-modal-title { font-size: var(--text-title-sm); line-height: var(--text-title-sm--line-height); font-weight: 600; letter-spacing: normal; }
+    .ui-form-label { font-size: var(--text-theme-sm); line-height: var(--text-theme-sm--line-height); font-weight: 500; letter-spacing: normal; text-transform: none; }
+    .ui-metric-value { font-size: var(--text-title-sm); line-height: var(--text-title-sm--line-height); font-weight: 700; letter-spacing: normal; }
+    .ui-metric-label { font-size: var(--text-theme-sm); line-height: var(--text-theme-sm--line-height); font-weight: 400; letter-spacing: normal; text-transform: none; }
+    .ui-menu-group { font-size: 12px; line-height: 20px; font-weight: 400; letter-spacing: normal; text-transform: uppercase; }
+    .ui-caption { font-size: var(--text-theme-xs); line-height: var(--text-theme-xs--line-height); font-weight: 400; letter-spacing: normal; }
+    .ui-modal-copy { font-size: 14px; line-height: 24px; font-weight: 400; }
+    .ui-display-title { font-size: var(--text-title-md); line-height: var(--text-title-md--line-height); font-weight: 600; letter-spacing: normal; }
+    :where(.app-shell, .school-home, .fi-page) select:not([multiple]):not(.fi-select-input) {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23667085' stroke-width='1.5'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
+        background-position: right .6rem center;
+        background-repeat: no-repeat;
+        background-size: 16px;
+        padding-right: 2rem;
+    }
+    .dark :where(.app-shell, .school-home, .fi-page) select:not([multiple]):not(.fi-select-input) {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%2398a2b3' stroke-width='1.5'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
+    }
+    @media (min-width: 640px) {
+        .ui-auth-title { font-size: var(--text-title-md); line-height: var(--text-title-md--line-height); }
+    }
+    @media (min-width: 1024px) {
+        .ui-display-title { font-size: var(--text-title-xl); line-height: var(--text-title-xl--line-height); }
+    }
+}

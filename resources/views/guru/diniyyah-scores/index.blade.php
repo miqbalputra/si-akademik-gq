@@ -2,8 +2,8 @@
     <header class="portal-page-header animate-fade-in-up">
         <div>
             <p class="school-index">Panel Guru Pengajar</p>
-            <h1 class="mt-2 text-heading">Input Nilai Diniyyah</h1>
-            <p class="mt-2 text-sm text-body font-medium">Isi dan evaluasi nilai mata pelajaran Diniyyah untuk kelas binaan Anda.</p>
+            <h1 class="mt-2 text-heading ui-page-title">Input Nilai Diniyyah</h1>
+            <p class="mt-2 text-theme-sm text-body font-normal">Isi dan evaluasi nilai mata pelajaran Diniyyah untuk kelas binaan Anda.</p>
         </div>
     </header>
 
@@ -16,15 +16,15 @@
     <!-- Stats Overview -->
     <section class="mb-8 grid grid-cols-3 gap-3 animate-fade-in-up" style="animation-delay:100ms;">
         <div class="metric-card text-center transition-transform hover:scale-[1.02]">
-            <p class="metric-label">Mata Pelajaran</p>
+            <p class="metric-label ui-metric-label">Mata Pelajaran</p>
             <p class="metric-value">{{ $totalSets }}</p>
         </div>
         <div class="metric-card border-success-line bg-success-soft/70 text-center transition-transform hover:scale-[1.02]">
-            <p class="metric-label text-success-ink">Lengkap</p>
+            <p class="metric-label text-success-ink ui-metric-label">Lengkap</p>
             <p class="metric-value text-success-ink">{{ $completedSets }}</p>
         </div>
         <div class="metric-card border-brand-line bg-brand-soft/70 text-center transition-transform hover:scale-[1.02]">
-            <p class="metric-label text-school-600">Perlu Input</p>
+            <p class="metric-label text-school-600 ui-metric-label">Perlu Input</p>
             <p class="metric-value text-school-800">{{ $needInputSets }}</p>
         </div>
     </section>
@@ -70,20 +70,20 @@
             <article class="action-card group rounded-2xl p-5 sm:p-6">
                 <div class="flex items-start justify-between gap-3">
                     <div class="min-w-0">
-                        <h2 class="font-semibold text-lg text-heading group-hover:text-school-700 transition-colors leading-tight">
+                        <h2 class="text-heading group-hover:text-school-700 transition-colors ui-card-title">
                             {{ $assessmentSet->classSubject?->subject?->name ?? $assessmentSet->title }}
                         </h2>
-                        <p class="mt-1 text-sm font-semibold text-muted">
+                        <p class="mt-1 text-theme-sm font-normal text-muted">
                             {{ $assessmentSet->classSubject?->classroomTerm?->name }}
                         </p>
                     </div>
-                    <span class="shrink-0 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider {{ $badgeClass }}">
+                    <span class="shrink-0 rounded-full px-3 py-1 {{ $badgeClass }} text-theme-xs font-medium">
                         {{ $badgeText }}
                     </span>
                 </div>
 
                 <div class="mt-5">
-                    <div class="mb-2 flex justify-between text-xs font-bold text-muted">
+                    <div class="mb-2 flex justify-between text-theme-xs font-normal text-muted">
                         <span>{{ $summary['complete_students'] ?? 0 }} dari {{ $summary['total_students'] ?? 0 }} santri dinilai</span>
                         <span class="{{ $isComplete || $isReadOnly ? 'text-success-ink' : 'text-school-600' }}">{{ $progress }}%</span>
                     </div>
@@ -92,13 +92,13 @@
                     </div>
                 </div>
 
-                <div class="mt-4 flex flex-wrap gap-2 text-[10px] font-bold uppercase tracking-wider text-muted">
-                    <span class="badge">{{ $assessmentSet->components->count() }} komponen nilai</span>
-                    <span class="badge">KKM {{ $assessmentSet->kkm ?? '-' }}</span>
+                <div class="mt-4 flex flex-wrap gap-2 text-theme-xs font-normal uppercase text-muted">
+                    <span class="badge text-theme-xs font-medium">{{ $assessmentSet->components->count() }} komponen nilai</span>
+                    <span class="badge text-theme-xs font-medium">KKM {{ $assessmentSet->kkm ?? '-' }}</span>
                 </div>
                 
                 <div class="mt-5 flex gap-3">
-                    <a href="{{ route('guru.diniyyah-scores.edit', $assessmentSet) }}" class="btn {{ $isReadOnly ? 'btn-outline' : 'btn-primary' }} flex-1">
+                    <a href="{{ route('guru.diniyyah-scores.edit', $assessmentSet) }}" class="btn {{ $isReadOnly ? 'btn-outline' : 'btn-primary' }} flex-1 text-theme-sm font-medium">
                         {{ $isReadOnly ? 'Lihat Nilai' : 'Isi Nilai' }}
                     </a>
                 </div>
@@ -108,7 +108,7 @@
                 <svg class="mx-auto h-12 w-12 text-soft mb-3" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
                 </svg>
-                <p class="text-sm font-bold">Belum ada mata pelajaran yang ditugaskan kepada Anda.</p>
+                <p class="text-theme-sm font-normal">Belum ada mata pelajaran yang ditugaskan kepada Anda.</p>
             </div>
         @endforelse
     </section>

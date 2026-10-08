@@ -16,17 +16,17 @@
         <section class="w-full rounded-2xl border border-line bg-surface p-6 shadow-sm sm:p-10">
             <a href="{{ route('login') }}" class="school-brand"><span class="school-mark">GQ</span><span><strong>Ruang GQ</strong><small>AKTIVITAS AKADEMIK</small></span></a>
             <p class="school-index mt-10">PEMULIHAN AKUN</p>
-            <h1 class="mt-3 text-3xl font-semibold">Lupa kata sandi?</h1>
-            <p class="mt-3 text-sm leading-6 text-body">Masukkan email akun Anda. Jika terdaftar, kami akan mengirim tautan reset yang berlaku selama 60 menit.</p>
-            @if (session('status'))<p class="mt-5 rounded-lg bg-success-soft p-3 text-sm text-success-ink" role="status">{{ session('status') }}</p>@endif
-            @error('email')<p class="mt-5 rounded-lg bg-danger-soft p-3 text-sm text-danger-ink" role="alert">{{ $message }}</p>@enderror
+            <h1 class="mt-3 ui-auth-title">Lupa kata sandi?</h1>
+            <p class="mt-3 text-theme-sm text-body">Masukkan email akun Anda. Jika terdaftar, kami akan mengirim tautan reset yang berlaku selama 60 menit.</p>
+            @if (session('status'))<p class="mt-5 rounded-lg bg-success-soft p-3 text-theme-sm text-success-ink" role="status">{{ session('status') }}</p>@endif
+            @error('email')<p class="mt-5 rounded-lg bg-danger-soft p-3 text-theme-sm text-danger-ink" role="alert">{{ $message }}</p>@enderror
             <form method="POST" action="{{ route('password.email') }}" class="mt-6 space-y-4">
                 @csrf
-                <label class="block text-sm font-medium" for="email">Email akun</label>
-                <input class="form-input" id="email" name="email" type="email" value="{{ old('email') }}" required autocomplete="email" autofocus>
-                <button class="btn btn-primary btn-lg w-full" type="submit">Kirim tautan reset</button>
+                <label class="block ui-form-label" for="email">Email akun</label>
+                <input class="form-input text-theme-sm font-normal" id="email" name="email" type="email" value="{{ old('email') }}" required autocomplete="email" autofocus>
+                <button class="btn btn-primary btn-lg w-full text-theme-sm font-medium" type="submit">Kirim tautan reset</button>
             </form>
-            <a class="mt-6 inline-flex text-sm font-semibold text-school-700 underline" href="{{ route('login') }}">Kembali ke halaman masuk</a>
+            <a class="mt-6 inline-flex text-school-700 underline text-theme-sm font-medium" href="{{ route('login') }}">Kembali ke halaman masuk</a>
         </section>
     </main>
 </body>

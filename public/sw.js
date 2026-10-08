@@ -1,7 +1,10 @@
-const CACHE_NAME = 'gq-edu-static-v4';
+const CACHE_NAME = 'gq-edu-static-v5';
 const STATIC_ASSETS = [
     '/manifest.json',
     '/offline.html',
+    '/fonts/outfit/outfit.css',
+    '/fonts/outfit/outfit-latin-variable.woff2',
+    '/fonts/outfit/outfit-latin-ext-variable.woff2',
     '/icons/icon-192.svg',
     '/icons/icon-512.svg',
     '/icons/icon-192.png',

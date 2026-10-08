@@ -204,10 +204,10 @@
             </div>
 
             <nav class="school-sidebar-nav flex-1 overflow-y-auto px-4 py-6" aria-label="Menu portal">
-                <p class="mb-2 px-3 text-[11px] font-semibold uppercase tracking-[.08em] text-soft">{{ $portalLabel ?? 'Ruang GQ' }}</p>
+                <p class="mb-2 px-3 ui-menu-group text-soft">{{ $portalLabel ?? 'Ruang GQ' }}</p>
                 <a
                     href="{{ $portalHomeUrl }}"
-                    class="school-sidebar-link mb-5 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition @if($isHomeActive) bg-brand-soft text-brand-ink dark:bg-surface/5 dark:text-brand-300 @else text-body hover:bg-surface-subtle hover:text-heading dark:text-body dark:hover:bg-surface/5 dark:hover:text-white @endif"
+                    class="school-sidebar-link mb-5 flex items-center gap-3 rounded-lg px-3 py-2.5 text-theme-sm font-medium transition @if($isHomeActive) bg-brand-soft text-brand-ink dark:bg-surface/5 dark:text-brand-300 @else text-body hover:bg-surface-subtle hover:text-heading dark:text-body dark:hover:bg-surface/5 dark:hover:text-white @endif"
                     @if($isHomeActive) aria-current="page" @endif
                 >
                     <svg class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m3.75 10.5 8.25-6.75 8.25 6.75v9a.75.75 0 0 1-.75.75h-5.25v-6.75h-4.5v6.75H4.5a.75.75 0 0 1-.75-.75v-9Z"/></svg>
@@ -217,7 +217,7 @@
                 @foreach($portalNavGroups as $group)
                     @php($isGroupActive = collect($group['items'])->contains(fn ($item) => collect($item['match'])->contains(fn ($pattern) => request()->routeIs($pattern))))
                     <details class="school-sidebar-group school-nav-dropdown mb-6" @if($isGroupActive) open @endif>
-                        <summary class="school-nav-dropdown-toggle mb-2 flex cursor-pointer list-none items-center justify-between rounded-lg px-3 py-2 text-[11px] font-semibold uppercase tracking-[.08em] text-soft hover:bg-surface-subtle dark:hover:bg-surface/5">
+                        <summary class="school-nav-dropdown-toggle mb-2 flex cursor-pointer list-none items-center justify-between rounded-lg px-3 py-2 ui-menu-group text-soft hover:bg-surface-subtle dark:hover:bg-surface/5">
                             <span>{{ $group['label'] }}</span>
                             <svg class="school-nav-chevron h-4 w-4" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m5 7.5 5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
                         </summary>
@@ -226,7 +226,7 @@
                                 @php($isActive = collect($item['match'])->contains(fn ($pattern) => request()->routeIs($pattern)))
                                 <a
                                     href="{{ $item['href'] }}"
-                                    class="school-sidebar-link flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition @if($isActive) bg-brand-soft text-brand-ink dark:bg-surface/5 dark:text-brand-300 @else text-body hover:bg-surface-subtle hover:text-heading dark:text-body dark:hover:bg-surface/5 dark:hover:text-white @endif"
+                                    class="school-sidebar-link flex items-center gap-3 rounded-lg px-3 py-2.5 text-theme-sm font-medium transition @if($isActive) bg-brand-soft text-brand-ink dark:bg-surface/5 dark:text-brand-300 @else text-body hover:bg-surface-subtle hover:text-heading dark:text-body dark:hover:bg-surface/5 dark:hover:text-white @endif"
                                     @if($isActive) aria-current="page" @endif
                                 >
                                     <span class="h-1.5 w-1.5 shrink-0 rounded-full @if($isActive) bg-brand-500 @else bg-line-strong dark:bg-gray-600 @endif" aria-hidden="true"></span>
@@ -240,12 +240,12 @@
 
             <div class="border-t border-line p-4 dark:border-gray-800">
                 <div class="flex items-center gap-3 rounded-lg bg-surface-subtle p-3 dark:bg-surface-muted/60">
-                    <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-soft-strong text-sm font-semibold text-brand-ink dark:bg-brand-900/50 dark:text-brand-300">
+                    <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-soft-strong text-theme-sm font-medium text-brand-ink dark:bg-brand-900/50 dark:text-brand-300">
                         {{ \Illuminate\Support\Str::of(auth()->user()?->name ?? 'GQ')->substr(0, 1)->upper() }}
                     </span>
                     <span class="min-w-0 flex-1">
-                        <span class="block truncate text-sm font-semibold text-heading dark:text-white/90">{{ auth()->user()?->name }}</span>
-                        <span class="block truncate text-xs text-muted dark:text-muted">{{ $portalLabel ?? 'Ruang GQ' }}</span>
+                        <span class="block truncate text-theme-sm font-medium text-heading dark:text-white/90">{{ auth()->user()?->name }}</span>
+                        <span class="block truncate text-theme-xs text-muted dark:text-muted font-normal">{{ $portalLabel ?? 'Ruang GQ' }}</span>
                     </span>
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
@@ -265,8 +265,8 @@
                     </button>
 
                     <div class="school-context min-w-0 flex-1">
-                        <p class="m-0 truncate text-xs font-medium text-muted dark:text-muted">{{ $portalLabel ?? 'Ruang GQ' }}@if(filled($breadcrumb ?? null)) <span class="mx-1 text-soft dark:text-soft">/</span>{{ $breadcrumb }}@endif</p>
-                        <h1 class="m-0 truncate text-base font-semibold text-heading dark:text-white sm:text-lg">{{ $title ?? 'Beranda' }}</h1>
+                        <p class="m-0 truncate text-theme-sm font-normal text-muted dark:text-muted">{{ $portalLabel ?? 'Ruang GQ' }}@if(filled($breadcrumb ?? null)) <span class="mx-1 text-soft dark:text-soft">/</span>{{ $breadcrumb }}@endif</p>
+                        <h1 class="m-0 truncate text-heading dark:text-white ui-page-title">{{ $title ?? 'Beranda' }}</h1>
                     </div>
 
                     <div class="school-header-actions flex shrink-0 items-center gap-2 sm:gap-3" data-header-actions>
@@ -276,14 +276,14 @@
 
                         @if(count($workspaceItems) > 1)
                             <details class="school-nav-dropdown relative" data-portal-menu>
-                                <summary class="school-nav-dropdown-toggle inline-flex h-10 cursor-pointer list-none items-center gap-2 rounded-lg border border-line bg-surface px-3 text-sm font-medium text-body hover:bg-surface-subtle dark:border-gray-700 dark:bg-surface dark:text-body dark:hover:bg-gray-800" aria-expanded="false">
+                                <summary class="school-nav-dropdown-toggle inline-flex h-10 cursor-pointer list-none items-center gap-2 rounded-lg border border-line bg-surface px-3 text-theme-sm font-medium text-body hover:bg-surface-subtle dark:border-gray-700 dark:bg-surface dark:text-body dark:hover:bg-gray-800" aria-expanded="false">
                                     <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6.75h16M4 12h16M4 17.25h16"/></svg>
                                     <span class="hidden sm:inline">Ganti Ruang</span>
                                     <svg class="school-nav-chevron h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6" /></svg>
                                 </summary>
                                 <div class="school-nav-dropdown-panel absolute end-0 top-12 z-50 grid min-w-56 gap-1 rounded-xl border border-line bg-surface p-2 shadow-theme-lg dark:border-gray-700 dark:bg-surface" role="menu" aria-label="Ganti ruang kerja">
                                     @foreach($workspaceItems as $key => $workspace)
-                                        <a href="{{ $workspace['destination'] }}" class="school-nav-dropdown-link flex items-center justify-between rounded-lg px-3 py-2 text-sm text-body hover:bg-surface-subtle dark:text-body dark:hover:bg-gray-800" role="menuitem" @if($currentWorkspace === $key) aria-current="page" @endif>
+                                        <a href="{{ $workspace['destination'] }}" class="school-nav-dropdown-link flex items-center justify-between rounded-lg px-3 py-2 text-theme-sm font-medium text-body hover:bg-surface-subtle dark:text-body dark:hover:bg-gray-800" role="menuitem" @if($currentWorkspace === $key) aria-current="page" @endif>
                                             <span>{{ $workspace['label'] }}</span>
                                             @if($currentWorkspace === $key)<span class="school-nav-active-dot h-1.5 w-1.5 rounded-full bg-brand-500" aria-hidden="true"></span>@endif
                                         </a>
@@ -297,15 +297,15 @@
                         <div class="relative" data-notification-root data-feed-url="{{ route('notifications.feed') }}" data-read-url-template="{{ route('notifications.read', '__ID__') }}" data-mark-all-url="{{ route('notifications.read-all') }}">
                             <button type="button" class="relative inline-flex h-10 w-10 items-center justify-center rounded-lg border border-line bg-surface text-muted transition hover:bg-surface-subtle dark:border-gray-700 dark:bg-surface dark:text-body dark:hover:bg-gray-800" aria-label="Notifikasi" aria-haspopup="dialog" aria-expanded="false" data-notification-toggle>
                                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" /></svg>
-                                <span class="absolute -end-1 -top-1 hidden min-w-4 rounded-full bg-brand-600 px-1 py-0.5 text-[9px] font-bold text-white" data-notification-badge>0</span>
+                                <span class="absolute -end-1 -top-1 hidden min-w-4 rounded-full bg-brand-600 px-1 py-0.5 text-white text-theme-xs font-medium" data-notification-badge>0</span>
                             </button>
                             <section class="notification-dropdown absolute end-0 top-12 z-60" role="dialog" aria-label="Notifikasi" hidden data-notification-panel>
                                 <header class="flex items-center justify-between border-b border-line px-4 py-3 dark:border-gray-800">
-                                    <strong class="text-sm font-semibold text-heading dark:text-white/90">Notifikasi</strong>
-                                    <button type="button" class="text-xs font-medium text-brand-ink hover:text-brand-ink dark:text-brand-300" data-notification-mark-all>Tandai semua dibaca</button>
+                                    <strong class="text-theme-sm font-medium text-heading dark:text-white/90">Notifikasi</strong>
+                                    <button type="button" class="text-brand-ink hover:text-brand-ink dark:text-brand-300 text-theme-sm font-medium" data-notification-mark-all>Tandai semua dibaca</button>
                                 </header>
-                                <div class="max-h-96 overflow-y-auto" data-notification-list><p class="px-5 py-8 text-center text-xs font-medium text-soft">Memuat...</p></div>
-                                <footer class="border-t border-line px-4 py-3 text-center dark:border-gray-800"><a href="{{ route('notifications.index') }}" class="text-xs font-medium text-brand-ink hover:text-brand-ink dark:text-brand-300">Lihat semua notifikasi <span aria-hidden="true">&rarr;</span></a></footer>
+                                <div class="max-h-96 overflow-y-auto" data-notification-list><p class="px-5 py-8 text-center text-theme-xs font-normal text-soft">Memuat...</p></div>
+                                <footer class="border-t border-line px-4 py-3 text-center dark:border-gray-800"><a href="{{ route('notifications.index') }}" class="text-theme-sm font-medium text-brand-ink hover:text-brand-ink dark:text-brand-300">Lihat semua notifikasi <span aria-hidden="true">&rarr;</span></a></footer>
                             </section>
                         </div>
                     </div>
@@ -319,7 +319,7 @@
 
             <main class="school-main mx-auto w-full max-w-[1600px] px-4 py-6 sm:px-6 sm:py-8 xl:px-8">
                 {{ $slot }}
-                <footer class="school-footer mt-10 border-t border-line pt-5 text-center text-xs text-soft dark:border-gray-800 dark:text-muted">
+                <footer class="school-footer mt-10 border-t border-line pt-5 text-center text-theme-xs text-soft dark:border-gray-800 dark:text-muted font-normal">
                     &copy; {{ date('Y') }} Ruang GQ · Griya Qur'an Tunas Ilmu · SchoolVia.id
                 </footer>
             </main>

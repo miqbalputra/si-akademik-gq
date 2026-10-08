@@ -7,8 +7,8 @@
 
 
         .detail-row { display:grid; grid-template-columns:160px 1fr; gap:12px; padding:12px 0; border-bottom:1px solid var(--ui-surface-muted); }
-        .detail-label { font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.04em; color:var(--ui-muted); }
-        .detail-value { font-size:14px; font-weight:600; color:var(--ui-heading); }
+        .detail-label {  text-transform:none; letter-spacing:normal; color:var(--ui-muted); font-size:12px; line-height:18px; font-weight:400; }
+        .detail-value {  color:var(--ui-heading); font-size:14px; line-height:20px; font-weight:500; }
 
 
 
@@ -16,15 +16,15 @@
     @endpush
 
     <header class="fade-up" style="margin-bottom:24px;">
-        <a href="{{ route('guru.tasmi-wali.index') }}" style="font-size:12px;font-weight:700;color:var(--ui-info-ink);display:inline-flex;align-items:center;gap:4px;margin-bottom:10px;text-decoration:none;">
+        <a href="{{ route('guru.tasmi-wali.index') }}" style="color:var(--ui-info-ink);display:inline-flex;align-items:center;gap:4px;margin-bottom:10px;text-decoration:none;font-size:14px;line-height:20px;font-weight:500;">
             <svg style="width:14px;height:14px;" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" /></svg>
             Tasmi' Kelas Saya
         </a>
         <div style="display:inline-flex;align-items:center;gap:6px;background:var(--ui-info-soft-strong);border-radius:999px;padding:4px 12px;margin-bottom:10px;">
-            <span style="font-size:11px;font-weight:700;color:var(--ui-info-ink);text-transform:uppercase;letter-spacing:.05em;">Read-only</span>
+            <span style="font-size:12px;color:var(--ui-info-ink);text-transform:uppercase;letter-spacing:normal;line-height:18px;font-weight:400;">Read-only</span>
         </div>
-        <h1 style="font-size:24px;font-weight:700;color:var(--ui-heading);margin:0 0 4px;letter-spacing:-.02em;">Detail Tasmi'</h1>
-        <p style="font-size:14px;color:var(--ui-muted);font-weight:500;margin:0;">Setoran tasmi' santri.</p>
+        <h1 style="color:var(--ui-heading);margin:0 0 4px;letter-spacing:normal;font-size:20px;font-weight:600;line-height:28px;">Detail Tasmi'</h1>
+        <p style="font-size:14px;color:var(--ui-muted);margin:0;line-height:20px;font-weight:400;">Setoran tasmi' santri.</p>
     </header>
 
     <div class="card fade-up delay-1" style="padding:24px;margin-bottom:18px;">
@@ -66,7 +66,7 @@
         </div>
         <div class="detail-row">
             <span class="detail-label">Predikat</span>
-            <span><span class="badge predicate-{{ $record->predicate }}">{{ \App\Models\TasmiRecord::predicateLabel($record->predicate) }}</span></span>
+            <span><span class="badge predicate-{{ $record->predicate }} text-theme-xs font-medium">{{ \App\Models\TasmiRecord::predicateLabel($record->predicate) }}</span></span>
         </div>
         <div class="detail-row" style="border-bottom:none;">
             <span class="detail-label">Catatan</span>
@@ -74,7 +74,7 @@
         </div>
     </div>
 
-    <a href="{{ route('guru.tasmi-wali.index') }}" class="btn btn-outline">
+    <a href="{{ route('guru.tasmi-wali.index') }}" class="btn btn-outline text-theme-sm font-medium">
         <svg style="width:14px;height:14px;" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" /></svg>
         Kembali
     </a>

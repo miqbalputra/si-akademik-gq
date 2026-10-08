@@ -17,22 +17,22 @@
         <header class="school-dashboard-hero p-6 sm:p-8 lg:p-10">
             <div class="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
                 <div class="max-w-2xl">
-                    <span class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-surface/10 px-3 py-1 font-mono text-[11px] font-semibold uppercase tracking-[.16em] text-on-primary">
+                    <span class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-surface/10 px-3 py-1 font-sans text-on-primary text-theme-xs font-medium">
                         <span class="h-1.5 w-1.5 rounded-full bg-on-primary"></span>
                         Papan Kegiatan Guru
                     </span>
-                    <h1 class="mt-4 text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
+                    <h1 class="mt-4 ui-page-title">
                         Kelas hari ini, {{ $teacher->name ?? auth()->user()->name }}
                     </h1>
-                    <p class="mt-3 max-w-xl text-sm leading-6 text-on-primary/80 sm:text-base">
+                    <p class="mt-3 max-w-xl text-theme-sm text-on-primary/80 sm:text-base">
                         Mulai dari kegiatan yang perlu diselesaikan: catatan kelas, presensi, penilaian, dan agenda mengajar.
                     </p>
                 </div>
 
                 <div class="school-today-note w-full sm:w-auto sm:min-w-64">
-                    <p class="font-mono text-[10px] font-semibold uppercase tracking-[.16em] text-on-primary/80">Hari ini</p>
-                    <p class="mt-1 text-sm font-bold text-on-primary">{{ $today->locale('id')->translatedFormat('l, d F Y') }}</p>
-                    <a href="{{ route('guru.calendar') }}" class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-surface px-4 py-2.5 text-xs font-semibold text-heading transition-colors hover:bg-warning-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
+                    <p class="font-sans text-theme-xs font-normal uppercase text-on-primary/80">Hari ini</p>
+                    <p class="mt-1 text-theme-sm font-normal text-on-primary">{{ $today->locale('id')->translatedFormat('l, d F Y') }}</p>
+                    <a href="{{ route('guru.calendar') }}" class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-surface px-4 py-2.5 text-heading transition-colors hover:bg-warning-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white text-theme-sm font-medium">
                         Lihat kalender mengajar
                         <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
@@ -46,52 +46,52 @@
             <div class="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                     <p class="school-index">Kegiatan Hari Ini</p>
-                    <h2 id="quick-actions-heading" class="mt-2 text-xl font-semibold text-heading">Papan Kegiatan</h2>
+                    <h2 id="quick-actions-heading" class="mt-2 text-heading ui-card-title">Papan Kegiatan</h2>
                 </div>
-                <p class="text-sm font-medium text-muted">Pilih catatan atau agenda yang ingin Anda selesaikan.</p>
+                <p class="text-theme-sm font-normal text-muted">Pilih catatan atau agenda yang ingin Anda selesaikan.</p>
             </div>
             <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <a href="{{ $singleJournalLink }}" class="group rounded-2xl border border-success-line bg-surface p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-success-line hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-success-600">
                     <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-success-soft text-success-ink" aria-hidden="true">✎</span>
-                    <span class="mt-3 block text-sm font-semibold text-heading">Isi jurnal Diniyyah</span>
-                    <span class="mt-1 block text-xs font-medium text-muted">Catat materi dan kehadiran kelas.</span>
+                    <span class="mt-3 block text-theme-sm font-medium text-heading">Isi jurnal Diniyyah</span>
+                    <span class="mt-1 block text-theme-xs font-normal text-muted">Catat materi dan kehadiran kelas.</span>
                 </a>
                 @if($teacher)
                     <a href="{{ route('guru.diniyyah-substitute-journals.index') }}" class="group rounded-2xl border border-warning-line bg-surface p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-warning-line hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-warning-600">
                         <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-warning-soft text-warning-ink" aria-hidden="true">↺</span>
-                        <span class="mt-3 block text-sm font-semibold text-heading">Jurnal guru pengganti</span>
-                        <span class="mt-1 block text-xs font-medium text-muted">Isi jurnal saat menggantikan guru lain.</span>
+                        <span class="mt-3 block text-theme-sm font-medium text-heading">Jurnal guru pengganti</span>
+                        <span class="mt-1 block text-theme-xs font-normal text-muted">Isi jurnal saat menggantikan guru lain.</span>
                     </a>
                 @endif
                 @if($hasSimultaneousTafsirSchedule ?? false)
                     <a href="{{ route('guru.diniyyah-tafsir-journals.index') }}" class="group rounded-2xl border border-brand-line bg-surface p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand-line hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">
                         <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-soft text-brand-ink" aria-hidden="true">☷</span>
-                        <span class="mt-3 block text-sm font-semibold text-heading">Jurnal Tafsir serentak</span>
-                        <span class="mt-1 block text-xs font-medium text-muted">Catat satu materi untuk beberapa kelas sekaligus.</span>
+                        <span class="mt-3 block text-theme-sm font-medium text-heading">Jurnal Tafsir serentak</span>
+                        <span class="mt-1 block text-theme-xs font-normal text-muted">Catat satu materi untuk beberapa kelas sekaligus.</span>
                     </a>
                 @endif
                 <a href="{{ route('guru.performa', ['month' => $performaMonth, 'year' => $performaYear]) }}" class="group rounded-2xl border border-warning-line bg-surface p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-warning-line hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-warning-600">
                     <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-warning-soft text-warning-ink" aria-hidden="true">▥</span>
-                    <span class="mt-3 block text-sm font-semibold text-heading">Lihat performa</span>
-                    <span class="mt-1 block text-xs font-medium text-muted">Cek jurnal kosong dan download laporan.</span>
+                    <span class="mt-3 block text-theme-sm font-medium text-heading">Lihat performa</span>
+                    <span class="mt-1 block text-theme-xs font-normal text-muted">Cek jurnal kosong dan download laporan.</span>
                 </a>
                 @if($teacher)
                     <a href="{{ route('guru.attendance-report.index') }}" class="group rounded-2xl border border-info-line bg-surface p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-info-line hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-info-600">
                         <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-info-soft text-info-ink" aria-hidden="true">✓</span>
-                        <span class="mt-3 block text-sm font-semibold text-heading">Presensi saya</span>
-                        <span class="mt-1 block text-xs font-medium text-muted">Lihat rekap GeoPresensi dan unduh laporan.</span>
+                        <span class="mt-3 block text-theme-sm font-medium text-heading">Presensi saya</span>
+                        <span class="mt-1 block text-theme-xs font-normal text-muted">Lihat rekap GeoPresensi dan unduh laporan.</span>
                     </a>
                 @endif
                 <a href="{{ route('guru.calendar') }}" class="group rounded-2xl border border-brand-line bg-surface p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand-line hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">
                     <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-soft text-brand-ink" aria-hidden="true">◷</span>
-                    <span class="mt-3 block text-sm font-semibold text-heading">Buka kalender</span>
-                    <span class="mt-1 block text-xs font-medium text-muted">Lihat jadwal dan agenda terdekat.</span>
+                    <span class="mt-3 block text-theme-sm font-medium text-heading">Buka kalender</span>
+                    <span class="mt-1 block text-theme-xs font-normal text-muted">Lihat jadwal dan agenda terdekat.</span>
                 </a>
                 @if(auth()->user()?->hasRole('kabag_tahfidz'))
                     <a href="{{ route('admin.tasmi-report.index') }}" class="group rounded-2xl border border-brand-line bg-surface p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand-line hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">
                         <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-soft text-brand-ink" aria-hidden="true">◫</span>
-                        <span class="mt-3 block text-sm font-semibold text-heading">Monitoring Tasmi' Semua Kelas</span>
-                        <span class="mt-1 block text-xs font-medium text-muted">Pantau hasil lintas kelas dan PJ Tasmi'.</span>
+                        <span class="mt-3 block text-theme-sm font-medium text-heading">Monitoring Tasmi' Semua Kelas</span>
+                        <span class="mt-1 block text-theme-xs font-normal text-muted">Pantau hasil lintas kelas dan PJ Tasmi'.</span>
                     </a>
                 @endif
             </div>
@@ -108,9 +108,9 @@
                             </svg>
                         </div>
                         <div>
-                            <p class="text-[11px] font-semibold uppercase tracking-[.16em] {{ $performa['stats']['kosong'] > 0 ? 'text-danger-ink' : 'text-success-ink' }}">Performa mengajar</p>
-                            <h2 id="performa-heading" class="mt-1 text-lg font-semibold text-heading">Performa Mengajar Saya <span class="font-semibold text-muted">— Jurnal {{ $performa['month_label'] }}</span></h2>
-                            <p class="mt-1 text-sm text-body">
+                            <p class="text-theme-xs font-normal uppercase {{ $performa['stats']['kosong'] > 0 ? 'text-danger-ink' : 'text-success-ink' }}">Performa mengajar</p>
+                            <h2 id="performa-heading" class="mt-1 text-heading ui-card-title">Performa Mengajar Saya <span class="font-semibold text-muted">— Jurnal {{ $performa['month_label'] }}</span></h2>
+                            <p class="mt-1 text-theme-sm text-body">
                                 @if($performa['stats']['kosong'] > 0)
                                     Ada jurnal yang perlu dilengkapi agar rekap mengajar tetap rapi.
                                 @else
@@ -122,29 +122,29 @@
 
                     <div class="flex items-center gap-5 rounded-2xl bg-surface/70 px-4 py-3 lg:min-w-64 lg:justify-center">
                         <div>
-                            <p class="text-2xl font-semibold {{ $performa['stats']['kosong'] > 0 ? 'text-danger-ink' : 'text-success-ink' }}">{{ $performa['stats']['kosong'] }}</p>
-                            <p class="text-[11px] font-bold text-muted">slot belum diisi</p>
+                            <p class="{{ $performa['stats']['kosong'] > 0 ? 'text-danger-ink' : 'text-success-ink' }} ui-metric-value">{{ $performa['stats']['kosong'] }}</p>
+                            <p class="text-theme-xs font-normal text-muted">slot belum diisi</p>
                         </div>
                         <div class="h-9 w-px bg-surface-muted"></div>
                         <div>
-                            <p class="text-2xl font-semibold text-heading">{{ $performa['stats']['sudah_diisi'] }}</p>
-                            <p class="text-[11px] font-bold text-muted">slot selesai</p>
+                            <p class="text-heading ui-metric-value">{{ $performa['stats']['sudah_diisi'] }}</p>
+                            <p class="text-theme-xs font-normal text-muted">slot selesai</p>
                         </div>
                     </div>
                 </div>
 
                 <div class="mt-5 flex flex-col gap-3 border-t border-black/5 pt-5 sm:flex-row sm:items-center sm:justify-between">
                     <form method="GET" action="{{ route('guru.dashboard') }}" class="flex items-center gap-2">
-                        <label for="performa-month" class="text-xs font-bold text-body">Tampilkan bulan</label>
-                        <select id="performa-month" name="month" class="form-input w-auto min-w-36 bg-surface py-2 text-xs" onchange="var o=this.options[this.selectedIndex]; this.form.year.value=o.dataset.year; this.form.submit()">
+                        <label for="performa-month" class="text-body ui-form-label">Tampilkan bulan</label>
+                        <select id="performa-month" name="month" class="form-input w-auto min-w-36 bg-surface py-2 text-theme-sm font-normal" onchange="var o=this.options[this.selectedIndex]; this.form.year.value=o.dataset.year; this.form.submit()">
                             @foreach($performaMonthOptions as $opt)
                                 <option value="{{ $opt['value']['month'] }}" data-year="{{ $opt['value']['year'] }}" @if((int) $performaMonth === $opt['value']['month'] && (int) $performaYear === $opt['value']['year']) selected @endif>{{ $opt['label'] }}</option>
                             @endforeach
                         </select>
                         <input type="hidden" name="year" value="{{ $performaYear }}">
-                        <noscript><button type="submit" class="btn btn-sm">Tampilkan</button></noscript>
+                        <noscript><button type="submit" class="btn btn-sm text-theme-sm font-medium">Tampilkan</button></noscript>
                     </form>
-                    <a href="{{ route('guru.performa', ['month' => $performaMonth, 'year' => $performaYear]) }}" class="inline-flex items-center gap-2 text-sm font-semibold {{ $performa['stats']['kosong'] > 0 ? 'text-danger-ink hover:text-danger-ink' : 'text-success-ink hover:text-success-ink' }} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-warning-500">
+                    <a href="{{ route('guru.performa', ['month' => $performaMonth, 'year' => $performaYear]) }}" class="inline-flex items-center gap-2 {{ $performa['stats']['kosong'] > 0 ? 'text-danger-ink hover:text-danger-ink' : 'text-success-ink hover:text-success-ink' }} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-warning-500 text-theme-sm font-medium">
                         {{ $performa['stats']['kosong'] > 0 ? 'Isi jurnal yang kosong' : 'Lihat detail performa' }}
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
@@ -161,25 +161,25 @@
             <section class="rounded-2xl border {{ ($reconciliation['available'] ?? false) ? (($reconciliationCount ?? 0) > 0 ? 'border-brand-line bg-brand-soft/70' : 'border-success-line bg-success-soft/60') : 'border-warning-line bg-warning-soft' }} p-5 shadow-sm sm:p-6" aria-labelledby="attendance-journal-heading">
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                        <p class="text-[11px] font-semibold uppercase tracking-[.16em] {{ ($reconciliation['available'] ?? false) ? 'text-brand-ink' : 'text-warning-ink' }}">Sinkronisasi operasional</p>
-                        <h2 id="attendance-journal-heading" class="mt-1 text-lg font-semibold text-heading">Kesesuaian Presensi &amp; Jurnal</h2>
+                        <p class="text-theme-xs font-normal uppercase {{ ($reconciliation['available'] ?? false) ? 'text-brand-ink' : 'text-warning-ink' }}">Sinkronisasi operasional</p>
+                        <h2 id="attendance-journal-heading" class="mt-1 text-heading ui-card-title">Kesesuaian Presensi &amp; Jurnal</h2>
                         @if(! ($reconciliation['available'] ?? false))
-                            <p class="mt-1 text-sm text-warning-ink">{{ $reconciliation['message'] ?? 'Status presensi belum dapat diverifikasi.' }}</p>
+                            <p class="mt-1 text-theme-sm text-warning-ink">{{ $reconciliation['message'] ?? 'Status presensi belum dapat diverifikasi.' }}</p>
                         @elseif($reconciliationCount > 0)
-                            <p class="mt-1 text-sm text-brand-ink">Ada {{ $reconciliationCount }} slot yang perlu dicek setelah sesi berakhir.</p>
+                            <p class="mt-1 text-theme-sm text-brand-ink">Ada {{ $reconciliationCount }} slot yang perlu dicek setelah sesi berakhir.</p>
                         @else
-                            <p class="mt-1 text-sm text-success-ink">Presensi dan jurnal yang sudah jatuh tempo pada periode ini sudah selaras.</p>
+                            <p class="mt-1 text-theme-sm text-success-ink">Presensi dan jurnal yang sudah jatuh tempo pada periode ini sudah selaras.</p>
                         @endif
                     </div>
-                    <a href="{{ route('guru.performa', ['month' => $performa['month'], 'year' => $performa['year']]) }}#attendance-journal-reconciliation" class="inline-flex shrink-0 items-center justify-center rounded-xl {{ ($reconciliation['available'] ?? false) && $reconciliationCount > 0 ? 'bg-brand-700 text-white hover:bg-brand-800' : 'border border-line-strong bg-surface text-body hover:border-brand-line hover:bg-brand-soft' }} px-4 py-2.5 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-700">
+                    <a href="{{ route('guru.performa', ['month' => $performa['month'], 'year' => $performa['year']]) }}#attendance-journal-reconciliation" class="inline-flex shrink-0 items-center justify-center rounded-xl {{ ($reconciliation['available'] ?? false) && $reconciliationCount > 0 ? 'bg-brand-700 text-white hover:bg-brand-800' : 'border border-line-strong bg-surface text-body hover:border-brand-line hover:bg-brand-soft' }} px-4 py-2.5 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-700 text-theme-sm font-medium">
                         Lihat rincian
                     </a>
                 </div>
                 @if(($reconciliation['available'] ?? false))
                     <div class="mt-4 grid gap-2 sm:grid-cols-3">
-                        <div class="rounded-xl border border-brand-line bg-surface/80 px-3 py-2.5"><p class="text-xl font-semibold text-brand-ink">{{ $reconciliationStats['hadir_tanpa_jurnal'] ?? 0 }}</p><p class="text-[11px] font-bold text-brand-ink">hadir tanpa jurnal</p></div>
-                        <div class="rounded-xl border border-brand-line bg-surface/80 px-3 py-2.5"><p class="text-xl font-semibold text-brand-ink">{{ $reconciliationStats['presensi_belum_tercatat'] ?? 0 }}</p><p class="text-[11px] font-bold text-brand-ink">presensi belum tercatat</p></div>
-                        <div class="rounded-xl border border-danger-line bg-surface/80 px-3 py-2.5"><p class="text-xl font-semibold text-danger-ink">{{ $reconciliationStats['presensi_dan_jurnal_belum_tercatat'] ?? 0 }}</p><p class="text-[11px] font-bold text-danger-ink">keduanya belum tercatat</p></div>
+                        <div class="rounded-xl border border-brand-line bg-surface/80 px-3 py-2.5"><p class="text-xl font-semibold text-brand-ink">{{ $reconciliationStats['hadir_tanpa_jurnal'] ?? 0 }}</p><p class="text-theme-xs font-normal text-brand-ink">hadir tanpa jurnal</p></div>
+                        <div class="rounded-xl border border-brand-line bg-surface/80 px-3 py-2.5"><p class="text-xl font-semibold text-brand-ink">{{ $reconciliationStats['presensi_belum_tercatat'] ?? 0 }}</p><p class="text-theme-xs font-normal text-brand-ink">presensi belum tercatat</p></div>
+                        <div class="rounded-xl border border-danger-line bg-surface/80 px-3 py-2.5"><p class="text-xl font-semibold text-danger-ink">{{ $reconciliationStats['presensi_dan_jurnal_belum_tercatat'] ?? 0 }}</p><p class="text-theme-xs font-normal text-danger-ink">keduanya belum tercatat</p></div>
                     </div>
                 @endif
             </section>
@@ -189,10 +189,10 @@
         <section aria-labelledby="task-heading">
             <div class="mb-5 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                    <p class="text-[11px] font-semibold uppercase tracking-[.16em] text-warning-ink">Akses utama</p>
-                    <h2 id="task-heading" class="mt-1 text-2xl font-semibold tracking-tight text-heading">Tugas dan kelas Anda</h2>
+                    <p class="text-theme-xs font-normal uppercase text-warning-ink">Akses utama</p>
+                    <h2 id="task-heading" class="mt-1 text-heading ui-card-title">Tugas dan kelas Anda</h2>
                 </div>
-                <p class="text-sm font-medium text-muted">Pilih area kerja sesuai peran mengajar Anda.</p>
+                <p class="text-theme-sm font-normal text-muted">Pilih area kerja sesuai peran mengajar Anda.</p>
             </div>
 
             @if($hasTeachingTasks)
@@ -208,10 +208,10 @@
                                     </div>
                                     <div>
                                         <div class="flex flex-wrap items-center gap-2">
-                                            <h3 id="homeroom-heading" class="text-lg font-semibold text-heading">Wali Kelas</h3>
-                                            <span class="badge badge-blue">{{ $homeroomClassroomTerms->count() }} kelas</span>
+                                            <h3 id="homeroom-heading" class="text-heading ui-card-title">Wali Kelas</h3>
+                                            <span class="badge badge-blue text-theme-xs font-medium">{{ $homeroomClassroomTerms->count() }} kelas</span>
                                         </div>
-                                        <p class="mt-1 text-sm leading-5 text-muted">Kelola presensi harian dan pantau jurnal kelas yang Anda dampingi.</p>
+                                        <p class="mt-1 text-theme-sm text-muted">Kelola presensi harian dan pantau jurnal kelas yang Anda dampingi.</p>
                                     </div>
                                 </div>
                             </div>
@@ -219,29 +219,29 @@
                             <div class="mt-5 grid gap-2 sm:grid-cols-2">
                                 @foreach($homeroomClassroomTerms->take(4) as $term)
                                     <div class="rounded-xl border border-line bg-surface-subtle px-3 py-2.5">
-                                        <p class="truncate text-sm font-bold text-heading">{{ $term->name }}</p>
-                                        <p class="mt-0.5 text-[11px] font-semibold text-soft">{{ $term->academicTerm->name ?? 'Periode aktif' }}</p>
+                                        <p class="truncate text-theme-sm font-medium text-heading">{{ $term->name }}</p>
+                                        <p class="mt-0.5 text-theme-xs font-normal text-soft">{{ $term->academicTerm->name ?? 'Periode aktif' }}</p>
                                     </div>
                                 @endforeach
                                 @if($homeroomClassroomTerms->count() > 4)
-                                    <p class="self-center px-1 text-xs font-bold text-soft">+ {{ $homeroomClassroomTerms->count() - 4 }} kelas lainnya</p>
+                                    <p class="self-center px-1 text-theme-xs font-normal text-soft">+ {{ $homeroomClassroomTerms->count() - 4 }} kelas lainnya</p>
                                 @endif
                             </div>
 
                             <div class="mt-5 flex flex-col gap-2 sm:flex-row">
-                                <a href="{{ route('attendance.index') }}" class="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-info-700 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-info-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-info-700">
+                                <a href="{{ route('attendance.index') }}" class="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-info-700 px-4 py-3 text-white shadow-sm transition-colors hover:bg-info-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-info-700 text-theme-sm font-medium">
                                     Input presensi
                                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" /></svg>
                                 </a>
-                                <a href="{{ route('wali.diniyyah-journals.index') }}" class="inline-flex flex-1 items-center justify-center rounded-xl border border-line bg-surface px-4 py-3 text-sm font-semibold text-body transition-colors hover:border-info-line hover:bg-info-soft hover:text-info-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-info-700">
+                                <a href="{{ route('wali.diniyyah-journals.index') }}" class="inline-flex flex-1 items-center justify-center rounded-xl border border-line bg-surface px-4 py-3 text-body transition-colors hover:border-info-line hover:bg-info-soft hover:text-info-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-info-700 text-theme-sm font-medium">
                                     Pantau jurnal kelas
                                 </a>
                             </div>
                             <div class="mt-2">
-                                <a href="{{ route('guru.tasmi-wali.index') }}" class="flex items-center justify-between rounded-xl border border-line bg-surface-subtle px-4 py-3 text-sm font-semibold text-body transition-colors hover:border-success-line hover:bg-success-soft hover:text-success-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-success-700">
+                                <a href="{{ route('guru.tasmi-wali.index') }}" class="flex items-center justify-between rounded-xl border border-line bg-surface-subtle px-4 py-3 text-theme-sm font-medium text-body transition-colors hover:border-success-line hover:bg-success-soft hover:text-success-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-success-700">
                                     <span class="flex items-center gap-2">
                                         <svg class="h-4 w-4 text-success-ink" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>
-                                        Tasmi&#039; Kelas Saya <span class="text-[10px] font-bold text-soft">(read-only)</span>
+                                        Tasmi&#039; Kelas Saya <span class="text-theme-xs font-normal text-soft">(read-only)</span>
                                     </span>
                                     <span class="text-soft">→</span>
                                 </a>
@@ -259,38 +259,38 @@
                                 </div>
                                 <div>
                                     <div class="flex flex-wrap items-center gap-2">
-                                        <h3 id="diniyyah-heading" class="text-lg font-semibold text-heading">Guru Diniyyah</h3>
-                                        <span class="badge badge-green">{{ $diniyyahAssignments->count() }} penugasan</span>
+                                        <h3 id="diniyyah-heading" class="text-heading ui-card-title">Guru Diniyyah</h3>
+                                        <span class="badge badge-green text-theme-xs font-medium">{{ $diniyyahAssignments->count() }} penugasan</span>
                                         @if($diniyyahAssignments->isNotEmpty())
-                                            <span class="badge badge-indigo">Jadwal Mengajar</span>
+                                            <span class="badge badge-indigo text-theme-xs font-medium">Jadwal Mengajar</span>
                                         @endif
                                     </div>
-                                    <p class="mt-1 text-sm leading-5 text-muted">Input nilai dan jurnal untuk mapel Diniyyah yang Anda ampu.</p>
+                                    <p class="mt-1 text-theme-sm text-muted">Input nilai dan jurnal untuk mapel Diniyyah yang Anda ampu.</p>
                                 </div>
                             </div>
 
                             <div class="mt-5 grid grid-cols-2 gap-2">
                                 <div class="rounded-xl border border-success-line bg-success-soft/60 p-3">
-                                    <p class="text-2xl font-semibold text-success-ink">{{ $diniyyahAssessmentSets->count() }}</p>
-                                    <p class="mt-0.5 text-[11px] font-bold text-success-ink">tugas nilai aktif</p>
+                                    <p class="text-success-ink ui-metric-value">{{ $diniyyahAssessmentSets->count() }}</p>
+                                    <p class="mt-0.5 text-theme-xs font-normal text-success-ink">tugas nilai aktif</p>
                                 </div>
                                 <div class="rounded-xl border border-line bg-surface-subtle p-3">
-                                    <p class="text-2xl font-semibold text-heading">{{ $diniyyahClasses->count() }}</p>
-                                    <p class="mt-0.5 text-[11px] font-bold text-muted">kelas diajar</p>
+                                    <p class="text-heading ui-metric-value">{{ $diniyyahClasses->count() }}</p>
+                                    <p class="mt-0.5 text-theme-xs font-normal text-muted">kelas diajar</p>
                                 </div>
                             </div>
 
                             <div class="mt-5 space-y-2">
-                                <a href="{{ route('guru.diniyyah-scores.index') }}" class="group flex items-center justify-between rounded-xl bg-success-700 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-success-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-success-700">
+                                <a href="{{ route('guru.diniyyah-scores.index') }}" class="group flex items-center justify-between rounded-xl bg-success-700 px-4 py-3 text-theme-sm font-medium text-white transition-colors hover:bg-success-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-success-700">
                                     Input nilai Diniyyah
                                     <svg class="h-4 w-4 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" /></svg>
                                 </a>
-                                <a href="{{ $singleJournalLink }}" class="flex items-center justify-between rounded-xl border border-line bg-surface px-4 py-3 text-sm font-semibold text-body transition-colors hover:border-success-line hover:bg-success-soft hover:text-success-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-success-700">
+                                <a href="{{ $singleJournalLink }}" class="flex items-center justify-between rounded-xl border border-line bg-surface px-4 py-3 text-theme-sm font-medium text-body transition-colors hover:border-success-line hover:bg-success-soft hover:text-success-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-success-700">
                                     Jurnal kelas
                                     <span class="text-soft">→</span>
                                 </a>
                                 @if($hasSimultaneousTafsirSchedule ?? false)
-                                    <a href="{{ route('guru.diniyyah-tafsir-journals.index') }}" class="flex items-center justify-between rounded-xl border border-line bg-surface px-4 py-3 text-sm font-semibold text-body transition-colors hover:border-success-line hover:bg-success-soft hover:text-success-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-success-700">
+                                    <a href="{{ route('guru.diniyyah-tafsir-journals.index') }}" class="flex items-center justify-between rounded-xl border border-line bg-surface px-4 py-3 text-theme-sm font-medium text-body transition-colors hover:border-success-line hover:bg-success-soft hover:text-success-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-success-700">
                                         Jurnal Tafsir
                                         <span class="text-soft">→</span>
                                     </a>
@@ -310,10 +310,10 @@
                                     </div>
                                     <div>
                                         <div class="flex flex-wrap items-center gap-2">
-                                            <h3 id="tahfidz-heading" class="text-lg font-semibold text-heading">Guru Tahfidz</h3>
-                                            <span class="badge badge-purple">{{ $tahfidzHalaqahs->count() }} halaqah</span>
+                                            <h3 id="tahfidz-heading" class="text-heading ui-card-title">Guru Tahfidz</h3>
+                                            <span class="badge badge-purple text-theme-xs font-medium">{{ $tahfidzHalaqahs->count() }} halaqah</span>
                                         </div>
-                                        <p class="mt-1 text-sm leading-5 text-muted">Catat setoran hafalan santri pada halaqah Anda.</p>
+                                        <p class="mt-1 text-theme-sm text-muted">Catat setoran hafalan santri pada halaqah Anda.</p>
                                     </div>
                                 </div>
                             </div>
@@ -321,16 +321,16 @@
                             <div class="mt-5 space-y-2">
                                 @foreach($tahfidzHalaqahs->take(3) as $halaqah)
                                     <div class="flex items-center justify-between rounded-xl border border-line bg-surface-subtle px-3 py-2.5">
-                                        <p class="text-sm font-bold text-heading">{{ $halaqah->name ?: 'Halaqah Tahfidz' }}</p>
-                                        <span class="text-[11px] font-bold text-soft">{{ $halaqah->activeMembers->count() }} santri</span>
+                                        <p class="text-theme-sm font-medium text-heading">{{ $halaqah->name ?: 'Halaqah Tahfidz' }}</p>
+                                        <span class="text-theme-xs font-normal text-soft">{{ $halaqah->activeMembers->count() }} santri</span>
                                     </div>
                                 @endforeach
                                 @if($tahfidzHalaqahs->count() > 3)
-                                    <p class="px-1 text-xs font-bold text-soft">+ {{ $tahfidzHalaqahs->count() - 3 }} halaqah lainnya</p>
+                                    <p class="px-1 text-theme-xs font-normal text-soft">+ {{ $tahfidzHalaqahs->count() - 3 }} halaqah lainnya</p>
                                 @endif
                             </div>
 
-                            <a href="{{ route('guru.tahfidz.index') }}" class="mt-5 inline-flex w-full items-center justify-between rounded-xl bg-brand-700 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-700">
+                            <a href="{{ route('guru.tahfidz.index') }}" class="mt-5 inline-flex w-full items-center justify-between rounded-xl bg-brand-700 px-4 py-3 text-white transition-colors hover:bg-brand-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-700 text-theme-sm font-medium">
                                 Buka jurnal Tahfidz
                                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" /></svg>
                             </a>
@@ -348,27 +348,27 @@
                                     </div>
                                     <div>
                                         <div class="flex flex-wrap items-center gap-2">
-                                            <h3 id="tasmi-heading" class="text-lg font-semibold text-heading">PJ Tasmi&#039;</h3>
-                                            <span class="badge badge-green">{{ $tasmiEligibleClassrooms->count() }} kelas</span>
+                                            <h3 id="tasmi-heading" class="text-heading ui-card-title">PJ Tasmi&#039;</h3>
+                                            <span class="badge badge-green text-theme-xs font-medium">{{ $tasmiEligibleClassrooms->count() }} kelas</span>
                                             @if($tasmiGenderScope === 'male')
-                                                <span class="badge badge-blue">Ikhwan</span>
+                                                <span class="badge badge-blue text-theme-xs font-medium">Ikhwan</span>
                                             @elseif($tasmiGenderScope === 'female')
-                                                <span class="badge badge-pink" style="background:var(--ui-brand-soft-strong);color:var(--ui-brand-ink);">Akwat</span>
+                                                <span class="badge badge-pink text-theme-xs font-medium" style="background:var(--ui-brand-soft-strong);color:var(--ui-brand-ink);">Akwat</span>
                                             @endif
                                         </div>
-                                        <p class="mt-1 text-sm leading-5 text-muted">Catat setoran ujian tasmi&#039; santri (1 juz / 5 juz).</p>
+                                        <p class="mt-1 text-theme-sm text-muted">Catat setoran ujian tasmi&#039; santri (1 juz / 5 juz).</p>
                                     </div>
                                 </div>
                             </div>
 
                             <div class="mt-5 grid grid-cols-2 gap-2">
                                 <div class="rounded-xl border border-success-line bg-success-soft/60 p-3">
-                                    <p class="text-2xl font-semibold text-success-ink">{{ $tasmiRecordsCount }}</p>
-                                    <p class="mt-0.5 text-[11px] font-bold text-success-ink">record tasmi&#039;</p>
+                                    <p class="text-success-ink ui-metric-value">{{ $tasmiRecordsCount }}</p>
+                                    <p class="mt-0.5 text-theme-xs font-normal text-success-ink">record tasmi&#039;</p>
                                 </div>
                                 <div class="rounded-xl border border-line bg-surface-subtle p-3">
-                                    <p class="text-2xl font-semibold text-heading">{{ $tasmiEligibleClassrooms->count() }}</p>
-                                    <p class="mt-0.5 text-[11px] font-bold text-muted">kelas bisa diuji</p>
+                                    <p class="text-heading ui-metric-value">{{ $tasmiEligibleClassrooms->count() }}</p>
+                                    <p class="mt-0.5 text-theme-xs font-normal text-muted">kelas bisa diuji</p>
                                 </div>
                             </div>
 
@@ -376,23 +376,23 @@
                                 <div class="mt-5 space-y-2">
                                     <div class="flex flex-wrap gap-1.5">
                                         @foreach($tasmiEligibleClassrooms->take(5) as $ct)
-                                            <a href="{{ route('guru.tasmi.create', ['classroom_term_id' => $ct->id]) }}" class="rounded-lg border border-line bg-surface px-2.5 py-1 text-xs font-bold text-body transition-colors hover:border-success-line hover:bg-success-soft hover:text-success-ink">
+                                            <a href="{{ route('guru.tasmi.create', ['classroom_term_id' => $ct->id]) }}" class="rounded-lg border border-line bg-surface px-2.5 py-1 text-theme-sm font-medium text-body transition-colors hover:border-success-line hover:bg-success-soft hover:text-success-ink">
                                                 {{ $ct->classroom->name ?? $ct->name }}
                                             </a>
                                         @endforeach
                                         @if($tasmiEligibleClassrooms->count() > 5)
-                                            <span class="self-center px-1 text-xs font-bold text-soft">+ {{ $tasmiEligibleClassrooms->count() - 5 }} kelas</span>
+                                            <span class="self-center px-1 text-theme-xs font-normal text-soft">+ {{ $tasmiEligibleClassrooms->count() - 5 }} kelas</span>
                                         @endif
                                     </div>
                                 </div>
                             @endif
 
                             <div class="mt-5 space-y-2">
-                                <a href="{{ route('guru.tasmi.create') }}" class="group flex items-center justify-between rounded-xl bg-success-700 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-success-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-success-700">
+                                <a href="{{ route('guru.tasmi.create') }}" class="group flex items-center justify-between rounded-xl bg-success-700 px-4 py-3 text-theme-sm font-medium text-white transition-colors hover:bg-success-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-success-700">
                                     Input tasmi&#039; baru
                                     <svg class="h-4 w-4 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
                                 </a>
-                                <a href="{{ route('guru.tasmi.records') }}" class="flex items-center justify-between rounded-xl border border-line bg-surface px-4 py-3 text-sm font-semibold text-body transition-colors hover:border-success-line hover:bg-success-soft hover:text-success-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-success-700">
+                                <a href="{{ route('guru.tasmi.records') }}" class="flex items-center justify-between rounded-xl border border-line bg-surface px-4 py-3 text-theme-sm font-medium text-body transition-colors hover:border-success-line hover:bg-success-soft hover:text-success-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-success-700">
                                     Riwayat &amp; laporan tasmi&#039;
                                     <span class="text-soft">→</span>
                                 </a>
@@ -409,16 +409,16 @@
                                     </svg>
                                 </div>
                                 <div>
-                                    <h3 id="other-tasks-heading" class="text-lg font-semibold text-heading">Tugas lainnya</h3>
-                                    <p class="mt-1 text-sm leading-5 text-muted">Akses jurnal pengganti dan riwayat perubahan jadwal.</p>
+                                    <h3 id="other-tasks-heading" class="text-heading ui-card-title">Tugas lainnya</h3>
+                                    <p class="mt-1 text-theme-sm text-muted">Akses jurnal pengganti dan riwayat perubahan jadwal.</p>
                                 </div>
                             </div>
                             <div class="mt-5 grid gap-2 sm:grid-cols-2">
-                                <a href="{{ route('guru.diniyyah-substitute-journals.index') }}" class="flex items-center justify-between rounded-xl border border-line bg-surface-subtle px-4 py-3 text-sm font-semibold text-body transition-colors hover:border-warning-line hover:bg-warning-soft hover:text-warning-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-warning-500">
+                                <a href="{{ route('guru.diniyyah-substitute-journals.index') }}" class="flex items-center justify-between rounded-xl border border-line bg-surface-subtle px-4 py-3 text-theme-sm font-medium text-body transition-colors hover:border-warning-line hover:bg-warning-soft hover:text-warning-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-warning-500">
                                     Jurnal guru pengganti
                                     <span class="text-soft">→</span>
                                 </a>
-                                <a href="{{ route('guru.jadwal.riwayat') }}" class="flex items-center justify-between rounded-xl border border-line bg-surface-subtle px-4 py-3 text-sm font-semibold text-body transition-colors hover:border-warning-line hover:bg-warning-soft hover:text-warning-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-warning-500">
+                                <a href="{{ route('guru.jadwal.riwayat') }}" class="flex items-center justify-between rounded-xl border border-line bg-surface-subtle px-4 py-3 text-theme-sm font-medium text-body transition-colors hover:border-warning-line hover:bg-warning-soft hover:text-warning-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-warning-500">
                                     Riwayat perubahan jadwal
                                     <span class="text-soft">→</span>
                                 </a>
@@ -431,8 +431,8 @@
                     <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-surface-muted text-soft">
                         <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3m0 4h.01M4.93 19h14.14a2 2 0 0 0 1.73-3L13.73 4a2 2 0 0 0-3.46 0L3.2 16a2 2 0 0 0 1.73 3Z" /></svg>
                     </div>
-                    <p class="mt-3 text-sm font-bold text-body">Belum ada penugasan mengajar aktif.</p>
-                    <p class="mt-1 text-xs text-soft">Hubungi admin jika data penugasan Anda belum sesuai.</p>
+                    <p class="mt-3 text-theme-sm font-normal text-body">Belum ada penugasan mengajar aktif.</p>
+                    <p class="mt-1 text-theme-xs text-soft font-normal">Hubungi admin jika data penugasan Anda belum sesuai.</p>
                 </div>
             @endif
         </section>
@@ -441,11 +441,11 @@
         <section class="rounded-2xl border border-line bg-surface p-5 shadow-sm sm:p-6" aria-labelledby="agenda-heading">
             <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                    <p class="text-[11px] font-semibold uppercase tracking-[.16em] text-soft">Informasi sekolah</p>
-                    <h2 id="agenda-heading" class="mt-1 text-xl font-semibold text-heading">Agenda terdekat</h2>
-                    <p class="mt-1 text-sm text-muted">Ringkasan kegiatan dan libur yang relevan untuk Anda.</p>
+                    <p class="text-theme-xs font-normal uppercase text-soft">Informasi sekolah</p>
+                    <h2 id="agenda-heading" class="mt-1 text-heading ui-card-title">Agenda terdekat</h2>
+                    <p class="mt-1 text-theme-sm text-muted">Ringkasan kegiatan dan libur yang relevan untuk Anda.</p>
                 </div>
-                <a href="{{ route('guru.calendar') }}" class="inline-flex items-center gap-2 text-sm font-semibold text-body hover:text-warning-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-warning-500">
+                <a href="{{ route('guru.calendar') }}" class="inline-flex items-center gap-2 text-body hover:text-warning-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-warning-500 text-theme-sm font-medium">
                     Buka kalender lengkap
                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" /></svg>
                 </a>
@@ -465,11 +465,11 @@
                                 </div>
                                 <div class="min-w-0">
                                     <div class="flex flex-wrap items-center gap-2">
-                                        <span class="text-[10px] font-semibold uppercase tracking-wider {{ $alert['kind'] === 'holiday' ? 'text-warning-ink' : (($alert['is_no_kbm'] ?? false) ? 'text-info-ink' : 'text-brand-ink') }}">{{ $alert['kind_label'] }}</span>
-                                        <span class="rounded-full bg-surface-muted px-2 py-0.5 text-[10px] font-bold {{ $alert['countdown_label'] === 'Hari ini' ? 'text-danger-ink' : 'text-muted' }}">{{ $alert['countdown_label'] }}</span>
+                                        <span class="text-theme-xs font-normal uppercase {{ $alert['kind'] === 'holiday' ? 'text-warning-ink' : (($alert['is_no_kbm'] ?? false) ? 'text-info-ink' : 'text-brand-ink') }}">{{ $alert['kind_label'] }}</span>
+                                        <span class="rounded-full bg-surface-muted px-2 py-0.5 {{ $alert['countdown_label'] === 'Hari ini' ? 'text-danger-ink' : 'text-muted' }} text-theme-xs font-medium">{{ $alert['countdown_label'] }}</span>
                                     </div>
-                                    <h3 class="mt-1 truncate text-sm font-semibold text-heading sm:text-base">{{ $alert['title'] }}</h3>
-                                    <p class="mt-0.5 truncate text-xs font-semibold text-muted">{{ $alert['date_label'] }}@if($alert['meta']) · {{ $alert['meta'] }}@endif</p>
+                                    <h3 class="mt-1 truncate text-heading text-theme-sm font-medium">{{ $alert['title'] }}</h3>
+                                    <p class="mt-0.5 truncate text-theme-xs font-normal text-muted">{{ $alert['date_label'] }}@if($alert['meta']) · {{ $alert['meta'] }}@endif</p>
                                 </div>
                             </div>
                         </article>
@@ -477,8 +477,8 @@
                 </div>
             @else
                 <div class="mt-5 rounded-2xl border-2 border-dashed border-line bg-surface-subtle/70 p-8 text-center">
-                    <p class="text-sm font-bold text-muted">Belum ada agenda sekolah terdekat.</p>
-                    <p class="mt-1 text-xs font-medium text-soft">Agenda baru akan muncul di sini saat sudah dibagikan admin.</p>
+                    <p class="text-theme-sm font-normal text-muted">Belum ada agenda sekolah terdekat.</p>
+                    <p class="mt-1 text-theme-xs font-normal text-soft">Agenda baru akan muncul di sini saat sudah dibagikan admin.</p>
                 </div>
             @endif
         </section>

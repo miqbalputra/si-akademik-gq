@@ -41,24 +41,18 @@
             gap:8px;
         }
         .ac-toolbar-label {
-            font-size:11px;
-            font-weight:700;
-            text-transform:uppercase;
-            letter-spacing:.04em;
-            color:var(--ui-soft);
-        }
+            text-transform:none;
+            letter-spacing:normal;
+            color:var(--ui-soft); font-size:14px; line-height:20px; font-weight:500; }
         .ac-toolbar select,
         .ac-toolbar input[type="month"] {
             border-radius:10px;
             border:1px solid var(--ui-line-strong);
             background:var(--ui-surface-subtle);
             padding:5px 10px;
-            font-size:13px;
-            font-weight:700;
             color:var(--ui-heading);
             outline:none;
-            transition:border-color .2s;
-        }
+            transition:border-color .2s; font-size:14px; line-height:20px; font-weight:400; }
         .ac-toolbar select:focus,
         .ac-toolbar input[type="month"]:focus { border-color:var(--color-warning-500); }
 
@@ -67,20 +61,16 @@
             border-radius:10px; border:0;
             background:var(--color-warning-600); color:var(--ui-on-color);
             padding:6px 16px;
-            font-size:12px; font-weight:700;
             cursor:pointer; transition:background .2s;
-            text-decoration:none;
-        }
+            text-decoration:none; font-size:14px; line-height:20px; font-weight:500; }
         .ac-btn-primary:hover { background:var(--ui-warning-ink); }
 
         .ac-btn-outline {
             display:inline-flex; align-items:center; justify-content:center;
             border-radius:10px;
             padding:6px 14px;
-            font-size:11px; font-weight:700;
             cursor:pointer; transition:all .2s;
-            text-decoration:none;
-        }
+            text-decoration:none; font-size:14px; line-height:20px; font-weight:500; }
         .ac-btn-outline.amber {
             border:1px solid var(--color-warning-400); background:var(--ui-warning-soft); color:var(--ui-warning-ink);
         }
@@ -116,9 +106,7 @@
         .ac-legend-dot.holiday { background:var(--color-warning-500); }
         .ac-legend-dot.event  { background:var(--color-brand-500); }
 
-        .ac-legend-text {
-            font-size:12px; font-weight:700; color:var(--ui-text);
-        }
+        .ac-legend-text {  color:var(--ui-text); font-size:14px; line-height:20px; font-weight:400; }
 
         /* ---------- Calendar Container ---------- */
         .ac-cal {
@@ -126,25 +114,25 @@
             border:1px solid var(--ui-line);
             background:var(--ui-surface);
             box-shadow:0 4px 6px -1px rgba(0,0,0,.05), 0 2px 4px -2px rgba(0,0,0,.05);
-            overflow:hidden;
+            overflow:auto;
         }
 
         /* Day header row */
         .ac-cal-header {
             display:grid;
+            min-width:900px;
             grid-template-columns:repeat(7, 1fr);
             text-align:center;
-            font-size:11px; font-weight:600;
-            text-transform:uppercase; letter-spacing:.05em;
+            text-transform:none; letter-spacing:normal;
             color:var(--ui-muted);
             background:var(--ui-surface-subtle);
             border-bottom:1px solid var(--ui-line);
-            padding:10px 0;
-        }
+            padding:10px 0; font-size:12px; line-height:18px; font-weight:500; }
 
         /* Grid */
         .ac-cal-grid {
             display:grid;
+            min-width:900px;
             grid-template-columns:repeat(7, 1fr);
             gap:1px;
             background:var(--ui-line);
@@ -152,6 +140,7 @@
 
         /* Day cell */
         .ac-day {
+            min-width:0;
             min-height:120px;
             padding:10px;
             background:var(--ui-surface);
@@ -171,22 +160,16 @@
         .ac-day-top {
             display:flex; align-items:flex-start; justify-content:space-between;
         }
-        .ac-day-num {
-            font-size:15px; font-weight:700; color:var(--ui-heading); line-height:1;
-        }
-        .ac-day-label {
-            font-size:8px; font-weight:700; color:var(--ui-soft);
-            text-transform:uppercase; margin-top:2px;
-        }
+        .ac-day-num {  color:var(--ui-heading); font-size:14px; line-height:20px; font-weight:500; }
+        .ac-day-label {  color:var(--ui-soft);
+            text-transform:uppercase; margin-top:2px; font-size:12px; line-height:18px; font-weight:400; }
 
         /* Pill badge */
         .ac-pill {
             border-radius:999px;
             padding:2px 7px;
-            font-size:8px; font-weight:600;
-            text-transform:uppercase; letter-spacing:.03em;
-            white-space:nowrap;
-        }
+            text-transform:none; letter-spacing:normal;
+            white-space:nowrap; font-size:12px; line-height:18px; font-weight:500; }
         .ac-pill.school  { background:var(--ui-success-soft-strong); color:var(--ui-success-ink); }
         .ac-pill.weekend { background:var(--ui-line); color:var(--ui-text); }
         .ac-pill.holiday { background:var(--ui-warning-soft-strong); color:var(--ui-warning-ink); }
@@ -195,23 +178,16 @@
         .ac-day-content { margin-top:8px; flex:1; }
         .ac-day-content > * + * { margin-top:4px; }
 
-        .ac-holiday-title {
-            font-size:10px; font-weight:700; color:var(--ui-warning-ink); line-height:1.3;
-        }
+        .ac-holiday-title {  color:var(--ui-warning-ink); font-size:12px; line-height:18px; font-weight:500; }
 
         .ac-event-chip {
             border-radius:6px;
             border:1px solid var(--ui-brand-soft-strong);
             background:rgba(238,242,255,.5);
-            padding:4px 6px;
-            font-size:9px; font-weight:700; color:var(--ui-brand-ink);
-            line-height:1.2;
-            overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-        }
-        .ac-event-chip-type {
-            font-size:7px; font-weight:600; text-transform:uppercase;
-            color:var(--color-brand-500); display:block; margin-bottom:1px;
-        }
+            padding:4px 6px; color:var(--ui-brand-ink);
+            overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; line-height:18px; font-weight:500; }
+        .ac-event-chip-type {  text-transform:uppercase;
+            color:var(--color-brand-500); display:block; margin-bottom:1px; font-size:12px; line-height:18px; font-weight:400; }
 
         /* Hover actions */
         .ac-day-actions {
@@ -248,12 +224,8 @@
             padding:20px;
         }
 
-        .ac-detail-title {
-            font-size:15px; font-weight:600; color:var(--ui-heading);
-        }
-        .ac-detail-sub {
-            font-size:11px; font-weight:600; color:var(--ui-soft); margin-top:4px;
-        }
+        .ac-detail-title {  color:var(--ui-heading); font-size:18px; line-height:28px; font-weight:600; }
+        .ac-detail-sub {  color:var(--ui-soft); margin-top:4px; font-size:12px; line-height:18px; font-weight:400; }
 
         .ac-detail-empty {
             margin-top:16px;
@@ -261,9 +233,7 @@
             border-radius:12px;
             border:1px dashed var(--ui-line-strong);
             background:var(--ui-surface-subtle);
-            text-align:center;
-            font-size:12px; font-weight:600; color:var(--ui-soft);
-        }
+            text-align:center; color:var(--ui-soft); font-size:14px; line-height:20px; font-weight:400; }
 
         .ac-detail-list { margin-top:16px; }
         .ac-detail-list > * + * { margin-top:10px; }
@@ -276,37 +246,27 @@
         .ac-detail-item.amber  { border-color:var(--ui-warning-line); background:var(--ui-warning-soft); }
         .ac-detail-item.indigo { border-color:var(--ui-brand-line); background:var(--ui-brand-soft); }
 
-        .ac-detail-item-date {
-            font-size:9px; font-weight:600; text-transform:uppercase;
-            letter-spacing:.04em;
-        }
+        .ac-detail-item-date {  text-transform:none;
+            letter-spacing:normal; font-size:12px; line-height:18px; font-weight:400; }
         .ac-detail-item.amber .ac-detail-item-date { color:var(--ui-warning-ink); }
         .ac-detail-item.indigo .ac-detail-item-date { color:var(--ui-brand-ink); }
 
-        .ac-detail-item-title {
-            font-size:13px; font-weight:600; color:var(--ui-heading);
-            margin-top:4px; line-height:1.3;
-        }
+        .ac-detail-item-title {  color:var(--ui-heading);
+            margin-top:4px; font-size:14px; line-height:20px; font-weight:500; }
 
-        .ac-detail-item-desc {
-            font-size:12px; font-weight:500; color:var(--ui-muted);
-            margin-top:6px; line-height:1.5;
-        }
+        .ac-detail-item-desc {  color:var(--ui-muted);
+            margin-top:6px; font-size:12px; line-height:18px; font-weight:400; }
 
-        .ac-detail-item-meta {
-            font-size:11px; font-weight:600; color:var(--ui-muted);
-            margin-top:4px;
-        }
+        .ac-detail-item-meta {  color:var(--ui-muted);
+            margin-top:4px; font-size:12px; line-height:18px; font-weight:400; }
 
         .ac-edit-link {
             display:inline-flex; align-items:center;
             margin-top:8px;
-            font-size:11px; font-weight:700;
             border-radius:8px; border:1px solid var(--ui-line-strong);
             padding:4px 10px;
             color:var(--ui-text); background:var(--ui-surface);
-            text-decoration:none; transition:all .15s;
-        }
+            text-decoration:none; transition:all .15s; font-size:14px; line-height:20px; font-weight:500; }
         .ac-edit-link:hover { background:var(--ui-surface-muted); }
     </style>
 
@@ -327,14 +287,14 @@
                 <span class="ac-toolbar-label">Bulan:</span>
                 <input type="month" name="month" value="{{ $selectedMonth }}">
 
-                <button type="submit" class="ac-btn-primary">Tampilkan</button>
+                <button type="submit" class="ac-btn-primary text-theme-sm font-medium">Tampilkan</button>
             </form>
 
             @if ($createHolidayUrl)
                 <div class="ac-toolbar-right">
-                    <a href="{{ $createHolidayUrl }}" class="ac-btn-outline amber">Tambah Libur Sekolah</a>
+                    <a href="{{ $createHolidayUrl }}" class="ac-btn-outline amber text-theme-sm font-medium">Tambah Libur Sekolah</a>
                     @if ($createEventUrl)
-                        <a href="{{ $createEventUrl }}" class="ac-btn-outline indigo">Tambah Event Sekolah</a>
+                        <a href="{{ $createEventUrl }}" class="ac-btn-outline indigo text-theme-sm font-medium">Tambah Event Sekolah</a>
                     @endif
                 </div>
             @endif
@@ -366,7 +326,7 @@
             </div>
         @else
             {{-- ====== CALENDAR GRID ====== --}}
-            <div class="ac-cal">
+            <div class="ac-cal" tabindex="0" role="region" aria-label="Kalender akademik, dapat digeser mendatar">
                 <div class="ac-cal-header">
                     @foreach (['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'] as $dayLabel)
                         <div>{{ $dayLabel }}</div>

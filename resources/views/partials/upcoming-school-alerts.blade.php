@@ -21,8 +21,8 @@
     <section class="mb-5 rounded-lg border border-warning-line bg-warning-soft p-4 shadow-sm">
         <div class="flex items-start justify-between gap-3">
             <div>
-                <p class="text-sm font-semibold text-warning-ink">{{ $heading ?? 'Info 7 Hari ke Depan' }}</p>
-                <p class="mt-1 text-xs text-warning-ink">{{ $subheading ?? 'Ringkasan libur sekolah dan event terdekat.' }}</p>
+                <p class="text-theme-sm font-normal text-warning-ink">{{ $heading ?? 'Info 7 Hari ke Depan' }}</p>
+                <p class="mt-1 text-theme-xs text-warning-ink font-normal">{{ $subheading ?? 'Ringkasan libur sekolah dan event terdekat.' }}</p>
             </div>
         </div>
 
@@ -33,23 +33,23 @@
                     <div class="flex items-start justify-between gap-3">
                         <div class="min-w-0">
                             <div class="flex flex-wrap items-center gap-2">
-                                <span class="rounded-full px-2.5 py-1 text-[11px] font-semibold {{ ($alert['is_no_kbm'] ?? false) ? 'bg-info-soft-strong text-info-ink' : $style['kind'] }}">
+                                <span class="rounded-full px-2.5 py-1 {{ ($alert['is_no_kbm'] ?? false) ? 'bg-info-soft-strong text-info-ink' : $style['kind'] }} text-theme-xs font-medium">
                                     {{ $alert['kind_label'] }}
                                 </span>
-                                <span class="rounded-full px-2.5 py-1 text-[11px] font-semibold {{ $style['priority'] }}">
+                                <span class="rounded-full px-2.5 py-1 {{ $style['priority'] }} text-theme-xs font-medium">
                                     {{ $alert['priority_label'] }}
                                 </span>
-                                <span class="rounded-full bg-surface-muted px-2.5 py-1 text-[11px] font-semibold text-body">
+                                <span class="rounded-full bg-surface-muted px-2.5 py-1 text-body text-theme-xs font-medium">
                                     {{ $alert['countdown_label'] }}
                                 </span>
                             </div>
-                            <h3 class="mt-2 font-semibold text-heading">{{ $alert['title'] }}</h3>
-                            <p class="mt-1 text-sm text-body">{{ $alert['date_label'] }}</p>
+                            <h3 class="mt-2 text-heading ui-card-title">{{ $alert['title'] }}</h3>
+                            <p class="mt-1 text-theme-sm text-body">{{ $alert['date_label'] }}</p>
                             @if ($alert['meta'])
-                                <p class="mt-1 text-sm text-body">{{ $alert['meta'] }}</p>
+                                <p class="mt-1 text-theme-sm text-body">{{ $alert['meta'] }}</p>
                             @endif
                             @if ($alert['description'])
-                                <p class="mt-2 text-sm text-body">{{ $alert['description'] }}</p>
+                                <p class="mt-2 text-theme-sm text-body">{{ $alert['description'] }}</p>
                             @endif
                         </div>
                     </div>

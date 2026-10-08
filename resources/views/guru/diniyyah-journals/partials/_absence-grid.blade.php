@@ -22,10 +22,10 @@
                     <input id="student_{{ $enrollment->id }}" type="checkbox" name="absences[{{ $enrollment->id }}]" value="{{ $existingStatus ?? 'skipped' }}" {{ $existingStatus ? 'checked' : '' }} class="h-5 w-5 text-success-ink rounded border-line-strong focus:ring-success-500 cursor-pointer" onclick="event.stopPropagation()">
                 @endif
             </div>
-            <div class="ml-3 flex-1 flex justify-between items-center text-sm">
-                <label for="student_{{ $enrollment->id }}" title="{{ $enrollment->student->name }}" class="font-bold text-body truncate cursor-pointer select-none w-full" onclick="event.stopPropagation()">{{ $enrollment->student->name }}</label>
+            <div class="ml-3 flex-1 flex justify-between items-center text-theme-sm">
+                <label for="student_{{ $enrollment->id }}" title="{{ $enrollment->student->name }}" class="text-body truncate cursor-pointer select-none w-full ui-form-label" onclick="event.stopPropagation()">{{ $enrollment->student->name }}</label>
                 @if($isDailyAbsent)
-                    <span class="text-[10px] font-bold text-warning-ink uppercase bg-warning-soft-strong px-2 py-0.5 rounded ml-2">{{ $dailyStatus }}</span>
+                    <span class="text-theme-xs font-normal text-warning-ink uppercase bg-warning-soft-strong px-2 py-0.5 rounded ml-2">{{ $dailyStatus }}</span>
                 @endif
             </div>
         </div>

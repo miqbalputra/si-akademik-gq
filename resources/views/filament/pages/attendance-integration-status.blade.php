@@ -20,26 +20,26 @@
             <article class="rounded-xl border p-5 shadow-sm {{ $connectionClass }}">
                 <div class="flex flex-wrap items-start justify-between gap-4">
                     <div>
-                        <p class="text-xs font-bold uppercase tracking-wider opacity-70">Status koneksi umum</p>
-                        <h2 class="mt-2 text-2xl font-semibold">{{ $connectionLabel }}</h2>
-                        <p class="mt-2 max-w-2xl text-sm leading-6 opacity-80">{{ $connection['message'] ?? 'Belum ada pemeriksaan koneksi.' }}</p>
+                        <p class="text-theme-xs font-normal uppercase opacity-70">Status koneksi umum</p>
+                        <h2 class="mt-2 ui-card-title">{{ $connectionLabel }}</h2>
+                        <p class="mt-2 max-w-2xl text-theme-sm opacity-80">{{ $connection['message'] ?? 'Belum ada pemeriksaan koneksi.' }}</p>
                     </div>
-                    <span class="rounded-full border border-current px-3 py-1 text-xs font-semibold uppercase tracking-wide">
+                    <span class="rounded-full border border-current px-3 py-1 text-theme-xs font-medium">
                         {{ strtoupper($connectionKey) }}
                     </span>
                 </div>
 
-                <dl class="mt-5 grid gap-3 text-sm sm:grid-cols-3">
+                <dl class="mt-5 grid gap-3 text-theme-sm sm:grid-cols-3">
                     <div>
-                        <dt class="text-xs font-semibold opacity-70">Host</dt>
+                        <dt class="text-theme-xs font-normal opacity-70">Host</dt>
                         <dd class="mt-1 break-all font-bold">{{ ($connection['base_url'] ?? '') ?: '-' }}</dd>
                     </div>
                     <div>
-                        <dt class="text-xs font-semibold opacity-70">Diperiksa</dt>
+                        <dt class="text-theme-xs font-normal opacity-70">Diperiksa</dt>
                         <dd class="mt-1 font-bold">{{ $checkedAt }}</dd>
                     </div>
                     <div>
-                        <dt class="text-xs font-semibold opacity-70">Respons API</dt>
+                        <dt class="text-theme-xs font-normal opacity-70">Respons API</dt>
                         <dd class="mt-1 font-bold">{{ ($connection['latency_ms'] ?? null) !== null ? $connection['latency_ms'].' ms' : '-' }}</dd>
                     </div>
                 </dl>
@@ -48,11 +48,11 @@
             <article class="rounded-xl border border-line bg-surface p-5 shadow-sm dark:border-gray-800 dark:bg-surface">
                 <div class="flex items-start justify-between gap-4">
                     <div>
-                        <p class="text-xs font-bold uppercase tracking-wider text-muted dark:text-muted">Tindakan</p>
-                        <h2 class="mt-2 text-lg font-semibold text-heading dark:text-white">Periksa ulang koneksi</h2>
-                        <p class="mt-2 text-sm leading-6 text-body dark:text-body">Pemeriksaan memakai API key server dan tidak menampilkan secret ke browser.</p>
+                        <p class="text-theme-xs font-normal uppercase text-muted dark:text-muted">Tindakan</p>
+                        <h2 class="mt-2 text-heading dark:text-white ui-card-title">Periksa ulang koneksi</h2>
+                        <p class="mt-2 text-theme-sm text-body dark:text-body">Pemeriksaan memakai API key server dan tidak menampilkan secret ke browser.</p>
                     </div>
-                    <button type="button" wire:click="refreshStatus" wire:loading.attr="disabled" class="inline-flex shrink-0 items-center rounded-lg bg-primary-600 px-3 py-2 text-sm font-bold text-white shadow-sm hover:bg-primary-700 disabled:opacity-60">
+                    <button type="button" wire:click="refreshStatus" wire:loading.attr="disabled" class="inline-flex shrink-0 items-center rounded-lg bg-primary-600 px-3 py-2 text-white shadow-sm hover:bg-primary-700 disabled:opacity-60 text-theme-sm font-medium">
                         <span wire:loading.remove wire:target="refreshStatus">Cek ulang</span>
                         <span wire:loading wire:target="refreshStatus">Memeriksa...</span>
                     </button>
@@ -73,27 +73,27 @@
             @endphp
             @foreach ($metrics as $metric)
                 <article class="rounded-xl border p-4 shadow-sm {{ $metric['class'] }}">
-                    <p class="text-xs font-bold uppercase tracking-wide opacity-70">{{ $metric['label'] }}</p>
-                    <p class="mt-2 text-3xl font-semibold">{{ number_format((int) ($summary[$metric['key']] ?? 0)) }}</p>
+                    <p class="text-theme-xs font-normal uppercase opacity-70">{{ $metric['label'] }}</p>
+                    <p class="mt-2 ui-metric-value">{{ number_format((int) ($summary[$metric['key']] ?? 0)) }}</p>
                 </article>
             @endforeach
         </section>
 
         <section class="overflow-hidden rounded-xl border border-line bg-surface shadow-sm dark:border-gray-800 dark:bg-surface">
             <div class="border-b border-line px-5 py-4 dark:border-gray-800">
-                <h2 class="text-lg font-semibold text-heading dark:text-white">Status mapping guru aktif</h2>
-                <p class="mt-1 text-sm text-body dark:text-body">Terhubung berarti NIY lokal unik dan ditemukan sebagai <code>users.id_guru</code> aktif di GeoPresensi.</p>
+                <h2 class="text-heading dark:text-white ui-card-title">Status mapping guru aktif</h2>
+                <p class="mt-1 text-theme-sm text-body dark:text-body">Terhubung berarti NIY lokal unik dan ditemukan sebagai <code>users.id_guru</code> aktif di GeoPresensi.</p>
             </div>
 
             <div class="overflow-x-auto">
-                <table class="w-full min-w-[900px] text-left text-sm">
-                    <thead class="bg-surface-subtle text-xs uppercase tracking-wide text-muted dark:bg-canvas dark:text-muted">
+                <table class="w-full min-w-[900px] text-left text-theme-sm">
+                    <thead class="bg-surface-subtle text-muted dark:bg-canvas dark:text-muted text-theme-xs font-medium">
                         <tr>
-                            <th class="px-5 py-3">Guru</th>
-                            <th class="px-5 py-3">Akun</th>
-                            <th class="px-5 py-3">NIY</th>
-                            <th class="px-5 py-3">Status GeoPresensi</th>
-                            <th class="px-5 py-3">Keterangan</th>
+                            <th class="px-5 py-3 text-theme-xs font-medium">Guru</th>
+                            <th class="px-5 py-3 text-theme-xs font-medium">Akun</th>
+                            <th class="px-5 py-3 text-theme-xs font-medium">NIY</th>
+                            <th class="px-5 py-3 text-theme-xs font-medium">Status GeoPresensi</th>
+                            <th class="px-5 py-3 text-theme-xs font-medium">Keterangan</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-line dark:divide-gray-800">
@@ -106,13 +106,13 @@
                                 };
                             @endphp
                             <tr class="align-top">
-                                <td class="px-5 py-4 font-bold text-heading dark:text-white">{{ $teacher['name'] }}</td>
+                                <td class="px-5 py-4 font-medium text-heading dark:text-white">{{ $teacher['name'] }}</td>
                                 <td class="px-5 py-4 text-body dark:text-body">
                                     <div>{{ $teacher['account_name'] ?: '-' }}</div>
-                                    @if ($teacher['username'])<div class="text-xs text-muted">{{ '@'.$teacher['username'] }}</div>@endif
+                                    @if ($teacher['username'])<div class="text-theme-xs text-muted font-normal">{{ '@'.$teacher['username'] }}</div>@endif
                                 </td>
-                                <td class="px-5 py-4 font-mono text-xs text-body dark:text-heading">{{ $teacher['niy'] ?: '—' }}</td>
-                                <td class="px-5 py-4"><span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold {{ $badgeClass }}">{{ $teacher['label'] }}</span></td>
+                                <td class="px-5 py-4 font-sans text-body dark:text-heading text-theme-sm">{{ $teacher['niy'] ?: '—' }}</td>
+                                <td class="px-5 py-4"><span class="inline-flex rounded-full px-2.5 py-1 {{ $badgeClass }} text-theme-xs font-medium">{{ $teacher['label'] }}</span></td>
                                 <td class="max-w-md px-5 py-4 text-body dark:text-body">{{ $teacher['reason'] }}</td>
                             </tr>
                         @empty
