@@ -3,8 +3,8 @@
         <header class="school-dashboard-hero p-6 sm:p-8">
             <div class="relative z-10">
                 <span class="badge badge-amber">Koordinasi Tahfidz</span>
-                <h1 class="mt-3 text-3xl font-black leading-tight text-white sm:text-4xl">Dashboard Kabag Tahfidz</h1>
-                <p class="mt-2 max-w-2xl text-sm font-medium text-slate-300">{{ $term?->academicYear?->name ? $term->academicYear->name.' · ' : '' }}{{ $term?->name ?? 'Belum ada periode akademik aktif' }}</p>
+                <h1 class="mt-3 text-3xl font-semibold leading-tight text-on-primary sm:text-4xl">Dashboard Kabag Tahfidz</h1>
+                <p class="mt-2 max-w-2xl text-sm font-medium text-on-primary/80">{{ $term?->academicYear?->name ? $term->academicYear->name.' · ' : '' }}{{ $term?->name ?? 'Belum ada periode akademik aktif' }}</p>
             </div>
         </header>
 
@@ -17,12 +17,12 @@
 
         <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Distribusi predikat Tasmi'">
             @foreach(\App\Models\TasmiRecord::predicateOptions() as $value => $label)
-                <article class="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm"><p class="text-xs font-bold text-slate-500">{{ $label }}</p><p class="mt-1 text-2xl font-black text-slate-900">{{ $summary['predicates'][$value] ?? 0 }}</p></article>
+                <article class="rounded-2xl border border-line bg-surface px-4 py-3 shadow-sm"><p class="text-xs font-bold text-muted">{{ $label }}</p><p class="mt-1 text-2xl font-semibold text-heading">{{ $summary['predicates'][$value] ?? 0 }}</p></article>
             @endforeach
         </section>
 
         <section class="card-lg p-5 sm:p-6" aria-labelledby="tahfidz-actions-heading">
-            <div class="mb-4"><p class="text-xs font-black uppercase tracking-[.14em] text-emerald-700">Operasional</p><h2 id="tahfidz-actions-heading" class="mt-1 text-lg font-black text-slate-900">Koordinasi Tahfidz</h2></div>
+            <div class="mb-4"><p class="text-xs font-semibold uppercase tracking-[.14em] text-success-ink">Operasional</p><h2 id="tahfidz-actions-heading" class="mt-1 text-lg font-semibold text-heading">Koordinasi Tahfidz</h2></div>
             <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 @php
                     $actions = [
@@ -36,17 +36,17 @@
                     ];
                 @endphp
                 @foreach($actions as [$label, $description, $href])
-                    <a href="{{ $href }}" class="group rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:-translate-y-0.5 hover:border-emerald-300 hover:bg-emerald-50 hover:shadow-md"><span class="text-sm font-black text-slate-900">{{ $label }}</span><span class="mt-1 block text-xs leading-5 text-slate-500">{{ $description }}</span><span class="mt-3 block text-xs font-black text-emerald-800">Buka →</span></a>
+                    <a href="{{ $href }}" class="group rounded-2xl border border-line bg-surface-subtle p-4 transition hover:-translate-y-0.5 hover:border-success-line hover:bg-success-soft hover:shadow-md"><span class="text-sm font-semibold text-heading">{{ $label }}</span><span class="mt-1 block text-xs leading-5 text-muted">{{ $description }}</span><span class="mt-3 block text-xs font-semibold text-success-ink">Buka →</span></a>
                 @endforeach
             </div>
         </section>
 
         <section class="card-lg overflow-hidden" aria-labelledby="recent-tasmi-heading">
-            <div class="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4 sm:px-6"><div><p class="text-xs font-black uppercase tracking-[.14em] text-slate-400">Hasil terbaru</p><h2 id="recent-tasmi-heading" class="mt-1 text-lg font-black text-slate-900">Tasmi' terbaru periode aktif</h2></div><a href="{{ route('admin.tasmi-report.index') }}" class="text-xs font-black text-emerald-800 underline decoration-emerald-300 decoration-2 underline-offset-4">Lihat semua</a></div>
+            <div class="flex items-center justify-between gap-3 border-b border-line px-5 py-4 sm:px-6"><div><p class="text-xs font-semibold uppercase tracking-[.14em] text-soft">Hasil terbaru</p><h2 id="recent-tasmi-heading" class="mt-1 text-lg font-semibold text-heading">Tasmi' terbaru periode aktif</h2></div><a href="{{ route('admin.tasmi-report.index') }}" class="text-xs font-semibold text-success-ink underline decoration-success-300 decoration-2 underline-offset-4">Lihat semua</a></div>
             @if($recentRecords->isEmpty())
-                <p class="p-8 text-sm font-bold text-slate-500">Belum ada hasil Tasmi' pada periode aktif.</p>
+                <p class="p-8 text-sm font-bold text-muted">Belum ada hasil Tasmi' pada periode aktif.</p>
             @else
-                <div class="overflow-x-auto"><table class="w-full min-w-[680px] text-left text-sm"><thead class="bg-slate-50 text-[11px] font-black uppercase tracking-wider text-slate-500"><tr><th class="px-5 py-3">Tanggal</th><th class="px-5 py-3">Santri</th><th class="px-5 py-3">Kelas</th><th class="px-5 py-3">Predikat</th><th class="px-5 py-3">PJ</th></tr></thead><tbody class="divide-y divide-slate-100">@foreach($recentRecords as $record)<tr><td class="px-5 py-3 font-semibold text-slate-600">{{ $record->exam_date?->format('d M Y') }}</td><td class="px-5 py-3 font-black text-slate-900">{{ $record->student?->name }}</td><td class="px-5 py-3 text-slate-600">{{ $record->classroomTerm?->classroom?->name ?? $record->classroomTerm?->name ?? '-' }}</td><td class="px-5 py-3 font-semibold text-slate-600">{{ \App\Models\TasmiRecord::predicateLabel($record->predicate) }}</td><td class="px-5 py-3 text-slate-600">{{ $record->examinerTeacher?->name ?? '-' }}</td></tr>@endforeach</tbody></table></div>
+                <div class="overflow-x-auto"><table class="w-full min-w-[680px] text-left text-sm"><thead class="bg-surface-subtle text-[11px] font-semibold uppercase tracking-wider text-muted"><tr><th class="px-5 py-3">Tanggal</th><th class="px-5 py-3">Santri</th><th class="px-5 py-3">Kelas</th><th class="px-5 py-3">Predikat</th><th class="px-5 py-3">PJ</th></tr></thead><tbody class="divide-y divide-line">@foreach($recentRecords as $record)<tr><td class="px-5 py-3 font-semibold text-body">{{ $record->exam_date?->format('d M Y') }}</td><td class="px-5 py-3 font-semibold text-heading">{{ $record->student?->name }}</td><td class="px-5 py-3 text-body">{{ $record->classroomTerm?->classroom?->name ?? $record->classroomTerm?->name ?? '-' }}</td><td class="px-5 py-3 font-semibold text-body">{{ \App\Models\TasmiRecord::predicateLabel($record->predicate) }}</td><td class="px-5 py-3 text-body">{{ $record->examinerTeacher?->name ?? '-' }}</td></tr>@endforeach</tbody></table></div>
             @endif
         </section>
     </section>

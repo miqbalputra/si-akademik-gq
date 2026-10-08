@@ -10,22 +10,22 @@
         data-snooze-url="{{ route('guru.journal-reminder.snooze') }}"
     >
         <aside
-            class="fixed inset-x-4 bottom-4 z-[90] mx-auto flex max-w-3xl flex-col gap-3 rounded-2xl border border-brand-200 bg-brand-50 px-4 py-3 shadow-xl shadow-slate-950/15 sm:flex-row sm:items-center sm:justify-between sm:px-5"
+            class="fixed inset-x-4 bottom-4 z-[90] mx-auto flex max-w-3xl flex-col gap-3 rounded-2xl border border-brand-line bg-brand-soft px-4 py-3 shadow-xl shadow-gray-950/15 sm:flex-row sm:items-center sm:justify-between sm:px-5"
             role="status"
             aria-live="polite"
             data-journal-overdue-banner
             @unless($isSnoozed) hidden @endunless
         >
             <div class="flex items-center gap-3">
-                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-neon text-base font-black text-neon-ink" aria-hidden="true">!</span>
+                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-neon text-base font-semibold text-neon-ink" aria-hidden="true">!</span>
                 <p class="text-sm font-semibold leading-5 text-school-800">
-                    <span class="font-black">{{ $journalOverdueReminder['count'] }} jurnal masih kosong.</span>
-                    Ingatkan lagi pukul <span class="font-black" data-journal-overdue-next-time>{{ $journalOverdueReminder['snoozed_until_label'] ?? '—' }}</span> WIB.
+                    <span class="font-semibold">{{ $journalOverdueReminder['count'] }} jurnal masih kosong.</span>
+                    Ingatkan lagi pukul <span class="font-semibold" data-journal-overdue-next-time>{{ $journalOverdueReminder['snoozed_until_label'] ?? '—' }}</span> WIB.
                 </p>
             </div>
             <button
                 type="button"
-                class="inline-flex shrink-0 items-center justify-center rounded-xl border border-brand-300 bg-white px-4 py-2 text-sm font-black text-school-800 transition-colors hover:bg-brand-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neon"
+                class="inline-flex shrink-0 items-center justify-center rounded-xl border border-brand-line bg-surface px-4 py-2 text-sm font-semibold text-school-800 transition-colors hover:bg-brand-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neon"
                 data-journal-overdue-open
             >
                 Buka daftar jurnal
@@ -37,10 +37,10 @@
             data-journal-overdue-modal
             @if($isSnoozed) hidden @endif
         >
-            <div class="absolute inset-0 bg-slate-950/55 backdrop-blur-sm" aria-hidden="true"></div>
+            <div class="absolute inset-0 bg-gray-950/55 backdrop-blur-sm" aria-hidden="true"></div>
 
             <section
-                class="relative flex max-h-full w-full max-w-3xl flex-col overflow-hidden rounded-[1.75rem] border border-rose-200 bg-white shadow-2xl shadow-slate-950/30"
+                class="relative flex max-h-full w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-danger-line bg-surface shadow-2xl shadow-gray-950/30"
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="journal-overdue-reminder-title"
@@ -48,15 +48,15 @@
                 tabindex="-1"
                 data-journal-overdue-dialog
             >
-                <header class="border-b border-rose-100 bg-rose-50 px-5 py-5 sm:px-7">
+                <header class="border-b border-danger-line bg-danger-soft px-5 py-5 sm:px-7">
                     <div class="flex items-start gap-4">
-                        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-rose-600 text-xl font-black text-white" aria-hidden="true">!</span>
+                        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-danger-600 text-xl font-semibold text-white" aria-hidden="true">!</span>
                         <div class="min-w-0 flex-1">
-                            <p class="text-[11px] font-black uppercase tracking-[.16em] text-rose-700">Jurnal perlu dilengkapi</p>
-                            <h2 id="journal-overdue-reminder-title" class="mt-1 text-xl font-black text-slate-950 sm:text-2xl">
+                            <p class="text-[11px] font-semibold uppercase tracking-[.16em] text-danger-ink">Jurnal perlu dilengkapi</p>
+                            <h2 id="journal-overdue-reminder-title" class="mt-1 text-xl font-semibold text-heading sm:text-2xl">
                                 Masih ada {{ $journalOverdueReminder['count'] }} jurnal kosong
                             </h2>
-                            <p id="journal-overdue-reminder-description" class="mt-2 text-sm font-medium leading-6 text-slate-600">
+                            <p id="journal-overdue-reminder-description" class="mt-2 text-sm font-medium leading-6 text-body">
                                 Lengkapi jurnal tertunda pada {{ $journalOverdueReminder['class_count'] }} kelas di semester {{ $journalOverdueReminder['term_label'] }}. Anda dapat menutup pengingat ini selama tiga jam dan membukanya kembali dari banner.
                             </p>
                         </div>
@@ -64,7 +64,7 @@
                 </header>
 
                 <div class="min-h-0 overflow-y-auto px-5 py-5 sm:px-7">
-                    <p class="mb-3 text-xs font-bold uppercase tracking-wider text-slate-500">Daftar jurnal kosong</p>
+                    <p class="mb-3 text-xs font-bold uppercase tracking-wider text-muted">Daftar jurnal kosong</p>
                     <ul class="space-y-3" aria-label="Daftar jurnal kosong">
                         @foreach($journalOverdueReminder['empty_slots'] as $slot)
                             @php
@@ -72,22 +72,22 @@
                                     ? \Carbon\Carbon::parse($slot['starts_at'])->format('H:i').' – '.\Carbon\Carbon::parse($slot['ends_at'])->format('H:i')
                                     : null;
                             @endphp
-                            <li class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                            <li class="rounded-2xl border border-line bg-surface-subtle p-4">
                                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-                                    <div class="shrink-0 rounded-xl border border-rose-100 bg-white px-3 py-2 text-center sm:min-w-28">
-                                        <p class="text-sm font-black text-slate-900">{{ $slot['session_label'] }}</p>
+                                    <div class="shrink-0 rounded-xl border border-danger-line bg-surface px-3 py-2 text-center sm:min-w-28">
+                                        <p class="text-sm font-semibold text-heading">{{ $slot['session_label'] }}</p>
                                         @if($timeLabel)
-                                            <p class="mt-0.5 text-[11px] font-semibold text-slate-500">{{ $timeLabel }}</p>
+                                            <p class="mt-0.5 text-[11px] font-semibold text-muted">{{ $timeLabel }}</p>
                                         @endif
                                     </div>
                                     <div class="min-w-0 flex-1">
-                                        <p class="text-sm font-black text-slate-900">{{ $slot['subject_name'] }}</p>
-                                        <p class="mt-1 text-xs font-medium text-slate-600">{{ $slot['date_label'] }}</p>
-                                        <p class="mt-1 text-xs font-semibold text-slate-500">Kelas: {{ $slot['classroom_names'] }}</p>
+                                        <p class="text-sm font-semibold text-heading">{{ $slot['subject_name'] }}</p>
+                                        <p class="mt-1 text-xs font-medium text-body">{{ $slot['date_label'] }}</p>
+                                        <p class="mt-1 text-xs font-semibold text-muted">Kelas: {{ $slot['classroom_names'] }}</p>
                                     </div>
                                     <a
                                         href="{{ $slot['fill_url'] }}"
-                                        class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl {{ $slot['is_tafsir'] ? 'bg-cyan-600 hover:bg-cyan-700 focus-visible:outline-cyan-600' : 'bg-teal-600 hover:bg-teal-700 focus-visible:outline-teal-600' }} px-4 py-2.5 text-sm font-black text-white transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                                        class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl {{ $slot['is_tafsir'] ? 'bg-info-600 hover:bg-info-700 focus-visible:outline-info-600' : 'bg-info-600 hover:bg-info-700 focus-visible:outline-info-600' }} px-4 py-2.5 text-sm font-semibold text-white transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
                                     >
                                         {{ $slot['is_tafsir'] ? 'Isi Jurnal Tafsir' : 'Isi Jurnal' }}
                                         <span aria-hidden="true">→</span>
@@ -98,17 +98,17 @@
                     </ul>
                 </div>
 
-                <footer class="flex flex-col gap-3 border-t border-slate-100 bg-slate-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-7">
-                    <p class="text-xs font-medium leading-5 text-slate-500">Pengingat muncul kembali saat membuka portal setelah masa tunda berakhir.</p>
+                <footer class="flex flex-col gap-3 border-t border-line bg-surface-subtle px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-7">
+                    <p class="text-xs font-medium leading-5 text-muted">Pengingat muncul kembali saat membuka portal setelah masa tunda berakhir.</p>
                     <button
                         type="button"
-                        class="inline-flex shrink-0 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-black text-slate-700 transition-colors hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-500"
+                        class="inline-flex shrink-0 items-center justify-center rounded-xl border border-line-strong bg-surface px-4 py-2.5 text-sm font-semibold text-body transition-colors hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-500"
                         data-journal-overdue-snooze
                     >
                         Tutup sementara 3 jam
                     </button>
                 </footer>
-                <p class="hidden px-5 pb-4 text-sm font-semibold text-rose-700 sm:px-7" role="alert" data-journal-overdue-error></p>
+                <p class="hidden px-5 pb-4 text-sm font-semibold text-danger-ink sm:px-7" role="alert" data-journal-overdue-error></p>
             </section>
         </div>
     </div>

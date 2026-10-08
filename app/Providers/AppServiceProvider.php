@@ -33,6 +33,7 @@ use App\Policies\DiniyyahClassJournalPolicy;
 use App\Policies\ReportCardPolicy;
 use App\Services\GuruJournalReminderPreferenceService;
 use App\Services\GuruPerformaService;
+use App\Services\ThemePaletteService;
 use App\Services\TasmiWaliReminderPreferenceService;
 use App\Services\TafsirJournalMenuService;
 use Filament\Auth\Http\Responses\Contracts\LogoutResponse as LogoutResponseContract;
@@ -51,6 +52,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(LogoutResponseContract::class, \App\Filament\Auth\LogoutResponse::class);
+        $this->app->scoped(ThemePaletteService::class);
     }
 
     /**

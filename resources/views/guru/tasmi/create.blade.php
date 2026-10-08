@@ -1,33 +1,16 @@
 <x-layouts.portal title="Input Tasmi'" portalLabel="Portal Guru" breadcrumb="Input Tasmi'">
-    @push('styles')
-    <style>
-        .card { background: #fff; border: 1px solid #f1f5f9; border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.04); }
-        .badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; }
-        .badge-amber { background: #fef3c7; color: #92400e; }
-        .form-label { display:block; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:#475569; margin-bottom:6px; }
-        .form-input { width:100%; border:1.5px solid #e2e8f0; border-radius:10px; padding:10px 13px; font-size:14px; font-weight:500; color:#1e293b; background:#f8fafc; outline:none; transition: border-color .2s, background .2s; font-family:'Outfit',sans-serif; }
-        .form-input:focus { border-color:#17663a; background:#fff; box-shadow: 0 0 0 3px rgba(0,223,102,.18); }
-        .form-hint { font-size:12px; color:#64748b; margin-top:4px; font-weight:500; }
-        .btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; font-weight:700; font-size:13px; border-radius:10px; padding:9px 18px; transition: all .2s; cursor:pointer; border:none; text-decoration:none; white-space:nowrap; }
-        .btn-primary { background:#00df66; color:#063d23; box-shadow: 0 2px 8px rgba(0,173,79,.22); }
-        .btn-primary:hover { background:#29fa79; transform: translateY(-1px); }
-        .btn-outline { background:transparent; border:1.5px solid #e2e8f0; color:#475569; }
-        .btn-outline:hover { background:#f8fafc; }
-    </style>
-    @endpush
-
     {{-- Header --}}
     <header class="fade-up" style="margin-bottom:24px;">
-        <a href="{{ route('guru.tasmi.index') }}" style="font-size:12px;font-weight:700;color:#17663a;display:inline-flex;align-items:center;gap:4px;margin-bottom:10px;text-decoration:none;">
+        <a href="{{ route('guru.tasmi.index') }}" style="font-size:12px;font-weight:700;color:var(--ui-brand-ink);display:inline-flex;align-items:center;gap:4px;margin-bottom:10px;text-decoration:none;">
             <svg style="width:14px;height:14px;" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" /></svg>
             Kembali ke dashboard Tasmi'
         </a>
-        <h1 style="font-size:24px;font-weight:900;color:#0f172a;margin:0 0 4px;letter-spacing:-.02em;">Input Tasmi' Baru</h1>
-        <p style="font-size:14px;color:#64748b;font-weight:500;margin:0;">Pilih kelas → pilih santri → isi data setoran tasmi'.</p>
+        <h1 style="font-size:24px;font-weight:700;color:var(--ui-heading);margin:0 0 4px;letter-spacing:-.02em;">Input Tasmi' Baru</h1>
+        <p style="font-size:14px;color:var(--ui-muted);font-weight:500;margin:0;">Pilih kelas → pilih santri → isi data setoran tasmi'.</p>
     </header>
 
     @if ($errors->any())
-        <div style="margin-bottom:20px;background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:14px 18px;font-size:13px;font-weight:600;color:#991b1b;" class="fade-up">
+        <div style="margin-bottom:20px;background:var(--ui-danger-soft);border:1px solid var(--ui-danger-line);border-radius:12px;padding:14px 18px;font-size:13px;font-weight:600;color:var(--ui-danger-ink);" class="fade-up">
             @foreach ($errors->all() as $error)
                 <div>{{ $error }}</div>
             @endforeach
@@ -73,7 +56,7 @@
                 </div>
 
                 {{-- 3. Hari & Tanggal --}}
-                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px;">
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%, 180px),1fr));gap:14px;margin-bottom:20px;">
                     <div>
                         <label for="exam_day_label" class="form-label">3. Hari</label>
                         <select id="exam_day_label" name="exam_day_label" class="form-input">
@@ -99,9 +82,9 @@
                     <label class="form-label">4. Jenis Ujian Tasmi'</label>
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
                         @foreach($examTypeOptions as $value => $label)
-                            <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1.5px solid #e2e8f0;border-radius:10px;cursor:pointer;transition:all .2s;">
+                            <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1.5px solid var(--ui-line);border-radius:10px;cursor:pointer;transition:all .2s;">
                                 <input type="radio" name="exam_type" value="{{ $value }}" required @if(old('exam_type') === $value) checked @endif onchange="tasmiToggleJuzFields()">
-                                <span style="font-size:14px;font-weight:700;color:#0f172a;">{{ $label }}</span>
+                                <span style="font-size:14px;font-weight:700;color:var(--ui-heading);">{{ $label }}</span>
                             </label>
                         @endforeach
                     </div>
@@ -126,7 +109,7 @@
                                     <option value="{{ $i }}" @if(old('juz_start') == $i) selected @endif>Juz {{ $i }}</option>
                                 @endfor
                             </select>
-                            <span style="font-weight:700;color:#475569;">→</span>
+                            <span style="font-weight:700;color:var(--ui-text);">→</span>
                             <select id="juz_end" name="juz_end" class="form-input">
                                 <option value="">Sampai juz</option>
                                 @for($i = 5; $i <= 30; $i++)
@@ -166,7 +149,7 @@
         </form>
     @else
         <div class="card fade-up delay-1" style="padding:24px;text-align:center;">
-            <p style="font-size:14px;color:#64748b;font-weight:600;margin:0;">Pilih kelas terlebih dahulu untuk menampilkan daftar santri.</p>
+            <p style="font-size:14px;color:var(--ui-muted);font-weight:600;margin:0;">Pilih kelas terlebih dahulu untuk menampilkan daftar santri.</p>
         </div>
     @endif
 

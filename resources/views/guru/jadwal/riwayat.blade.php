@@ -10,17 +10,17 @@
 
     <div class="mb-6 flex justify-between items-center glass-card p-4 rounded-2xl">
         <div>
-            <h1 class="text-2xl font-black text-slate-900">Riwayat Perubahan Jadwal</h1>
-            <p class="text-sm text-slate-500">Catatan setiap perubahan jadwal mengajar &amp; penugasan yang menyangkut Anda.</p>
+            <h1 class="text-2xl font-semibold text-heading">Riwayat Perubahan Jadwal</h1>
+            <p class="text-sm text-muted">Catatan setiap perubahan jadwal mengajar &amp; penugasan yang menyangkut Anda.</p>
         </div>
-        <span class="text-sm font-bold text-teal-700 bg-teal-100 px-3 py-1 rounded-full whitespace-nowrap">
+        <span class="text-sm font-bold text-info-ink bg-info-soft-strong px-3 py-1 rounded-full whitespace-nowrap">
             {{ $changes->count() }} perubahan
         </span>
     </div>
 
-    <div class="glass-card rounded-2xl p-6 border border-slate-200">
+    <div class="glass-card rounded-2xl p-6 border border-line">
         @if($changes->isEmpty())
-            <p class="text-sm text-slate-500 italic text-center py-8">Belum ada perubahan jadwal yang tercatat untuk Anda.</p>
+            <p class="text-sm text-muted italic text-center py-8">Belum ada perubahan jadwal yang tercatat untuk Anda.</p>
         @else
             @php
                 $grouped = $changes->groupBy(fn ($c) => $c->created_at->format('Y-m-d'));
@@ -28,20 +28,20 @@
             <div class="space-y-5">
                 @foreach($grouped as $date => $items)
                     <div>
-                        <div class="flex items-baseline gap-2 mb-2 pb-1 border-b border-slate-100">
-                            <span class="text-sm font-black text-slate-800">
+                        <div class="flex items-baseline gap-2 mb-2 pb-1 border-b border-line">
+                            <span class="text-sm font-semibold text-heading">
                                 {{ \Carbon\Carbon::parse($date)->locale('id')->translatedFormat('l, d F Y') }}
                             </span>
-                            <span class="text-xs font-medium text-slate-400">· {{ $items->count() }} perubahan</span>
+                            <span class="text-xs font-medium text-soft">· {{ $items->count() }} perubahan</span>
                         </div>
                         <div class="space-y-2">
                             @foreach($items as $change)
                                 @php
                                     $eventBadge = match($change->event) {
-                                        'created' => ['label' => 'Dibuat', 'class' => 'bg-emerald-100 text-emerald-700'],
-                                        'updated' => ['label' => 'Diubah', 'class' => 'bg-amber-100 text-amber-700'],
-                                        'deleted' => ['label' => 'Dihapus', 'class' => 'bg-rose-100 text-rose-700'],
-                                        default => ['label' => $change->event, 'class' => 'bg-slate-100 text-slate-700'],
+                                        'created' => ['label' => 'Dibuat', 'class' => 'bg-success-soft-strong text-success-ink'],
+                                        'updated' => ['label' => 'Diubah', 'class' => 'bg-warning-soft-strong text-warning-ink'],
+                                        'deleted' => ['label' => 'Dihapus', 'class' => 'bg-danger-soft-strong text-danger-ink'],
+                                        default => ['label' => $change->event, 'class' => 'bg-surface-muted text-body'],
                                     };
                                     $typeBadge = match($change->entity_type) {
                                         'schedule' => 'Jadwal',
@@ -49,18 +49,18 @@
                                         default => $change->entity_type,
                                     };
                                 @endphp
-                                <div class="flex flex-col sm:flex-row sm:items-start gap-3 p-3 rounded-xl border border-slate-200 bg-white">
+                                <div class="flex flex-col sm:flex-row sm:items-start gap-3 p-3 rounded-xl border border-line bg-surface">
                                     <div class="flex flex-wrap items-center gap-2 shrink-0">
                                         <span class="text-[10px] font-bold px-2 py-0.5 rounded {{ $eventBadge['class'] }}">{{ $eventBadge['label'] }}</span>
-                                        <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-600">{{ $typeBadge }}</span>
-                                        <span class="text-[10px] text-slate-400 whitespace-nowrap">{{ $change->created_at->format('H:i') }}</span>
+                                        <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-surface-muted text-body">{{ $typeBadge }}</span>
+                                        <span class="text-[10px] text-soft whitespace-nowrap">{{ $change->created_at->format('H:i') }}</span>
                                     </div>
                                     <div class="flex-1 min-w-0">
-                                        <p class="text-sm text-slate-700">{{ $change->change_summary }}</p>
+                                        <p class="text-sm text-body">{{ $change->change_summary }}</p>
                                         @if($change->old_teacher_id && $change->old_teacher_id !== $change->teacher_id)
-                                            <p class="text-[11px] text-slate-400 mt-0.5">Menyangkut: {{ $change->oldTeacher?->name ?? '-' }} → {{ $change->teacher?->name ?? '-' }}</p>
+                                            <p class="text-[11px] text-soft mt-0.5">Menyangkut: {{ $change->oldTeacher?->name ?? '-' }} → {{ $change->teacher?->name ?? '-' }}</p>
                                         @endif
-                                        <p class="text-[11px] text-slate-400 mt-0.5">Diubah oleh: {{ $change->changer?->name ?? 'sistem' }}</p>
+                                        <p class="text-[11px] text-soft mt-0.5">Diubah oleh: {{ $change->changer?->name ?? 'sistem' }}</p>
                                     </div>
                                 </div>
                             @endforeach

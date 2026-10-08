@@ -162,118 +162,170 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $title ?? 'Portal' }} - Ruang GQ</title>
     <meta name="description" content="Aktivitas Akademik Griya Qur'an Tunas Ilmu">
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700,800" rel="stylesheet" />
+    @include('partials.theme-init')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @include('partials.theme-palette')
     @include('partials.pwa-head')
     @stack('head')
     @stack('styles')
 </head>
-<body class="app-shell overflow-x-clip text-slate-800 antialiased">
+<body class="app-shell min-h-screen overflow-x-clip bg-surface-subtle text-body antialiased dark:bg-canvas dark:text-body">
     @if(in_array($portalLabel ?? null, ['Portal Guru', 'Portal Wali Santri'], true))
         @include('partials.pwa-install-prompt')
     @endif
-    <header class="school-header">
-        <nav class="school-header-inner" aria-label="Navigasi {{ $portalLabel ?? 'portal' }}">
-            <a href="{{ $portalHomeUrl }}" class="school-brand">
-                <span class="school-mark">GQ</span>
-                <span>
-                    <strong>Ruang GQ</strong>
-                    <small>Griya Qur'an Tunas Ilmu</small>
-                </span>
-            </a>
 
-            <div class="school-context">
-                <strong>{{ $portalLabel ?? 'Ruang GQ' }}</strong>
-                <span>{{ $breadcrumb ?? 'Kegiatan akademik' }}</span>
+    <div x-data="{ mobileSidebarOpen: false }" @keydown.escape.window="mobileSidebarOpen = false" class="min-h-screen xl:flex">
+        <div
+            x-cloak
+            x-show="mobileSidebarOpen"
+            x-transition.opacity
+            @click="mobileSidebarOpen = false"
+            class="fixed inset-0 z-40 bg-gray-900/50 backdrop-blur-sm xl:hidden"
+            aria-hidden="true"
+        ></div>
+
+        <aside
+            id="portal-sidebar"
+            :class="mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+            class="school-sidebar fixed inset-y-0 start-0 z-50 flex w-72 flex-col border-e border-line bg-surface transition-transform duration-300 xl:sticky xl:top-0 xl:h-screen xl:translate-x-0 dark:border-gray-800 dark:bg-surface"
+            aria-label="Navigasi {{ $portalLabel ?? 'portal' }}"
+        >
+            <div class="flex h-20 shrink-0 items-center justify-between border-b border-line px-6 dark:border-gray-800">
+                <a href="{{ $portalHomeUrl }}" class="school-brand">
+                    <span class="school-mark">GQ</span>
+                    <span>
+                        <strong>Ruang GQ</strong>
+                        <small>Griya Qur'an Tunas Ilmu</small>
+                    </span>
+                </a>
+                <button type="button" @click="mobileSidebarOpen = false" class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-soft hover:bg-surface-muted hover:text-body xl:hidden dark:hover:bg-gray-800 dark:hover:text-white" aria-label="Tutup menu">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                </button>
             </div>
 
-            <div class="school-nav" aria-label="Menu kegiatan">
-                <a href="{{ $portalHomeUrl }}" class="school-nav-link school-nav-home" @if($isHomeActive) aria-current="page" @endif>Beranda</a>
-                @if($isGuruPortal || $isTahfidzPortal || $isDiniyyahPortal)
-                    @foreach($portalNavGroups as $group)
-                        @php($isGroupActive = collect($group['items'])->contains(fn ($item) => collect($item['match'])->contains(fn ($pattern) => request()->routeIs($pattern))))
-                        <details class="school-nav-dropdown" data-portal-menu>
-                            <summary class="school-nav-dropdown-toggle @if($isGroupActive) is-active @endif" aria-expanded="false">
-                                <span>{{ $group['label'] }}</span>
-                                <svg class="school-nav-chevron" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6" /></svg>
-                            </summary>
-                            <div class="school-nav-dropdown-panel" role="menu" aria-label="{{ $group['label'] }}">
-                                @foreach($group['items'] as $item)
-                                    @php($isActive = collect($item['match'])->contains(fn ($pattern) => request()->routeIs($pattern)))
-                                    <a href="{{ $item['href'] }}" class="school-nav-dropdown-link" role="menuitem" @if($isActive) aria-current="page" @endif>
-                                        <span>{{ $item['label'] }}</span>
-                                        @if($isActive)<span class="school-nav-active-dot" aria-hidden="true"></span>@endif
-                                    </a>
-                                @endforeach
-                            </div>
-                        </details>
-                    @endforeach
-                @else
-                    @foreach($portalNavGroups as $group)
-                        <div class="school-nav-group" aria-label="{{ $group['label'] }}">
+            <nav class="school-sidebar-nav flex-1 overflow-y-auto px-4 py-6" aria-label="Menu portal">
+                <p class="mb-2 px-3 text-[11px] font-semibold uppercase tracking-[.08em] text-soft">{{ $portalLabel ?? 'Ruang GQ' }}</p>
+                <a
+                    href="{{ $portalHomeUrl }}"
+                    class="school-sidebar-link mb-5 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition @if($isHomeActive) bg-brand-soft text-brand-ink dark:bg-surface/5 dark:text-brand-300 @else text-body hover:bg-surface-subtle hover:text-heading dark:text-body dark:hover:bg-surface/5 dark:hover:text-white @endif"
+                    @if($isHomeActive) aria-current="page" @endif
+                >
+                    <svg class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m3.75 10.5 8.25-6.75 8.25 6.75v9a.75.75 0 0 1-.75.75h-5.25v-6.75h-4.5v6.75H4.5a.75.75 0 0 1-.75-.75v-9Z"/></svg>
+                    <span>Beranda</span>
+                </a>
+
+                @foreach($portalNavGroups as $group)
+                    @php($isGroupActive = collect($group['items'])->contains(fn ($item) => collect($item['match'])->contains(fn ($pattern) => request()->routeIs($pattern))))
+                    <details class="school-sidebar-group school-nav-dropdown mb-6" @if($isGroupActive) open @endif>
+                        <summary class="school-nav-dropdown-toggle mb-2 flex cursor-pointer list-none items-center justify-between rounded-lg px-3 py-2 text-[11px] font-semibold uppercase tracking-[.08em] text-soft hover:bg-surface-subtle dark:hover:bg-surface/5">
+                            <span>{{ $group['label'] }}</span>
+                            <svg class="school-nav-chevron h-4 w-4" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m5 7.5 5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </summary>
+                        <div class="space-y-1">
                             @foreach($group['items'] as $item)
                                 @php($isActive = collect($item['match'])->contains(fn ($pattern) => request()->routeIs($pattern)))
-                                <a href="{{ $item['href'] }}" class="school-nav-link" @if($isActive) aria-current="page" @endif>{{ $item['label'] }}</a>
-                            @endforeach
-                        </div>
-                    @endforeach
-                @endif
-            </div>
-
-            <div class="school-header-actions" data-notification-root data-feed-url="{{ route('notifications.feed') }}" data-read-url-template="{{ route('notifications.read', '__ID__') }}" data-mark-all-url="{{ route('notifications.read-all') }}">
-                @isset($navLinks)
-                    <div class="hidden items-center gap-1 xl:flex">{{ $navLinks }}</div>
-                @endisset
-                @if(count($workspaceItems) > 1)
-                    <details class="school-nav-dropdown hidden sm:block" data-portal-menu>
-                        <summary class="school-nav-dropdown-toggle" aria-expanded="false"><span>Ganti Ruang</span><svg class="school-nav-chevron" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6" /></svg></summary>
-                        <div class="school-nav-dropdown-panel" role="menu" aria-label="Ganti ruang kerja">
-                            @foreach($workspaceItems as $key => $workspace)
-                                <a href="{{ $workspace['destination'] }}" class="school-nav-dropdown-link" role="menuitem" @if($currentWorkspace === $key) aria-current="page" @endif><span>{{ $workspace['label'] }}</span>@if($currentWorkspace === $key)<span class="school-nav-active-dot" aria-hidden="true"></span>@endif</a>
+                                <a
+                                    href="{{ $item['href'] }}"
+                                    class="school-sidebar-link flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition @if($isActive) bg-brand-soft text-brand-ink dark:bg-surface/5 dark:text-brand-300 @else text-body hover:bg-surface-subtle hover:text-heading dark:text-body dark:hover:bg-surface/5 dark:hover:text-white @endif"
+                                    @if($isActive) aria-current="page" @endif
+                                >
+                                    <span class="h-1.5 w-1.5 shrink-0 rounded-full @if($isActive) bg-brand-500 @else bg-line-strong dark:bg-gray-600 @endif" aria-hidden="true"></span>
+                                    <span class="min-w-0 flex-1">{{ $item['label'] }}</span>
+                                </a>
                             @endforeach
                         </div>
                     </details>
-                @endif
-                <div class="relative">
-                    <button type="button" class="relative flex h-10 w-10 items-center justify-center rounded-lg border border-line bg-white text-ink transition hover:border-ink" aria-label="Notifikasi" aria-haspopup="dialog" aria-expanded="false" data-notification-toggle>
-                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" /></svg>
-                        <span class="absolute -right-1 -top-1 hidden min-w-4 rounded-full bg-ink px-1 py-0.5 font-mono text-[9px] font-black text-neon" data-notification-badge>0</span>
-                    </button>
-                    <section class="notification-dropdown absolute right-0 top-12 z-60" role="dialog" aria-label="Notifikasi" hidden data-notification-panel>
-                        <header class="flex items-center justify-between border-b border-line px-4 py-3"><strong class="text-xs text-ink">Notifikasi</strong><button type="button" class="font-mono text-[10px] font-bold text-slate-500 underline decoration-neon decoration-2 underline-offset-4" data-notification-mark-all>Tandai semua dibaca</button></header>
-                        <div class="max-h-96 overflow-y-auto" data-notification-list><p class="px-5 py-8 text-center text-xs font-bold text-slate-400">Memuat...</p></div>
-                        <footer class="border-t border-line px-4 py-3 text-center"><a href="{{ route('notifications.index') }}" class="font-mono text-[10px] font-bold text-ink underline decoration-neon decoration-2 underline-offset-4">Lihat semua notifikasi <span aria-hidden="true">&rarr;</span></a></footer>
-                    </section>
-                </div>
-                <form method="POST" action="{{ route('logout') }}" class="hidden sm:block">@csrf<button type="submit" class="btn btn-outline btn-sm">Keluar</button></form>
-                <details class="school-mobile-menu relative" data-portal-menu>
-                    <summary class="school-menu-summary flex h-10 cursor-pointer items-center gap-2 rounded-lg border border-line bg-white px-3 text-xs font-extrabold text-ink" aria-expanded="false">Menu <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6" /></svg></summary>
-                    <div class="absolute right-0 top-12 z-50 w-72 rounded-xl border border-line bg-white p-2 shadow-2xl shadow-slate-950/10" role="dialog" aria-label="Menu portal">
-                        <p class="px-3 pb-2 pt-1 font-mono text-[10px] font-bold tracking-[.1em] text-slate-500">{{ $portalLabel ?? 'Ruang GQ' }}</p>
-                        <a href="{{ $portalHomeUrl }}" class="school-mobile-link" @if($isHomeActive) aria-current="page" @endif>Beranda @if($isHomeActive)<span class="h-2 w-2 rounded-full bg-neon"></span>@endif</a>
-                        @if(count($workspaceItems) > 1)
-                            <section class="school-mobile-group" aria-label="Ganti ruang kerja"><p>Ganti Ruang Kerja</p>@foreach($workspaceItems as $key => $workspace)<a href="{{ $workspace['destination'] }}" class="school-mobile-link" @if($currentWorkspace === $key) aria-current="page" @endif>{{ $workspace['label'] }} @if($currentWorkspace === $key)<span class="h-2 w-2 rounded-full bg-neon"></span>@endif</a>@endforeach</section>
-                        @endif
-                        @foreach($portalNavGroups as $group)
-                            <section class="school-mobile-group" aria-label="{{ $group['label'] }}">
-                                <p>{{ $group['label'] }}</p>
-                                @foreach($group['items'] as $item)
-                                    @php($isActive = collect($item['match'])->contains(fn ($pattern) => request()->routeIs($pattern)))
-                                    <a href="{{ $item['href'] }}" class="school-mobile-link" @if($isActive) aria-current="page" @endif>{{ $item['label'] }} @if($isActive)<span class="h-2 w-2 rounded-full bg-neon"></span>@endif</a>
-                                @endforeach
-                            </section>
-                        @endforeach
-                        @isset($navLinks)<div class="mt-2 border-t border-line pt-2">{{ $navLinks }}</div>@endisset
-                        <form method="POST" action="{{ route('logout') }}" class="mt-2 border-t border-line pt-2 sm:hidden">@csrf<button type="submit" class="school-mobile-link w-full">Keluar <span aria-hidden="true">&rarr;</span></button></form>
-                    </div>
-                </details>
-            </div>
-        </nav>
-    </header>
+                @endforeach
+            </nav>
 
-    <main class="school-main">{{ $slot }}</main>
-    <footer class="school-footer">&copy; {{ date('Y') }} RUANG GQ · GRIYA QUR'AN TUNAS ILMU · Dikembangkan oleh Muhammad Iqbal Putra — SchoolVia.id</footer>
+            <div class="border-t border-line p-4 dark:border-gray-800">
+                <div class="flex items-center gap-3 rounded-lg bg-surface-subtle p-3 dark:bg-surface-muted/60">
+                    <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-soft-strong text-sm font-semibold text-brand-ink dark:bg-brand-900/50 dark:text-brand-300">
+                        {{ \Illuminate\Support\Str::of(auth()->user()?->name ?? 'GQ')->substr(0, 1)->upper() }}
+                    </span>
+                    <span class="min-w-0 flex-1">
+                        <span class="block truncate text-sm font-semibold text-heading dark:text-white/90">{{ auth()->user()?->name }}</span>
+                        <span class="block truncate text-xs text-muted dark:text-muted">{{ $portalLabel ?? 'Ruang GQ' }}</span>
+                    </span>
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <button type="submit" class="rounded-md p-2 text-soft transition hover:bg-surface hover:text-danger-ink dark:hover:bg-gray-700" aria-label="Keluar">
+                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6A2.25 2.25 0 0 0 5.25 5.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M18 15l3-3m0 0-3-3m3 3H9.75"/></svg>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </aside>
+
+        <div class="min-w-0 flex-1">
+            <header class="school-header sticky top-0 z-30 border-b border-line bg-surface/90 backdrop-blur-xl dark:border-gray-800 dark:bg-surface/90">
+                <nav class="school-header-inner flex min-h-[4.5rem] items-center gap-4 px-4 sm:px-6 xl:px-8" aria-label="Konteks {{ $portalLabel ?? 'portal' }}">
+                    <button type="button" @click="mobileSidebarOpen = true" class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-line bg-surface text-muted transition hover:bg-surface-subtle xl:hidden dark:border-gray-700 dark:bg-surface dark:text-body dark:hover:bg-gray-800" aria-label="Buka menu" aria-controls="portal-sidebar">
+                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                    </button>
+
+                    <div class="school-context min-w-0 flex-1">
+                        <p class="m-0 truncate text-xs font-medium text-muted dark:text-muted">{{ $portalLabel ?? 'Ruang GQ' }}@if(filled($breadcrumb ?? null)) <span class="mx-1 text-soft dark:text-soft">/</span>{{ $breadcrumb }}@endif</p>
+                        <h1 class="m-0 truncate text-base font-semibold text-heading dark:text-white sm:text-lg">{{ $title ?? 'Beranda' }}</h1>
+                    </div>
+
+                    <div class="school-header-actions flex shrink-0 items-center gap-2 sm:gap-3" data-header-actions>
+                        @isset($navLinks)
+                            <div class="hidden items-center gap-1 xl:flex">{{ $navLinks }}</div>
+                        @endisset
+
+                        @if(count($workspaceItems) > 1)
+                            <details class="school-nav-dropdown relative" data-portal-menu>
+                                <summary class="school-nav-dropdown-toggle inline-flex h-10 cursor-pointer list-none items-center gap-2 rounded-lg border border-line bg-surface px-3 text-sm font-medium text-body hover:bg-surface-subtle dark:border-gray-700 dark:bg-surface dark:text-body dark:hover:bg-gray-800" aria-expanded="false">
+                                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6.75h16M4 12h16M4 17.25h16"/></svg>
+                                    <span class="hidden sm:inline">Ganti Ruang</span>
+                                    <svg class="school-nav-chevron h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6" /></svg>
+                                </summary>
+                                <div class="school-nav-dropdown-panel absolute end-0 top-12 z-50 grid min-w-56 gap-1 rounded-xl border border-line bg-surface p-2 shadow-theme-lg dark:border-gray-700 dark:bg-surface" role="menu" aria-label="Ganti ruang kerja">
+                                    @foreach($workspaceItems as $key => $workspace)
+                                        <a href="{{ $workspace['destination'] }}" class="school-nav-dropdown-link flex items-center justify-between rounded-lg px-3 py-2 text-sm text-body hover:bg-surface-subtle dark:text-body dark:hover:bg-gray-800" role="menuitem" @if($currentWorkspace === $key) aria-current="page" @endif>
+                                            <span>{{ $workspace['label'] }}</span>
+                                            @if($currentWorkspace === $key)<span class="school-nav-active-dot h-1.5 w-1.5 rounded-full bg-brand-500" aria-hidden="true"></span>@endif
+                                        </a>
+                                    @endforeach
+                                </div>
+                            </details>
+                        @endif
+
+                        <x-common.theme-toggle />
+
+                        <div class="relative" data-notification-root data-feed-url="{{ route('notifications.feed') }}" data-read-url-template="{{ route('notifications.read', '__ID__') }}" data-mark-all-url="{{ route('notifications.read-all') }}">
+                            <button type="button" class="relative inline-flex h-10 w-10 items-center justify-center rounded-lg border border-line bg-surface text-muted transition hover:bg-surface-subtle dark:border-gray-700 dark:bg-surface dark:text-body dark:hover:bg-gray-800" aria-label="Notifikasi" aria-haspopup="dialog" aria-expanded="false" data-notification-toggle>
+                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" /></svg>
+                                <span class="absolute -end-1 -top-1 hidden min-w-4 rounded-full bg-brand-600 px-1 py-0.5 text-[9px] font-bold text-white" data-notification-badge>0</span>
+                            </button>
+                            <section class="notification-dropdown absolute end-0 top-12 z-60" role="dialog" aria-label="Notifikasi" hidden data-notification-panel>
+                                <header class="flex items-center justify-between border-b border-line px-4 py-3 dark:border-gray-800">
+                                    <strong class="text-sm font-semibold text-heading dark:text-white/90">Notifikasi</strong>
+                                    <button type="button" class="text-xs font-medium text-brand-ink hover:text-brand-ink dark:text-brand-300" data-notification-mark-all>Tandai semua dibaca</button>
+                                </header>
+                                <div class="max-h-96 overflow-y-auto" data-notification-list><p class="px-5 py-8 text-center text-xs font-medium text-soft">Memuat...</p></div>
+                                <footer class="border-t border-line px-4 py-3 text-center dark:border-gray-800"><a href="{{ route('notifications.index') }}" class="text-xs font-medium text-brand-ink hover:text-brand-ink dark:text-brand-300">Lihat semua notifikasi <span aria-hidden="true">&rarr;</span></a></footer>
+                            </section>
+                        </div>
+                    </div>
+                </nav>
+                @isset($navLinks)
+                    <div class="border-t border-line px-4 py-2 xl:hidden dark:border-gray-800 sm:px-6">
+                        <div class="flex flex-wrap items-center gap-2" data-mobile-page-actions>{{ $navLinks }}</div>
+                    </div>
+                @endisset
+            </header>
+
+            <main class="school-main mx-auto w-full max-w-[1600px] px-4 py-6 sm:px-6 sm:py-8 xl:px-8">
+                {{ $slot }}
+                <footer class="school-footer mt-10 border-t border-line pt-5 text-center text-xs text-soft dark:border-gray-800 dark:text-muted">
+                    &copy; {{ date('Y') }} Ruang GQ · Griya Qur'an Tunas Ilmu · SchoolVia.id
+                </footer>
+            </main>
+        </div>
+    </div>
+
     @if($isGuruPortal)
         <x-journal-overdue-reminder :journal-overdue-reminder="$journalOverdueReminder ?? null" />
         <x-tasmi-wali-reminder :tasmi-wali-reminder="$tasmiWaliReminder ?? null" />

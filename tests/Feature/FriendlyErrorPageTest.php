@@ -10,6 +10,18 @@ class FriendlyErrorPageTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_other_http_errors_share_the_theme_and_keep_their_status(): void
+    {
+        foreach ([403, 419, 429, 503] as $status) {
+            $this->app['router']->get('/test-http-error-'.$status, fn () => abort($status));
+
+            $this->get('/test-http-error-'.$status)
+                ->assertStatus($status)
+                ->assertSee('gq-theme-palette', false)
+                ->assertSee('Kembali ke halaman utama');
+        }
+    }
+
     public function test_not_found_response_uses_a_friendly_page_without_debug_details(): void
     {
         $this->get('/alamat-yang-tidak-tersedia')

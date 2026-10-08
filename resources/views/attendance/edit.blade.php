@@ -10,64 +10,57 @@
 
     @push('styles')
     <style>
-        .glass-card {
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.6);
-            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
-        }
 
-        :root { --attendance-sticky-top: 4.6rem; --attendance-student-column-width: clamp(16rem, 22vw, 20rem); }
-        .attendance-grid-card { overflow: visible; }
-        .attendance-grid-table { width: var(--attendance-grid-width); min-width: var(--attendance-grid-width); table-layout: fixed; border-collapse: separate; border-spacing: 0; }
+        :root { --attendance-sticky-top:4.6rem; --attendance-student-column-width:clamp(16rem, 22vw, 20rem); }
+        .attendance-grid-card { overflow:visible; }
+        .attendance-grid-table { width:var(--attendance-grid-width); min-width:var(--attendance-grid-width); table-layout:fixed; border-collapse:separate; border-spacing:0; }
         .attendance-sticky-head {
-            position: sticky;
-            top: var(--attendance-sticky-top);
-            z-index: 30;
-            overflow: hidden;
-            border-bottom: 1px solid #e2e8f0;
-            border-radius: 2rem 2rem 0 0;
-            background: rgb(248 250 252 / .97);
-            box-shadow: 0 6px 12px -10px rgb(15 23 42 / .45);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
+            position:sticky;
+            top:var(--attendance-sticky-top);
+            z-index:30;
+            overflow:hidden;
+            border-bottom:1px solid var(--ui-line);
+            border-radius:2rem 2rem 0 0;
+            background:var(--ui-surface-subtle);
+            box-shadow:0 6px 12px -10px rgb(15 23 42 / .45);
+            backdrop-filter:blur(12px);
+            -webkit-backdrop-filter:blur(12px);
         }
-        .attendance-sticky-head-content { width: var(--attendance-grid-width); will-change: transform; }
-        .attendance-sticky-head-content thead th:first-child { position: static !important; left: auto !important; }
-        .attendance-today-heading { background: #fef3c7; box-shadow: inset 0 -3px 0 #d97706; }
-        .attendance-today-heading .attendance-day-number { color: #92400e; }
-        .attendance-today-label { display: block; margin-top: .15rem; color: #92400e; font-size: .55rem; font-weight: 900; line-height: 1; }
-        .attendance-today-cell { background: #fffbeb; box-shadow: inset 1px 0 #fde68a, inset -1px 0 #fde68a; }
+        .attendance-sticky-head-content { width:var(--attendance-grid-width); will-change:transform; }
+        .attendance-sticky-head-content thead th:first-child { position:static !important; left:auto !important; }
+        .attendance-today-heading { background:var(--ui-warning-soft-strong); box-shadow:inset 0 -3px 0 var(--color-warning-600); }
+        .attendance-today-heading .attendance-day-number { color:var(--ui-warning-ink); }
+        .attendance-today-label { display:block; margin-top:.15rem; color:var(--ui-warning-ink); font-size:.55rem; font-weight:700; line-height:1; }
+        .attendance-today-cell { background:var(--ui-warning-soft); box-shadow:inset 1px 0 var(--ui-warning-line), inset -1px 0 var(--ui-warning-line); }
         .attendance-sticky-name {
-            position: absolute;
-            inset: 0 auto 0 0;
-            z-index: 2;
-            display: flex;
-            width: var(--attendance-student-column-width);
-            align-items: center;
-            justify-content: space-between;
-            gap: .75rem;
-            border-right: 1px solid #e2e8f0;
-            background: #f8fafc;
-            padding: .75rem 1.5rem;
-            color: #64748b;
-            font-size: .625rem;
-            font-weight: 700;
-            letter-spacing: .08em;
-            text-transform: uppercase;
+            position:absolute;
+            inset:0 auto 0 0;
+            z-index:2;
+            display:flex;
+            width:var(--attendance-student-column-width);
+            align-items:center;
+            justify-content:space-between;
+            gap:.75rem;
+            border-right:1px solid var(--ui-line);
+            background:var(--ui-surface-subtle);
+            padding:.75rem 1.5rem;
+            color:var(--ui-muted);
+            font-size:.625rem;
+            font-weight:700;
+            letter-spacing:.08em;
+            text-transform:uppercase;
         }
-        .attendance-sticky-month { color: #94a3b8; font-size: .625rem; letter-spacing: 0; text-transform: none; }
+        .attendance-sticky-month { color:var(--ui-soft); font-size:.625rem; letter-spacing:0; text-transform:none; }
         @media (max-width: 767px) {
             .attendance-day-picker {
-                position: sticky;
-                top: var(--attendance-sticky-top);
-                z-index: 30;
-                border-radius: 2rem 2rem 0 0;
-                background: rgb(255 255 255 / .98);
-                box-shadow: 0 6px 12px -10px rgb(15 23 42 / .45);
-                backdrop-filter: blur(12px);
-                -webkit-backdrop-filter: blur(12px);
+                position:sticky;
+                top:var(--attendance-sticky-top);
+                z-index:30;
+                border-radius:2rem 2rem 0 0;
+                background:color-mix(in srgb, var(--ui-surface) 98%, transparent);
+                box-shadow:0 6px 12px -10px rgb(15 23 42 / .45);
+                backdrop-filter:blur(12px);
+                -webkit-backdrop-filter:blur(12px);
             }
         }
     </style>
@@ -77,90 +70,90 @@
     <div class="mx-auto max-w-7xl">
         
         <!-- Header -->
-        <header class="mb-6 rounded-3xl glass-card p-6 sm:p-8 animate-fade-in-up">
+        <header class="mb-6 rounded-2xl glass-card p-6 sm:p-8 animate-fade-in-up">
             <div class="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
                 <div>
-                    <span class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-bold text-amber-800 mb-2">
+                    <span class="inline-flex items-center rounded-full bg-warning-soft-strong px-2.5 py-0.5 text-xs font-bold text-warning-ink mb-2">
                         Presensi {{ $selectedMonthLabel }}
                     </span>
-                    <h1 class="text-3xl font-black text-slate-900 leading-tight">{{ $classroomTerm->name }}</h1>
-                    <p class="mt-2 text-sm font-semibold text-slate-500">
+                    <h1 class="text-3xl font-semibold text-heading leading-tight">{{ $classroomTerm->name }}</h1>
+                    <p class="mt-2 text-sm font-semibold text-muted">
                         {{ $classroomTerm->academicTerm?->academicYear?->name }} &middot; {{ $classroomTerm->academicTerm?->name }}
                     </p>
-                    <p class="mt-2 text-xs text-slate-400 font-bold">
+                    <p class="mt-2 text-xs text-soft font-bold">
                         * Hari Sabtu dan Minggu otomatis libur (tidak dihitung).
                     </p>
                 </div>
                 <div class="grid grid-cols-3 gap-3 text-center text-xs sm:min-w-[320px]">
-                    <div class="rounded-2xl bg-red-50/80 border border-red-150 p-3 text-red-800">
+                    <div class="rounded-2xl bg-danger-soft/80 border border-danger-line p-3 text-danger-ink">
                         <p class="text-[10px] font-bold uppercase tracking-wider">Sakit</p>
-                        <p class="mt-1 text-2xl font-black" id="header-sick">{{ $classTotals['sick'] }}</p>
+                        <p class="mt-1 text-2xl font-semibold" id="header-sick">{{ $classTotals['sick'] }}</p>
                     </div>
-                    <div class="rounded-2xl bg-sky-50/80 border border-sky-150 p-3 text-sky-800">
+                    <div class="rounded-2xl bg-info-soft/80 border border-info-line p-3 text-info-ink">
                         <p class="text-[10px] font-bold uppercase tracking-wider">Izin</p>
-                        <p class="mt-1 text-2xl font-black" id="header-permission">{{ $classTotals['permission'] }}</p>
+                        <p class="mt-1 text-2xl font-semibold" id="header-permission">{{ $classTotals['permission'] }}</p>
                     </div>
-                    <div class="rounded-2xl bg-slate-100/80 border border-slate-200 p-3 text-slate-850">
+                    <div class="rounded-2xl bg-surface-muted/80 border border-line p-3 text-heading">
                         <p class="text-[10px] font-bold uppercase tracking-wider">Alpa</p>
-                        <p class="mt-1 text-2xl font-black" id="header-absent">{{ $classTotals['absent'] }}</p>
+                        <p class="mt-1 text-2xl font-semibold" id="header-absent">{{ $classTotals['absent'] }}</p>
                     </div>
                 </div>
             </div>
         </header>
 
         @if (session('status'))
-            <div class="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-800 shadow-sm animate-fade-in-up">
+            <div class="mb-4 rounded-2xl border border-success-line bg-success-soft p-4 text-sm font-bold text-success-ink shadow-sm animate-fade-in-up">
                 {{ session('status') }}
             </div>
         @endif
 
         @if ($errors->any())
-            <div class="mb-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700 shadow-sm animate-fade-in-up">
+            <div class="mb-4 rounded-2xl border border-danger-line bg-danger-soft p-4 text-sm font-bold text-danger-ink shadow-sm animate-fade-in-up">
                 {{ $errors->first() }}
             </div>
         @endif
 
         <!-- Filter and Legends -->
-        <section class="mb-6 grid gap-4 rounded-3xl glass-card p-5 lg:grid-cols-[1fr_auto] items-end animate-fade-in-up" style="animation-delay: 50ms;">
+        <section class="mb-6 grid gap-4 rounded-2xl glass-card p-5 lg:grid-cols-[1fr_auto] items-end animate-fade-in-up" style="animation-delay:50ms;">
             <form method="GET" class="flex flex-wrap items-end gap-3">
                 <div>
-                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Bulan</label>
-                    <select name="month" class="min-w-[200px] rounded-xl border-2 border-slate-100 bg-white/50 px-3 py-2 text-sm font-semibold outline-none focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-500/10">
+                    <label class="block text-[10px] font-bold uppercase tracking-wider text-muted mb-1.5">Bulan</label>
+                    <select name="month" class="min-w-[200px] rounded-xl border-2 border-line bg-surface/50 px-3 py-2 text-sm font-semibold outline-none focus:border-brand-500 focus:bg-surface focus:ring-4 focus:ring-brand-500/10">
                         @foreach ($availableMonths as $month)
                             <option value="{{ $month['value'] }}" @selected($month['value'] === $selectedMonth)>{{ $month['label'] }}</option>
                         @endforeach
                     </select>
                 </div>
-                <button type="submit" class="rounded-xl bg-amber-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-amber-700 transition-colors shadow-md">
+                <button type="submit" class="rounded-xl bg-warning-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-warning-700 transition-colors shadow-md">
                     Ganti Bulan
                 </button>
             </form>
             <div class="flex flex-wrap gap-2 text-[10px] font-bold uppercase tracking-wider">
-                <span class="rounded-lg bg-white px-2 py-1.5 border border-slate-200 text-slate-700">H Hadir</span>
-                <span class="rounded-lg bg-amber-100 px-2 py-1.5 border border-amber-300 text-amber-800">S Sakit</span>
-                <span class="rounded-lg bg-emerald-100 px-2 py-1.5 border border-emerald-300 text-emerald-800">I Izin</span>
-                <span class="rounded-lg bg-red-100 px-2 py-1.5 border border-red-300 text-red-800">A Alpa</span>
-                <span class="rounded-lg bg-blue-100 px-2 py-1.5 border border-blue-300 text-blue-800">L Libur</span>
+                <span class="rounded-lg bg-surface px-2 py-1.5 border border-line text-body">H Hadir</span>
+                <span class="rounded-lg bg-warning-soft-strong px-2 py-1.5 border border-warning-line text-warning-ink">S Sakit</span>
+                <span class="rounded-lg bg-success-soft-strong px-2 py-1.5 border border-success-line text-success-ink">I Izin</span>
+                <span class="rounded-lg bg-danger-soft-strong px-2 py-1.5 border border-danger-line text-danger-ink">A Alpa</span>
+                <span class="rounded-lg bg-info-soft-strong px-2 py-1.5 border border-info-line text-info-ink">L Libur</span>
                 @if ($days->contains(fn ($day) => $day->toDateString() === $todayWib))
-                    <span class="rounded-lg border border-amber-300 bg-amber-50 px-2 py-1.5 text-amber-900">Hari ini: {{ \Carbon\CarbonImmutable::parse($todayWib)->locale('id')->translatedFormat('l, d F Y') }} WIB</span>
+                    <span class="rounded-lg border border-warning-line bg-warning-soft px-2 py-1.5 text-warning-ink">Hari ini: {{ \Carbon\CarbonImmutable::parse($todayWib)->locale('id')->translatedFormat('l, d F Y') }} WIB</span>
                 @endif
             </div>
         </section>
 
         <!-- Holiday list -->
         @if ($schoolHolidays->isNotEmpty())
-            <section class="mb-6 rounded-3xl border border-amber-200 bg-amber-50/50 p-6 shadow-sm animate-fade-in-up" style="animation-delay: 100ms;">
-                <h3 class="text-sm font-black text-amber-900 mb-1">Libur sekolah di {{ $selectedMonthLabel }}</h3>
-                <p class="text-xs font-semibold text-amber-700 mb-4">Daftar libur resmi yang terdaftar, tidak masuk dalam hitungan absensi.</p>
+            <section class="mb-6 rounded-2xl border border-warning-line bg-warning-soft/50 p-6 shadow-sm animate-fade-in-up" style="animation-delay:100ms;">
+                <h3 class="text-sm font-semibold text-warning-ink mb-1">Libur sekolah di {{ $selectedMonthLabel }}</h3>
+                <p class="text-xs font-semibold text-warning-ink mb-4">Daftar libur resmi yang terdaftar, tidak masuk dalam hitungan absensi.</p>
                 <div class="grid gap-3 md:grid-cols-2">
                     @foreach ($schoolHolidays as $holiday)
-                        <div class="rounded-2xl bg-white border border-amber-100 p-4">
-                            <p class="text-xs font-bold text-slate-400">
+                        <div class="rounded-2xl bg-surface border border-warning-line p-4">
+                            <p class="text-xs font-bold text-soft">
                                 {{ $holiday->holiday_date->locale('id')->translatedFormat('l, d F Y') }}
                             </p>
-                            <p class="text-sm font-black text-slate-800 mt-1">{{ $holiday->title }}</p>
+                            <p class="text-sm font-semibold text-heading mt-1">{{ $holiday->title }}</p>
                             @if ($holiday->description)
-                                <p class="mt-1 text-xs text-slate-500 font-medium">{{ $holiday->description }}</p>
+                                <p class="mt-1 text-xs text-muted font-medium">{{ $holiday->description }}</p>
                             @endif
                         </div>
                     @endforeach
@@ -169,13 +162,13 @@
         @endif
 
         <!-- Student Search -->
-        <div class="mb-6 rounded-3xl glass-card p-4 animate-fade-in-up" style="animation-delay: 150ms;">
-            <label for="student-filter" class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Cari santri</label>
+        <div class="mb-6 rounded-2xl glass-card p-4 animate-fade-in-up" style="animation-delay:150ms;">
+            <label for="student-filter" class="text-[10px] font-bold uppercase tracking-wider text-muted">Cari santri</label>
             <input
                 id="student-filter"
                 type="search"
                 placeholder="Ketik nama atau NIS santri..."
-                class="mt-2 w-full rounded-2xl border-2 border-slate-100 bg-white/50 px-4 py-2.5 text-sm font-semibold shadow-sm outline-none transition-all placeholder:text-slate-400 focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-500/10"
+                class="mt-2 w-full rounded-2xl border-2 border-line bg-surface/50 px-4 py-2.5 text-sm font-semibold shadow-sm outline-none transition-all placeholder:text-soft focus:border-brand-500 focus:bg-surface focus:ring-4 focus:ring-brand-500/10"
             >
             @csrf
         </div>
@@ -193,7 +186,7 @@
                 }
             }
         @endphp
-        <div x-data="attendanceManager('{{ route('attendance.update-single', $classroomTerm) }}')" x-init="selectedDay = @js($defaultSelectedDay)" class="attendance-grid-card rounded-[2rem] glass-card shadow-sm animate-fade-in-up relative" style="--attendance-grid-width: calc(var(--attendance-student-column-width) + {{ $days->count() * 70 + 192 }}px); animation-delay: 200ms;">
+        <div x-data="attendanceManager('{{ route('attendance.update-single', $classroomTerm) }}')" x-init="selectedDay = @js($defaultSelectedDay)" class="attendance-grid-card rounded-2xl glass-card shadow-sm animate-fade-in-up relative" style="--attendance-grid-width: calc(var(--attendance-student-column-width) + {{ $days->count() * 70 + 192 }}px); animation-delay:200ms;">
 
             {{-- ===== Desktop matrix (hidden on mobile) ===== --}}
             <div class="hidden md:block">
@@ -201,21 +194,21 @@
                 <div class="attendance-sticky-head-content" data-attendance-sticky-header-content>
                     <table class="attendance-grid-table text-left text-sm whitespace-nowrap">
                         <colgroup>
-                            <col style="width: var(--attendance-student-column-width)">
+                            <col style="width:var(--attendance-student-column-width)">
                             @foreach ($days as $day)
-                                <col style="width: 70px">
+                                <col style="width:70px">
                             @endforeach
-                            <col style="width: 64px">
-                            <col style="width: 64px">
-                            <col style="width: 64px">
+                            <col style="width:64px">
+                            <col style="width:64px">
+                            <col style="width:64px">
                         </colgroup>
                         <thead>
-                            <tr class="bg-slate-50 border-b border-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                            <tr class="bg-surface-subtle border-b border-line text-[10px] font-bold uppercase tracking-wider text-muted">
                                 <th class="px-6 py-4">Santri</th>
                                 @foreach ($days as $day)
                                     <th @class(['px-2 py-2 text-center', 'attendance-today-heading' => $day->toDateString() === $todayWib]) @if ($day->toDateString() === $todayWib) data-attendance-today-header @endif>
-                                        <span class="attendance-day-number block font-black text-slate-700 text-sm">{{ $day->format('d') }}</span>
-                                        <span class="block text-[8px] font-bold mt-0.5 text-slate-400">{{ $day->locale('id')->translatedFormat('l') }}</span>
+                                        <span class="attendance-day-number block font-semibold text-body text-sm">{{ $day->format('d') }}</span>
+                                        <span class="block text-[8px] font-bold mt-0.5 text-soft">{{ $day->locale('id')->translatedFormat('l') }}</span>
                                         @if ($day->toDateString() === $todayWib)<span class="attendance-today-label">Hari ini</span>@endif
                                     </th>
                                 @endforeach
@@ -231,23 +224,23 @@
             <div class="overflow-x-auto pb-20" data-attendance-scroll-area>
                 <table class="attendance-grid-table text-left text-sm whitespace-nowrap" data-attendance-table aria-label="Presensi santri {{ $selectedMonthLabel }}">
                     <colgroup>
-                        <col style="width: var(--attendance-student-column-width)">
+                        <col style="width:var(--attendance-student-column-width)">
                         @foreach ($days as $day)
-                            <col style="width: 70px">
+                            <col style="width:70px">
                         @endforeach
-                        <col style="width: 64px">
-                        <col style="width: 64px">
-                        <col style="width: 64px">
+                        <col style="width:64px">
+                        <col style="width:64px">
+                        <col style="width:64px">
                     </colgroup>
-                    <tbody id="attendance-rows" class="divide-y divide-slate-100">
+                    <tbody id="attendance-rows" class="divide-y divide-line">
                         @foreach ($enrollments as $enrollment)
                             @php
                                 $totals = $studentTotals[$enrollment->id] ?? ['sick' => 0, 'permission' => 0, 'absent' => 0];
                             @endphp
-                            <tr class="hover:bg-slate-50/50 transition-colors" data-student="{{ \Illuminate\Support\Str::lower($enrollment->student?->name.' '.$enrollment->student?->nis) }}">
-                                <td class="sticky left-0 z-10 bg-white px-6 py-4 font-bold border-r border-slate-50">
-                                    <div class="text-slate-900 text-sm font-extrabold">{{ $enrollment->student?->name }}</div>
-                                    <div class="text-xs font-semibold text-slate-400 mt-0.5">NIS {{ $enrollment->student?->nis }}</div>
+                            <tr class="hover:bg-surface-subtle/50 transition-colors" data-student="{{ \Illuminate\Support\Str::lower($enrollment->student?->name.' '.$enrollment->student?->nis) }}">
+                                <td class="sticky left-0 z-10 bg-surface px-6 py-4 font-bold border-r border-line">
+                                    <div class="text-heading text-sm font-bold">{{ $enrollment->student?->name }}</div>
+                                    <div class="text-xs font-semibold text-soft mt-0.5">NIS {{ $enrollment->student?->nis }}</div>
                                 </td>
                                 @foreach ($days as $day)
                                     @php
@@ -260,13 +253,13 @@
                                             x-model="attendances['{{ $enrollment->id }}_{{ $day->toDateString() }}']"
                                             x-init="attendances['{{ $enrollment->id }}_{{ $day->toDateString() }}'] = '{{ $code }}'"
                                             @change="updateAttendance('{{ $enrollment->id }}', '{{ $day->toDateString() }}')"
-                                            class="h-10 w-14 rounded-xl border-2 text-center text-sm font-extrabold outline-none transition-all focus:ring-4 cursor-pointer"
+                                            class="h-10 w-14 rounded-xl border-2 text-center text-sm font-bold outline-none transition-all focus:ring-4 cursor-pointer"
                                             :class="{
-                                                'bg-white border-slate-100 text-slate-700 focus:border-slate-300 focus:ring-slate-100': attendances['{{ $enrollment->id }}_{{ $day->toDateString() }}'] === 'H',
-                                                'bg-amber-100 border-amber-300 text-amber-800 focus:border-amber-400 focus:ring-amber-200': attendances['{{ $enrollment->id }}_{{ $day->toDateString() }}'] === 'S',
-                                                'bg-emerald-100 border-emerald-300 text-emerald-800 focus:border-emerald-400 focus:ring-emerald-200': attendances['{{ $enrollment->id }}_{{ $day->toDateString() }}'] === 'I',
-                                                'bg-red-100 border-red-300 text-red-800 focus:border-red-400 focus:ring-red-200': attendances['{{ $enrollment->id }}_{{ $day->toDateString() }}'] === 'A',
-                                                'bg-blue-100 border-blue-300 text-blue-800 focus:border-blue-400 focus:ring-blue-200': attendances['{{ $enrollment->id }}_{{ $day->toDateString() }}'] === 'L',
+                                                'bg-surface border-line text-body focus:border-line-strong focus:ring-line': attendances['{{ $enrollment->id }}_{{ $day->toDateString() }}'] === 'H',
+                                                'bg-warning-soft-strong border-warning-line text-warning-ink focus:border-warning-400 focus:ring-warning-line': attendances['{{ $enrollment->id }}_{{ $day->toDateString() }}'] === 'S',
+                                                'bg-success-soft-strong border-success-line text-success-ink focus:border-success-400 focus:ring-success-line': attendances['{{ $enrollment->id }}_{{ $day->toDateString() }}'] === 'I',
+                                                'bg-danger-soft-strong border-danger-line text-danger-ink focus:border-danger-400 focus:ring-danger-line': attendances['{{ $enrollment->id }}_{{ $day->toDateString() }}'] === 'A',
+                                                'bg-info-soft-strong border-info-line text-info-ink focus:border-info-400 focus:ring-info-line': attendances['{{ $enrollment->id }}_{{ $day->toDateString() }}'] === 'L',
                                             }"
                                             @disabled(! $canUpdate)
                                         >
@@ -276,9 +269,9 @@
                                         </select>
                                     </td>
                                 @endforeach
-                                <td class="px-4 py-3 text-center font-black text-red-700 text-base" x-text="studentTotals['{{ $enrollment->id }}']?.sick ?? {{ $totals['sick'] }}"></td>
-                                <td class="px-4 py-3 text-center font-black text-sky-700 text-base" x-text="studentTotals['{{ $enrollment->id }}']?.permission ?? {{ $totals['permission'] }}"></td>
-                                <td class="px-4 py-3 text-center font-black text-slate-700 text-base" x-text="studentTotals['{{ $enrollment->id }}']?.absent ?? {{ $totals['absent'] }}"></td>
+                                <td class="px-4 py-3 text-center font-semibold text-danger-ink text-base" x-text="studentTotals['{{ $enrollment->id }}']?.sick ?? {{ $totals['sick'] }}"></td>
+                                <td class="px-4 py-3 text-center font-semibold text-info-ink text-base" x-text="studentTotals['{{ $enrollment->id }}']?.permission ?? {{ $totals['permission'] }}"></td>
+                                <td class="px-4 py-3 text-center font-semibold text-body text-base" x-text="studentTotals['{{ $enrollment->id }}']?.absent ?? {{ $totals['absent'] }}"></td>
                             </tr>
                         @endforeach
                     </tbody>
@@ -289,31 +282,31 @@
             {{-- ===== Mobile view: Per Hari ===== --}}
             <div class="md:hidden pb-20">
                 {{-- Day picker strip --}}
-                <div class="attendance-day-picker border-b border-slate-100 px-4 pt-4 pb-3">
+                <div class="attendance-day-picker border-b border-line px-4 pt-4 pb-3">
                     <div class="flex items-center gap-2 overflow-x-auto">
-                        <span class="shrink-0 text-[10px] font-bold uppercase tracking-wider text-slate-400 mr-1">Tanggal · {{ $selectedMonthLabel }}</span>
+                        <span class="shrink-0 text-[10px] font-bold uppercase tracking-wider text-soft mr-1">Tanggal · {{ $selectedMonthLabel }}</span>
                         @foreach ($days as $day)
                             <button
                                 type="button"
                                 id="day-{{ $day->toDateString() }}"
                                 @click="selectedDay = '{{ $day->toDateString() }}'"
-                                :class="selectedDay === '{{ $day->toDateString() }}' ? 'bg-amber-600 text-white border-amber-600 shadow-md' : 'bg-white text-slate-700 border-slate-200 hover:border-amber-300'"
+                                :class="selectedDay === '{{ $day->toDateString() }}' ? 'bg-warning-600 text-white border-warning-600 shadow-md' : 'bg-surface text-body border-line hover:border-warning-line'"
                                 class="shrink-0 min-w-[3.25rem] rounded-2xl border-2 px-3 py-2 text-center transition-all"
                             >
-                                <span class="block text-sm font-black leading-none">{{ $day->format('d') }}</span>
+                                <span class="block text-sm font-semibold leading-none">{{ $day->format('d') }}</span>
                                 <span class="block text-[8px] font-bold mt-0.5 opacity-80">{{ $day->locale('id')->translatedFormat('D') }}</span>
                             </button>
                         @endforeach
                     </div>
                 </div>
 
-                <div class="flex flex-col gap-3 border-b border-slate-100 bg-slate-50/70 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div><p class="text-xs font-black text-slate-800">Input cepat</p><p class="mt-0.5 text-[11px] font-medium text-slate-500">Tandai semua santri pada tanggal yang dipilih.</p></div>
-                    <button type="button" @click="markSelectedDay('H')" class="inline-flex min-h-11 items-center justify-center rounded-xl bg-emerald-600 px-4 text-xs font-black text-white shadow-sm transition hover:bg-emerald-700" @disabled(! $canUpdate)>Tandai semua hadir</button>
+                <div class="flex flex-col gap-3 border-b border-line bg-surface-subtle/70 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div><p class="text-xs font-semibold text-heading">Input cepat</p><p class="mt-0.5 text-[11px] font-medium text-muted">Tandai semua santri pada tanggal yang dipilih.</p></div>
+                    <button type="button" @click="markSelectedDay('H')" class="inline-flex min-h-11 items-center justify-center rounded-xl bg-success-600 px-4 text-xs font-semibold text-white shadow-sm transition hover:bg-success-700" @disabled(! $canUpdate)>Tandai semua hadir</button>
                 </div>
 
                 {{-- Student cards for selected day --}}
-                <div id="attendance-rows-mobile" class="divide-y divide-slate-100">
+                <div id="attendance-rows-mobile" class="divide-y divide-line">
                     @foreach ($enrollments as $enrollment)
                         @php
                             $totals = $studentTotals[$enrollment->id] ?? ['sick' => 0, 'permission' => 0, 'absent' => 0];
@@ -321,13 +314,13 @@
                         <div class="p-4" data-student="{{ \Illuminate\Support\Str::lower($enrollment->student?->name.' '.$enrollment->student?->nis) }}">
                             <div class="flex items-start justify-between gap-3">
                                 <div class="min-w-0">
-                                    <div class="text-slate-900 text-sm font-extrabold truncate">{{ $enrollment->student?->name }}</div>
-                                    <div class="text-xs font-semibold text-slate-400 mt-0.5">NIS {{ $enrollment->student?->nis }}</div>
+                                    <div class="text-heading text-sm font-bold truncate">{{ $enrollment->student?->name }}</div>
+                                    <div class="text-xs font-semibold text-soft mt-0.5">NIS {{ $enrollment->student?->nis }}</div>
                                 </div>
                                 <div class="shrink-0 flex gap-1 text-[10px] font-bold text-center">
-                                    <span class="rounded-md bg-amber-50 text-amber-700 px-1.5 py-0.5">S <span x-text="studentTotals['{{ $enrollment->id }}']?.sick ?? {{ $totals['sick'] }}"></span></span>
-                                    <span class="rounded-md bg-emerald-50 text-emerald-700 px-1.5 py-0.5">I <span x-text="studentTotals['{{ $enrollment->id }}']?.permission ?? {{ $totals['permission'] }}"></span></span>
-                                    <span class="rounded-md bg-slate-100 text-slate-700 px-1.5 py-0.5">A <span x-text="studentTotals['{{ $enrollment->id }}']?.absent ?? {{ $totals['absent'] }}"></span></span>
+                                    <span class="rounded-md bg-warning-soft text-warning-ink px-1.5 py-0.5">S <span x-text="studentTotals['{{ $enrollment->id }}']?.sick ?? {{ $totals['sick'] }}"></span></span>
+                                    <span class="rounded-md bg-success-soft text-success-ink px-1.5 py-0.5">I <span x-text="studentTotals['{{ $enrollment->id }}']?.permission ?? {{ $totals['permission'] }}"></span></span>
+                                    <span class="rounded-md bg-surface-muted text-body px-1.5 py-0.5">A <span x-text="studentTotals['{{ $enrollment->id }}']?.absent ?? {{ $totals['absent'] }}"></span></span>
                                 </div>
                             </div>
 
@@ -335,19 +328,19 @@
                             <div class="mt-3 grid grid-cols-5 gap-2">
                                 @php
                                     $codes = [
-                                        'H' => ['Hadir', 'bg-white border-slate-200 text-slate-700'],
-                                        'S' => ['Sakit', 'bg-amber-500 border-amber-500 text-white'],
-                                        'I' => ['Izin', 'bg-emerald-500 border-emerald-500 text-white'],
-                                        'A' => ['Alpa', 'bg-red-500 border-red-500 text-white'],
-                                        'L' => ['Libur', 'bg-blue-500 border-blue-500 text-white'],
+                                        'H' => ['Hadir', 'bg-surface border-line text-body'],
+                                        'S' => ['Sakit', 'bg-warning-500 border-warning-500 text-white'],
+                                        'I' => ['Izin', 'bg-success-500 border-success-500 text-white'],
+                                        'A' => ['Alpa', 'bg-danger-500 border-danger-500 text-white'],
+                                        'L' => ['Libur', 'bg-info-500 border-info-500 text-white'],
                                     ];
                                 @endphp
                                 @foreach ($codes as $code => [$label, $activeClass])
                                     <button
                                         type="button"
                                         @click="attendances['{{ $enrollment->id }}_' + selectedDay] = '{{ $code }}'; updateAttendance('{{ $enrollment->id }}', selectedDay)"
-                                        :class="attendances['{{ $enrollment->id }}_' + selectedDay] === '{{ $code }}' ? '{{ $activeClass }}' : 'bg-white border-slate-200 text-slate-500'"
-                                        class="rounded-xl border-2 py-2.5 text-xs font-extrabold transition-all"
+                                        :class="attendances['{{ $enrollment->id }}_' + selectedDay] === '{{ $code }}' ? '{{ $activeClass }}' : 'bg-surface border-line text-muted'"
+                                        class="rounded-xl border-2 py-2.5 text-xs font-bold transition-all"
                                         @disabled(! $canUpdate)
                                     >{{ $label }}</button>
                                 @endforeach
@@ -358,16 +351,16 @@
             </div>{{-- end mobile view --}}
 
             <!-- Footer Action Block -->
-            <div class="sticky-action-bar flex flex-col items-stretch justify-between gap-3 border-t border-slate-200/60 p-4 backdrop-blur-md sm:flex-row sm:items-center sm:p-5">
-                <p class="text-xs font-semibold text-slate-500">Rekap ketidakhadiran (S/I/A) akan terakumulasi otomatis ke cetakan rapor santri.</p>
+            <div class="sticky-action-bar flex flex-col items-stretch justify-between gap-3 border-t border-line/60 p-4 backdrop-blur-md sm:flex-row sm:items-center sm:p-5">
+                <p class="text-xs font-semibold text-muted">Rekap ketidakhadiran (S/I/A) akan terakumulasi otomatis ke cetakan rapor santri.</p>
                 <div class="flex items-center gap-2">
                     <span x-show="saveError" x-text="saveError" class="inline-feedback inline-feedback-error"></span>
-                    <button x-show="saveError" type="button" @click="retryLastSave()" class="inline-flex min-h-11 items-center rounded-xl border border-rose-200 bg-white px-3 text-xs font-black text-rose-700">Coba lagi</button>
-                    <span x-show="isSaving" x-transition class="flex items-center gap-1.5 text-xs font-bold text-amber-600">
+                    <button x-show="saveError" type="button" @click="retryLastSave()" class="inline-flex min-h-11 items-center rounded-xl border border-danger-line bg-surface px-3 text-xs font-semibold text-danger-ink">Coba lagi</button>
+                    <span x-show="isSaving" x-transition class="flex items-center gap-1.5 text-xs font-bold text-warning-ink">
                         <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                         Menyimpan...
                     </span>
-                    <span x-show="!isSaving && lastSaved" x-transition class="flex items-center gap-1.5 text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100">
+                    <span x-show="!isSaving && lastSaved" x-transition class="flex items-center gap-1.5 text-xs font-bold text-success-ink bg-success-soft px-3 py-1.5 rounded-lg border border-success-line">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                         Tersimpan otomatis
                     </span>

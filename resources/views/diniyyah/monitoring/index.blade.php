@@ -3,8 +3,8 @@
         <header class="school-dashboard-hero p-6 sm:p-8">
             <div class="relative z-10">
                 <span class="badge badge-amber">Monitoring &amp; Validasi</span>
-                <h1 class="mt-3 text-3xl font-black leading-tight text-white sm:text-4xl">Monitoring Input Nilai Diniyyah</h1>
-                <p class="mt-2 max-w-2xl text-sm font-medium text-slate-300">Lacak keaktifan guru, kelas, mapel, dan lakukan verifikasi berkas nilai.</p>
+                <h1 class="mt-3 text-3xl font-semibold leading-tight text-on-primary sm:text-4xl">Monitoring Input Nilai Diniyyah</h1>
+                <p class="mt-2 max-w-2xl text-sm font-medium text-on-primary/80">Lacak keaktifan guru, kelas, mapel, dan lakukan verifikasi berkas nilai.</p>
             </div>
         </header>
 
@@ -27,19 +27,19 @@
 
         <section class="grid grid-cols-2 gap-3 sm:grid-cols-4" aria-label="Ringkasan monitoring">
             <div class="metric-card"><p class="metric-label">Set ditampilkan</p><p class="metric-value">{{ $totalSets }}</p></div>
-            <div class="metric-card border-emerald-200 bg-emerald-50"><p class="metric-label text-emerald-700">Set lengkap</p><p class="metric-value text-emerald-900">{{ $completeSets }}</p></div>
-            <div class="metric-card border-rose-200 bg-rose-50"><p class="metric-label text-rose-700">Santri kurang nilai</p><p class="metric-value text-rose-900">{{ $incompleteStudents }}</p></div>
-            <div class="metric-card border-amber-200 bg-amber-50"><p class="metric-label text-amber-700">Menunggu validasi</p><p class="metric-value text-amber-900">{{ $submittedSets }}</p></div>
+            <div class="metric-card border-success-line bg-success-soft"><p class="metric-label text-success-ink">Set lengkap</p><p class="metric-value text-success-ink">{{ $completeSets }}</p></div>
+            <div class="metric-card border-danger-line bg-danger-soft"><p class="metric-label text-danger-ink">Santri kurang nilai</p><p class="metric-value text-danger-ink">{{ $incompleteStudents }}</p></div>
+            <div class="metric-card border-warning-line bg-warning-soft"><p class="metric-label text-warning-ink">Menunggu validasi</p><p class="metric-value text-warning-ink">{{ $submittedSets }}</p></div>
         </section>
 
         <section class="card-lg p-5 sm:p-6" aria-labelledby="monitoring-filter-heading">
             <div class="mb-4">
-                <p class="text-xs font-black uppercase tracking-[.14em] text-amber-700">Filter data</p>
-                <h2 id="monitoring-filter-heading" class="mt-1 text-lg font-black text-slate-900">Temukan set penilaian</h2>
+                <p class="text-xs font-semibold uppercase tracking-[.14em] text-warning-ink">Filter data</p>
+                <h2 id="monitoring-filter-heading" class="mt-1 text-lg font-semibold text-heading">Temukan set penilaian</h2>
             </div>
             <form method="GET" class="grid items-end gap-4 sm:grid-cols-2 lg:grid-cols-5">
                 <div>
-                    <label for="monitoring-classroom" class="mb-1.5 block text-xs font-bold text-slate-600">Kelas</label>
+                    <label for="monitoring-classroom" class="mb-1.5 block text-xs font-bold text-body">Kelas</label>
                     <select id="monitoring-classroom" name="classroom" class="form-input min-h-11">
                         <option value="">Semua kelas</option>
                         @foreach ($classrooms as $classroom)
@@ -48,7 +48,7 @@
                     </select>
                 </div>
                 <div>
-                    <label for="monitoring-subject" class="mb-1.5 block text-xs font-bold text-slate-600">Mapel</label>
+                    <label for="monitoring-subject" class="mb-1.5 block text-xs font-bold text-body">Mapel</label>
                     <select id="monitoring-subject" name="subject" class="form-input min-h-11">
                         <option value="">Semua mapel</option>
                         @foreach ($subjects as $subject)
@@ -57,7 +57,7 @@
                     </select>
                 </div>
                 <div>
-                    <label for="monitoring-status" class="mb-1.5 block text-xs font-bold text-slate-600">Status</label>
+                    <label for="monitoring-status" class="mb-1.5 block text-xs font-bold text-body">Status</label>
                     <select id="monitoring-status" name="status" class="form-input min-h-11">
                         <option value="">Semua status</option>
                         @foreach ($statuses as $status)
@@ -65,9 +65,9 @@
                         @endforeach
                     </select>
                 </div>
-                <label for="monitoring-attention" class="flex min-h-11 items-center gap-2.5 rounded-xl border border-slate-200 bg-slate-50 px-4">
-                    <input id="monitoring-attention" type="checkbox" name="needs_attention" value="1" @checked(request()->boolean('needs_attention')) class="h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500">
-                    <span class="text-xs font-bold text-slate-600">Perlu perhatian</span>
+                <label for="monitoring-attention" class="flex min-h-11 items-center gap-2.5 rounded-xl border border-line bg-surface-subtle px-4">
+                    <input id="monitoring-attention" type="checkbox" name="needs_attention" value="1" @checked(request()->boolean('needs_attention')) class="h-4 w-4 rounded border-line-strong text-warning-ink focus:ring-warning-500">
+                    <span class="text-xs font-bold text-body">Perlu perhatian</span>
                 </label>
                 <div class="flex gap-2">
                     <button type="submit" class="btn btn-primary min-h-11 flex-1">Filter</button>
@@ -87,30 +87,30 @@
                     <div>
                         <div class="flex items-start justify-between gap-3">
                             <div class="min-w-0">
-                                <h2 class="truncate text-base font-black text-slate-900">{{ $assessmentSet->title }}</h2>
-                                <p class="mt-1 text-xs font-semibold text-slate-500">{{ $summary['classroom_name'] }} &middot; {{ $summary['subject_name'] }}</p>
-                                <p class="mt-1 truncate text-[11px] font-bold text-slate-400">{{ implode(', ', $summary['teacher_names']) ?: 'Guru belum ditentukan' }}</p>
+                                <h2 class="truncate text-base font-semibold text-heading">{{ $assessmentSet->title }}</h2>
+                                <p class="mt-1 text-xs font-semibold text-muted">{{ $summary['classroom_name'] }} &middot; {{ $summary['subject_name'] }}</p>
+                                <p class="mt-1 truncate text-[11px] font-bold text-soft">{{ implode(', ', $summary['teacher_names']) ?: 'Guru belum ditentukan' }}</p>
                             </div>
                             <span class="status-badge status-badge-{{ \App\Support\UiLabel::statusColor($summary['status']) }} shrink-0">{{ \App\Support\UiLabel::statusLabel($summary['status']) }}</span>
                         </div>
 
                         <div class="mt-5" aria-label="Progress {{ $progress }} persen">
-                            <div class="mb-1 flex justify-between text-xs font-bold text-slate-500">
+                            <div class="mb-1 flex justify-between text-xs font-bold text-muted">
                                 <span>{{ $summary['complete_students'] }} lengkap</span><span>{{ $progress }}%</span>
                             </div>
-                            <div class="h-2.5 overflow-hidden rounded-full bg-slate-100">
-                                <div class="h-full rounded-full {{ $isComplete ? 'bg-emerald-500' : 'bg-amber-500' }}" style="width: {{ $progress }}%"></div>
+                            <div class="h-2.5 overflow-hidden rounded-full bg-surface-muted">
+                                <div class="h-full rounded-full {{ $isComplete ? 'bg-success-500' : 'bg-warning-500' }}" style="width: {{ $progress }}%"></div>
                             </div>
                         </div>
 
                         <dl class="mt-5 grid grid-cols-3 gap-2 text-center">
-                            <div class="rounded-xl bg-slate-50 p-2"><dt class="metric-label">Santri</dt><dd class="mt-1 text-sm font-black text-slate-800">{{ $summary['total_students'] }}</dd></div>
-                            <div class="rounded-xl border border-emerald-100 bg-emerald-50 p-2"><dt class="metric-label text-emerald-600">Lengkap</dt><dd class="mt-1 text-sm font-black text-emerald-700">{{ $summary['complete_students'] }}</dd></div>
-                            <div class="rounded-xl border border-rose-100 bg-rose-50 p-2"><dt class="metric-label text-rose-600">Kurang</dt><dd class="mt-1 text-sm font-black text-rose-700">{{ $summary['incomplete_students'] }}</dd></div>
+                            <div class="rounded-xl bg-surface-subtle p-2"><dt class="metric-label">Santri</dt><dd class="mt-1 text-sm font-semibold text-heading">{{ $summary['total_students'] }}</dd></div>
+                            <div class="rounded-xl border border-success-line bg-success-soft p-2"><dt class="metric-label text-success-ink">Lengkap</dt><dd class="mt-1 text-sm font-semibold text-success-ink">{{ $summary['complete_students'] }}</dd></div>
+                            <div class="rounded-xl border border-danger-line bg-danger-soft p-2"><dt class="metric-label text-danger-ink">Kurang</dt><dd class="mt-1 text-sm font-semibold text-danger-ink">{{ $summary['incomplete_students'] }}</dd></div>
                         </dl>
                     </div>
 
-                    <div class="mt-5 border-t border-slate-100 pt-4">
+                    <div class="mt-5 border-t border-line pt-4">
                         <div class="flex flex-wrap gap-2">
                             <a href="{{ route('guru.diniyyah-scores.edit', $assessmentSet) }}" class="btn btn-outline min-h-11">Cek Nilai</a>
                             @if (auth()->user()?->hasAnyRole(['admin', 'kabag_diniyyah']))
@@ -119,33 +119,33 @@
                         </div>
 
                         @if (auth()->user()?->hasAnyRole(['admin', 'kabag_diniyyah']) && $summary['status'] === 'submitted')
-                            <div class="mt-4 space-y-3 border-t border-slate-100 pt-4">
+                            <div class="mt-4 space-y-3 border-t border-line pt-4">
                                 <form method="POST" action="{{ route('diniyyah.assessment-sets.approve', $assessmentSet) }}" class="space-y-2">
                                     @csrf
                                     <label class="sr-only" for="approve-notes-{{ $assessmentSet->id }}">Catatan persetujuan</label>
                                     <textarea id="approve-notes-{{ $assessmentSet->id }}" name="notes" rows="2" class="form-input" placeholder="Catatan persetujuan..."></textarea>
-                                    <button type="submit" class="btn min-h-11 w-full bg-emerald-600 text-white hover:bg-emerald-700">Validasi</button>
+                                    <button type="submit" class="btn min-h-11 w-full bg-success-600 text-white hover:bg-success-700">Validasi</button>
                                 </form>
                                 <form method="POST" action="{{ route('diniyyah.assessment-sets.revision', $assessmentSet) }}" class="space-y-2">
                                     @csrf
                                     <label class="sr-only" for="revision-notes-{{ $assessmentSet->id }}">Catatan perbaikan</label>
                                     <textarea id="revision-notes-{{ $assessmentSet->id }}" name="notes" rows="2" class="form-input" placeholder="Catatan perbaikan..."></textarea>
-                                    <button type="submit" class="btn min-h-11 w-full border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100">Kembalikan untuk revisi</button>
+                                    <button type="submit" class="btn min-h-11 w-full border border-warning-line bg-warning-soft text-warning-ink hover:bg-warning-soft-strong">Kembalikan untuk revisi</button>
                                 </form>
                             </div>
                         @elseif (auth()->user()?->hasAnyRole(['admin', 'kabag_diniyyah']) && $summary['status'] === 'validated')
-                            <form method="POST" action="{{ route('diniyyah.assessment-sets.revision', $assessmentSet) }}" class="mt-4 space-y-2 border-t border-slate-100 pt-4">
+                            <form method="POST" action="{{ route('diniyyah.assessment-sets.revision', $assessmentSet) }}" class="mt-4 space-y-2 border-t border-line pt-4">
                                 @csrf
                                 <label class="sr-only" for="reopen-notes-{{ $assessmentSet->id }}">Alasan pembukaan revisi</label>
                                 <textarea id="reopen-notes-{{ $assessmentSet->id }}" name="notes" rows="2" class="form-input" placeholder="Alasan pembukaan revisi..."></textarea>
-                                <button type="submit" class="btn min-h-11 w-full border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100">Buka ulang untuk revisi</button>
+                                <button type="submit" class="btn min-h-11 w-full border border-warning-line bg-warning-soft text-warning-ink hover:bg-warning-soft-strong">Buka ulang untuk revisi</button>
                             </form>
                         @endif
                     </div>
                 </article>
             @empty
                 <div class="empty-state md:col-span-2 xl:col-span-3">
-                    <p class="text-sm font-bold text-slate-600">Belum ada set penilaian yang sesuai filter.</p>
+                    <p class="text-sm font-bold text-body">Belum ada set penilaian yang sesuai filter.</p>
                     <p>Ubah filter atau periksa kembali periode input nilai.</p>
                 </div>
             @endforelse

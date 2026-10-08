@@ -1,69 +1,50 @@
 <x-layouts.portal title="Notifikasi" portalLabel="{{ auth()->user()->hasRole('guru') ? 'Portal Guru' : (auth()->user()->hasRole('wali_santri') ? 'Portal Wali Santri' : 'Ruang GQ') }}" breadcrumb="Notifikasi">
     @push('styles')
     <style>
-        .card { background: #fff; border: 1px solid #f1f5f9; border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.04); }
-        .badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; }
-        .badge-info { background: #dbeafe; color: #1e40af; }
-        .badge-success { background: #dcfce7; color: #166534; }
-        .badge-warning { background: #fef3c7; color: #92400e; }
-        .badge-danger { background: #fee2e2; color: #991b1b; }
-        .badge-slate { background: #f1f5f9; color: #475569; }
-        .form-input { width:100%; border:1.5px solid #e2e8f0; border-radius:10px; padding:8px 13px; font-size:13px; font-weight:500; color:#1e293b; background:#f8fafc; outline:none; font-family:'Outfit',sans-serif; }
-        .form-input:focus { border-color:#6b21a8; background:#fff; }
-        .btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; font-weight:700; font-size:12px; border-radius:8px; padding:7px 14px; transition: all .2s; cursor:pointer; border:none; text-decoration:none; white-space:nowrap; }
-        .btn-primary { background:#6b21a8; color:#fff; }
-        .btn-primary:hover { background:#581c87; }
-        .btn-outline { background:transparent; border:1.5px solid #e2e8f0; color:#475569; }
-        .btn-outline:hover { background:#f8fafc; }
-        .notif-item { display:flex; align-items:flex-start; gap:14px; padding:16px 18px; border-bottom:1px solid #f1f5f9; transition: background .15s; }
-        .notif-item:hover { background: #faf5ff; }
-        .notif-item.unread { background: #fdfbff; }
-        .notif-icon { width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:14px; font-weight:800; }
-        .icon-info { background:#dbeafe; color:#1e40af; }
-        .icon-success { background:#dcfce7; color:#166534; }
-        .icon-warning { background:#fef3c7; color:#92400e; }
-        .icon-danger { background:#fee2e2; color:#991b1b; }
-        .icon-slate { background:#f1f5f9; color:#475569; }
-        .empty-state { border: 2px dashed #e2e8f0; border-radius: 16px; padding: 48px 24px; text-align: center; }
+        .notif-item { display:flex; align-items:flex-start; gap:.875rem; border-bottom:1px solid var(--ui-surface-muted); padding:1rem 1.125rem; transition:background-color .15s ease; }
+        .notif-item:hover { background:var(--ui-surface-subtle); }
+        .notif-item.unread { background:var(--color-brand-25); }
+        .notif-icon { display:flex; width:2.25rem; height:2.25rem; flex-shrink:0; align-items:center; justify-content:center; border-radius:.625rem; font-size:.875rem; font-weight:700; }
+        .badge-info, .icon-info { background:var(--color-info-50); color:var(--color-info-700); }
+        .badge-success, .icon-success { background:var(--color-success-50); color:var(--color-success-700); }
+        .badge-warning, .icon-warning { background:var(--color-warning-50); color:var(--color-warning-700); }
+        .badge-danger, .icon-danger { background:var(--color-danger-50); color:var(--color-danger-700); }
+        .badge-slate, .icon-slate { background:var(--ui-surface-muted); color:var(--ui-text); }
     </style>
     @endpush
 
-    <header class="fade-up" style="margin-bottom:24px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;">
-            <div>
-                <h1 style="font-size:24px;font-weight:900;color:#0f172a;margin:0 0 4px;letter-spacing:-.02em;">Notifikasi</h1>
-                <p style="font-size:14px;color:#64748b;font-weight:500;margin:0;">
-                    @if($unreadCount > 0)
-                        Ada <strong>{{ $unreadCount }}</strong> notifikasi belum dibaca.
-                    @else
-                        Tidak ada notifikasi belum dibaca.
-                    @endif
-                </p>
-            </div>
-            @if($unreadCount > 0)
-                <form method="POST" action="{{ route('notifications.read-all') }}">
-                    @csrf
-                    <button type="submit" class="btn btn-primary">
-                        <svg style="width:14px;height:14px;" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
-                        Tandai semua dibaca
-                    </button>
-                </form>
-            @endif
+    <header class="portal-page-header fade-up">
+        <div>
+            <p class="eyebrow">Pusat informasi</p>
+            <h1>Notifikasi</h1>
+            <p class="mt-2 text-sm font-normal text-muted dark:text-muted">
+                @if($unreadCount > 0)
+                    Ada <strong>{{ $unreadCount }}</strong> notifikasi belum dibaca.
+                @else
+                    Tidak ada notifikasi belum dibaca.
+                @endif
+            </p>
         </div>
+        @if($unreadCount > 0)
+            <form method="POST" action="{{ route('notifications.read-all') }}">
+                @csrf
+                <button type="submit" class="btn btn-primary">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
+                    Tandai semua dibaca
+                </button>
+            </form>
+        @endif
     </header>
 
     @if (session('status'))
-        <div style="margin-bottom:18px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:12px 16px;font-size:13px;font-weight:600;color:#166534;" class="fade-up">
-            {{ session('status') }}
-        </div>
+        <div class="inline-feedback inline-feedback-success fade-up mb-4" role="status">{{ session('status') }}</div>
     @endif
 
-    {{-- Filter --}}
-    <form method="GET" class="card fade-up delay-1" style="padding:14px;margin-bottom:18px;">
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;align-items:flex-end;">
+    <form method="GET" class="card fade-up delay-1 mb-4 p-4">
+        <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(10rem,1fr)_minmax(10rem,1fr)_auto_auto] xl:items-end">
             <div>
-                <label style="font-size:10px;font-weight:800;text-transform:uppercase;color:#475569;">Tipe</label>
-                <select name="type" class="form-input">
+                <label for="notification-type" class="mb-1.5 block text-xs font-semibold text-body dark:text-body">Tipe</label>
+                <select id="notification-type" name="type" class="form-input">
                     <option value="">Semua tipe</option>
                     @foreach($typeOptions as $value => $label)
                         <option value="{{ $value }}" @if(($filters['type'] ?? '') === $value) selected @endif>{{ $label }}</option>
@@ -71,33 +52,30 @@
                 </select>
             </div>
             <div>
-                <label style="font-size:10px;font-weight:800;text-transform:uppercase;color:#475569;">Severity</label>
-                <select name="severity" class="form-input">
+                <label for="notification-severity" class="mb-1.5 block text-xs font-semibold text-body dark:text-body">Tingkat</label>
+                <select id="notification-severity" name="severity" class="form-input">
                     <option value="">Semua</option>
                     @foreach($severityOptions as $value => $label)
                         <option value="{{ $value }}" @if(($filters['severity'] ?? '') === $value) selected @endif>{{ $label }}</option>
                     @endforeach
                 </select>
             </div>
-            <div style="display:flex;align-items:center;gap:8px;padding-bottom:6px;">
-                <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#475569;cursor:pointer;">
-                    <input type="checkbox" name="unread_only" value="1" @if(($filters['unread_only'] ?? '') === '1') checked @endif style="cursor:pointer;">
-                    Belum dibaca saja
-                </label>
-            </div>
-            <div style="display:flex;gap:8px;">
+            <label class="flex min-h-10 cursor-pointer items-center gap-2 text-sm font-medium text-body dark:text-body">
+                <input type="checkbox" name="unread_only" value="1" @if(($filters['unread_only'] ?? '') === '1') checked @endif class="h-4 w-4 rounded border-line-strong text-brand-ink focus:ring-brand-500">
+                Belum dibaca saja
+            </label>
+            <div class="flex gap-2">
                 <button type="submit" class="btn btn-primary">Filter</button>
                 <a href="{{ route('notifications.index') }}" class="btn btn-outline">Reset</a>
             </div>
         </div>
     </form>
 
-    {{-- Daftar --}}
-    <div class="card fade-up delay-2">
+    <div class="card fade-up delay-2 overflow-hidden">
         @if($notifications->isEmpty())
-            <div class="empty-state" style="margin:20px;">
-                <svg style="width:40px;height:40px;color:#cbd5e1;margin:0 auto 12px;" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" /></svg>
-                <p style="color:#94a3b8;font-weight:600;font-size:14px;">Tidak ada notifikasi yang sesuai filter.</p>
+            <div class="empty-state m-5 border-dashed">
+                <svg class="mx-auto mb-3 h-10 w-10 text-soft dark:text-soft" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" /></svg>
+                <p class="text-sm font-medium text-muted dark:text-muted">Tidak ada notifikasi yang sesuai filter.</p>
             </div>
         @else
             @foreach($notifications as $notif)
@@ -122,10 +100,10 @@
                     };
                 @endphp
                 <div class="notif-item {{ $notif->status === 'unread' ? 'unread' : '' }}">
-                    <div class="notif-icon {{ $iconClass }}">{{ $iconChar }}</div>
-                    <div style="flex:1;min-width:0;">
-                        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
-                            <strong style="font-size:14px;color:#0f172a;">{{ $notif->title }}</strong>
+                    <div class="notif-icon {{ $iconClass }}" aria-hidden="true">{{ $iconChar }}</div>
+                    <div class="min-w-0 flex-1">
+                        <div class="mb-1 flex flex-wrap items-center gap-2">
+                            <strong class="text-sm font-semibold text-heading dark:text-white">{{ $notif->title }}</strong>
                             @if($notif->status === 'unread')
                                 <span class="badge badge-danger">Baru</span>
                             @endif
@@ -134,32 +112,32 @@
                             @endif
                             <span class="badge {{ $badgeClass }}">{{ $severityOptions[$notif->severity] ?? $notif->severity }}</span>
                         </div>
-                        <p style="font-size:13px;color:#475569;margin:0 0 6px;line-height:1.5;">{{ $notif->body }}</p>
-                        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-                            <span style="font-size:11px;color:#94a3b8;font-weight:600;">{{ $notif->created_at?->diffForHumans() }}</span>
-                            <span style="font-size:11px;color:#94a3b8;">·</span>
-                            <span style="font-size:11px;color:#94a3b8;font-weight:500;">{{ $typeOptions[$notif->notification_type] ?? $notif->notification_type }}</span>
+                        <p class="m-0 mb-1.5 text-sm leading-5 text-body dark:text-body">{{ $notif->body }}</p>
+                        <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-soft dark:text-muted">
+                            <span class="font-medium">{{ $notif->created_at?->diffForHumans() }}</span>
+                            <span aria-hidden="true">·</span>
+                            <span>{{ $typeOptions[$notif->notification_type] ?? $notif->notification_type }}</span>
                             @if($notif->link_url)
-                                <a href="{{ $notif->link_url }}" style="font-size:11px;font-weight:700;color:#6b21a8;text-decoration:none;">Lihat detail →</a>
+                                <a href="{{ $notif->link_url }}" class="font-semibold text-brand-ink hover:text-brand-ink dark:text-brand-300">Lihat detail <span aria-hidden="true">→</span></a>
                             @endif
                         </div>
                     </div>
-                    <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
+                    <div class="flex shrink-0 flex-col gap-1.5">
                         @if($notif->status === 'unread')
                             <form method="POST" action="{{ route('notifications.read', $notif) }}">
                                 @csrf
-                                <button type="submit" class="btn btn-outline" style="font-size:10px;padding:4px 10px;" title="Tandai dibaca">✓ Dibaca</button>
+                                <button type="submit" class="btn btn-outline btn-sm" title="Tandai dibaca">Dibaca</button>
                             </form>
                         @endif
                         <form method="POST" action="{{ route('notifications.archive', $notif) }}">
                             @csrf
                             @method('DELETE')
-                            <button type="submit" class="btn btn-outline" style="font-size:10px;padding:4px 10px;color:#991b1b;border-color:#fecaca;" title="Hapus" onclick="return confirm('Hapus notifikasi ini?')">×</button>
+                            <button type="submit" class="btn btn-danger btn-sm" title="Hapus" onclick="return confirm('Hapus notifikasi ini?')">Hapus</button>
                         </form>
                     </div>
                 </div>
             @endforeach
-            <div style="padding:14px 18px;">
+            <div class="border-t border-line p-4 dark:border-gray-800">
                 {{ $notifications->withQueryString()->links() }}
             </div>
         @endif

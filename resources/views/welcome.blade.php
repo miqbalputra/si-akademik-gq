@@ -30,10 +30,9 @@
     <meta name="twitter:title" content="Ruang GQ - Griya Qur'an Tunas Ilmu">
     <meta name="twitter:description" content="Aktivitas akademik untuk guru, wali santri, dan manajemen sekolah.">
     <meta name="twitter:image" content="{{ url('/images/og-ruang-gq.png') }}">
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700,800" rel="stylesheet" />
-    <link href="https://fonts.bunny.net/css?family=plus-jakarta-sans:500,600,700,800" rel="stylesheet" />
+    @include('partials.theme-init')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @include('partials.theme-palette')
     @include('partials.pwa-head')
 </head>
 <body class="school-home overflow-x-hidden">
@@ -52,11 +51,12 @@
                 <a href="#kegiatan" data-scroll-link>Kegiatan Akademik</a>
             </div>
             <div class="ml-auto flex items-center gap-2 sm:ml-0">
+                <x-common.theme-toggle />
                 @auth
                     <a href="{{ $dashboardUrl }}" class="btn btn-primary btn-sm">Buka ruang saya <span aria-hidden="true">&rarr;</span></a>
                     <form method="POST" action="{{ route('logout') }}" class="hidden sm:block">@csrf<button type="submit" class="btn btn-outline btn-sm">Keluar</button></form>
                 @else
-                    <a href="{{ route('auth.google') }}" class="hidden text-xs font-bold text-slate-600 sm:inline">Masuk Google</a>
+                    <a href="{{ route('auth.google') }}" class="hidden text-xs font-bold text-body sm:inline">Masuk Google</a>
                     <a href="{{ route('login') }}" class="btn btn-primary btn-sm">Masuk portal <span aria-hidden="true">&rarr;</span></a>
                 @endauth
             </div>
@@ -73,7 +73,7 @@
                     <a href="{{ route('login') }}" class="btn btn-primary btn-lg">Masuk ke ruang akademik <span aria-hidden="true">&rarr;</span></a>
                     <a href="#peta" class="btn btn-outline btn-lg" data-scroll-link>Lihat perjalanan belajar</a>
                 </div>
-                <p class="mt-6 font-mono text-[10px] font-bold tracking-[.08em] text-slate-500">KELAS · HALAQAH · JURNAL · RAPOR · AGENDA</p>
+                <p class="mt-6 font-mono text-[10px] font-bold tracking-[.08em] text-muted">KELAS · HALAQAH · JURNAL · RAPOR · AGENDA</p>
             </div>
 
             <aside class="school-board" aria-label="Ilustrasi papan kegiatan sekolah">
@@ -106,14 +106,14 @@
                             <div data-learning-note><span>CATATAN</span><strong>Presensi</strong></div>
                             <div data-learning-note><span>CATATAN</span><strong>Tahfidz</strong></div>
                         </div>
-                        <a href="{{ route('guru.dashboard') }}" class="mt-5 inline-flex font-mono text-xs font-black text-school-600 underline decoration-neon decoration-4 underline-offset-4" data-learning-cta>Masuk ke Ruang Guru</a>
-                        <p class="mt-5 font-mono text-[9px] font-bold tracking-[.08em] text-slate-400">SIMULASI ALUR · TANPA DATA AKADEMIK NYATA</p>
+                        <a href="{{ route('guru.dashboard') }}" class="mt-5 inline-flex font-mono text-xs font-semibold text-school-600 underline decoration-neon decoration-4 underline-offset-4" data-learning-cta>Masuk ke Ruang Guru</a>
+                        <p class="mt-5 font-mono text-[9px] font-bold tracking-[.08em] text-soft">SIMULASI ALUR · TANPA DATA AKADEMIK NYATA</p>
                     </article>
                 </div>
             </div>
         </section>
 
-        <section id="ruang" class="school-section bg-[#f0f3ed]" aria-labelledby="room-title">
+        <section id="ruang" class="school-section bg-surface-subtle dark:bg-canvas" aria-labelledby="room-title">
             <div class="school-section-inner">
                 <p class="school-index">Pintu ruang</p>
                 <h2 id="room-title" class="school-section-title">Setiap warga sekolah memulai dari ruang yang tepat.</h2>
@@ -130,10 +130,10 @@
                 <p class="school-index">Kegiatan akademik</p>
                 <h2 id="activity-title" class="school-section-title">Dibangun dari aktivitas sekolah yang benar-benar berjalan setiap hari.</h2>
                 <div class="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    <article class="school-work-card"><p class="school-index">01</p><h3 class="mt-4 text-lg font-black">Kelas &amp; Presensi</h3><p class="mt-2 text-sm leading-6 text-slate-600">Kehadiran dan kegiatan harian dekat dengan ruang kelas.</p></article>
-                    <article class="school-work-card"><p class="school-index">02</p><h3 class="mt-4 text-lg font-black">Jurnal Diniyyah</h3><p class="mt-2 text-sm leading-6 text-slate-600">Materi pembelajaran tercatat per sesi dan guru.</p></article>
-                    <article class="school-work-card"><p class="school-index">03</p><h3 class="mt-4 text-lg font-black">Halaqah Tahfidz</h3><p class="mt-2 text-sm leading-6 text-slate-600">Progres hafalan dan tasmi' terhubung dengan pendampingan.</p></article>
-                    <article class="school-work-card"><p class="school-index">04</p><h3 class="mt-4 text-lg font-black">Rapor &amp; Arsip</h3><p class="mt-2 text-sm leading-6 text-slate-600">Ringkasan belajar diterbitkan dan disimpan dengan tertib.</p></article>
+                    <article class="school-work-card"><p class="school-index">01</p><h3 class="mt-4 text-lg font-semibold">Kelas &amp; Presensi</h3><p class="mt-2 text-sm leading-6 text-body">Kehadiran dan kegiatan harian dekat dengan ruang kelas.</p></article>
+                    <article class="school-work-card"><p class="school-index">02</p><h3 class="mt-4 text-lg font-semibold">Jurnal Diniyyah</h3><p class="mt-2 text-sm leading-6 text-body">Materi pembelajaran tercatat per sesi dan guru.</p></article>
+                    <article class="school-work-card"><p class="school-index">03</p><h3 class="mt-4 text-lg font-semibold">Halaqah Tahfidz</h3><p class="mt-2 text-sm leading-6 text-body">Progres hafalan dan tasmi' terhubung dengan pendampingan.</p></article>
+                    <article class="school-work-card"><p class="school-index">04</p><h3 class="mt-4 text-lg font-semibold">Rapor &amp; Arsip</h3><p class="mt-2 text-sm leading-6 text-body">Ringkasan belajar diterbitkan dan disimpan dengan tertib.</p></article>
                 </div>
             </div>
         </section>

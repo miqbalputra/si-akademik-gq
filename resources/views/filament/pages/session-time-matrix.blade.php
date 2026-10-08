@@ -2,19 +2,19 @@
     @php
         $dayNames = [1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 4 => 'Kamis', 5 => 'Jumat'];
         $classroomOptions = $classroomOptions ?? [];
-        $inputStyle = 'border:1.5px solid var(--gray-200,#e5e7eb);border-radius:8px;padding:6px 10px;font-size:14px;font-weight:500;background:#fff;color:var(--gray-800,#1f2937);width:118px;';
-        $selectStyle = 'border:1.5px solid var(--gray-200,#e5e7eb);border-radius:10px;padding:9px 12px;font-size:14px;font-weight:600;background:var(--gray-50,#f9fafb);color:var(--gray-800,#1f2937);min-width:260px;';
+        $inputStyle = 'border:1.5px solid var(--ui-line);border-radius:8px;padding:6px 10px;font-size:14px;font-weight:500;background:var(--ui-surface);color:var(--ui-heading);width:118px;';
+        $selectStyle = 'border:1.5px solid var(--ui-line);border-radius:10px;padding:9px 12px;font-size:14px;font-weight:600;background:var(--ui-surface-subtle);color:var(--ui-heading);min-width:260px;';
     @endphp
 
     <x-filament::section icon="heroicon-o-clock" heading="Atur Jadwal Sesi Diniyyah per Kelas"
         description="Ubah jam sesi per kelas tanpa deploy. Pantau Jurnal Kelas & input jurnal guru langsung mengikuti.">
         <div style="display:flex;flex-direction:column;gap:0.5rem;">
-            <p style="font-size:14px;color:var(--gray-600,#4b5563);line-height:1.6;">
+            <p style="font-size:14px;color:var(--ui-text);line-height:1.6;">
                 Pilih kelas, atur jam tiap sesi, lalu klik <strong>Simpan</strong> di bawah tabel.
                 <strong>Terapkan ke Ikhwan/Akhwat</strong> menyalin matrix kelas ini ke semua kelas gender sama
                 (M2–M6 sesama band; M1 hanya ke M1). <strong>Reset ke Default</strong> memulihkan jam dari kode.
             </p>
-            <p style="font-size:13px;color:var(--gray-500,#6b7280);line-height:1.6;">
+            <p style="font-size:13px;color:var(--ui-muted);line-height:1.6;">
                 Baris dengan jam <em>kosong</em> = sesi tidak aktif di hari itu (tidak muncul di jurnal/monitoring).
                 Kosongkan kedua jam untuk meniadakan sesi, lalu Simpan.
             </p>
@@ -23,7 +23,7 @@
 
     <div style="margin-top:1rem;">
         <div style="display:flex;flex-direction:column;gap:4px;">
-            <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray-500,#6b7280);">Kelas</label>
+            <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ui-muted);">Kelas</label>
             <select wire:model.live="classroomId" style="{{ $selectStyle }}">
                 <option value="">— Pilih Kelas —</option>
                 @foreach ($classroomOptions as $id => $name)
@@ -34,41 +34,41 @@
     </div>
 
     @if (empty($classroomOptions))
-        <div style="margin-top:1.5rem;padding:20px;border:1.5px dashed var(--gray-200,#e5e7eb);border-radius:14px;background:var(--gray-50,#f9fafb);color:var(--gray-500,#6b7280);font-size:14px;">
+        <div style="margin-top:1.5rem;padding:20px;border:1.5px dashed var(--ui-line);border-radius:14px;background:var(--ui-surface-subtle);color:var(--ui-muted);font-size:14px;">
             Belum ada classroom Mustawa (Ikhwan/Akhwat). Buat dulu di <em>Struktur Kelas → Master Kelas</em>, lalu refresh halaman ini.
         </div>
     @elseif (empty($rows))
-        <div style="margin-top:1.5rem;padding:20px;border:1.5px dashed var(--gray-200,#e5e7eb);border-radius:14px;background:var(--gray-50,#f9fafb);color:var(--gray-500,#6b7280);font-size:14px;">
+        <div style="margin-top:1.5rem;padding:20px;border:1.5px dashed var(--ui-line);border-radius:14px;background:var(--ui-surface-subtle);color:var(--ui-muted);font-size:14px;">
             Tidak ada sesi diniyyah. Tambah sesi di menu <em>Data Sekolah → Jam Pelajaran / Sesi</em>.
         </div>
     @else
-        <div style="margin-top:1.25rem;overflow-x:auto;border:1px solid var(--gray-200,#e5e7eb);border-radius:14px;">
+        <div style="margin-top:1.25rem;overflow-x:auto;border:1px solid var(--ui-line);border-radius:14px;">
             <table style="width:100%;border-collapse:collapse;font-size:14px;">
                 <thead>
-                    <tr style="background:var(--gray-100,#f3f4f6);">
-                        <th style="text-align:left;padding:10px 14px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray-500,#6b7280);border-bottom:1px solid var(--gray-200,#e5e7eb);">Sesi</th>
-                        <th style="text-align:left;padding:10px 14px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray-500,#6b7280);border-bottom:1px solid var(--gray-200,#e5e7eb);">Mulai</th>
-                        <th style="text-align:left;padding:10px 14px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray-500,#6b7280);border-bottom:1px solid var(--gray-200,#e5e7eb);">Selesai</th>
+                    <tr style="background:var(--ui-surface-muted);">
+                        <th style="text-align:left;padding:10px 14px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ui-muted);border-bottom:1px solid var(--ui-line);">Sesi</th>
+                        <th style="text-align:left;padding:10px 14px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ui-muted);border-bottom:1px solid var(--ui-line);">Mulai</th>
+                        <th style="text-align:left;padding:10px 14px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ui-muted);border-bottom:1px solid var(--ui-line);">Selesai</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach ($rows as $i => $row)
                         @php
                             $showDayHeader = $loop->first || $row['day'] !== $rows[$loop->index - 1]['day'];
-                            $rowBg = ($row['is_break'] ?? false) ? 'background:var(--amber-50,#fffbeb);' : '';
+                            $rowBg = ($row['is_break'] ?? false) ? 'background:var(--ui-warning-soft);' : '';
                         @endphp
                         @if ($showDayHeader)
                             <tr>
-                                <td colspan="3" style="padding:9px 14px;background:var(--gray-50,#f9fafb);border-top:1px solid var(--gray-200,#e5e7eb);border-bottom:1px solid var(--gray-200,#e5e7eb);font-weight:800;color:var(--gray-700,#374151);font-size:13px;">
+                                <td colspan="3" style="padding:9px 14px;background:var(--ui-surface-subtle);border-top:1px solid var(--ui-line);border-bottom:1px solid var(--ui-line);font-weight:600;color:var(--ui-text);font-size:13px;">
                                     {{ $dayNames[$row['day']] ?? 'Hari '.$row['day'] }}
                                 </td>
                             </tr>
                         @endif
-                        <tr style="{{ $rowBg }}border-bottom:1px solid var(--gray-100,#f3f4f6);">
-                            <td style="padding:10px 14px;font-weight:600;color:var(--gray-700,#374151);">
+                        <tr style="{{ $rowBg }}border-bottom:1px solid var(--ui-surface-muted);">
+                            <td style="padding:10px 14px;font-weight:600;color:var(--ui-text);">
                                 {{ \App\Support\SessionTimetable::label($row['session_name']) }}
                                 @if ($row['is_break'] ?? false)
-                                    <span style="font-size:11px;color:var(--amber-700,#b45309);font-weight:600;">· istirahat</span>
+                                    <span style="font-size:11px;color:var(--ui-warning-ink);font-weight:600;">· istirahat</span>
                                 @endif
                             </td>
                             <td style="padding:10px 14px;">

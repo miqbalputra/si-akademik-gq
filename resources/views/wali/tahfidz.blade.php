@@ -1,37 +1,32 @@
 @push('head')
     <title>Rekap Hafalan Tahfidz — Ruang GQ</title>
     <style>
-        * { box-sizing: border-box; }
-        body { font-family: 'Outfit', sans-serif; background: #f8fafc; color: #1e293b; margin: 0; -webkit-font-smoothing: antialiased; }
-        .bg-grid { background-size: 40px 40px; background-image: linear-gradient(to right, rgba(0,0,0,.025) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,.025) 1px, transparent 1px); }
-        .portal-nav { position: sticky; top: 0; z-index: 50; background: rgba(255,255,255,.95); backdrop-filter: blur(16px); border-bottom: 1px solid #f1f5f9; box-shadow: 0 1px 0 rgba(0,0,0,.04); }
-        .card { background: #fff; border: 1px solid #f1f5f9; border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.04); }
-        .btn-ghost { background: transparent; border: 1.5px solid #e2e8f0; color: #475569; border-radius: 10px; padding: 6px 14px; font-size: 12px; font-weight: 600; text-decoration: none; transition: all .2s; display: inline-flex; align-items: center; gap: 5px; font-family: 'Outfit', sans-serif; }
-        .btn-ghost:hover { background: #f8fafc; border-color: #fde68a; color: #d97706; }
-        .student-tab { display: flex; flex-direction: column; align-items: center; padding: 14px 16px; border-radius: 14px; border: 1.5px solid #e2e8f0; background: #fff; cursor: pointer; text-decoration: none; transition: all .2s; }
-        .student-tab:hover { border-color: #fde68a; }
-        .student-tab.active { border-color: #d97706; background: #fef3c7; }
-        .student-tab .name { font-size: 14px; font-weight: 700; color: #0f172a; }
-        .student-tab .nis  { font-size: 11px; color: #94a3b8; font-weight: 500; margin-top: 2px; }
-        .student-tab.active .name { color: #92400e; }
-        .section-title { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
-        .section-title h2 { font-size: 17px; font-weight: 800; color: #0f172a; white-space: nowrap; margin: 0; }
-        .section-divider { flex: 1; height: 1px; background: #f1f5f9; }
-        .stat-mini { background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 12px; padding: 14px 16px; text-align: center; }
-        .stat-mini .label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #94a3b8; margin: 0 0 4px; }
-        .stat-mini .value { font-size: 22px; font-weight: 900; color: #0f172a; margin: 0; }
-        .stat-mini .sub   { font-size: 11px; font-weight: 700; color: #d97706; margin-top: 2px; }
-        .chart-wrap { background: #fff; border: 1px solid #f1f5f9; border-radius: 14px; padding: 18px; }
-        .chart-wrap .chart-label { font-size: 12px; font-weight: 700; color: #64748b; margin: 0 0 12px; }
-        .score-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        .score-table th { padding: 10px 16px; text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #94a3b8; background: #f8fafc; border-bottom: 2px solid #f1f5f9; }
-        .score-table td { padding: 12px 16px; border-top: 1px solid #f8fafc; vertical-align: middle; }
-        .score-table tr:hover td { background: #fafaf8; }
-        .score-badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; background: #fef3c7; color: #92400e; }
+        .bg-grid { background-size:40px 40px; background-image:linear-gradient(to right, rgb(16 24 40 / .025) 1px, transparent 1px), linear-gradient(to bottom, rgb(16 24 40 / .025) 1px, transparent 1px); }
+        .student-tab { display:flex; flex-direction:column; align-items:center; border:1px solid var(--ui-line); border-radius:.875rem; background:var(--ui-surface); padding:1rem; text-decoration:none; transition:border-color .16s ease, background-color .16s ease, box-shadow .16s ease; }
+        .student-tab:hover { border-color:var(--color-brand-300); box-shadow:0 8px 24px -18px rgb(16 24 40 / .28); }
+        .student-tab.active { border-color:var(--color-brand-300); background:var(--color-brand-25); }
+        .student-tab .name { color:var(--ui-heading); font-size:.875rem; font-weight:600; }
+        .student-tab .nis { margin-top:.125rem; color:var(--ui-muted); font-size:.7rem; font-weight:500; }
+        .section-title { display:flex; align-items:center; gap:.75rem; margin-bottom:1rem; }
+        .section-title h2 { margin:0; color:var(--ui-heading); font-size:1rem; font-weight:650; white-space:nowrap; }
+        .section-divider { height:1px; flex:1; background:var(--ui-line); }
+        .stat-mini { border:1px solid var(--ui-line); border-radius:.875rem; background:var(--ui-surface); padding:1rem; text-align:center; }
+        .stat-mini .label { margin:0 0 .25rem; color:var(--ui-muted); font-size:.68rem; font-weight:600; letter-spacing:.02em; text-transform:none; }
+        .stat-mini .value { margin:0; color:var(--ui-heading); font-size:1.5rem; font-weight:700; }
+        .stat-mini .sub { margin-top:.125rem; color:var(--color-brand-600); font-size:.7rem; font-weight:600; }
+        .stat-mini-warning { border-color:var(--color-warning-200); background:var(--color-warning-50); }
+        .chart-wrap { position:relative; min-width:0; border:1px solid var(--ui-line); border-radius:.875rem; background:var(--ui-surface); padding:1rem; }
+        .chart-wrap canvas { display:block; max-width:100%; }
+        .chart-wrap .chart-label { margin:0 0 .75rem; color:var(--ui-text); font-size:.8rem; font-weight:600; }
+        .score-table { width:100%; border-collapse:collapse; font-size:.8125rem; }
+        .score-table th { border-bottom:1px solid var(--ui-line); background:var(--ui-surface-subtle); padding:.75rem 1rem; color:var(--ui-muted); font-size:.68rem; font-weight:600; letter-spacing:.04em; text-align:left; text-transform:uppercase; }
+        .score-table td { border-top:1px solid var(--ui-surface-muted); padding:.75rem 1rem; vertical-align:middle; }
+        .score-table tr:hover td { background:var(--ui-surface-subtle); }
+        .score-badge { display:inline-block; border-radius:999px; background:var(--color-brand-50); padding:.125rem .625rem; color:var(--color-brand-700); font-size:.75rem; font-weight:600; }
         @keyframes fadeInUp { 0%{opacity:0;transform:translateY(14px)} 100%{opacity:1;transform:translateY(0)} }
-        .fade-up { animation: fadeInUp .5s cubic-bezier(.16,1,.3,1) forwards; opacity: 0; }
-        .delay-1 { animation-delay: .1s; }
-        .delay-2 { animation-delay: .2s; }
+        .fade-up { animation:fadeInUp .5s cubic-bezier(.16,1,.3,1) forwards; opacity:0; }
+        .delay-1 { animation-delay:.1s; }
+        .delay-2 { animation-delay:.2s; }
     </style>
     @endpush
 
@@ -41,20 +36,20 @@
     <div class="mx-auto max-w-5xl">
 
         {{-- Header --}}
-        <header class="fade-up" style="margin-bottom:28px;">
-            <div style="display:inline-flex;align-items:center;gap:6px;background:#e0e7ff;border-radius:999px;padding:3px 12px;margin-bottom:10px;">
-                <span style="font-size:11px;font-weight:700;color:#4338ca;text-transform:uppercase;letter-spacing:.05em;">Rekap Tahfidz</span>
+        <header class="portal-page-header fade-up">
+            <div>
+                <p class="eyebrow">Rekap Tahfidz</p>
+                <h1>Hafalan Al-Qur'an</h1>
+                <p class="mt-2 text-sm font-normal text-muted dark:text-muted">Pantau progres hafalan, nilai pekanan, manzil, dan UAS anak Anda.</p>
             </div>
-            <h1 style="font-size:26px;font-weight:900;color:#0f172a;margin:0 0 6px;letter-spacing:-.02em;">Hafalan Al-Qur'an</h1>
-            <p style="font-size:14px;color:#64748b;font-weight:500;margin:0;">Pantau progres hafalan, nilai pekanan, manzil, dan UAS anak Anda.</p>
         </header>
 
         {{-- Student Selector --}}
         @if ($students->count() > 1)
-            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:28px;" class="fade-up">
+            <div class="mb-7 grid grid-cols-[repeat(auto-fill,minmax(min(100%,160px),1fr))] gap-3 fade-up">
                 @foreach ($students as $student)
                     <a href="?student={{ $student->id }}" class="student-tab {{ $selectedStudent?->id === $student->id ? 'active' : '' }}">
-                        <div style="width:40px;height:40px;background:{{ $selectedStudent?->id === $student->id ? '#fde68a' : '#f1f5f9' }};border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px;color:{{ $selectedStudent?->id === $student->id ? '#92400e' : '#64748b' }};margin-bottom:8px;">
+                        <div class="mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-brand-soft-strong text-base font-bold text-brand-ink dark:bg-brand-900/40 dark:text-brand-300">
                             {{ substr($student->name, 0, 1) }}
                         </div>
                         <span class="name">{{ $student->name }}</span>
@@ -63,18 +58,18 @@
                 @endforeach
             </div>
         @elseif ($students->count() === 1)
-            <div class="card fade-up" style="padding:16px 20px;margin-bottom:28px;display:flex;align-items:center;gap:14px;">
-                <div style="width:44px;height:44px;background:#fef3c7;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;color:#d97706;flex-shrink:0;">
+            <div class="card fade-up mb-7 flex items-center gap-3 p-4">
+                <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-soft-strong text-lg font-bold text-brand-ink dark:bg-brand-900/40 dark:text-brand-300">
                     {{ substr($selectedStudent->name, 0, 1) }}
                 </div>
                 <div>
-                    <div style="font-size:15px;font-weight:800;color:#0f172a;">{{ $selectedStudent->name }}</div>
-                    <div style="font-size:12px;color:#94a3b8;font-weight:500;">NIS: {{ $selectedStudent->nis }}</div>
+                    <div class="text-sm font-semibold text-heading dark:text-white">{{ $selectedStudent->name }}</div>
+                    <div class="text-xs text-muted dark:text-muted">NIS: {{ $selectedStudent->nis }}</div>
                 </div>
             </div>
         @else
-            <div style="border:2px dashed #e2e8f0;border-radius:16px;padding:48px;text-align:center;" class="fade-up">
-                <p style="color:#94a3b8;font-weight:600;font-size:14px;">Belum ada data anak yang terhubung dengan akun Anda.</p>
+            <div class="empty-state fade-up">
+                <p class="text-sm font-medium text-muted dark:text-muted">Belum ada data anak yang terhubung dengan akun Anda.</p>
             </div>
         @endif
 
@@ -88,11 +83,11 @@
                 </div>
 
                 @if ($weeklyScores->isEmpty())
-                    <div class="card" style="padding:32px;text-align:center;">
-                        <p style="font-size:13px;font-weight:600;color:#94a3b8;">Belum ada data pekanan untuk periode ini.</p>
+                    <div class="card p-8 text-center">
+                        <p class="text-sm font-medium text-muted dark:text-muted">Belum ada data pekanan untuk periode ini.</p>
                     </div>
                 @else
-                    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:20px;">
+                    <div class="mb-5 grid gap-4 md:grid-cols-2">
                         <div class="chart-wrap">
                             <p class="chart-label">📈 Nilai per Pekan</p>
                             <canvas id="chartWeekly" height="180"></canvas>
@@ -102,8 +97,9 @@
                             <canvas id="chartBaris" height="180"></canvas>
                         </div>
                     </div>
-                    <div class="card" style="overflow:hidden;">
-                        <table class="score-table">
+                    <div class="card overflow-hidden">
+                        <div class="overflow-x-auto">
+                        <table class="score-table min-w-[44rem]">
                             <thead>
                                 <tr>
                                     <th>Pekan</th>
@@ -116,21 +112,22 @@
                             <tbody>
                                 @foreach ($weeklyScores as $score)
                                     <tr>
-                                        <td style="font-weight:600;color:#0f172a;">{{ $score->week?->date_label ?? 'Pekan '.$score->week?->week_number }}</td>
-                                        <td style="color:#475569;">{{ $score->surah_ayat ?? '—' }}</td>
-                                        <td style="color:#475569;">{{ $score->sabaq_amount ?? '—' }}</td>
+                                        <td class="font-semibold text-heading dark:text-white">{{ $score->week?->date_label ?? 'Pekan '.$score->week?->week_number }}</td>
+                                        <td class="text-body dark:text-body">{{ $score->surah_ayat ?? '—' }}</td>
+                                        <td class="text-body dark:text-body">{{ $score->sabaq_amount ?? '—' }}</td>
                                         <td style="text-align:center;">
                                             @if ($score->score !== null)
                                                 <span class="score-badge">{{ $score->score }}</span>
                                             @else
-                                                <span style="color:#cbd5e1;font-weight:600;">—</span>
+                                                <span class="font-semibold text-soft dark:text-soft">—</span>
                                             @endif
                                         </td>
-                                        <td style="color:#64748b;font-size:12px;">{{ $score->notes ?? '—' }}</td>
+                                        <td class="text-xs text-muted dark:text-muted">{{ $score->notes ?? '—' }}</td>
                                     </tr>
                                 @endforeach
                             </tbody>
                         </table>
+                        </div>
                     </div>
                 @endif
             </section>
@@ -142,7 +139,7 @@
                         <h2>Rekap Bulanan</h2>
                         <div class="section-divider"></div>
                     </div>
-                    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:20px;">
+                    <div class="mb-5 grid gap-4 md:grid-cols-2">
                         <div class="chart-wrap">
                             <p class="chart-label">📈 Tren Nilai Rata-rata</p>
                             <canvas id="chartMonthlyAvg" height="180"></canvas>
@@ -152,8 +149,9 @@
                             <canvas id="chartManzil" height="180"></canvas>
                         </div>
                     </div>
-                    <div class="card" style="overflow:hidden;">
-                        <table class="score-table">
+                    <div class="card overflow-hidden">
+                        <div class="overflow-x-auto">
+                        <table class="score-table min-w-[52rem]">
                             <thead>
                                 <tr>
                                     <th>Bulan</th>
@@ -167,22 +165,23 @@
                             <tbody>
                                 @foreach ($monthlyRecaps as $recap)
                                     <tr>
-                                        <td style="font-weight:700;color:#0f172a;">{{ $recap->month_label ?? 'Bulan '.$recap->month_number }}</td>
-                                        <td style="color:#475569;">{{ $recap->sabaq_monthly ?? '—' }}</td>
+                                        <td class="font-semibold text-heading dark:text-white">{{ $recap->month_label ?? 'Bulan '.$recap->month_number }}</td>
+                                        <td class="text-body dark:text-body">{{ $recap->sabaq_monthly ?? '—' }}</td>
                                         <td style="text-align:center;">
                                             @if ($recap->average_score !== null)
                                                 <span class="score-badge">{{ $recap->average_score }}</span>
                                             @else
-                                                <span style="color:#cbd5e1;">—</span>
+                                                <span class="text-soft dark:text-soft">—</span>
                                             @endif
                                         </td>
-                                        <td style="color:#475569;">{{ $recap->total_hafalan ?? '—' }}</td>
-                                        <td style="color:#475569;">{{ $recap->manzil_submitted ?? '—' }}</td>
+                                        <td class="text-body dark:text-body">{{ $recap->total_hafalan ?? '—' }}</td>
+                                        <td class="text-body dark:text-body">{{ $recap->manzil_submitted ?? '—' }}</td>
                                         <td style="text-align:center;">{{ $recap->manzil_score ?? '—' }}</td>
                                     </tr>
                                 @endforeach
                             </tbody>
                         </table>
+                        </div>
                     </div>
                 </section>
             @endif
@@ -194,7 +193,7 @@
                         <h2>Rekap Semester</h2>
                         <div class="section-divider"></div>
                     </div>
-                    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;">
+                    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%, 160px),1fr));gap:14px;">
                         @if ($semesterRecap)
                             <div class="stat-mini">
                                 <p class="label">Nilai Sabaq</p>
@@ -208,9 +207,9 @@
                             </div>
                         @endif
                         @if ($uasResult)
-                            <div class="stat-mini" style="background:#fef3c7;border-color:#fde68a;">
-                                <p class="label" style="color:#92400e;">UAS Tahfidz</p>
-                                <p class="value" style="color:#92400e;">{{ $uasResult->final_score ?? '—' }}</p>
+                            <div class="stat-mini stat-mini-warning">
+                                <p class="label text-warning-ink dark:text-warning-300">UAS Tahfidz</p>
+                                <p class="value text-warning-ink dark:text-warning-300">{{ $uasResult->final_score ?? '—' }}</p>
                                 <p class="sub">{{ $uasResult->predicate ?? '' }}</p>
                             </div>
                             <div class="stat-mini">
@@ -221,9 +220,9 @@
                     </div>
 
                     @if ($semesterRecap?->semester_notes)
-                        <div style="margin-top:16px;background:#fef3c7;border:1px solid #fde68a;border-radius:12px;padding:16px 20px;">
-                            <p style="font-size:12px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:.04em;margin:0 0 6px;">Catatan Guru Tahfidz</p>
-                            <p style="font-size:14px;color:#78350f;margin:0;line-height:1.6;">{{ $semesterRecap->semester_notes }}</p>
+                        <div class="mt-4 rounded-xl border border-warning-line bg-warning-soft p-4 dark:border-warning-800 dark:bg-warning-900/20">
+                            <p class="mb-1.5 text-xs font-semibold text-warning-ink dark:text-warning-300">Catatan Guru Tahfidz</p>
+                            <p class="m-0 text-sm leading-6 text-warning-ink dark:text-warning-200">{{ $semesterRecap->semester_notes }}</p>
                         </div>
                     @endif
                 </section>
@@ -233,7 +232,15 @@
 
     @if ($selectedStudent && $chartData)
     <script>
+        (() => {
+        const initialiseCharts = () => {
+        if (typeof window.Chart !== 'function') return;
         const chartData = @json($chartData);
+        const chartTheme = (name, alpha = 1) => {
+            const hex = getComputedStyle(document.documentElement).getPropertyValue(`--color-${name}-500`).trim() || '#465fff';
+            const channels = hex.match(/[0-9a-f]{2}/gi)?.map((value) => parseInt(value, 16)) ?? [70, 95, 255];
+            return `rgba(${channels[0]}, ${channels[1]}, ${channels[2]}, ${alpha})`;
+        };
         const chartDefaults = { responsive: true, plugins: { legend: { display: false } } };
         const lineStyle = { borderWidth: 2.5, pointRadius: 4, tension: 0.4 };
 
@@ -245,27 +252,31 @@
         if (ctxW && chartData.weekly.length > 0) {
             new Chart(ctxW, { type: 'line', data: {
                 labels: chartData.weekly.map(d => d.label),
-                datasets: [{ ...lineStyle, label: 'Nilai', data: chartData.weekly.map(d => d.value), borderColor: '#d97706', backgroundColor: 'rgba(217,119,6,0.08)', fill: true }]
+                datasets: [{ ...lineStyle, label: 'Nilai', data: chartData.weekly.map(d => d.value), borderColor: chartTheme('warning'), backgroundColor: chartTheme('warning', 0.08), fill: true }]
             }, options: { ...chartDefaults, scales: { y: { min: 0, max: 100, ticks: { font: { family: 'Outfit', size: 11 } } }, x: { ticks: { font: { family: 'Outfit', size: 10 } } } } } });
         }
         if (ctxB && chartData.baris.length > 0) {
             new Chart(ctxB, { type: 'bar', data: {
                 labels: chartData.baris.map(d => d.label),
-                datasets: [{ label: 'Baris', data: chartData.baris.map(d => d.value), backgroundColor: 'rgba(14,165,233,0.75)', borderRadius: 6 }]
+                datasets: [{ label: 'Baris', data: chartData.baris.map(d => d.value), backgroundColor: chartTheme('info', 0.75), borderRadius: 6 }]
             }, options: { ...chartDefaults, scales: { x: { ticks: { font: { family: 'Outfit', size: 10 } } } } } });
         }
         if (ctxMA && chartData.monthly_avg.length > 0) {
             new Chart(ctxMA, { type: 'line', data: {
                 labels: chartData.monthly_avg.map(d => d.label),
-                datasets: [{ ...lineStyle, label: 'Rata-rata', data: chartData.monthly_avg.map(d => d.value), borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.08)', fill: true }]
+                datasets: [{ ...lineStyle, label: 'Rata-rata', data: chartData.monthly_avg.map(d => d.value), borderColor: chartTheme('success'), backgroundColor: chartTheme('success', 0.08), fill: true }]
             }, options: { ...chartDefaults, scales: { y: { min: 0, max: 100 }, x: { ticks: { font: { family: 'Outfit', size: 10 } } } } } });
         }
         if (ctxMN && chartData.manzil.length > 0) {
             new Chart(ctxMN, { type: 'bar', data: {
                 labels: chartData.manzil.map(d => d.label),
-                datasets: [{ label: 'Manzil', data: chartData.manzil.map(d => d.value), backgroundColor: 'rgba(139,92,246,0.75)', borderRadius: 6 }]
+                datasets: [{ label: 'Manzil', data: chartData.manzil.map(d => d.value), backgroundColor: chartTheme('primary', 0.75), borderRadius: 6 }]
             }, options: { ...chartDefaults, scales: { y: { min: 0, max: 100 }, x: { ticks: { font: { family: 'Outfit', size: 10 } } } } } });
         }
+        };
+        if (document.readyState === 'complete') initialiseCharts();
+        else window.addEventListener('load', initialiseCharts, { once: true });
+        })();
     </script>
     @endif
 </x-layouts.portal>

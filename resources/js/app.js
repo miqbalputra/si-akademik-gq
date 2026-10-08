@@ -5,7 +5,73 @@ window.Chart = Chart;
 window.Alpine = Alpine;
 Alpine.start();
 
+function syncChartTheme() {
+    const styles = getComputedStyle(document.documentElement);
+    const color = styles.getPropertyValue('--ui-muted').trim();
+    const line = styles.getPropertyValue('--ui-line').trim();
+    const surface = styles.getPropertyValue('--ui-surface').trim();
+    const heading = styles.getPropertyValue('--ui-heading').trim();
+    Chart.defaults.font.family = 'Outfit, sans-serif';
+    Chart.defaults.color = color;
+    Chart.defaults.borderColor = line;
+    Object.assign(Chart.defaults.plugins.tooltip, { backgroundColor: surface, titleColor: heading, bodyColor: color, borderColor: line, borderWidth: 1 });
+
+    Object.values(Chart.instances).forEach((chart) => {
+        Object.values(chart.options.scales ?? {}).forEach((scale) => {
+            if (scale.ticks) scale.ticks.color = color;
+            if (scale.grid) scale.grid.color = line;
+        });
+        if (chart.options.plugins?.legend?.labels) chart.options.plugins.legend.labels.color = color;
+        if (chart.options.plugins?.tooltip) Object.assign(chart.options.plugins.tooltip, { backgroundColor: surface, titleColor: heading, bodyColor: color, borderColor: line });
+        chart.update('none');
+    });
+}
+
+syncChartTheme();
+window.addEventListener('gq-theme-changed', syncChartTheme);
+
 const getCsrfToken = () => document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
+
+function initTheme() {
+    const root = document.documentElement;
+    const storageKey = root.dataset.themeStorageKey ?? 'ruang-gq-theme-guest';
+    let mode = root.classList.contains('dark') ? 'dark' : 'light';
+
+    try {
+        const savedMode = window.localStorage.getItem(storageKey);
+        if (savedMode === 'light' || savedMode === 'dark') mode = savedMode;
+        root.classList.toggle('dark', mode === 'dark');
+    } catch (_) {}
+
+    const persistAndNotify = () => {
+        mode = root.classList.contains('dark') ? 'dark' : 'light';
+
+        try {
+            window.localStorage.setItem(storageKey, mode);
+        } catch (_) {}
+
+        document.querySelectorAll('[data-theme-toggle]').forEach((button) => {
+            button.setAttribute('aria-pressed', String(mode === 'dark'));
+            button.dataset.currentTheme = mode;
+        });
+
+        window.dispatchEvent(new CustomEvent('gq-theme-changed', { detail: { theme: mode } }));
+    };
+
+    document.querySelectorAll('[data-theme-toggle]').forEach((button) => {
+        button.addEventListener('click', () => {
+            root.classList.toggle('dark');
+            persistAndNotify();
+        });
+    });
+
+    new MutationObserver(() => {
+        const currentMode = root.classList.contains('dark') ? 'dark' : 'light';
+        if (currentMode !== mode) persistAndNotify();
+    }).observe(root, { attributes: true, attributeFilter: ['class'] });
+
+    persistAndNotify();
+}
 
 const PWA_INSTALL_SNOOZE_KEY = 'gq-edu-install-dismissed-until';
 const PWA_INSTALLED_KEY = 'gq-edu-installed';
@@ -283,14 +349,14 @@ function createNotificationElement(notification, readUrlTemplate, csrf) {
     item.dataset.notificationId = notification.id;
 
     const severity = {
-        success: ['✓', 'bg-emerald-100 text-emerald-800'],
-        warning: ['!', 'bg-amber-100 text-amber-800'],
-        danger: ['!', 'bg-red-100 text-red-800'],
-        info: ['i', 'bg-blue-100 text-blue-800'],
-    }[notification.severity] ?? ['i', 'bg-slate-100 text-slate-700'];
+        success: ['✓', 'bg-success-soft text-success-ink'],
+        warning: ['!', 'bg-warning-soft text-warning-ink'],
+        danger: ['!', 'bg-danger-soft text-danger-ink'],
+        info: ['i', 'bg-info-soft text-info-ink'],
+    }[notification.severity] ?? ['i', 'bg-surface-muted text-body'];
 
     const icon = document.createElement('span');
-    icon.className = `flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-black ${severity[1]}`;
+    icon.className = `flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-semibold ${severity[1]}`;
     icon.textContent = severity[0];
 
     const content = document.createElement('span');
@@ -299,10 +365,10 @@ function createNotificationElement(notification, readUrlTemplate, csrf) {
     heading.className = 'block text-xs font-extrabold text-ink';
     heading.textContent = `${notification.title ?? 'Notifikasi'}${notification.batch_count > 1 ? ` ×${notification.batch_count}` : ''}`;
     const body = document.createElement('span');
-    body.className = 'mt-1 block line-clamp-2 text-[11px] leading-4 text-slate-500';
+    body.className = 'mt-1 block line-clamp-2 text-xs leading-5 text-muted';
     body.textContent = notification.body ?? '';
     const timestamp = document.createElement('span');
-    timestamp.className = 'mt-1 block font-mono text-[10px] text-slate-400';
+    timestamp.className = 'mt-1 block text-[11px] text-muted';
     timestamp.textContent = notification.created_at ?? '';
     content.append(heading, body, timestamp);
     item.append(icon, content);
@@ -350,7 +416,7 @@ function initNotifications() {
             list.replaceChildren();
             if (!notifications.length) {
                 const empty = document.createElement('p');
-                empty.className = 'px-5 py-8 text-center text-xs font-bold text-slate-400';
+                empty.className = 'px-5 py-8 text-center text-xs font-medium text-muted';
                 empty.textContent = 'Tidak ada notifikasi baru.';
                 list.append(empty);
                 return;
@@ -517,6 +583,7 @@ function initJournalOverdueReminder() {
 }
 
 function init() {
+    initTheme();
     registerPwaServiceWorker();
     initPwaInstallPrompt();
     initLearningMap();
