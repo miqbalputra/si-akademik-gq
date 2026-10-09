@@ -2,7 +2,7 @@
 
 @if(($tasmiWaliReminder['count'] ?? 0) > 0)
     <div data-tasmi-wali-reminder data-dismiss-url="{{ route('guru.tasmi-wali.reminder.dismiss') }}">
-        <aside class="fixed inset-x-4 bottom-4 z-[90] mx-auto flex max-w-3xl flex-col gap-3 rounded-2xl border border-success-line bg-success-soft px-4 py-3 shadow-xl shadow-gray-950/15 sm:flex-row sm:items-center sm:justify-between sm:px-5" role="status" aria-live="polite" data-tasmi-wali-banner @if($tasmiWaliReminder['should_show_modal']) hidden @endif>
+        <aside class="fixed inset-x-4 bottom-4 z-30 mx-auto flex max-w-3xl flex-col gap-3 rounded-2xl border border-success-line bg-success-soft px-4 py-3 shadow-xl shadow-gray-950/15 sm:flex-row sm:items-center sm:justify-between sm:px-5 xl:start-[19rem]" role="status" aria-live="polite" data-tasmi-wali-banner @if($tasmiWaliReminder['should_show_modal']) hidden @endif>
             <div class="flex items-center gap-3"><span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-success-700 text-base font-semibold text-white" aria-hidden="true">✓</span><p class="text-theme-sm font-normal text-school-800"><span class="font-semibold">{{ $tasmiWaliReminder['count'] }} hasil Tasmi' belum dibuka.</span> Lihat hasil santri di kelas Anda.</p></div>
             <a href="{{ route('guru.tasmi-wali.index') }}" class="inline-flex shrink-0 items-center justify-center rounded-xl border border-success-line bg-surface px-4 py-2 text-success-ink transition-colors hover:bg-success-soft text-theme-sm font-medium">Buka hasil Tasmi'</a>
         </aside>

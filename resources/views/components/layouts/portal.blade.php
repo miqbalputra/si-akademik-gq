@@ -5,6 +5,7 @@
     $isTahfidzPortal = ($portalLabel ?? null) === 'Portal Kabag Tahfidz';
     $isDiniyyahPortal = ($portalLabel ?? null) === 'Portal Kabag Diniyyah';
     $portalUser = auth()->user();
+    $portalLogoutUrl = $isManagementPortal ? route('filament.admin.auth.logout') : route('logout');
     $workspaceService = app(\App\Services\WorkspaceRedirectService::class);
     $workspaceItems = $portalUser ? $workspaceService->availableFor($portalUser) : [];
     $currentWorkspace = $isGuruPortal
@@ -238,7 +239,7 @@
                 @endforeach
             </nav>
 
-            <div class="border-t border-line p-4 dark:border-gray-800">
+            <div class="shrink-0 border-t border-line p-4 dark:border-gray-800">
                 <div class="flex items-center gap-3 rounded-lg bg-surface-subtle p-3 dark:bg-surface-muted/60">
                     <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-soft-strong text-theme-sm font-medium text-brand-ink dark:bg-brand-900/50 dark:text-brand-300">
                         {{ \Illuminate\Support\Str::of(auth()->user()?->name ?? 'GQ')->substr(0, 1)->upper() }}
@@ -247,9 +248,9 @@
                         <span class="block truncate text-theme-sm font-medium text-heading dark:text-white/90">{{ auth()->user()?->name }}</span>
                         <span class="block truncate text-theme-xs text-muted dark:text-muted font-normal">{{ $portalLabel ?? 'Ruang GQ' }}</span>
                     </span>
-                    <form method="POST" action="{{ route('logout') }}">
+                    <form method="POST" action="{{ $portalLogoutUrl }}" class="shrink-0">
                         @csrf
-                        <button type="submit" class="rounded-md p-2 text-soft transition hover:bg-surface hover:text-danger-ink dark:hover:bg-gray-700" aria-label="Keluar">
+                        <button type="submit" class="inline-flex h-10 w-10 items-center justify-center rounded-md text-soft transition hover:bg-surface hover:text-danger-ink dark:hover:bg-gray-700" aria-label="Keluar dari akun" title="Keluar dari akun">
                             <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6A2.25 2.25 0 0 0 5.25 5.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M18 15l3-3m0 0-3-3m3 3H9.75"/></svg>
                         </button>
                     </form>
@@ -259,12 +260,12 @@
 
         <div class="min-w-0 flex-1">
             <header class="school-header sticky top-0 z-30 border-b border-line bg-surface/90 backdrop-blur-xl dark:border-gray-800 dark:bg-surface/90">
-                <nav class="school-header-inner flex min-h-[4.5rem] items-center gap-4 px-4 sm:px-6 xl:px-8" aria-label="Konteks {{ $portalLabel ?? 'portal' }}">
+                <nav class="school-header-inner flex min-h-[4.5rem] flex-wrap items-center gap-x-3 gap-y-2 px-4 sm:flex-nowrap sm:gap-4 sm:px-6 xl:px-8" aria-label="Konteks {{ $portalLabel ?? 'portal' }}">
                     <button type="button" @click="mobileSidebarOpen = true" class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-line bg-surface text-muted transition hover:bg-surface-subtle xl:hidden dark:border-gray-700 dark:bg-surface dark:text-body dark:hover:bg-gray-800" aria-label="Buka menu" aria-controls="portal-sidebar">
                         <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
                     </button>
 
-                    <div class="school-context min-w-0 flex-1">
+                    <div class="school-context order-last w-full min-w-0 sm:order-none sm:w-auto sm:flex-1">
                         <p class="m-0 truncate text-theme-sm font-normal text-muted dark:text-muted">{{ $portalLabel ?? 'Ruang GQ' }}@if(filled($breadcrumb ?? null)) <span class="mx-1 text-soft dark:text-soft">/</span>{{ $breadcrumb }}@endif</p>
                         <h1 class="m-0 truncate text-heading dark:text-white ui-page-title">{{ $title ?? 'Beranda' }}</h1>
                     </div>
@@ -276,10 +277,10 @@
 
                         @if(count($workspaceItems) > 1)
                             <details class="school-nav-dropdown relative" data-portal-menu>
-                                <summary class="school-nav-dropdown-toggle inline-flex h-10 cursor-pointer list-none items-center gap-2 rounded-lg border border-line bg-surface px-3 text-theme-sm font-medium text-body hover:bg-surface-subtle dark:border-gray-700 dark:bg-surface dark:text-body dark:hover:bg-gray-800" aria-expanded="false">
+                                <summary class="school-nav-dropdown-toggle inline-flex h-10 w-10 cursor-pointer list-none items-center justify-center gap-2 rounded-lg border border-line bg-surface text-theme-sm font-medium text-body hover:bg-surface-subtle sm:w-auto sm:px-3 dark:border-gray-700 dark:bg-surface dark:text-body dark:hover:bg-gray-800" aria-label="Ganti ruang kerja" aria-expanded="false">
                                     <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6.75h16M4 12h16M4 17.25h16"/></svg>
                                     <span class="hidden sm:inline">Ganti Ruang</span>
-                                    <svg class="school-nav-chevron h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6" /></svg>
+                                    <svg class="school-nav-chevron hidden h-4 w-4 sm:block" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6" /></svg>
                                 </summary>
                                 <div class="school-nav-dropdown-panel absolute end-0 top-12 z-50 grid min-w-56 gap-1 rounded-xl border border-line bg-surface p-2 shadow-theme-lg dark:border-gray-700 dark:bg-surface" role="menu" aria-label="Ganti ruang kerja">
                                     @foreach($workspaceItems as $key => $workspace)
@@ -308,6 +309,14 @@
                                 <footer class="border-t border-line px-4 py-3 text-center dark:border-gray-800"><a href="{{ route('notifications.index') }}" class="text-theme-sm font-medium text-brand-ink hover:text-brand-ink dark:text-brand-300">Lihat semua notifikasi <span aria-hidden="true">&rarr;</span></a></footer>
                             </section>
                         </div>
+
+                        <form method="POST" action="{{ $portalLogoutUrl }}" class="shrink-0" data-header-logout>
+                            @csrf
+                            <button type="submit" class="inline-flex h-10 w-10 items-center justify-center gap-2 rounded-lg border border-line bg-surface text-theme-sm font-medium text-muted transition hover:border-danger-line hover:bg-danger-soft hover:text-danger-ink sm:w-auto sm:px-3 dark:border-gray-700 dark:bg-surface dark:text-body dark:hover:border-danger-line dark:hover:bg-danger-soft dark:hover:text-danger-ink" aria-label="Keluar dari akun" title="Keluar dari akun">
+                                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6A2.25 2.25 0 0 0 5.25 5.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M18 15l3-3m0 0-3-3m3 3H9.75"/></svg>
+                                <span class="hidden sm:inline">Keluar</span>
+                            </button>
+                        </form>
                     </div>
                 </nav>
                 @isset($navLinks)

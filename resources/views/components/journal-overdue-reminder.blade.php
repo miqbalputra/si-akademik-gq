@@ -10,7 +10,7 @@
         data-snooze-url="{{ route('guru.journal-reminder.snooze') }}"
     >
         <aside
-            class="fixed inset-x-4 bottom-4 z-[90] mx-auto flex max-w-3xl flex-col gap-3 rounded-2xl border border-brand-line bg-brand-soft px-4 py-3 shadow-xl shadow-gray-950/15 sm:flex-row sm:items-center sm:justify-between sm:px-5"
+            class="fixed inset-x-4 bottom-4 z-30 mx-auto flex max-w-3xl flex-col gap-3 rounded-2xl border border-brand-line bg-brand-soft px-4 py-3 shadow-xl shadow-gray-950/15 sm:flex-row sm:items-center sm:justify-between sm:px-5 xl:start-[19rem]"
             role="status"
             aria-live="polite"
             data-journal-overdue-banner
@@ -99,14 +99,20 @@
                 </div>
 
                 <footer class="flex flex-col gap-3 border-t border-line bg-surface-subtle px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-7">
-                    <p class="text-theme-xs font-normal text-muted">Pengingat muncul kembali saat membuka portal setelah masa tunda berakhir.</p>
-                    <button
-                        type="button"
-                        class="inline-flex shrink-0 items-center justify-center rounded-xl border border-line-strong bg-surface px-4 py-2.5 text-body transition-colors hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-500 text-theme-sm font-medium"
-                        data-journal-overdue-snooze
-                    >
-                        Tutup sementara 3 jam
-                    </button>
+                    <p class="min-w-0 text-theme-xs font-normal text-muted">Pengingat muncul kembali saat membuka portal setelah masa tunda berakhir.</p>
+                    <div class="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
+                        <form method="POST" action="{{ route('logout') }}">
+                            @csrf
+                            <button type="submit" class="inline-flex items-center justify-center rounded-xl border border-line-strong bg-surface px-4 py-2.5 text-theme-sm font-medium text-body transition-colors hover:border-danger-line hover:bg-danger-soft hover:text-danger-ink">Keluar</button>
+                        </form>
+                        <button
+                            type="button"
+                            class="inline-flex shrink-0 items-center justify-center rounded-xl border border-line-strong bg-surface px-4 py-2.5 text-body transition-colors hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-500 text-theme-sm font-medium"
+                            data-journal-overdue-snooze
+                        >
+                            Tutup sementara 3 jam
+                        </button>
+                    </div>
                 </footer>
                 <p class="hidden px-5 pb-4 text-theme-sm font-normal text-danger-ink sm:px-7" role="alert" data-journal-overdue-error></p>
             </section>
