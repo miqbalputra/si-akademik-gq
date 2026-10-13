@@ -5,6 +5,7 @@ use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\Auth\PasswordResetController;
+use App\Http\Controllers\ClassAttendanceReportController;
 use App\Http\Controllers\DiniyyahJournalExportController;
 use App\Http\Controllers\DiniyyahJournalReportController;
 use App\Http\Controllers\DiniyyahLedgerController;
@@ -38,9 +39,10 @@ use App\Http\Controllers\WaliJpRecapController;
 use App\Http\Controllers\WaliKelasTasmiController;
 use App\Http\Controllers\WaliKelasTasmiReminderController;
 use App\Http\Controllers\WorkspaceSelectionController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function (\Illuminate\Http\Request $request) {
+Route::get('/', function (Request $request) {
     $response = response()->view('welcome');
 
     return $request->user()
@@ -48,7 +50,7 @@ Route::get('/', function (\Illuminate\Http\Request $request) {
         : $response->header('Cache-Control', 'public, max-age=0, s-maxage=300, stale-while-revalidate=60');
 })->name('home');
 
-Route::get('/app', function (\Illuminate\Http\Request $request, WorkspaceRedirectService $workspaces) {
+Route::get('/app', function (Request $request, WorkspaceRedirectService $workspaces) {
     return $workspaces->redirectAfterLogin($request, $request->user());
 })->middleware('auth:admin,web')->name('app.start');
 
@@ -215,6 +217,18 @@ Route::middleware('auth:admin')->prefix('admin/tasmi-report')->name('admin.tasmi
         ->whereIn('format', ['xlsx', 'pdf'])
         ->name('export');
     Route::get('/{tasmi_record}', [ManagementTasmiReportController::class, 'show'])->name('show');
+});
+
+Route::middleware(['auth:admin', 'role:admin'])->prefix('admin/class-attendance-reports')->name('admin.class-attendance-report.')->group(function () {
+    Route::get('/preview', [ClassAttendanceReportController::class, 'preview'])->name('preview');
+    Route::get('/export/{format}', [ClassAttendanceReportController::class, 'export'])
+        ->whereIn('format', ['xlsx', 'pdf'])->name('export');
+});
+
+Route::middleware(['auth:web', 'role:guru'])->prefix('attendance-reports')->name('class-attendance-report.')->group(function () {
+    Route::get('/preview', [ClassAttendanceReportController::class, 'preview'])->name('preview');
+    Route::get('/export/{format}', [ClassAttendanceReportController::class, 'export'])
+        ->whereIn('format', ['xlsx', 'pdf'])->name('export');
 });
 
 Route::middleware('auth:web')->prefix('attendance')->name('attendance.')->group(function () {

@@ -41,6 +41,7 @@ class PwaAssetTest extends TestCase
         $this->assertStringContainsString("'/admin'", $serviceWorker);
         $this->assertStringContainsString("'/guru'", $serviceWorker);
         $this->assertStringContainsString("'/wali'", $serviceWorker);
+        $this->assertStringContainsString("'/attendance-reports'", $serviceWorker);
         $this->assertStringContainsString("'/api'", $serviceWorker);
         $this->assertStringContainsString("'/livewire'", $serviceWorker);
         $this->assertStringContainsString('PUBLIC_NAVIGATIONS', $serviceWorker);

@@ -15,7 +15,7 @@ const STATIC_ASSETS = [
 
 const PUBLIC_NAVIGATIONS = new Set(['/']);
 const PRIVATE_PATHS = [
-    '/admin', '/guru', '/wali', '/attendance', '/report-cards', '/diniyyah',
+    '/admin', '/guru', '/wali', '/attendance', '/attendance-reports', '/report-cards', '/diniyyah',
     '/notifications', '/pilih-ruang-kerja', '/kabag',
 ];
 

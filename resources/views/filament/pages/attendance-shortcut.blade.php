@@ -1,4 +1,7 @@
 <x-filament-panels::page>
+    @if(\App\Filament\Widgets\ClassAttendanceReportWidget::canView())
+        @livewire(\App\Filament\Widgets\ClassAttendanceReportWidget::class)
+    @endif
     <x-filament::section icon="heroicon-o-clipboard-document-check" heading="Manajemen Presensi Kelas" description="Pusat kelola data kehadiran santri">
         <div style="display:flex;flex-direction:column;gap:1rem;">
             <p style="font-size:14px;color:var(--ui-text);line-height:20px;font-weight:400;" class="dark:text-body">

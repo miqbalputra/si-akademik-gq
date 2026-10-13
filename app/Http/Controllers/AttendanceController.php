@@ -9,6 +9,7 @@ use App\Models\SchoolEvent;
 use App\Models\SchoolHoliday;
 use App\Models\StudentAttendance;
 use App\Models\User;
+use App\Services\ClassAttendanceReportService;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonPeriod;
 use Illuminate\Contracts\View\View;
@@ -96,6 +97,10 @@ class AttendanceController extends Controller
             ->keyBy(fn (StudentAttendance $attendance) => $attendance->class_enrollment_id.'-'.$attendance->attendance_date->toDateString());
 
         [$studentTotals, $classTotals] = $this->totalsFor($enrollments, $days, $attendances);
+        $reports = app(ClassAttendanceReportService::class);
+        $attendanceReportOptions = $reports->canExportClass($request->user(), $classroomTerm)
+            ? $reports->options($request->user(), false, $classroomTerm->id, $monthStart->format('Y-m'))
+            : null;
 
         return view('attendance.edit', [
             'classroomTerm' => $classroomTerm,
@@ -111,6 +116,7 @@ class AttendanceController extends Controller
             'selectedMonthLabel' => $monthStart->locale('id')->translatedFormat('F Y'),
             'availableMonths' => $this->availableMonths($classroomTerm),
             'canUpdate' => $this->canUpdateClass($request->user(), $classroomTerm),
+            'attendanceReportOptions' => $attendanceReportOptions,
         ]);
     }
 

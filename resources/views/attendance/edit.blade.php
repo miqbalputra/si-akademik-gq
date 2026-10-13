@@ -110,6 +110,14 @@
             </div>
         @endif
 
+        @if($attendanceReportOptions ?? null)
+            <section class="mb-6 rounded-2xl glass-card p-5" aria-labelledby="attendance-report-heading">
+                <h2 id="attendance-report-heading" class="ui-card-title text-heading">Unduh Laporan</h2>
+                <p class="mt-1 mb-4 text-theme-sm text-muted">Rekap kehadiran santri, persentase, dan rincian per tanggal.</p>
+                <x-attendance-report-download :options="$attendanceReportOptions" route-prefix="class-attendance-report" />
+            </section>
+        @endif
+
         <!-- Filter and Legends -->
         <section class="mb-6 grid gap-4 rounded-2xl glass-card p-5 lg:grid-cols-[1fr_auto] items-end animate-fade-in-up" style="animation-delay:50ms;">
             <form method="GET" class="flex flex-wrap items-end gap-3">
@@ -251,7 +259,7 @@
                                             x-init="attendances['{{ $enrollment->id }}_{{ $day->toDateString() }}'] = '{{ $code }}'"
                                             @change="updateAttendance('{{ $enrollment->id }}', '{{ $day->toDateString() }}')"
                                             class="h-10 w-14 rounded-xl border-2 text-center outline-none transition-all focus:ring-4 cursor-pointer text-theme-sm font-normal"
-                                            :class="{ 'bg-surface border-line text-body focus:border-line-strong focus:ring-line': attendances['{{ $enrollment->id }}_{{ $day->toDateString() }}'] === 'H', 'bg-warning-soft-strong border-warning-line text-warning-ink focus:border-warning-400 focus:ring-warning-line': attendances['{{ $enrollment->id }}_{{ $day->toDateString() }}'] === 'S', 'bg-success-soft-strong border-success-line text-success-ink focus:border-success-400 focus:ring-success-line': attendances['{{ $enrollment->id }}_{{ $day->toDateString() }}'] === 'I', 'bg-danger-soft-strong border-danger-line text-danger-ink focus:border-danger-400 focus:ring-danger-line': attendances['{{ $enrollment->id }}_{{ $day->toDateString() }}'] === 'A', 'bg-info-soft-strong border-info-line text-info-ink focus:border-info-400 focus:ring-info-line': attendances['{{ $enrollment->id }}_{{ $day->toDateString() }}'] === 'L', } text-theme-sm font-normal"
+                                            :class="{ 'bg-surface border-line text-body focus:border-line-strong focus:ring-line': attendances['{{ $enrollment->id }}_{{ $day->toDateString() }}'] === 'H', 'bg-warning-soft-strong border-warning-line text-warning-ink focus:border-warning-400 focus:ring-warning-line': attendances['{{ $enrollment->id }}_{{ $day->toDateString() }}'] === 'S', 'bg-success-soft-strong border-success-line text-success-ink focus:border-success-400 focus:ring-success-line': attendances['{{ $enrollment->id }}_{{ $day->toDateString() }}'] === 'I', 'bg-danger-soft-strong border-danger-line text-danger-ink focus:border-danger-400 focus:ring-danger-line': attendances['{{ $enrollment->id }}_{{ $day->toDateString() }}'] === 'A', 'bg-info-soft-strong border-info-line text-info-ink focus:border-info-400 focus:ring-info-line': attendances['{{ $enrollment->id }}_{{ $day->toDateString() }}'] === 'L' }"
                                             @disabled(! $canUpdate)
                                         >
                                             @foreach (\App\Models\StudentAttendance::codeOptions() as $optionCode => $label)
@@ -363,8 +371,6 @@
                 </div>
             </div>
         </div>
-    </main>
-
         @push('scripts')
         <script>
             document.addEventListener('alpine:init', () => {
