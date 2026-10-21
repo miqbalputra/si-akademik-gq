@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'exam_weighted_score',
     'final_score',
     'kkm',
+    'kkm_revision_id',
     'is_complete',
     'is_passed',
     'calculated_at',

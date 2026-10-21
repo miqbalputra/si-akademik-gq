@@ -94,7 +94,7 @@
 
                 <div class="mt-4 flex flex-wrap gap-2 text-theme-xs font-normal uppercase text-muted">
                     <span class="badge text-theme-xs font-medium">{{ $assessmentSet->components->count() }} komponen nilai</span>
-                    <span class="badge text-theme-xs font-medium">KKM {{ $assessmentSet->kkm ?? '-' }}</span>
+                    <span class="badge text-theme-xs font-medium">KKM {{ $assessmentSet->kkm ?? 'menunggu ACC' }}</span>
                 </div>
                 
                 <div class="mt-5 flex gap-3">

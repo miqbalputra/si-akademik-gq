@@ -14,6 +14,7 @@ class AcademicTermForm
     {
         return $schema
             ->components([
+                \Filament\Forms\Components\Hidden::make('kkm_workflow_enabled')->default(true),
                 Select::make('academic_year_id')->label('Tahun Ajaran')
                     ->relationship('academicYear', 'name')
                     ->required(),

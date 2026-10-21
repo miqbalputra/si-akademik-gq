@@ -19,6 +19,12 @@ class DiniyyahAssessmentWorkflow
 
     public function approve(DiniyyahAssessmentSet $assessmentSet, User $validator, ?string $notes = null): DiniyyahScoreValidation
     {
+        return app(DiniyyahKkmResolver::class)->withAssessmentLock($assessmentSet, fn () => $this->approveLocked($assessmentSet, $validator, $notes));
+    }
+
+    private function approveLocked(DiniyyahAssessmentSet $assessmentSet, User $validator, ?string $notes): DiniyyahScoreValidation
+    {
+        app(DiniyyahKkmResolver::class)->ensureApproved($assessmentSet);
         $assessmentSet->update(['status' => 'validated']);
         $assessmentSet->scores()->whereIn('status', ['draft', 'submitted'])->update(['status' => 'validated']);
 

@@ -26,7 +26,7 @@ class DiniyyahAssessmentSetsTable
                 TextColumn::make('classSubject.subject.name')->label('Mapel')->searchable(),
                 TextColumn::make('title')->label('Judul')->searchable()->sortable(),
                 TextColumn::make('assessment_method')->label('Metode Penilaian')->badge(),
-                TextColumn::make('kkm')->label('KKM')->numeric(),
+                TextColumn::make('kkm')->label('KKM')->state(fn ($record) => app(\App\Services\DiniyyahKkmResolver::class)->resolve($record->classSubject, $record->kkm === null ? null : (float) $record->kkm)['kkm'])->placeholder('Menunggu ACC'),
                 TextColumn::make('status')->label('Status')->badge()
                     ->formatStateUsing(fn ($state): string => \App\Support\UiLabel::statusLabel($state))
                     ->color(fn ($state): string => \App\Support\UiLabel::statusColor($state)),

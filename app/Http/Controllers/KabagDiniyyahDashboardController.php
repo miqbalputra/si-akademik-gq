@@ -16,6 +16,7 @@ class KabagDiniyyahDashboardController extends Controller
 
         return view('kabag.diniyyah.dashboard', [
             'summary' => [
+                'submitted_kkms' => \App\Models\DiniyyahKkmRevision::where('status', 'submitted')->count(),
                 'submitted_assessments' => DiniyyahAssessmentSet::query()->where('status', 'submitted')->count(),
                 'revision_assessments' => DiniyyahAssessmentSet::query()->where('status', 'needs_revision')->count(),
                 'active_assignments' => DiniyyahTeacherAssignment::query()->where(fn ($query) => $query->whereNull('ends_at')->orWhere('ends_at', '>=', now()->toDateString()))->count(),

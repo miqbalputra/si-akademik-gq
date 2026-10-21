@@ -49,7 +49,7 @@ class GuruDiniyyahScoreController extends Controller
                             'title' => 'Penilaian ' . $classSubject->subject?->name,
                             'tested_material' => '-',
                             'assessment_method' => $classSubject->assessment_method ?? 'weighted',
-                            'kkm' => $classSubject->kkm ?? 70,
+                            'kkm' => $classSubject->kkm,
                             'daily_weight' => $classSubject->daily_weight ?? 40,
                             'exam_weight' => $classSubject->exam_weight ?? 60,
                             'appears_on_ledger' => $classSubject->appears_on_ledger ?? true,
@@ -132,11 +132,15 @@ class GuruDiniyyahScoreController extends Controller
 
         $upcomingAlerts = $this->buildUpcomingAlerts($schoolEvents, $schoolHolidays);
 
+        foreach ($assessmentSets as $set) {
+            $set->forceFill(app(\App\Services\DiniyyahKkmResolver::class)->resolve($set->classSubject, $set->kkm === null ? null : (float) $set->kkm));
+        }
         return view('guru.diniyyah-scores.index', compact('assessmentSets', 'summaries', 'schoolEvents', 'upcomingAlerts'));
     }
 
     public function edit(Request $request, DiniyyahAssessmentSet $assessmentSet): View
     {
+        $assessmentSet->forceFill(app(\App\Services\DiniyyahKkmResolver::class)->resolve($assessmentSet->classSubject, $assessmentSet->kkm === null ? null : (float) $assessmentSet->kkm));
         Gate::authorize('inputScores', $assessmentSet);
 
         $assessmentSet->load(['classSubject.classroomTerm', 'classSubject.subject', 'components' => fn ($query) => $query->orderBy('sort_order')]);

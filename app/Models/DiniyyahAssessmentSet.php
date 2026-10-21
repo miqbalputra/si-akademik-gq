@@ -28,6 +28,11 @@ class DiniyyahAssessmentSet extends Model
 {
     use HasFactory, SoftDeletes;
 
+    protected static function booted(): void
+    {
+        static::saving(fn (self $set) => app(\App\Services\DiniyyahKkmResolver::class)->apply($set));
+    }
+
     protected function casts(): array
     {
         return [

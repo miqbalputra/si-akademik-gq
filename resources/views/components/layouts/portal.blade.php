@@ -5,6 +5,7 @@
     $isTahfidzPortal = ($portalLabel ?? null) === 'Portal Kabag Tahfidz';
     $isDiniyyahPortal = ($portalLabel ?? null) === 'Portal Kabag Diniyyah';
     $portalUser = auth()->user();
+    $notificationPrefix = $isManagementPortal ? 'admin.notifications.' : 'notifications.';
     $portalLogoutUrl = $isManagementPortal ? route('filament.admin.auth.logout') : route('logout');
     $workspaceService = app(\App\Services\WorkspaceRedirectService::class);
     $workspaceItems = $portalUser ? $workspaceService->availableFor($portalUser) : [];
@@ -53,6 +54,7 @@
         $guruTodayItems[] = ['label' => 'Tasmi\'', 'href' => route('guru.tasmi.index'), 'match' => ['guru.tasmi.*']];
     }
     $guruClassItems = [
+        ['label' => 'KKM', 'href' => route('guru.kkm.index'), 'match' => ['guru.kkm.*']],
         ['label' => 'Input Nilai', 'href' => route('guru.diniyyah-scores.index'), 'match' => ['guru.diniyyah-scores.*']],
     ];
     if ($isHomeroomTeacher) {
@@ -104,6 +106,7 @@
         ['label' => 'Aspek UAS', 'href' => \App\Filament\Resources\TahfidzUasCategories\TahfidzUasCategoryResource::getUrl(), 'match' => ['filament.admin.resources.tahfidz-uas-categories.*']],
     ];
     $diniyyahMonitoringItems = [
+        ['label' => 'Penetapan KKM', 'href' => route('kabag.kkm.index'), 'match' => ['kabag.kkm.*']],
         ['label' => 'Dashboard Diniyyah', 'href' => route('kabag-diniyyah.dashboard'), 'match' => ['kabag-diniyyah.dashboard']],
         ['label' => 'Monitoring Nilai', 'href' => route('diniyyah.monitoring.index'), 'match' => ['diniyyah.monitoring.*']],
         ['label' => 'Jurnal KBM', 'href' => \App\Filament\Resources\DiniyyahClassJournals\DiniyyahClassJournalResource::getUrl(), 'match' => ['filament.admin.resources.diniyyah-class-journals.*']],
@@ -295,7 +298,7 @@
 
                         <x-common.theme-toggle />
 
-                        <div class="relative" data-notification-root data-feed-url="{{ route('notifications.feed') }}" data-read-url-template="{{ route('notifications.read', '__ID__') }}" data-mark-all-url="{{ route('notifications.read-all') }}">
+                        <div class="relative" data-notification-root data-feed-url="{{ route($notificationPrefix.'feed') }}" data-read-url-template="{{ route($notificationPrefix.'read', '__ID__') }}" data-mark-all-url="{{ route($notificationPrefix.'read-all') }}">
                             <button type="button" class="relative inline-flex h-10 w-10 items-center justify-center rounded-lg border border-line bg-surface text-muted transition hover:bg-surface-subtle dark:border-gray-700 dark:bg-surface dark:text-body dark:hover:bg-gray-800" aria-label="Notifikasi" aria-haspopup="dialog" aria-expanded="false" data-notification-toggle>
                                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" /></svg>
                                 <span class="absolute -end-1 -top-1 hidden min-w-4 rounded-full bg-brand-600 px-1 py-0.5 text-white text-theme-xs font-medium" data-notification-badge>0</span>
@@ -306,7 +309,7 @@
                                     <button type="button" class="text-brand-ink hover:text-brand-ink dark:text-brand-300 text-theme-sm font-medium" data-notification-mark-all>Tandai semua dibaca</button>
                                 </header>
                                 <div class="max-h-96 overflow-y-auto" data-notification-list><p class="px-5 py-8 text-center text-theme-xs font-normal text-soft">Memuat...</p></div>
-                                <footer class="border-t border-line px-4 py-3 text-center dark:border-gray-800"><a href="{{ route('notifications.index') }}" class="text-theme-sm font-medium text-brand-ink hover:text-brand-ink dark:text-brand-300">Lihat semua notifikasi <span aria-hidden="true">&rarr;</span></a></footer>
+                                <footer class="border-t border-line px-4 py-3 text-center dark:border-gray-800"><a href="{{ route($notificationPrefix.'index') }}" class="text-theme-sm font-medium text-brand-ink hover:text-brand-ink dark:text-brand-300">Lihat semua notifikasi <span aria-hidden="true">&rarr;</span></a></footer>
                             </section>
                         </div>
 

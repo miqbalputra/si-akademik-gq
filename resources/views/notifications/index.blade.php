@@ -1,4 +1,7 @@
-<x-layouts.portal title="Notifikasi" portalLabel="{{ auth()->user()->hasRole('guru') ? 'Portal Guru' : (auth()->user()->hasRole('wali_santri') ? 'Portal Wali Santri' : 'Ruang GQ') }}" breadcrumb="Notifikasi">
+@php
+    $notificationPrefix = request()->routeIs('admin.notifications.*') ? 'admin.notifications.' : 'notifications.';
+@endphp
+<x-layouts.portal title="Notifikasi" portalLabel="{{ request()->routeIs('admin.notifications.*') ? 'Portal Manajemen' : (auth()->user()->hasRole('guru') ? 'Portal Guru' : (auth()->user()->hasRole('wali_santri') ? 'Portal Wali Santri' : 'Ruang GQ')) }}" breadcrumb="Notifikasi">
     @push('styles')
     <style>
         .notif-item { display:flex; align-items:flex-start; gap:.875rem; border-bottom:1px solid var(--ui-surface-muted); padding:1rem 1.125rem; transition:background-color .15s ease; }
@@ -26,7 +29,7 @@
             </p>
         </div>
         @if($unreadCount > 0)
-            <form method="POST" action="{{ route('notifications.read-all') }}">
+            <form method="POST" action="{{ route($notificationPrefix.'read-all') }}">
                 @csrf
                 <button type="submit" class="btn btn-primary text-theme-sm font-medium">
                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
@@ -66,7 +69,7 @@
             </label>
             <div class="flex gap-2">
                 <button type="submit" class="btn btn-primary text-theme-sm font-medium">Filter</button>
-                <a href="{{ route('notifications.index') }}" class="btn btn-outline text-theme-sm font-medium">Reset</a>
+                <a href="{{ route($notificationPrefix.'index') }}" class="btn btn-outline text-theme-sm font-medium">Reset</a>
             </div>
         </div>
     </form>
@@ -124,12 +127,12 @@
                     </div>
                     <div class="flex shrink-0 flex-col gap-1.5">
                         @if($notif->status === 'unread')
-                            <form method="POST" action="{{ route('notifications.read', $notif) }}">
+                            <form method="POST" action="{{ route($notificationPrefix.'read', $notif) }}">
                                 @csrf
                                 <button type="submit" class="btn btn-outline btn-sm text-theme-sm font-medium" title="Tandai dibaca">Dibaca</button>
                             </form>
                         @endif
-                        <form method="POST" action="{{ route('notifications.archive', $notif) }}">
+                        <form method="POST" action="{{ route($notificationPrefix.'archive', $notif) }}">
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="btn btn-danger btn-sm text-theme-sm font-medium" title="Hapus" onclick="return confirm('Hapus notifikasi ini?')">Hapus</button>

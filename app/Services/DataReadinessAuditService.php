@@ -17,6 +17,21 @@ class DataReadinessAuditService
     public function audit(): array
     {
         $sections = [
+            $this->classSubjectIssue(
+                key: 'class_subjects_without_approved_kkm',
+                title: 'Mapel belum memiliki KKM disetujui',
+                description: 'Tetapkan penyusun dan selesaikan persetujuan KKM sebelum finalisasi leger.',
+                query: DiniyyahClassSubject::query()->with(['classroomTerm', 'subject'])->where('is_active', true)->whereNull('kkm_revision_id')
+                    ->whereHas('classroomTerm.academicTerm', fn ($q) => $q->where('kkm_workflow_enabled', true)),
+            ),
+            $this->issue(
+                key: 'classrooms_without_kkm_level',
+                title: 'Jenjang KKM belum dikenali',
+                description: 'Isi Tingkat dengan Mustawa 1–6 atau M1–M6. Jenjang tidak ditentukan dari gender atau nama kelas.',
+                query: \App\Models\Classroom::whereIn('id', \App\Models\Classroom::get(['id','level_name'])->filter(fn ($c) => DiniyyahKkmResolver::mustawa($c->level_name) === null)->pluck('id'))
+                    ->whereHas('classroomTerms.academicTerm', fn ($q) => $q->where('kkm_workflow_enabled', true)),
+                sampleColumn: 'name',
+            ),
             $this->issue(
                 key: 'students_without_guardians',
                 title: 'Santri belum punya wali',

@@ -32,6 +32,7 @@ class DiniyyahClassSubjectForm
                     ->required()
                     ->default('weighted'),
                 TextInput::make('kkm')->label('KKM')
+                    ->readOnly()->helperText('Ditetapkan melalui menu Penetapan KKM.')
                     ->numeric()
                     ->minValue(0)
                     ->maxValue(100),

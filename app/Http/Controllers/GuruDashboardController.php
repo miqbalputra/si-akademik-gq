@@ -52,7 +52,7 @@ class GuruDashboardController extends Controller
                             'title' => 'Penilaian '.$classSubject->subject?->name,
                             'tested_material' => '-',
                             'assessment_method' => $classSubject->assessment_method ?? 'weighted',
-                            'kkm' => $classSubject->kkm ?? 70,
+                            'kkm' => $classSubject->kkm,
                             'daily_weight' => $classSubject->daily_weight ?? 40,
                             'exam_weight' => $classSubject->exam_weight ?? 60,
                             'appears_on_ledger' => $classSubject->appears_on_ledger ?? true,

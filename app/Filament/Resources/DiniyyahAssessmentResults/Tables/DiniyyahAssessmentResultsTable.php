@@ -21,7 +21,13 @@ class DiniyyahAssessmentResultsTable
                 TextColumn::make('exam_raw_score')->label('Nilai Mentah Ujian')->numeric(),
                 TextColumn::make('final_score')->label('Nilai Akhir')->numeric()->sortable(),
                 IconColumn::make('is_complete')->label('Lengkap')->boolean(),
-                IconColumn::make('is_passed')->label('Lulus')->boolean(),
+                TextColumn::make('is_passed')->label('Ketuntasan')->state(function ($record): string {
+                    $set = $record->assessmentSet;
+                    $resolver = app(\App\Services\DiniyyahKkmResolver::class);
+                    if ($resolver->required($set->classSubject) && ! $resolver->resolve($set->classSubject)['kkm_revision_id']) return 'Menunggu KKM';
+                    if (! $record->is_complete) return 'Nilai belum lengkap';
+                    return $record->is_passed ? 'Tuntas' : 'Belum tuntas';
+                }),
                 TextColumn::make('calculated_at')->label('Dihitung Pada')->dateTime()->sortable(),
             ])
             ->filters([

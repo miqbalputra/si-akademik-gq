@@ -13,6 +13,23 @@ class ReportCardWorkflow
 {
     public function lock(ReportCard $reportCard, User $user): void
     {
+        app(DiniyyahKkmResolver::class)->withClassLocks($reportCard->classroomTerm, function () use ($reportCard, $user): void {
+            $reportCard = ReportCard::whereKey($reportCard->id)->lockForUpdate()->firstOrFail();
+            if ($reportCard->classroomTerm?->academicTerm?->kkm_workflow_enabled) {
+                foreach ($reportCard->lines()->where('line_type', 'subject')->get() as $line) {
+                    $set = \App\Models\DiniyyahAssessmentSet::find($line->source_id);
+                    if (! $set) throw new DomainException('Sumber penilaian rapor tidak ditemukan.');
+                    $resolved = app(DiniyyahKkmResolver::class)->ensureApproved($set);
+                    if ($line->kkm_revision_id !== $resolved['kkm_revision_id']) throw new DomainException('KKM rapor telah berubah. Buat ulang rapor dari leger terkini.');
+                }
+            }
+            $this->lockOpenReport($reportCard, $user);
+        });
+        $reportCard->refresh();
+    }
+
+    private function lockOpenReport(ReportCard $reportCard, User $user): void
+    {
         if ($reportCard->status !== 'draft') {
             throw new DomainException('Hanya rapor draf yang dapat dikunci.');
         }

@@ -8,6 +8,7 @@ use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\ClassAttendanceReportController;
 use App\Http\Controllers\DiniyyahJournalExportController;
 use App\Http\Controllers\DiniyyahJournalReportController;
+use App\Http\Controllers\DiniyyahKkmController;
 use App\Http\Controllers\DiniyyahLedgerController;
 use App\Http\Controllers\DiniyyahMonitoringController;
 use App\Http\Controllers\GuardianDashboardController;
@@ -93,6 +94,25 @@ Route::middleware(['auth:web', 'role:kabag_diniyyah'])->group(function () {
 });
 
 // Notifikasi pusat — bell icon di pojok kanan atas (semua role).
+foreach ([['admin', 'admin.kkm.', 'admin/kkm', 'admin|kabag_diniyyah'], ['web', 'kabag.kkm.', 'kabag/kkm', 'admin|kabag_diniyyah'], ['web', 'guru.kkm.', 'guru/kkm', 'guru']] as [$guard, $name, $path, $roles]) {
+    Route::middleware(['auth:'.$guard, 'role:'.$roles])->prefix($path)->name($name)->group(function (): void {
+        Route::get('/', [DiniyyahKkmController::class, 'index'])->name('index');
+        Route::post('/penugasan', [DiniyyahKkmController::class, 'assign'])->name('assign');
+        Route::get('/rekap/{format}', [DiniyyahKkmController::class, 'recap'])->whereIn('format', ['xlsx', 'pdf'])->name('recap');
+        Route::get('/versi/{revision}/export/{format}', [DiniyyahKkmController::class, 'export'])->whereIn('format', ['xlsx', 'pdf'])->name('export');
+        Route::put('/versi/{revision}', [DiniyyahKkmController::class, 'save'])->name('save');
+        Route::post('/versi/{revision}/review', [DiniyyahKkmController::class, 'review'])->name('review');
+        Route::post('/{scope}/mulai', [DiniyyahKkmController::class, 'start'])->name('start');
+        Route::get('/{scope}', [DiniyyahKkmController::class, 'show'])->name('show');
+    });
+}
+Route::middleware('auth:admin')->prefix('admin/notifications')->name('admin.notifications.')->group(function (): void {
+    Route::get('/', [NotificationController::class, 'index'])->name('index');
+    Route::get('/feed', [NotificationController::class, 'feed'])->name('feed');
+    Route::post('/read-all', [NotificationController::class, 'markAllRead'])->name('read-all');
+    Route::post('/{notification}/read', [NotificationController::class, 'markAsRead'])->name('read');
+    Route::delete('/{notification}', [NotificationController::class, 'archive'])->name('archive');
+});
 Route::middleware('auth:web')->prefix('notifications')->name('notifications.')->group(function () {
     Route::get('/', [NotificationController::class, 'index'])->name('index');
     Route::get('/feed', [NotificationController::class, 'feed'])->name('feed');

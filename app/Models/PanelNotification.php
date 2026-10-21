@@ -101,6 +101,10 @@ class PanelNotification extends Model
     public static function typeOptions(): array
     {
         return [
+            'kkm_assigned' => 'Penugasan KKM',
+            'kkm_submitted' => 'KKM menunggu ACC',
+            'kkm_approved' => 'KKM disetujui',
+            'kkm_needs_revision' => 'KKM perlu revisi',
             'tasmi_created' => 'Tasmi\' baru',
             'tasmi_updated' => 'Tasmi\' diperbarui',
             'tasmi_deleted' => 'Tasmi\' dihapus',

@@ -29,6 +29,9 @@ class NotificationController extends Controller
         }
 
         $notifications = $query->paginate(20)->withQueryString();
+        $notifications->getCollection()->each(function ($notification) use ($request): void {
+            $notification->link_url = $this->contextLink($request, $notification);
+        });
         $typeOptions = PanelNotification::typeOptions();
         $severityOptions = PanelNotification::severityOptions();
 
@@ -62,7 +65,7 @@ class NotificationController extends Controller
                 'body' => $n->body,
                 'severity' => $n->severity,
                 'type' => $n->notification_type,
-                'link_url' => $n->link_url,
+                'link_url' => $this->contextLink($request, $n),
                 'status' => $n->status,
                 'batch_count' => $n->batch_count,
                 'created_at' => $n->created_at?->diffForHumans(),
@@ -137,5 +140,15 @@ class NotificationController extends Controller
         }
 
         return redirect()->back()->with('status', 'Notifikasi dihapus.');
+    }
+
+    private function contextLink(Request $request, PanelNotification $notification): ?string
+    {
+        if (str_starts_with($notification->notification_type, 'kkm_') && preg_match('~/kkm/(\d+)$~', $notification->link_url ?? '', $match)) {
+            $prefix = $request->routeIs('admin.notifications.*') ? 'admin.kkm.' : ($request->user()->hasRole('guru') ? 'guru.kkm.' : 'kabag.kkm.');
+            return route($prefix.'show', (int) $match[1]);
+        }
+
+        return $notification->link_url;
     }
 }

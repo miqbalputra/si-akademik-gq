@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['academic_year_id', 'name', 'semester', 'starts_at', 'ends_at', 'is_active'])]
+#[Fillable(['academic_year_id', 'name', 'semester', 'starts_at', 'ends_at', 'is_active', 'kkm_workflow_enabled'])]
 class AcademicTerm extends Model
 {
     use HasFactory;
@@ -19,6 +19,7 @@ class AcademicTerm extends Model
             'starts_at' => 'date',
             'ends_at' => 'date',
             'is_active' => 'boolean',
+            'kkm_workflow_enabled' => 'boolean',
         ];
     }
 

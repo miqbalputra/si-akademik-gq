@@ -110,7 +110,11 @@ class ReportCardGenerator
         foreach ($scoreCells as $cell) {
             $assessmentSet = $assessmentSets->get($cell->source_id);
             $score = $cell->value_numeric === null ? null : (float) $cell->value_numeric;
-            $kkm = $assessmentSet?->kkm;
+            $column = collect($snapshot->snapshot_data['columns'] ?? [])->firstWhere('assessment_set_id', $cell->source_id);
+            if ($snapshot->classroomTerm?->academicTerm?->kkm_workflow_enabled && empty($column['kkm_revision_id'])) {
+                throw new DomainException('Snapshot leger belum menyimpan KKM yang disetujui. Generate ulang leger sebelum membuat rapor.');
+            }
+            $kkm = $column && array_key_exists('kkm', $column) ? $column['kkm'] : $assessmentSet?->kkm;
 
             $reportCard->lines()->create([
                 'line_type' => 'subject',
@@ -119,6 +123,7 @@ class ReportCardGenerator
                 'subject_name' => $cell->label,
                 'tested_material' => $assessmentSet?->tested_material,
                 'kkm' => $kkm,
+                'kkm_revision_id' => $column['kkm_revision_id'] ?? null,
                 'score_numeric' => $score,
                 'score_letter' => $score === null ? null : $this->scorePredicate($score),
                 'score_words' => $score === null ? null : $this->scoreWords($score),

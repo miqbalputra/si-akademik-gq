@@ -27,6 +27,11 @@ class DiniyyahClassSubject extends Model
 {
     use HasFactory, SoftDeletes;
 
+    protected static function booted(): void
+    {
+        static::saving(fn (self $subject) => app(\App\Services\DiniyyahKkmResolver::class)->apply($subject));
+    }
+
     protected function casts(): array
     {
         return [

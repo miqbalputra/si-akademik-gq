@@ -95,7 +95,14 @@ class DiniyyahScoreCalculator
     }
     public function calculateAssessmentSet(DiniyyahAssessmentSet $assessmentSet): int
     {
+        return app(DiniyyahKkmResolver::class)->withAssessmentLock($assessmentSet, fn () => $this->calculateAssessmentSetLocked($assessmentSet));
+    }
+
+    private function calculateAssessmentSetLocked(DiniyyahAssessmentSet $assessmentSet): int
+    {
         $assessmentSet->loadMissing('classSubject');
+        $resolvedKkm = app(DiniyyahKkmResolver::class)->resolve($assessmentSet->classSubject, $assessmentSet->kkm === null ? null : (float) $assessmentSet->kkm);
+        $assessmentSet->forceFill($resolvedKkm);
 
         $enrollments = ClassEnrollment::query()
             ->where('classroom_term_id', $assessmentSet->classSubject->classroom_term_id)
@@ -128,6 +135,7 @@ class DiniyyahScoreCalculator
                 'diniyyah_assessment_set_id' => $assessmentSet->id,
                 'class_enrollment_id' => $enrollment->id,
                 'kkm' => $assessmentSet->kkm,
+                'kkm_revision_id' => $resolvedKkm['kkm_revision_id'],
                 'is_passed' => $payload['is_complete']
                     && $assessmentSet->kkm !== null
                     && $payload['final_score'] !== null
@@ -142,7 +150,7 @@ class DiniyyahScoreCalculator
             DiniyyahAssessmentResult::upsert(
                 $upsertResults,
                 ['diniyyah_assessment_set_id', 'class_enrollment_id'],
-                ['daily_raw_score', 'exam_raw_score', 'daily_weighted_score', 'exam_weighted_score', 'final_score', 'kkm', 'is_complete', 'is_passed', 'calculated_at', 'updated_at']
+                ['daily_raw_score', 'exam_raw_score', 'daily_weighted_score', 'exam_weighted_score', 'final_score', 'kkm', 'kkm_revision_id', 'is_complete', 'is_passed', 'calculated_at', 'updated_at']
             );
         }
 
@@ -151,6 +159,13 @@ class DiniyyahScoreCalculator
 
     public function calculate(DiniyyahAssessmentSet $assessmentSet, ClassEnrollment $enrollment): DiniyyahAssessmentResult
     {
+        return app(DiniyyahKkmResolver::class)->withAssessmentLock($assessmentSet, fn () => $this->calculateLocked($assessmentSet, $enrollment));
+    }
+
+    private function calculateLocked(DiniyyahAssessmentSet $assessmentSet, ClassEnrollment $enrollment): DiniyyahAssessmentResult
+    {
+        $resolvedKkm = app(DiniyyahKkmResolver::class)->resolve($assessmentSet->classSubject, $assessmentSet->kkm === null ? null : (float) $assessmentSet->kkm);
+        $assessmentSet->forceFill($resolvedKkm);
         $assessmentSet->loadMissing('components');
 
         $scores = $assessmentSet->scores()
@@ -171,6 +186,7 @@ class DiniyyahScoreCalculator
             ],
             $payload + [
                 'kkm' => $assessmentSet->kkm,
+                'kkm_revision_id' => $resolvedKkm['kkm_revision_id'],
                 'is_passed' => $payload['is_complete']
                     && $assessmentSet->kkm !== null
                     && $payload['final_score'] !== null

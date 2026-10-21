@@ -20,7 +20,7 @@ class DiniyyahClassSubjectsTable
                 TextColumn::make('classroomTerm.name')->label('Kelas')->searchable()->sortable(),
                 TextColumn::make('subject.name')->label('Mapel')->searchable()->sortable(),
                 TextColumn::make('assessment_method')->label('Metode Penilaian')->badge(),
-                TextColumn::make('kkm')->label('KKM')->numeric(),
+                TextColumn::make('kkm')->label('KKM')->state(fn ($record) => app(\App\Services\DiniyyahKkmResolver::class)->resolve($record)['kkm'])->placeholder('Menunggu ACC'),
                 TextColumn::make('daily_weight')->label('Bobot Harian (%)')->suffix('%'),
                 TextColumn::make('exam_weight')->label('Bobot Ujian (%)')->suffix('%'),
                 IconColumn::make('appears_on_ledger')->label('Tampil di Leger')->boolean(),

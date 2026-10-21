@@ -52,7 +52,7 @@
             <div class="grid grid-cols-2 gap-3 text-center sm:grid-cols-4 lg:min-w-[450px]">
                 <div class="rounded-2xl bg-surface/60 p-3 border border-line">
                     <p class="text-theme-xs font-normal uppercase text-muted">KKM</p>
-                    <p class="mt-1 font-semibold text-heading text-lg">{{ $assessmentSet->kkm ?? '-' }}</p>
+                    <p class="mt-1 font-semibold text-heading text-lg">{{ $assessmentSet->kkm ?? 'Menunggu ACC' }}</p>
                 </div>
                 <div class="rounded-2xl bg-surface/60 p-3 border border-line">
                     <p class="text-theme-xs font-normal uppercase text-muted">Terisi</p>

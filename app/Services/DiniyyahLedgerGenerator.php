@@ -16,7 +16,7 @@ class DiniyyahLedgerGenerator
 
     public function generate(ClassroomTerm $classroomTerm, ?int $generatedBy = null): DiniyyahLedgerSnapshot
     {
-        return DB::transaction(function () use ($classroomTerm, $generatedBy) {
+        return app(DiniyyahKkmResolver::class)->withClassLocks($classroomTerm, function () use ($classroomTerm, $generatedBy) {
             $classroomTerm->loadMissing('academicTerm');
 
             $existingSnapshot = DiniyyahLedgerSnapshot::query()
@@ -46,6 +46,7 @@ class DiniyyahLedgerGenerator
                 'source_type' => 'diniyyah_assessment_set',
                 'assessment_set_id' => $set->id,
                 'status' => $set->status,
+                ...app(DiniyyahKkmResolver::class)->resolve($set->classSubject, $set->kkm === null ? null : (float) $set->kkm),
             ])->values();
             $attendanceColumns = collect($this->attendanceColumns());
             $columns = $scoreColumns->merge($attendanceColumns)->values();
@@ -78,6 +79,12 @@ class DiniyyahLedgerGenerator
 
             $rankPayload = [];
             $issues = [];
+            foreach ($assessmentSets as $set) {
+                if (app(DiniyyahKkmResolver::class)->required($set->classSubject)
+                    && ! app(DiniyyahKkmResolver::class)->resolve($set->classSubject)['kkm_revision_id']) {
+                    $issues[] = ['level' => 'blocking', 'code' => 'kkm_not_approved', 'assessment_set_id' => $set->id, 'message' => 'KKM '.$set->title.' belum disetujui.'];
+                }
+            }
             $completeRows = 0;
             $incompleteRows = 0;
             $missingCells = 0;

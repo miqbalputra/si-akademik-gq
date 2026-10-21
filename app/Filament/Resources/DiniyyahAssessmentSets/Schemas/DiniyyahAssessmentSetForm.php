@@ -36,6 +36,7 @@ class DiniyyahAssessmentSetForm
                     ->default('weighted')
                     ->live(),
                 TextInput::make('kkm')->label('KKM')
+                    ->readOnly()->helperText('Mengikuti KKM mapel dan mustawa yang sudah disetujui.')
                     ->numeric()
                     ->minValue(0)
                     ->maxValue(100),

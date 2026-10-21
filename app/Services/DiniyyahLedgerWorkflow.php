@@ -11,6 +11,16 @@ class DiniyyahLedgerWorkflow
 {
     public function lock(DiniyyahLedgerSnapshot $snapshot, User $user): void
     {
+        app(DiniyyahKkmResolver::class)->withClassLocks($snapshot->classroomTerm, function () use ($snapshot, $user): void {
+            $snapshot = DiniyyahLedgerSnapshot::whereKey($snapshot->id)->lockForUpdate()->firstOrFail();
+            $this->ensureKkmCurrent($snapshot);
+            $this->lockOpenSnapshot($snapshot, $user);
+        });
+        $snapshot->refresh();
+    }
+
+    private function lockOpenSnapshot(DiniyyahLedgerSnapshot $snapshot, User $user): void
+    {
         if ($snapshot->status === 'published') {
             throw new DomainException('Leger yang sudah published tidak bisa dikunci ulang.');
         }
@@ -30,6 +40,7 @@ class DiniyyahLedgerWorkflow
 
     public function validate(DiniyyahLedgerSnapshot $snapshot, User $user): void
     {
+        $this->ensureKkmCurrent($snapshot);
         if (in_array($snapshot->status, ['locked', 'published'], true)) {
             throw new DomainException('Leger terkunci tidak bisa divalidasi ulang.');
         }
@@ -44,6 +55,22 @@ class DiniyyahLedgerWorkflow
     }
 
     // ── Notifikasi ────────────────────────────────────────────────────────
+    private function ensureKkmCurrent(DiniyyahLedgerSnapshot $snapshot): void
+    {
+        if (! $snapshot->classroomTerm?->academicTerm?->kkm_workflow_enabled) return;
+        if ($snapshot->snapshot_data['kkm_stale'] ?? false) throw new DomainException('KKM berubah. Generate ulang leger.');
+        $sets = \App\Models\DiniyyahAssessmentSet::where('appears_on_ledger', true)
+            ->whereHas('classSubject', fn ($q) => $q->where('classroom_term_id', $snapshot->classroom_term_id)->where('is_active', true)->where('appears_on_ledger', true))->get();
+        $columns = collect($snapshot->snapshot_data['columns'] ?? [])->where('source_type', 'diniyyah_assessment_set');
+        if ($sets->isEmpty() || $sets->count() !== $columns->count()) throw new DomainException('Struktur leger berubah atau belum lengkap. Generate ulang leger.');
+        foreach ($sets as $set) {
+            $column = $columns->firstWhere('assessment_set_id', $set->id);
+            $current = app(DiniyyahKkmResolver::class)->ensureApproved($set);
+            if (($column['kkm_revision_id'] ?? null) !== $current['kkm_revision_id'] || $set->status !== 'validated') {
+                throw new DomainException('Versi KKM atau validasi nilai berubah. Generate ulang leger.');
+            }
+        }
+    }
 
     private function notifyValidated(DiniyyahLedgerSnapshot $snapshot, User $user): void
     {
