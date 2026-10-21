@@ -1,8 +1,8 @@
 # Panduan Deploy ke Coolify
 
 Aplikasi: **SI Akademik GQ** (Laravel 13 + Filament 5 + Octane/FrankenPHP).
-Image dibangun dari `Dockerfile` (base `dunglas/frankenphp:php8.4-alpine`, PHP 8.4
-sesuai `composer.lock`). Server
+Image dibangun dari `Dockerfile` (base `dunglas/frankenphp:1.13.2-php8.4.27-alpine`,
+PHP 8.4.27). Server
 `octane:start --server=frankenphp` dipakai sebagai entrypoint runtime via
 `docker-entrypoint.sh`.
 
@@ -271,8 +271,9 @@ Tanpa persistent volume, isi `/app/storage` hilang setiap rebuild container.
 - **`composer install` gagal: "your lock file does not contain a compatible set
   of packages" / "requires php >=8.4 -> your php version does not satisfy"**:
   `composer.lock` dibuat dengan PHP 8.4, tapi image Docker memakai PHP 8.3. Pastikan
-  Dockerfile memakai base `dunglas/frankenphp:php8.4-alpine` (sesuai `composer.lock`)
-  — **bukan** `php8.3-alpine`. Setelah ganti, commit+push lalu rebuild di Coolify.
+  Dockerfile memakai base `dunglas/frankenphp:1.13.2-php8.4.27-alpine` (sesuai
+  `composer.lock` dan rilis keamanan PHP terbaru) — **bukan** `php8.3-alpine`.
+  Setelah ganti, commit+push lalu rebuild di Coolify.
 - **Peringatan `SecretsUsedInArgOrEnv` di log build**: secret ter-bake sebagai
   build-time `ARG`. Tandai variabel sensitif sebagai **Runtime only** di Coolify
   (lihat peringatan di langkah 2), lalu rotasi secret yang sempat terbocorkan

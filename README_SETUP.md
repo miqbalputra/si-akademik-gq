@@ -62,28 +62,28 @@ Ganti password sebelum digunakan di lingkungan selain lokal.
 
 ## Command Penting
 
-Karena PHP winget belum masuk PATH shell saat ini, command lokal dapat dijalankan dengan path PHP absolut:
+Pastikan `php -v` menunjukkan PHP 8.4.27 atau versi patch 8.4 yang lebih baru. Jalankan command lokal melalui `php` dari PATH:
 
 ```powershell
-& "C:\Users\LENOVO\AppData\Local\Microsoft\WinGet\Packages\PHP.PHP.8.4_Microsoft.Winget.Source_8wekyb3d8bbwe\php.exe" artisan serve
+php artisan serve
 ```
 
 Migration ulang dan seed:
 
 ```powershell
-& "C:\Users\LENOVO\AppData\Local\Microsoft\WinGet\Packages\PHP.PHP.8.4_Microsoft.Winget.Source_8wekyb3d8bbwe\php.exe" artisan migrate:fresh --seed
+php artisan migrate:fresh --seed
 ```
 
 Seed demo data lengkap (leger + rapor published):
 
 ```powershell
-& "C:\Users\LENOVO\AppData\Local\Microsoft\WinGet\Packages\PHP.PHP.8.4_Microsoft.Winget.Source_8wekyb3d8bbwe\php.exe" artisan db:seed --class=DemoSeeder
+php artisan db:seed --class=DemoSeeder
 ```
 
 Test:
 
 ```powershell
-& "C:\Users\LENOVO\AppData\Local\Microsoft\WinGet\Packages\PHP.PHP.8.4_Microsoft.Winget.Source_8wekyb3d8bbwe\php.exe" artisan test
+php artisan test
 ```
 
 Generate PWA PNG icons (butuh GD extension):
