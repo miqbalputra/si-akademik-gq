@@ -266,6 +266,100 @@ class DiniyyahKkmAssignmentTest extends TestCase
         $this->actingAs($c['admin'], 'admin')->get(route('admin.kkm.bulk.preview'))->assertOk()->assertSee('Leger arsip');
     }
 
+    public function test_teacher_filters_only_show_assigned_levels_even_before_kkm_exists(): void
+    {
+        $c = $this->context();
+        $m2 = $this->classSubject($c['term'], $c['subject'], 'M2 Guru Lain', 'M2');
+        DiniyyahTeacherAssignment::create(['diniyyah_class_subject_id' => $m2->id, 'teacher_id' => $c['male']->id]);
+        $response = $this->actingAs($c['female']->user, 'web')->get(route('guru.kkm.index'))->assertOk();
+        $this->assertSame([1], $response->viewData('mustawaOptions'));
+        $this->assertSame([$c['term']->id], $response->viewData('terms')->pluck('id')->all());
+        $this->assertSame(['1'], $this->filterOptionValues($response->getContent(), 'mustawa'));
+        $this->assertDatabaseCount('diniyyah_kkm_scopes', 0);
+        $this->qa('teacher-kkm-filters.html', $response->getContent());
+    }
+
+    public function test_teacher_levels_follow_selected_semester_without_showing_other_teachers_terms(): void
+    {
+        $c = $this->context();
+        $nextTerm = AcademicTerm::create(['academic_year_id' => $c['term']->academic_year_id, 'name' => 'Genap', 'semester' => 'genap', 'starts_at' => '2027-01-01', 'ends_at' => '2027-06-30', 'kkm_workflow_enabled' => true]);
+        $otherYear = AcademicYear::create(['school_id' => $c['term']->academicYear->school_id, 'name' => '2027/2028']);
+        $unassignedTerm = AcademicTerm::create(['academic_year_id' => $otherYear->id, 'name' => 'Semester guru lain', 'semester' => 'genap']);
+        $m3 = $this->classSubject($nextTerm, $c['subject'], 'Mustawa 3 Guru', 'Mustawa 3');
+        $m4 = $this->classSubject($unassignedTerm, $c['subject'], 'Mustawa 4 Guru Lain', 'M4');
+        DiniyyahTeacherAssignment::create(['diniyyah_class_subject_id' => $m3->id, 'teacher_id' => $c['female']->id, 'assignment_role' => 'assistant']);
+        DiniyyahTeacherAssignment::create(['diniyyah_class_subject_id' => $m4->id, 'teacher_id' => $c['male']->id]);
+        $this->actingAs($c['female']->user, 'web');
+        $all = $this->get(route('guru.kkm.index'))->assertOk()->assertDontSee('Semester guru lain');
+        $this->assertSame([1, 3], $all->viewData('mustawaOptions'));
+        $this->assertSame([(string) $nextTerm->id, (string) $c['term']->id], $this->filterOptionValues($all->getContent(), 'academic_term_id'));
+        $this->assertSame([1], $this->get(route('guru.kkm.index', ['academic_term_id' => $c['term']->id]))->assertOk()->viewData('mustawaOptions'));
+        $next = $this->get(route('guru.kkm.index', ['academic_term_id' => $nextTerm->id]))->assertOk();
+        $this->assertSame(['3'], $this->filterOptionValues($next->getContent(), 'mustawa'));
+    }
+
+    public function test_teacher_filter_ignores_expired_inactive_deleted_and_unknown_level_assignments(): void
+    {
+        $c = $this->context();
+        foreach ([2, 3, 4, 5] as $level) {
+            $subject = $this->classSubject($c['term'], $c['subject'], 'Kelas tidak memenuhi syarat '.$level, $level === 5 ? 'Jenjang belum dikenal' : 'M'.$level);
+            DiniyyahTeacherAssignment::create(['diniyyah_class_subject_id' => $subject->id, 'teacher_id' => $c['female']->id, 'ends_at' => $level === 2 ? '2026-06-30' : null]);
+            if ($level === 3) {
+                $subject->update(['is_active' => false]);
+            } elseif ($level === 4) {
+                $subject->delete();
+            }
+        }
+        $response = $this->actingAs($c['female']->user, 'web')->get(route('guru.kkm.index'))->assertOk();
+        $this->assertSame(['1'], $this->filterOptionValues($response->getContent(), 'mustawa'));
+        $c['female']->update(['status' => 'inactive']);
+        $this->actingAs($c['female']->user->fresh(), 'web');
+        $this->assertSame([], $this->get(route('guru.kkm.index'))->assertOk()->viewData('mustawaOptions'));
+    }
+
+    public function test_teacher_without_teaching_assignment_has_no_extra_filter_options(): void
+    {
+        $this->context();
+        $teacher = $this->teacher('female', 'Guru belum ditugaskan');
+        $response = $this->actingAs($teacher->user, 'web')->get(route('guru.kkm.index'))->assertOk();
+        $this->assertSame([], $this->filterOptionValues($response->getContent(), 'mustawa'));
+        $this->assertSame([], $this->filterOptionValues($response->getContent(), 'academic_term_id'));
+    }
+
+    public function test_teacher_portal_filters_stay_personal_for_users_with_management_roles(): void
+    {
+        $c = $this->context();
+        $c['female']->user->assignRole('admin');
+        $this->actingAs($c['female']->user, 'web')->get(route('guru.kkm.index'))->assertOk()->assertDontSee('Tetapkan Massal')->assertViewHas('mustawaOptions', [1]);
+        $this->actingAs($c['female']->user, 'admin')->get(route('admin.kkm.index'))->assertOk()->assertViewHas('mustawaOptions', range(1, 6));
+        $this->actingAs($c['kabag'], 'web')->get(route('kabag.kkm.index'))->assertOk()->assertViewHas('mustawaOptions', range(1, 6));
+    }
+
+    public function test_changing_teacher_filter_url_does_not_expose_other_teaching_scopes(): void
+    {
+        $c = $this->context();
+        $m2 = $this->classSubject($c['term'], $c['subject'], 'M2 Guru Lain', 'M2');
+        DiniyyahTeacherAssignment::create(['diniyyah_class_subject_id' => $m2->id, 'teacher_id' => $c['male']->id]);
+        $scope = app(DiniyyahKkmWorkflow::class)->assign($m2, $c['male']->id, $c['admin']);
+        // The teacher portal keeps its teaching boundary even for a user who also has an admin role.
+        $c['female']->user->assignRole('admin');
+        $this->actingAs($c['female']->user, 'web');
+        $response = $this->get(route('guru.kkm.index', ['mustawa' => 2]))->assertOk();
+        $this->assertSame([], $response->viewData('scopes')->items());
+        $this->assertSame(['1'], $this->filterOptionValues($response->getContent(), 'mustawa'));
+        $c['female']->user->removeRole('admin');
+        $this->get(route('guru.kkm.show', $scope))->assertForbidden();
+    }
+
+    private function filterOptionValues(string $html, string $name): array
+    {
+        $document = new \DOMDocument;
+        @$document->loadHTML($html);
+        $options = (new \DOMXPath($document))->query('//select[@name="'.$name.'"]/option[@value!=""]');
+
+        return array_map(fn ($option) => $option->getAttribute('value'), iterator_to_array($options));
+    }
+
     private function qa(string $name, string $content): void
     {
         if (getenv('KKM_QA') === '1') {

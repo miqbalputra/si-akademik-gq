@@ -15,6 +15,7 @@ use App\Services\DiniyyahKkmResolver;
 use App\Services\DiniyyahKkmWorkflow;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 
 class DiniyyahKkmController extends Controller
 {
@@ -25,11 +26,25 @@ class DiniyyahKkmController extends Controller
         return $request->routeIs('admin.kkm.*') ? 'admin.kkm.' : ($request->routeIs('kabag.kkm.*') ? 'kabag.kkm.' : 'guru.kkm.');
     }
 
-    private function scopes(Request $request)
+    private function scopes(Request $request, ?Collection $teachingScopes = null)
     {
         $filters = $request->validate(['academic_term_id' => ['nullable', 'integer', 'exists:academic_terms,id'], 'mustawa' => ['nullable', 'integer', 'between:1,6'], 'status' => ['nullable', 'in:draft,submitted,needs_revision,approved,unassigned']]);
+        if ($request->routeIs('guru.kkm.*')) {
+            $teachingScopes ??= $this->roster->teachingScopes($request->user());
+        }
 
         return DiniyyahKkmScope::with(['subject', 'academicTerm.academicYear', 'activeRevision', 'workingRevision', 'assignedTeacher'])
+            ->when($teachingScopes !== null, function ($query) use ($teachingScopes) {
+                if ($teachingScopes->isEmpty()) {
+                    $query->whereIn('id', []);
+                } else {
+                    $query->where(function ($query) use ($teachingScopes) {
+                        foreach ($teachingScopes as $scope) {
+                            $query->orWhere(fn ($query) => $query->where($scope));
+                        }
+                    });
+                }
+            })
             ->when($filters['academic_term_id'] ?? null, fn ($q, $id) => $q->where('academic_term_id', $id))
             ->when($filters['mustawa'] ?? null, fn ($q, $level) => $q->where('mustawa', $level))
             ->orderByDesc('academic_term_id')->orderBy('mustawa')->orderBy('subject_id')->get()
@@ -51,17 +66,22 @@ class DiniyyahKkmController extends Controller
 
     public function index(Request $request)
     {
-        $all = $this->scopes($request);
+        $teacherPortal = $request->routeIs('guru.kkm.*');
+        $teachingScopes = $teacherPortal ? $this->roster->teachingScopes($request->user()) : null;
+        $all = $this->scopes($request, $teachingScopes);
         $scopes = new LengthAwarePaginator($all->forPage(max(1, (int) $request->input('page', 1)), 20)->values(), $all->count(), 20, max(1, (int) $request->input('page', 1)), ['path' => $request->url(), 'query' => $request->query()]);
-        $manager = $this->access->manages($request->user());
-        $terms = AcademicTerm::with('academicYear')->latest('id')->get();
+        $manager = ! $teacherPortal && $this->access->manages($request->user());
+        $terms = AcademicTerm::with('academicYear')->when($teacherPortal, fn ($q) => $q->whereIn('id', $teachingScopes->pluck('academic_term_id')))->latest('id')->get();
+        $mustawaOptions = $teacherPortal
+            ? $teachingScopes->when($request->integer('academic_term_id'), fn ($scopes, $termId) => $scopes->where('academic_term_id', $termId))->pluck('mustawa')->unique()->sort()->values()->all()
+            : range(1, 6);
         $rosterTerm = $terms->firstWhere('id', $request->integer('academic_term_id')) ?? $terms->firstWhere('is_active', true) ?? $terms->first();
         $roster = $manager && $rosterTerm ? $this->roster->forTerm($rosterTerm, $request->integer('mustawa') ?: null) : ['rows' => [], 'issues' => []];
         if ($request->input('status') === 'unassigned') {
             $roster['rows'] = array_values(array_filter($roster['rows'], fn ($r) => ! $r['assigned_teacher_id']));
         }
 
-        return view('kkm.index', ['scopes' => $scopes, 'terms' => $terms, 'manager' => $manager, 'prefix' => $this->prefix($request), 'roster' => $roster, 'rosterTerm' => $rosterTerm, 'access' => $this->access]);
+        return view('kkm.index', ['scopes' => $scopes, 'terms' => $terms, 'mustawaOptions' => $mustawaOptions, 'teacherPortal' => $teacherPortal, 'manager' => $manager, 'prefix' => $this->prefix($request), 'roster' => $roster, 'rosterTerm' => $rosterTerm, 'access' => $this->access]);
     }
 
     public function bulkPreview(Request $request, DiniyyahKkmBulkAssignment $bulk)

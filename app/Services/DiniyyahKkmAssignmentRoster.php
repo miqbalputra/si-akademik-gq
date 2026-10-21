@@ -9,7 +9,9 @@ use App\Models\DiniyyahLedgerSnapshot;
 use App\Models\DiniyyahTeacherAssignment;
 use App\Models\ReportCard;
 use App\Models\Teacher;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 
 class DiniyyahKkmAssignmentRoster
 {
@@ -29,6 +31,31 @@ class DiniyyahKkmAssignmentRoster
 
         return Teacher::query()->where('status', 'active')->whereHas('user', fn ($q) => $q->role('guru'))
             ->whereIn('id', $this->assignments($scope->academicTerm)->whereIn('diniyyah_class_subject_id', $subjectIds)->select('teacher_id'));
+    }
+
+    /** Teaching scopes exist independently of whether a KKM has been assigned or approved. */
+    public function teachingScopes(User $user): Collection
+    {
+        $teacher = $user->teacher;
+        if (! $user->hasRole('guru') || ! $teacher || $teacher->status !== 'active') {
+            return collect();
+        }
+
+        return DiniyyahTeacherAssignment::where('teacher_id', $teacher->id)
+            ->whereHas('classSubject', fn ($q) => $q->where('is_active', true)->whereHas('classroomTerm.classroom'))
+            ->with(['classSubject.classroomTerm.classroom', 'classSubject.classroomTerm.academicTerm'])->get()
+            ->map(function ($assignment) {
+                $subject = $assignment->classSubject;
+                $term = $subject?->classroomTerm?->academicTerm;
+                $level = DiniyyahKkmResolver::mustawa($subject?->classroomTerm?->classroom?->level_name);
+                if (! $term || ! $level
+                    || ($term->ends_at && $assignment->starts_at && $assignment->starts_at > $term->ends_at)
+                    || ($term->starts_at && $assignment->ends_at && $assignment->ends_at < $term->starts_at)) {
+                    return null;
+                }
+
+                return ['academic_term_id' => $term->id, 'subject_id' => $subject->subject_id, 'mustawa' => $level];
+            })->filter()->unique(fn ($s) => implode(':', $s))->values();
     }
 
     /** Derived data only: visiting this roster must never create scopes or assignments. */
