@@ -4,12 +4,13 @@ namespace App\Services;
 
 use App\Models\DiniyyahKkmRevision;
 use App\Models\DiniyyahKkmScope;
-use App\Models\Teacher;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 
 class DiniyyahKkmAccess
 {
+    public function __construct(private DiniyyahKkmAssignmentRoster $roster) {}
+
     public function manages(User $user): bool
     {
         return $user->hasAnyRole(['admin', 'kabag_diniyyah']);
@@ -17,19 +18,7 @@ class DiniyyahKkmAccess
 
     public function eligibleTeachers(DiniyyahKkmScope $scope): Builder
     {
-        $term = $scope->academicTerm;
-        $subjectIds = app(DiniyyahKkmResolver::class)->classSubjects($scope)->pluck('id');
-
-        return Teacher::query()->where('status', 'active')->whereHas('user', fn ($q) => $q->role('guru'))
-            ->whereHas('diniyyahTeacherAssignments', function ($q) use ($subjectIds, $term): void {
-                $q->whereIn('diniyyah_class_subject_id', $subjectIds);
-                if ($term->ends_at) {
-                    $q->where(fn ($q) => $q->whereNull('starts_at')->orWhere('starts_at', '<=', $term->ends_at));
-                }
-                if ($term->starts_at) {
-                    $q->where(fn ($q) => $q->whereNull('ends_at')->orWhere('ends_at', '>=', $term->starts_at));
-                }
-            });
+        return $this->roster->eligibleTeachers($scope);
     }
 
     public function writes(User $user, DiniyyahKkmScope $scope): bool

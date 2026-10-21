@@ -5,16 +5,7 @@
         @if($errors->any())<div role="alert" class="rounded-xl border border-red-300 bg-red-50 p-4 text-red-800">@foreach($errors->all() as $error)<p>{{ $error }}</p>@endforeach</div>@endif
 
         @if($manager)
-        <section class="rounded-2xl border border-line bg-surface p-5" x-data="{ options: @js($assignmentOptions), selected: @js((string)old('class_subject_id', '')), get teachers() { return this.options.find(o => String(o.id) === String(this.selected))?.teachers || []; } }">
-            <h2 class="ui-card-title text-heading">Tetapkan guru penyusun</h2>
-            <p class="mt-1 text-theme-sm text-muted">Pilih mapel, mustawa, semester, lalu guru pengampu. Penugasan berlaku untuk seluruh kelas paralel.</p>
-            <form method="POST" action="{{ route($prefix.'assign') }}" class="mt-4 grid gap-4 md:grid-cols-3">@csrf
-                <label class="ui-field"><span>Mapel · Mustawa · Semester</span><select class="form-input" name="class_subject_id" x-model="selected" required><option value="">Pilih lingkup KKM</option>@foreach($assignmentOptions as $option)<option value="{{ $option['id'] }}">{{ $option['label'] }}</option>@endforeach</select></label>
-                <label class="ui-field"><span>Guru penyusun</span><select class="form-input" name="teacher_id" required><option value="">Pilih guru</option><template x-for="teacher in teachers" :key="teacher.id"><option :value="teacher.id" x-text="teacher.name"></option></template></select></label>
-                <div class="flex items-end"><button class="btn btn-primary" type="submit">Tetapkan penyusun</button></div>
-            </form>
-            @if(empty($assignmentOptions))<p class="mt-4 text-muted">Belum ada mapel kelas dengan tingkat Mustawa 1–6. Lengkapi kelas, semester, mapel, dan penugasan mengajar terlebih dahulu.</p>@endif
-        </section>
+            @include('kkm.partials.assignments')
         @endif
 
         <form method="GET" class="grid gap-3 rounded-2xl border border-line bg-surface p-5 md:grid-cols-4">

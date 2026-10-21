@@ -7,6 +7,8 @@ use App\Models\DiniyyahClassSubject;
 use App\Models\DiniyyahKkmRevision;
 use App\Models\DiniyyahKkmScope;
 use App\Services\DiniyyahKkmAccess;
+use App\Services\DiniyyahKkmAssignmentRoster;
+use App\Services\DiniyyahKkmBulkAssignment;
 use App\Services\DiniyyahKkmCalculator;
 use App\Services\DiniyyahKkmExportService;
 use App\Services\DiniyyahKkmResolver;
@@ -16,7 +18,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 
 class DiniyyahKkmController extends Controller
 {
-    public function __construct(private DiniyyahKkmAccess $access, private DiniyyahKkmResolver $resolver) {}
+    public function __construct(private DiniyyahKkmAccess $access, private DiniyyahKkmResolver $resolver, private DiniyyahKkmAssignmentRoster $roster) {}
 
     private function prefix(Request $request): string
     {
@@ -52,23 +54,63 @@ class DiniyyahKkmController extends Controller
         $all = $this->scopes($request);
         $scopes = new LengthAwarePaginator($all->forPage(max(1, (int) $request->input('page', 1)), 20)->values(), $all->count(), 20, max(1, (int) $request->input('page', 1)), ['path' => $request->url(), 'query' => $request->query()]);
         $manager = $this->access->manages($request->user());
-        $options = [];
-        if ($manager) {
-            foreach (DiniyyahClassSubject::with(['subject', 'classroomTerm.classroom', 'classroomTerm.academicTerm.academicYear'])->where('is_active', true)->get() as $subject) {
-                $mustawa = DiniyyahKkmResolver::mustawa($subject->classroomTerm?->classroom?->level_name);
-                if (! $mustawa) {
-                    continue;
-                }
-                $scope = new DiniyyahKkmScope(['academic_term_id' => $subject->classroomTerm->academic_term_id, 'subject_id' => $subject->subject_id, 'mustawa' => $mustawa]);
-                $key = $scope->academic_term_id.':'.$scope->subject_id.':'.$mustawa;
-                if (isset($options[$key])) {
-                    continue;
-                }
-                $options[$key] = ['id' => $subject->id, 'label' => $scope->label, 'teachers' => $this->access->eligibleTeachers($scope)->orderBy('name')->get(['id', 'name'])->toArray()];
-            }
+        $terms = AcademicTerm::with('academicYear')->latest('id')->get();
+        $rosterTerm = $terms->firstWhere('id', $request->integer('academic_term_id')) ?? $terms->firstWhere('is_active', true) ?? $terms->first();
+        $roster = $manager && $rosterTerm ? $this->roster->forTerm($rosterTerm, $request->integer('mustawa') ?: null) : ['rows' => [], 'issues' => []];
+        if ($request->input('status') === 'unassigned') {
+            $roster['rows'] = array_values(array_filter($roster['rows'], fn ($r) => ! $r['assigned_teacher_id']));
         }
 
-        return view('kkm.index', ['scopes' => $scopes, 'terms' => AcademicTerm::with('academicYear')->latest('id')->get(), 'manager' => $manager, 'prefix' => $this->prefix($request), 'assignmentOptions' => array_values($options), 'access' => $this->access]);
+        return view('kkm.index', ['scopes' => $scopes, 'terms' => $terms, 'manager' => $manager, 'prefix' => $this->prefix($request), 'roster' => $roster, 'rosterTerm' => $rosterTerm, 'access' => $this->access]);
+    }
+
+    public function bulkPreview(Request $request, DiniyyahKkmBulkAssignment $bulk)
+    {
+        abort_unless($this->access->manages($request->user()), 403);
+        $filters = $request->validate([
+            'academic_term_id' => ['nullable', 'integer', 'exists:academic_terms,id'],
+            'mustawa' => ['nullable', 'integer', 'between:1,6'],
+            'subject_id' => ['nullable', 'integer', 'exists:diniyyah_subjects,id'],
+            'gender' => ['nullable', 'in:male,female'],
+        ]);
+        $terms = AcademicTerm::with('academicYear')->latest('id')->get();
+        $term = $terms->firstWhere('id', (int) ($filters['academic_term_id'] ?? 0)) ?? $terms->firstWhere('is_active', true) ?? $terms->first();
+        $roster = $term ? $this->roster->forTerm($term) : ['rows' => [], 'issues' => []];
+        $subjects = collect($roster['rows'])->unique('subject_id')->sortBy('subject')->values();
+        $roster['rows'] = array_values(array_filter($roster['rows'], fn ($r) => (empty($filters['mustawa']) || $r['mustawa'] === (int) $filters['mustawa'])
+            && (empty($filters['subject_id']) || $r['subject_id'] === (int) $filters['subject_id'])
+        ));
+
+        return view('kkm.bulk', [
+            'terms' => $terms, 'term' => $term, 'subjects' => $subjects, 'roster' => $roster,
+            'gender' => $filters['gender'] ?? 'female', 'prefix' => $this->prefix($request),
+            'previewToken' => $term ? $bulk->previewToken($term, $roster['rows'], $request->user()) : '',
+        ]);
+    }
+
+    public function bulkApply(Request $request, DiniyyahKkmBulkAssignment $bulk)
+    {
+        abort_unless($this->access->manages($request->user()), 403);
+        $data = $request->validate([
+            'academic_term_id' => ['required', 'integer', 'exists:academic_terms,id'], 'preview_token' => ['required', 'string'],
+            'selected' => ['required', 'array', 'min:1', 'max:500'], 'selected.*' => ['required', 'integer', 'distinct'],
+            'teachers' => ['required', 'array'], 'teachers.*' => ['nullable', 'integer'],
+            'genders' => ['required', 'array'], 'genders.*' => ['nullable', 'in:male,female'],
+        ], [
+            'selected.required' => 'Pilih setidaknya satu mapel–mustawa yang akan ditetapkan.',
+            'selected.min' => 'Pilih setidaknya satu mapel–mustawa yang akan ditetapkan.',
+            'preview_token.required' => 'Tampilkan pratinjau penugasan sebelum menerapkan pilihan.',
+            'teachers.required' => 'Pilih guru penyusun untuk baris yang disertakan.',
+            'teachers.*.integer' => 'Pilihan guru penyusun tidak valid.',
+            'genders.required' => 'Pilih gender guru untuk baris yang disertakan.',
+        ]);
+        $entries = array_map(fn ($id) => [
+            'class_subject_id' => (int) $id, 'teacher_id' => (int) ($data['teachers'][$id] ?? 0), 'gender' => $data['genders'][$id] ?? null,
+        ], $data['selected']);
+        $result = $bulk->apply((int) $data['academic_term_id'], $entries, $data['preview_token'], $request->user());
+
+        return redirect()->route($this->prefix($request).'index', ['academic_term_id' => $data['academic_term_id']])
+            ->with('status', $result['assigned'].' penyusun KKM berhasil ditetapkan. '.$result['unchanged'].' tugas sudah sesuai dan tidak diubah.');
     }
 
     public function assign(Request $request, DiniyyahKkmWorkflow $workflow)
