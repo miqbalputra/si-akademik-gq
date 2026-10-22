@@ -33,6 +33,11 @@ class DiniyyahKkmRevision extends Model
 
     public function getStatusLabelAttribute(): string
     {
-        return ['draft' => 'Draf', 'submitted' => 'Menunggu ACC', 'needs_revision' => 'Perlu Revisi', 'approved' => 'Disetujui', 'superseded' => 'Versi Sebelumnya'][$this->status] ?? $this->status;
+        return ['draft' => 'Draf', 'submitted' => 'Menunggu ACC', 'needs_revision' => 'Perlu Revisi', 'approved' => 'Disetujui', 'superseded' => 'Versi Sebelumnya', 'school_fixed' => 'Ditetapkan Sekolah', 'cancelled_by_policy' => 'Digantikan Ketetapan Sekolah'][$this->status] ?? $this->status;
+    }
+
+    public function getIsSchoolFixedAttribute(): bool
+    {
+        return $this->status === 'school_fixed' || ($this->criteria['school_policy'] ?? null) === 'fixed_70_v1';
     }
 }

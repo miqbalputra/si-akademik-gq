@@ -64,7 +64,7 @@ class DiniyyahKkmAssignmentRoster
         $subjects = DiniyyahClassSubject::with(['subject', 'classroomTerm.classroom'])
             ->where('is_active', true)->whereHas('classroomTerm', fn ($q) => $q->where('academic_term_id', $term->id))
             ->when($subjectId, fn ($q) => $q->where('subject_id', $subjectId))->orderBy('id')->get();
-        $scopes = DiniyyahKkmScope::with('assignedTeacher')->where('academic_term_id', $term->id)->get()
+        $scopes = DiniyyahKkmScope::with(['assignedTeacher', 'activeRevision'])->where('academic_term_id', $term->id)->get()
             ->keyBy(fn ($s) => $s->subject_id.':'.$s->mustawa);
         $assignments = $this->assignments($term)->whereIn('diniyyah_class_subject_id', $subjects->pluck('id'))
             ->with(['teacher.user', 'schedules.classSession'])->orderBy('id')->get()->groupBy('diniyyah_class_subject_id');
@@ -86,12 +86,16 @@ class DiniyyahKkmAssignmentRoster
             if (! isset($rows[$key])) {
                 $scope = $scopes->get($key) ?? new DiniyyahKkmScope(['academic_term_id' => $term->id, 'subject_id' => $subject->subject_id, 'mustawa' => $level]);
                 $frozen = $frozenByScope[$key] ?? [];
+                $schoolManaged = $subject->subject?->schoolKkm() !== null || $scope->activeRevision?->is_school_fixed;
                 $rows[$key] = [
                     'key' => $key, 'class_subject_id' => $subject->id, 'subject_id' => $subject->subject_id,
                     'subject' => $subject->subject?->name, 'mustawa' => $level, 'scope_id' => $scope->id,
                     'assigned_teacher_id' => $scope->assigned_teacher_id, 'assigned_teacher' => $scope->assignedTeacher?->name,
                     'classes' => [], 'teachers' => [], 'frozen' => $frozen,
-                    'blocked' => ! $term->kkm_workflow_enabled ? 'Alur KKM semester ini belum aktif.' : ($frozen ? 'Terkunci oleh: '.implode(', ', $frozen) : null),
+                    'school_managed' => $schoolManaged,
+                    'blocked' => $schoolManaged
+                        ? (($frozen || ! $term->kkm_workflow_enabled) ? 'Ketetapan sekolah: KKM 70. Data historis yang sudah terkunci tetap dipertahankan.' : 'KKM tetap 70 — ditetapkan Sekolah/Kabag Diniyyah. Tidak memerlukan penyusun atau ACC guru.')
+                        : (! $term->kkm_workflow_enabled ? 'Alur KKM semester ini belum aktif.' : ($frozen ? 'Terkunci oleh: '.implode(', ', $frozen) : null)),
                 ];
             }
             $rows[$key]['classes'][$ct->id] = $ct->name;

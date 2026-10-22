@@ -23,7 +23,7 @@ class DiniyyahKkmAccess
 
     public function writes(User $user, DiniyyahKkmScope $scope): bool
     {
-        return $user->hasRole('guru') && $user->teacher?->id === $scope->assigned_teacher_id
+        return ! $scope->activeRevision?->is_school_fixed && $scope->subject?->schoolKkm() === null && $user->hasRole('guru') && $user->teacher?->id === $scope->assigned_teacher_id
             && $this->eligibleTeachers($scope)->whereKey($scope->assigned_teacher_id)->exists();
     }
 
@@ -41,6 +41,6 @@ class DiniyyahKkmAccess
             return false;
         }
 
-        return in_array($revision->status, ['approved', 'superseded'], true) || $this->manages($user) || $this->writes($user, $scope);
+        return in_array($revision->status, ['approved', 'superseded', 'school_fixed'], true) || $this->manages($user) || $this->writes($user, $scope);
     }
 }

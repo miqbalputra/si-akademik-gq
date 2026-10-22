@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\DiniyyahAssessmentSets\Schemas;
 
+use App\Models\DiniyyahClassSubject;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -15,8 +16,8 @@ class DiniyyahAssessmentSetForm
             ->components([
                 Select::make('diniyyah_class_subject_id')->label('Mapel Kelas')
                     ->relationship('classSubject', 'id')
-                    ->getOptionLabelFromRecordUsing(fn (\App\Models\DiniyyahClassSubject $record) => "{$record->classroomTerm?->name} - {$record->subject?->name}")
-                    ->getSearchResultsUsing(fn (string $search): array => \App\Models\DiniyyahClassSubject::searchOptions($search))
+                    ->getOptionLabelFromRecordUsing(fn (DiniyyahClassSubject $record) => "{$record->classroomTerm?->name} - {$record->subject?->name}")
+                    ->getSearchResultsUsing(fn (string $search): array => DiniyyahClassSubject::searchOptions($search))
                     ->searchable()
                     ->preload()
                     ->optionsLimit(200)
@@ -36,7 +37,7 @@ class DiniyyahAssessmentSetForm
                     ->default('weighted')
                     ->live(),
                 TextInput::make('kkm')->label('KKM')
-                    ->readOnly()->helperText('Mengikuti KKM mapel dan mustawa yang sudah disetujui.')
+                    ->readOnly()->helperText('Suluk dan Praktik Ibadah: ketetapan sekolah 70. Mapel lain mengikuti KKM mapel dan mustawa yang sudah disetujui.')
                     ->numeric()
                     ->minValue(0)
                     ->maxValue(100),

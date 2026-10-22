@@ -28,7 +28,7 @@ class DiniyyahKkmController extends Controller
 
     private function scopes(Request $request, ?Collection $teachingScopes = null)
     {
-        $filters = $request->validate(['academic_term_id' => ['nullable', 'integer', 'exists:academic_terms,id'], 'mustawa' => ['nullable', 'integer', 'between:1,6'], 'status' => ['nullable', 'in:draft,submitted,needs_revision,approved,unassigned']]);
+        $filters = $request->validate(['academic_term_id' => ['nullable', 'integer', 'exists:academic_terms,id'], 'mustawa' => ['nullable', 'integer', 'between:1,6'], 'status' => ['nullable', 'in:draft,submitted,needs_revision,approved,unassigned,school_fixed']]);
         if ($request->routeIs('guru.kkm.*')) {
             $teachingScopes ??= $this->roster->teachingScopes($request->user());
         }
@@ -55,7 +55,7 @@ class DiniyyahKkmController extends Controller
                     return true;
                 }
                 if ($status === 'unassigned') {
-                    return ! $scope->assigned_teacher_id;
+                    return ! $scope->assigned_teacher_id && ! $scope->activeRevision?->is_school_fixed && $scope->subject?->schoolKkm() === null;
                 }
                 // Do not expose a pending revision's existence to read-only teachers.
                 $visible = $this->access->manages($request->user()) || $this->access->writes($request->user(), $scope);
@@ -78,7 +78,7 @@ class DiniyyahKkmController extends Controller
         $rosterTerm = $terms->firstWhere('id', $request->integer('academic_term_id')) ?? $terms->firstWhere('is_active', true) ?? $terms->first();
         $roster = $manager && $rosterTerm ? $this->roster->forTerm($rosterTerm, $request->integer('mustawa') ?: null) : ['rows' => [], 'issues' => []];
         if ($request->input('status') === 'unassigned') {
-            $roster['rows'] = array_values(array_filter($roster['rows'], fn ($r) => ! $r['assigned_teacher_id']));
+            $roster['rows'] = array_values(array_filter($roster['rows'], fn ($r) => ! $r['assigned_teacher_id'] && ! $r['school_managed']));
         }
 
         return view('kkm.index', ['scopes' => $scopes, 'terms' => $terms, 'mustawaOptions' => $mustawaOptions, 'teacherPortal' => $teacherPortal, 'manager' => $manager, 'prefix' => $this->prefix($request), 'roster' => $roster, 'rosterTerm' => $rosterTerm, 'access' => $this->access]);

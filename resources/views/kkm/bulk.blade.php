@@ -29,7 +29,8 @@
                         <div class="grid gap-4 lg:grid-cols-2">
                             <div><h3 class="font-semibold text-heading">{{ $row['subject'] }} · Mustawa {{ $row['mustawa'] }}</h3><p class="mt-1 text-theme-sm text-muted">{{ implode(', ', $row['classes']) }}</p>@include('kkm.partials.candidates', ['teachers' => $row['teachers']])</div>
                             <div>
-                                @if($row['assigned_teacher_id'])<p class="font-medium">Sudah ditetapkan: {{ $row['assigned_teacher'] ?? 'Guru sebelumnya tidak tersedia' }}</p><p class="mt-1 text-theme-sm text-muted">Dilewati pada penetapan massal.</p>
+                                @if($row['school_managed'])<p class="font-medium">{{ $row['blocked'] }}</p>
+                                @elseif($row['assigned_teacher_id'])<p class="font-medium">Sudah ditetapkan: {{ $row['assigned_teacher'] ?? 'Guru sebelumnya tidak tersedia' }}</p><p class="mt-1 text-theme-sm text-muted">Dilewati pada penetapan massal.</p>
                                 @elseif($row['blocked'])<p class="text-muted">{{ $row['blocked'] }}</p>
                                 @else
                                     <div class="grid gap-3 sm:grid-cols-2">

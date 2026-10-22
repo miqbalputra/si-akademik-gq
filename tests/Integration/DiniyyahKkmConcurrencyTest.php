@@ -177,4 +177,32 @@ class DiniyyahKkmConcurrencyTest extends TestCase
         $this->assertSame('locked', $snapshot->fresh()->status);
         $this->assertSame(0, PanelNotification::where('notification_type', 'kkm_assigned')->count());
     }
+
+    public function test_concurrent_school_initialization_creates_one_fixed_version_and_one_notification_per_teacher(): void
+    {
+        $c = $this->context();
+        DiniyyahSubject::whereKey($c['cs']->subject_id)->update(['code' => 'suluk', 'name' => 'Suluk']);
+        DB::beginTransaction();
+        AcademicTerm::whereKey($c['term']->id)->lockForUpdate()->firstOrFail();
+        $workers = [];
+        foreach (['a', 'b'] as $name) {
+            $process = new Process([PHP_BINARY, dirname(__DIR__).'/Support/kkm-postgres-worker.php'], dirname(__DIR__, 2));
+            $process->setInput(json_encode(['settings' => $this->settings, 'name' => 'kkm_concurrent_school_'.$name, 'action' => 'school_initialize', 'subject' => $c['cs']->id], JSON_THROW_ON_ERROR));
+            $process->setTimeout(60)->start();
+            $this->processes[] = $process;
+            $workers[] = $process;
+        }
+        $this->awaitBlocked(2);
+        DB::commit();
+        $first = $this->processResult($workers[0]);
+        $second = $this->processResult($workers[1]);
+        $this->assertTrue($first['ok']);
+        $this->assertTrue($second['ok']);
+        $this->assertSame($first['result']['revision_id'], $second['result']['revision_id']);
+        $this->assertSame(1, $c['scope']->revisions()->count());
+        $this->assertSame('school_fixed', $c['scope']->fresh()->activeRevision->status);
+        $this->assertSame('70.00', $c['cs']->fresh()->kkm);
+        $this->assertSame(2, PanelNotification::where('notification_type', 'kkm_approved')->count());
+        $this->assertSame(2, PanelNotification::where('notification_type', 'kkm_approved')->where('batch_count', 1)->count());
+    }
 }

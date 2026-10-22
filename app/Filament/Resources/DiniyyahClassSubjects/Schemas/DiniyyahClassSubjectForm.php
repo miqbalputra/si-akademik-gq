@@ -32,7 +32,7 @@ class DiniyyahClassSubjectForm
                     ->required()
                     ->default('weighted'),
                 TextInput::make('kkm')->label('KKM')
-                    ->readOnly()->helperText('Ditetapkan melalui menu Penetapan KKM.')
+                    ->readOnly()->helperText('Suluk dan Praktik Ibadah: ketetapan sekolah 70. Mapel lain mengikuti menu Penetapan KKM.')
                     ->numeric()
                     ->minValue(0)
                     ->maxValue(100),

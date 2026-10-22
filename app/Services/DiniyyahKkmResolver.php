@@ -50,7 +50,17 @@ class DiniyyahKkmResolver
         if (! $this->required($subject)) {
             return ['kkm' => $legacy ?? $subject->kkm, 'kkm_revision_id' => null];
         }
-        $revision = $this->scopeFor($subject)?->activeRevision;
+        $scope = $this->scopeFor($subject);
+        $revision = $scope?->activeRevision;
+        if ($subject->subject?->schoolKkm() !== null && ! $revision?->is_school_fixed) {
+            $revision = app(DiniyyahSchoolKkm::class)->ensure($subject);
+            if (! $revision) {
+                $historicalScope = $scope ?? new DiniyyahKkmScope(['academic_term_id' => $subject->classroomTerm->academic_term_id, 'subject_id' => $subject->subject_id, 'mustawa' => self::mustawa($subject->classroomTerm->classroom?->level_name)]);
+                if ($this->frozen($historicalScope)) {
+                    return ['kkm' => $legacy ?? $subject->kkm, 'kkm_revision_id' => null];
+                }
+            }
+        }
 
         return ['kkm' => $revision?->final_kkm, 'kkm_revision_id' => $revision?->id];
     }
@@ -85,8 +95,13 @@ class DiniyyahKkmResolver
     {
         return DB::transaction(function () use ($classroomTerm, $callback) {
             if ($classroomTerm->academicTerm?->kkm_workflow_enabled) {
-                $scopes = $classroomTerm->diniyyahClassSubjects()->where('is_active', true)->get()
-                    ->map(fn ($s) => $this->scopeFor($s, true));
+                $subjects = $classroomTerm->diniyyahClassSubjects()->with('subject')->where('is_active', true)->get();
+                foreach ($subjects as $subject) {
+                    if ($subject->subject?->schoolKkm() !== null) {
+                        $this->resolve($subject);
+                    }
+                }
+                $scopes = $subjects->map(fn ($s) => $this->scopeFor($s, true));
                 if ($scopes->contains(null)) {
                     throw ValidationException::withMessages(['kkm' => 'Jenjang kelas belum dikenali. Lengkapi Tingkat dengan Mustawa 1–6.']);
                 }
@@ -110,6 +125,9 @@ class DiniyyahKkmResolver
     public function withAssessmentLock(DiniyyahAssessmentSet $set, callable $callback): mixed
     {
         return DB::transaction(function () use ($set, $callback) {
+            if ($set->classSubject?->subject?->schoolKkm() !== null) {
+                $this->resolve($set->classSubject, $set->kkm === null ? null : (float) $set->kkm);
+            }
             if ($this->required($set->classSubject) && ($scope = $this->scopeFor($set->classSubject, true))) {
                 DiniyyahKkmScope::whereKey($scope->id)->lockForUpdate()->firstOrFail();
             }

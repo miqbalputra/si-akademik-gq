@@ -17,7 +17,7 @@
                     <td class="p-3"><strong>{{ $row['subject'] }}</strong><p class="mt-1 text-muted">Mustawa {{ $row['mustawa'] }}</p></td>
                     <td class="min-w-64 p-3"><p>{{ implode(', ', $row['classes']) }}</p>@include('kkm.partials.candidates', ['teachers' => $row['teachers']])</td>
                     <td class="min-w-64 p-3">
-                        <p class="mb-2">Penyusun: <strong>{{ $row['assigned_teacher'] ?? ($row['assigned_teacher_id'] ? 'Guru sebelumnya tidak tersedia' : 'Belum ditugaskan') }}</strong></p>
+                        @if(! $row['school_managed'])<p class="mb-2">Penyusun: <strong>{{ $row['assigned_teacher'] ?? ($row['assigned_teacher_id'] ? 'Guru sebelumnya tidak tersedia' : 'Belum ditugaskan') }}</strong></p>@endif
                         @if($row['blocked'])<p class="text-muted">{{ $row['blocked'] }}</p>
                         @elseif($row['teachers'])
                             <form method="POST" action="{{ route($prefix.'assign') }}" class="space-y-2">@csrf

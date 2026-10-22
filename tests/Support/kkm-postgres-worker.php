@@ -1,7 +1,9 @@
 <?php
 
+use App\Models\DiniyyahClassSubject;
 use App\Models\User;
 use App\Services\DiniyyahKkmBulkAssignment;
+use App\Services\DiniyyahSchoolKkm;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\DB;
@@ -44,7 +46,9 @@ if (realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) {
     kkmPostgresApplication($input['settings']);
     DB::select("SELECT set_config('application_name', ?, false)", [$input['name']]);
     try {
-        $result = app(DiniyyahKkmBulkAssignment::class)->apply($input['term'], $input['entries'], $input['token'], User::findOrFail($input['actor']));
+        $result = ($input['action'] ?? 'bulk') === 'school_initialize'
+            ? ['revision_id' => app(DiniyyahSchoolKkm::class)->ensure(DiniyyahClassSubject::findOrFail($input['subject']))?->id]
+            : app(DiniyyahKkmBulkAssignment::class)->apply($input['term'], $input['entries'], $input['token'], User::findOrFail($input['actor']));
         echo json_encode(['ok' => true, 'result' => $result], JSON_THROW_ON_ERROR);
     } catch (ValidationException $exception) {
         echo json_encode(['ok' => false, 'errors' => $exception->errors()], JSON_THROW_ON_ERROR);

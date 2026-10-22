@@ -27,19 +27,25 @@ class DiniyyahKkmExportService
         $theme = app(SpreadsheetTheme::class);
         $workbook = $theme->workbook();
         $summary = $workbook->getActiveSheet()->setTitle('Rekap KKM');
-        $theme->title($summary, 'PENETAPAN KKM DINIYYAH', 'KKM = ROUND((Kompleksitas + Daya Dukung + Intake) / 3, 0)', 11);
-        $theme->tableHeader($summary, 5, ['Semester', 'Mustawa', 'Mapel', 'Versi', 'Status', 'Kompleksitas', 'Daya Dukung', 'Intake', 'Rata-rata', 'KKM', 'ACC oleh / waktu']);
+        $theme->title($summary, 'PENETAPAN KKM DINIYYAH', 'Mapel umum: KKM = ROUND((Kompleksitas + Daya Dukung + Intake) / 3, 0). Suluk dan Praktik Ibadah: ketetapan sekolah 70.', 11);
+        $theme->tableHeader($summary, 5, ['Semester', 'Mustawa', 'Mapel', 'Versi', 'Status', 'Kompleksitas', 'Daya Dukung', 'Intake', 'Rata-rata', 'KKM', 'Penetap / ACC oleh / waktu']);
         $detail = $workbook->createSheet()->setTitle('Pertimbangan');
-        $theme->title($detail, 'PERTIMBANGAN PENYUSUN KKM', 'Kategori ditentukan dari angka setiap unsur. Draf belum menjadi KKM resmi.', 9);
-        $theme->tableHeader($detail, 5, ['Semester', 'Mustawa', 'Mapel / Versi', 'Penyusun', 'Status', 'Unsur', 'Angka', 'Kategori', 'Alasan']);
+        $theme->title($detail, 'DASAR PENETAPAN KKM', 'Mapel umum menggunakan unsur KKM. Suluk dan Praktik Ibadah menggunakan ketetapan sekolah 70. Draf belum menjadi KKM resmi.', 9);
+        $theme->tableHeader($detail, 5, ['Semester', 'Mustawa', 'Mapel / Versi', 'Penetap / Penyusun', 'Status', 'Unsur', 'Angka', 'Kategori', 'Alasan']);
         $row = $detailRow = 6;
         foreach ($revisions as $revision) {
             $scope = $revision->scope;
             $term = $scope->academicTerm?->academicYear?->name.' '.$scope->academicTerm?->name;
-            $state = in_array($revision->status, ['approved', 'superseded'], true) ? $revision->status_label : 'BELUM DISETUJUI — '.$revision->status_label;
+            $state = in_array($revision->status, ['approved', 'superseded', 'school_fixed'], true) ? $revision->status_label : 'BELUM DISETUJUI — '.$revision->status_label;
             $scores = array_map(fn ($key) => $revision->criteria[$key]['score'] ?? null, array_keys(DiniyyahKkmCalculator::CRITERIA));
-            $values = [$term, (int) $scope->mustawa, $scope->subject?->name, $revision->version, $state, ...$scores, $revision->average, $revision->final_kkm, $revision->reviewer?->name.' / '.$revision->reviewed_at?->format('d-m-Y H:i')];
+            $values = [$term, (int) $scope->mustawa, $scope->subject?->name, $revision->version, $state, ...$scores, $revision->average, $revision->final_kkm, ($revision->is_school_fixed ? 'Sekolah/Kabag Diniyyah' : $revision->reviewer?->name).' / '.$revision->reviewed_at?->format('d-m-Y H:i')];
             $this->writeRow($summary, $row++, $values);
+            if ($revision->is_school_fixed) {
+                $this->writeRow($detail, $detailRow, [$term, (int) $scope->mustawa, $scope->subject?->name.' / v'.$revision->version, 'Sekolah/Kabag Diniyyah', $state, 'Ketetapan sekolah', $revision->final_kkm, 'KKM Tetap', 'Ditetapkan Sekolah/Kabag Diniyyah. Tidak melalui perhitungan unsur, pengajuan, perubahan, revisi, atau ACC guru.']);
+                $detail->getRowDimension($detailRow++)->setRowHeight(52);
+
+                continue;
+            }
             foreach (DiniyyahKkmCalculator::CRITERIA as $key => $label) {
                 $criterion = $revision->criteria[$key] ?? [];
                 $lines = [];

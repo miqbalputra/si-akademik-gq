@@ -22,4 +22,16 @@ class DiniyyahSubject extends Model
     {
         return $this->hasMany(DiniyyahClassSubject::class, 'subject_id');
     }
+
+    public function schoolKkm(): ?int
+    {
+        foreach ([$this->code, $this->name] as $identifier) {
+            $key = preg_replace('/[^a-z0-9]+/', '_', strtolower(trim($identifier ?? '')));
+            if (in_array($key, ['suluk', 'praktik_ibadah', 'praktek_ibadah'], true)) {
+                return 70;
+            }
+        }
+
+        return null;
+    }
 }

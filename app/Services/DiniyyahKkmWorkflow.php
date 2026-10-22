@@ -21,6 +21,7 @@ class DiniyyahKkmWorkflow
     public function assign(DiniyyahClassSubject $subject, int $teacherId, User $actor): DiniyyahKkmScope
     {
         abort_unless($this->access->manages($actor), 403);
+        $this->ensureTeacherManaged($subject->subject?->schoolKkm(), (bool) $this->resolver->scopeFor($subject)?->activeRevision?->is_school_fixed);
 
         return DB::transaction(function () use ($subject, $teacherId, $actor) {
             $term = $subject->classroomTerm->academicTerm()->lockForUpdate()->firstOrFail();
@@ -44,6 +45,7 @@ class DiniyyahKkmWorkflow
                 $setIds = DiniyyahAssessmentSet::whereIn('diniyyah_class_subject_id', $allIds)->pluck('id');
                 DiniyyahAssessmentSet::whereIn('id', $setIds)->update(['kkm' => null, 'kkm_revision_id' => null]);
                 DiniyyahAssessmentResult::whereIn('diniyyah_assessment_set_id', $setIds)->update(['kkm' => null, 'kkm_revision_id' => null, 'is_passed' => false]);
+                app(DiniyyahSchoolKkm::class)->initializeExisting($term->id);
             }
             $oldTeacher = $scope->assigned_teacher_id;
             if ($oldTeacher === $teacherId) {
@@ -140,7 +142,8 @@ class DiniyyahKkmWorkflow
         });
     }
 
-    private function synchronize(DiniyyahKkmScope $scope, DiniyyahKkmRevision $revision): void
+    /** Called only by workflows holding the scope lock, after checking frozen documents. */
+    public function synchronize(DiniyyahKkmScope $scope, DiniyyahKkmRevision $revision): void
     {
         $subjects = $this->resolver->classSubjects($scope);
         $ids = (clone $subjects)->pluck('id');
@@ -177,6 +180,7 @@ class DiniyyahKkmWorkflow
     {
         return DB::transaction(function () use ($scope, $callback) {
             $scope = DiniyyahKkmScope::whereKey($scope->id)->lockForUpdate()->firstOrFail();
+            $this->ensureTeacherManaged($scope->subject?->schoolKkm(), (bool) $scope->activeRevision?->is_school_fixed);
             $this->resolver->ensureOpen($scope);
 
             return $callback($scope);
@@ -202,5 +206,12 @@ class DiniyyahKkmWorkflow
     private function invalid(string $message): never
     {
         throw ValidationException::withMessages(['kkm' => $message]);
+    }
+
+    private function ensureTeacherManaged(?int $schoolKkm, bool $fixedVersion = false): void
+    {
+        if ($schoolKkm !== null || $fixedVersion) {
+            $this->invalid('KKM mapel ini ditetapkan Sekolah/Kabag Diniyyah sebesar '.($schoolKkm ?? 70).'. Penugasan penyusun, pengajuan, perubahan, dan ACC tidak tersedia.');
+        }
     }
 }
