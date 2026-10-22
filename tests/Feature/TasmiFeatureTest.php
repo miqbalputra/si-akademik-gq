@@ -158,7 +158,8 @@ class TasmiFeatureTest extends TestCase
         $resp->assertSee('>Senin</option>', false);
         $resp->assertSee('>Ahad</option>', false);
         $resp->assertSee('data-hijri-auto', false);
-        $resp->assertSee("Intl.DateTimeFormat('id-ID-u-ca-islamic'", false);
+        $resp->assertSee('data-hijri-url="'.route('guru.tasmi.hijri-date').'"', false);
+        $resp->assertSee('fetch(hijriInput.dataset.hijriUrl', false);
         $resp->assertSee('method="GET" action="'.route('guru.tasmi.create').'"', false);
         $resp->assertSee('name="classroom_term_id" value="'.$ctx['classroomTerm']->id.'"', false);
     }
@@ -182,7 +183,48 @@ class TasmiFeatureTest extends TestCase
 
     public function test_hijri_date_is_calculated_from_gregorian_date_in_wib(): void
     {
-        $this->assertSame('9 Rabiulawal 1448 H', app(TasmiService::class)->hijriDateFor('2026-08-21'));
+        $this->assertSame('9 Rabi\'ul Awwal 1448 H', app(TasmiService::class)->hijriDateFor('2026-08-21'));
+    }
+
+    public function test_examiner_can_fetch_standard_hijri_date_for_selected_gregorian_date(): void
+    {
+        $ctx = $this->makeContext('male');
+        TasmiExaminerAssignment::create([
+            'academic_term_id' => $ctx['term']->id,
+            'teacher_id' => $ctx['teacher']->id,
+            'status' => 'active',
+        ]);
+
+        $response = $this->actingAs($ctx['user'])->getJson(route('guru.tasmi.hijri-date', [
+            'date' => '2026-08-21',
+        ]));
+
+        $response->assertOk()->assertExactJson([
+            'hijri_date' => '9 Rabi\'ul Awwal 1448 H',
+        ]);
+    }
+
+    public function test_existing_hijri_month_spelling_is_normalized_when_read(): void
+    {
+        $monthNames = [
+            'Muharam' => 'Muharram',
+            'Safar' => 'Shafar',
+            'Rabiulawal' => "Rabi'ul Awwal",
+            'Rabiulakhir' => "Rabi'ul Akhir",
+            'Jumadilawal' => 'Jumadal Ula',
+            'Jumadilakhir' => 'Jumadal Akhirah',
+            'Rajab' => 'Rajab',
+            'Syakban' => "Sya'ban",
+            'Ramadan' => 'Ramadhan',
+            'Syawal' => 'Syawwal',
+            'Zulkaidah' => "Dzulqo'dah",
+            'Zulhijah' => 'Dzulhijjah',
+        ];
+
+        foreach ($monthNames as $legacyName => $canonicalName) {
+            $record = new TasmiRecord(['hijri_date' => "1 {$legacyName} 1448 H"]);
+            $this->assertSame("1 {$canonicalName} 1448 H", $record->hijri_date);
+        }
     }
 
     public function test_examiner_can_store_1_juz_tasmi(): void
@@ -215,7 +257,7 @@ class TasmiFeatureTest extends TestCase
             'juz_start' => 30,
             'juz_end' => 30,
             'predicate' => 'mumtaz',
-            'hijri_date' => '3 Rabiulawal 1448 H',
+            'hijri_date' => '3 Rabi\'ul Awwal 1448 H',
         ]);
         // Audit log tercatat.
         $this->assertDatabaseHas('score_change_logs', [

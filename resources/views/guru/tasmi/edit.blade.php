@@ -56,8 +56,8 @@
                 </div>
                 <div>
                     <label for="hijri_date" class="form-label ui-form-label">Tanggal (Hijriyah)</label>
-                    <input id="hijri_date" name="hijri_date" type="text" class="form-input text-theme-sm font-normal" readonly data-hijri-auto maxlength="50" value="{{ old('hijri_date', $record->hijri_date) }}">
-                    <p class="form-hint">Terisi otomatis berdasarkan kalender Hijriyah dan zona waktu WIB.</p>
+                    <input id="hijri_date" name="hijri_date" type="text" class="form-input text-theme-sm font-normal" readonly data-hijri-auto data-hijri-url="{{ route('guru.tasmi.hijri-date') }}" maxlength="50" value="{{ old('hijri_date', $record->hijri_date) }}">
+                    <p id="hijri-date-status" class="form-hint" role="status" aria-live="polite">Terisi otomatis berdasarkan kalender Hijriyah dan zona waktu WIB.</p>
                 </div>
             </div>
 
@@ -188,27 +188,41 @@
             feedback.style.color = valid ? 'var(--ui-success-ink, #15803d)' : 'var(--ui-danger-ink)';
             if (submitButton) submitButton.disabled = !valid;
         }
+        var tasmiHijriDateRequest = 0;
+
         function tasmiAutofillHijriDate() {
             var dateInput = document.getElementById('exam_date');
             var hijriInput = document.getElementById('hijri_date');
-            if (!dateInput || !hijriInput) return;
+            var status = document.getElementById('hijri-date-status');
+            if (!dateInput || !hijriInput || !status) return;
+            var requestId = ++tasmiHijriDateRequest;
             if (!dateInput.value) {
                 hijriInput.value = '';
+                status.textContent = 'Terisi otomatis berdasarkan kalender Hijriyah dan zona waktu WIB.';
                 return;
             }
-            try {
-                var date = new Date(dateInput.value + 'T00:00:00+07:00');
-                if (Number.isNaN(date.getTime())) return;
-                hijriInput.value = new Intl.DateTimeFormat('id-ID-u-ca-islamic', {
-                    timeZone: 'Asia/Jakarta',
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric',
-                    era: 'short'
-                }).format(date);
-            } catch (error) {
-                // Server menghitung ulang ketika data disimpan.
-            }
+
+            hijriInput.value = '';
+            status.textContent = 'Menghitung tanggal Hijriyah...';
+            fetch(hijriInput.dataset.hijriUrl + '?date=' + encodeURIComponent(dateInput.value), {
+                headers: { 'Accept': 'application/json' }
+            })
+                .then(function (response) {
+                    if (!response.ok) throw new Error('Hijri date request failed');
+                    return response.json();
+                })
+                .then(function (data) {
+                    if (requestId !== tasmiHijriDateRequest) return;
+                    hijriInput.value = data.hijri_date || '';
+                    status.textContent = hijriInput.value
+                        ? 'Tanggal Hijriyah tersinkron otomatis berdasarkan tanggal Masehi.'
+                        : 'Tanggal Hijriyah belum dapat dihitung oleh server.';
+                })
+                .catch(function () {
+                    if (requestId !== tasmiHijriDateRequest) return;
+                    hijriInput.value = '';
+                    status.textContent = 'Gagal menyinkronkan tanggal Hijriyah. Coba ubah tanggal lagi.';
+                });
         }
         document.addEventListener('DOMContentLoaded', function () {
             tasmiToggleJuzFields();

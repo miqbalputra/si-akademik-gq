@@ -12,6 +12,7 @@ use App\Services\TasmiReportDownloadService;
 use App\Services\TasmiReportService;
 use App\Services\TasmiService;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -101,6 +102,20 @@ class GuruTasmiController extends Controller
             'dayOptions' => TasmiRecord::examDayOptions(),
             'examTypeOptions' => TasmiRecord::examTypeOptions(),
             'predicateOptions' => TasmiRecord::predicateOptions(),
+        ]);
+    }
+
+    public function hijriDate(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless($user?->teacher && $user->isTasmiExaminer(), 403, 'Anda tidak ditugaskan sebagai PJ Tasmi\'.');
+
+        $validated = $request->validate([
+            'date' => ['required', 'date'],
+        ]);
+
+        return response()->json([
+            'hijri_date' => $this->tasmiService->hijriDateFor($validated['date']),
         ]);
     }
 

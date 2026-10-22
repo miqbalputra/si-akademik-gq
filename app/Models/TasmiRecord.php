@@ -135,4 +135,63 @@ class TasmiRecord extends Model
 
         return "Juz {$this->juz_start} - {$this->juz_end}";
     }
+
+    public function getHijriDateAttribute(?string $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return $value;
+        }
+
+        $monthAliases = [
+            'Rabi al-Akhir' => "Rabi'ul Akhir",
+            'Rabi al-Awwal' => "Rabi'ul Awwal",
+            'Jumada al-Akhirah' => 'Jumadal Akhirah',
+            'Jumada al-Akhir' => 'Jumadal Akhirah',
+            'Jumada al-Ula' => 'Jumadal Ula',
+            'Dzulqo dah' => "Dzulqo'dah",
+            'Dzulqa dah' => "Dzulqo'dah",
+            'Zulqa dah' => "Dzulqo'dah",
+            'Dhul Hijjah' => 'Dzulhijjah',
+            'Dhul Qadah' => "Dzulqo'dah",
+            'Rabiulakhir' => "Rabi'ul Akhir",
+            'Rabiulawal' => "Rabi'ul Awwal",
+            'Jumadilakhir' => 'Jumadal Akhirah',
+            'Jumadilawal' => 'Jumadal Ula',
+            'Dzulqa\'dah' => "Dzulqo'dah",
+            'Dzulqaidah' => "Dzulqo'dah",
+            'Zulkaidah' => "Dzulqo'dah",
+            'Zulhijah' => 'Dzulhijjah',
+            'Dzulhijjah' => 'Dzulhijjah',
+            'Syakban' => "Sya'ban",
+            'Sha\'ban' => "Sya'ban",
+            'Shaban' => "Sya'ban",
+            'Ramadan' => 'Ramadhan',
+            'Shafar' => 'Shafar',
+            'Safar' => 'Shafar',
+            'Muharam' => 'Muharram',
+            'Muharram' => 'Muharram',
+            'Rajab' => 'Rajab',
+            'Syawwal' => 'Syawwal',
+            'Shawwal' => 'Syawwal',
+            'Syawal' => 'Syawwal',
+            'Jumadal Ula' => 'Jumadal Ula',
+            'Jumadal Akhirah' => 'Jumadal Akhirah',
+            "Rabi'ul Awwal" => "Rabi'ul Awwal",
+            "Rabi'ul Akhir" => "Rabi'ul Akhir",
+            "Sya'ban" => "Sya'ban",
+            "Dzulqo'dah" => "Dzulqo'dah",
+        ];
+
+        uksort($monthAliases, fn (string $a, string $b): int => strlen($b) <=> strlen($a));
+
+        foreach ($monthAliases as $alias => $month) {
+            $value = preg_replace(
+                '/(?<![\p{L}])'.preg_quote($alias, '/').'(?![\p{L}])/iu',
+                $month,
+                $value,
+            ) ?? $value;
+        }
+
+        return $value;
+    }
 }

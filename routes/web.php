@@ -176,6 +176,7 @@ Route::middleware(['auth:web', 'role:guru'])->prefix('guru')->name('guru.')->gro
     // Menu "Tasmi'" — khusus guru yang ditugaskan sebagai PJ Tasmi' (tasmi_examiner_assignments).
     // Ustadz hanya melihat kelas ikhwan, ustadzah hanya melihat kelas akhwat.
     Route::get('/tasmi', [GuruTasmiController::class, 'index'])->name('tasmi.index');
+    Route::get('/tasmi/hijri-date', [GuruTasmiController::class, 'hijriDate'])->name('tasmi.hijri-date');
     Route::get('/tasmi/create', [GuruTasmiController::class, 'create'])->name('tasmi.create');
     Route::post('/tasmi', [GuruTasmiController::class, 'store'])->name('tasmi.store');
     Route::get('/tasmi/records', [GuruTasmiController::class, 'records'])->name('tasmi.records');

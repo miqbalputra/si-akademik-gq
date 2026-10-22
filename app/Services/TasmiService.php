@@ -12,6 +12,21 @@ use Illuminate\Support\Collection;
 
 class TasmiService
 {
+    private const HIJRI_MONTH_NAMES = [
+        1 => 'Muharram',
+        2 => 'Shafar',
+        3 => "Rabi'ul Awwal",
+        4 => "Rabi'ul Akhir",
+        5 => 'Jumadal Ula',
+        6 => 'Jumadal Akhirah',
+        7 => 'Rajab',
+        8 => "Sya'ban",
+        9 => 'Ramadhan',
+        10 => 'Syawwal',
+        11 => "Dzulqo'dah",
+        12 => 'Dzulhijjah',
+    ];
+
     /**
      * Dapatkan penugasan PJ Tasmi' aktif untuk guru pada periode aktif.
      * Mengembalikan null bila guru tidak ditugaskan atau tidak punya teacher.
@@ -95,10 +110,23 @@ class TasmiService
             \IntlDateFormatter::NONE,
             'Asia/Jakarta',
             \IntlDateFormatter::TRADITIONAL,
-            'd MMMM y G',
+            'd|M|y',
         );
         $formatted = $formatter->format($wibDate->getTimestamp());
+        if (! is_string($formatted)) {
+            return null;
+        }
 
-        return is_string($formatted) ? $formatted : null;
+        $parts = explode('|', $formatted);
+        if (count($parts) !== 3 || ! ctype_digit($parts[1])) {
+            return null;
+        }
+
+        $month = self::HIJRI_MONTH_NAMES[(int) $parts[1]] ?? null;
+        if (! $month) {
+            return null;
+        }
+
+        return "{$parts[0]} {$month} {$parts[2]} H";
     }
 }
