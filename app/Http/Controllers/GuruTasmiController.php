@@ -281,10 +281,20 @@ class GuruTasmiController extends Controller
 
     private function validateStore(Request $request): array
     {
+        // Form 1 juz mengirim satu pilihan (juz_single). Ubah menjadi rentang
+        // satu juz sebelum validasi agar server tetap menjadi sumber kebenaran.
+        if ($request->input('exam_type') === TasmiRecord::EXAM_TYPE_ONE_JUZ && $request->filled('juz_single')) {
+            $request->merge([
+                'juz_start' => $request->input('juz_single'),
+                'juz_end' => $request->input('juz_single'),
+            ]);
+        }
+
         return $request->validate([
             'classroom_term_id' => ['required', 'exists:classroom_terms,id'],
             'student_id' => ['required', 'exists:students,id'],
             'exam_type' => ['required', Rule::in(array_keys(TasmiRecord::examTypeOptions()))],
+            'juz_single' => ['nullable', 'integer', 'min:1', 'max:30'],
             'juz_start' => ['required', 'integer', 'min:1', 'max:30'],
             'juz_end' => ['required', 'integer', 'min:1', 'max:30'],
             'exam_day_label' => ['nullable', 'string', 'max:50'],
@@ -296,6 +306,9 @@ class GuruTasmiController extends Controller
             'classroom_term_id.required' => 'Pilih kelas terlebih dahulu.',
             'student_id.required' => 'Pilih nama santri terlebih dahulu.',
             'exam_type.required' => 'Pilih jenis ujian Tasmi\'.',
+            'juz_single.integer' => 'Pilihan juz harus berupa angka.',
+            'juz_single.min' => 'Juz yang dipilih minimal Juz 1.',
+            'juz_single.max' => 'Juz yang dipilih maksimal Juz 30.',
             'juz_start.required' => 'Pilih juz awal.',
             'juz_end.required' => 'Pilih juz akhir.',
             'exam_date.required' => 'Pilih tanggal ujian.',

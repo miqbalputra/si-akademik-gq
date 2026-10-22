@@ -195,8 +195,9 @@ class TasmiFeatureTest extends TestCase
             'classroom_term_id' => $ctx['classroomTerm']->id,
             'student_id' => $ctx['student']->id,
             'exam_type' => TasmiRecord::EXAM_TYPE_ONE_JUZ,
-            'juz_start' => 30,
-            'juz_end' => 30,
+            // Bentuk payload dari form satu juz, termasuk batas atas yang
+            // sebelumnya tidak dapat dipetakan oleh dropdown rentang 5 juz.
+            'juz_single' => 30,
             'exam_day_label' => 'Hari 1',
             'exam_date' => '2026-08-15',
             'hijri_date' => '1 Shafar 1448 H',
@@ -219,6 +220,9 @@ class TasmiFeatureTest extends TestCase
             'new_score' => 'mumtaz',
             'reason' => 'created_tasmi',
         ]);
+
+        $dashboard = $this->actingAs($ctx['user'])->get(route('guru.tasmi.index'));
+        $dashboard->assertOk()->assertSee('Juz 30');
     }
 
     public function test_examiner_cannot_store_1_juz_with_mismatched_juz_range(): void
@@ -270,6 +274,39 @@ class TasmiFeatureTest extends TestCase
             'juz_end' => 30,
             'predicate' => 'jayyid_jiddan',
         ]);
+    }
+
+    public function test_examiner_can_store_and_view_5_juz_from_juz_1_to_5(): void
+    {
+        $ctx = $this->makeContext('male');
+        TasmiExaminerAssignment::create([
+            'academic_term_id' => $ctx['term']->id,
+            'teacher_id' => $ctx['teacher']->id,
+            'status' => 'active',
+        ]);
+
+        $resp = $this->actingAs($ctx['user'])->post(route('guru.tasmi.store'), [
+            'classroom_term_id' => $ctx['classroomTerm']->id,
+            'student_id' => $ctx['student']->id,
+            'exam_type' => TasmiRecord::EXAM_TYPE_FIVE_JUZ,
+            'juz_start' => 1,
+            'juz_end' => 5,
+            'exam_day_label' => 'Senin',
+            'exam_date' => '2026-08-20',
+            'predicate' => TasmiRecord::PREDICATE_JAYYID,
+        ]);
+
+        $resp->assertRedirect();
+        $this->assertDatabaseHas('tasmi_records', [
+            'student_id' => $ctx['student']->id,
+            'exam_type' => TasmiRecord::EXAM_TYPE_FIVE_JUZ,
+            'juz_start' => 1,
+            'juz_end' => 5,
+            'predicate' => TasmiRecord::PREDICATE_JAYYID,
+        ]);
+
+        $dashboard = $this->actingAs($ctx['user'])->get(route('guru.tasmi.index'));
+        $dashboard->assertOk()->assertSee('Juz 1 - 5');
     }
 
     public function test_examiner_cannot_store_5_juz_with_wrong_range(): void

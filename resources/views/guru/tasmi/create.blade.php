@@ -91,10 +91,10 @@
 
                     <div id="juz-one-block" style="display:none;margin-bottom:12px;">
                         <label for="juz_single" class="form-label ui-form-label">Juz yang Diuji (1 - 30)</label>
-                        <select id="juz_single" name="juz_single" class="form-input text-theme-sm font-normal" onchange="document.getElementById('juz_start').value=this.value; document.getElementById('juz_end').value=this.value;">
+                        <select id="juz_single" name="juz_single" class="form-input text-theme-sm font-normal">
                             <option value="">— Pilih juz —</option>
                             @for($i = 1; $i <= 30; $i++)
-                                <option value="{{ $i }}">Juz {{ $i }}</option>
+                                <option value="{{ $i }}" @selected((string)old('juz_single') === (string)$i)>Juz {{ $i }}</option>
                             @endfor
                         </select>
                         <p class="form-hint">Setoran 1 juz full — pilih satu juz (1-30).</p>
@@ -160,18 +160,33 @@
             var type = checked ? checked.value : null;
             var oneBlock = document.getElementById('juz-one-block');
             var fiveBlock = document.getElementById('juz-five-block');
+            var single = document.getElementById('juz_single');
+            var start = document.getElementById('juz_start');
+            var end = document.getElementById('juz_end');
+            var isOneJuz = type === '1_juz';
+            var isFiveJuz = type === '5_juz';
             if (oneBlock) oneBlock.style.display = (type === '1_juz') ? 'block' : 'none';
             if (fiveBlock) fiveBlock.style.display = (type === '5_juz') ? 'block' : 'none';
 
-            // Kosongkan field juz yang tidak aktif agar tidak ter-submit
-            if (type === '1_juz') {
-                var js = document.getElementById('juz_start');
-                var je = document.getElementById('juz_end');
-                if (js) js.value = '';
-                if (je) je.value = '';
-            } else if (type === '5_juz') {
-                var jsingle = document.getElementById('juz_single');
-                if (jsingle) jsingle.value = '';
+            // Hanya field untuk tipe ujian aktif yang ikut dikirim.
+            if (single) {
+                single.disabled = !isOneJuz;
+                single.required = isOneJuz;
+            }
+            if (start) {
+                start.disabled = !isFiveJuz;
+                start.required = isFiveJuz;
+            }
+            if (end) {
+                end.disabled = !isFiveJuz;
+                end.required = isFiveJuz;
+            }
+
+            if (isOneJuz) {
+                if (start) start.value = '';
+                if (end) end.value = '';
+            } else if (isFiveJuz && single) {
+                single.value = '';
             }
         }
 
@@ -180,9 +195,11 @@
             var end = document.getElementById('juz_end');
             if (!start || !end) return;
             var s = parseInt(start.value, 10);
-            if (!s) return;
+            if (!s) {
+                end.value = '';
+                return;
+            }
             var computed = s + 4;
-            if (computed > 30) computed = 30;
             end.value = String(computed);
         }
 
