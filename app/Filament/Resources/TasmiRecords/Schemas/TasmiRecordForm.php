@@ -69,14 +69,14 @@ class TasmiRecordForm
                             ->minValue(1)
                             ->maxValue(30)
                             ->required()
-                            ->helperText('Untuk 1 juz: juz awal = juz akhir. Untuk 5 juz: rentang harus 5 juz.'),
+                            ->helperText('Untuk 1 juz: juz awal = juz akhir. Untuk 5 juz: selisih harus 4, boleh naik atau turun.'),
                         TextInput::make('juz_end')
                             ->label('Juz Akhir')
                             ->numeric()
                             ->minValue(1)
                             ->maxValue(30)
                             ->required()
-                            ->helperText('Untuk 1 juz: juz akhir = juz awal. Untuk 5 juz: juz akhir - juz awal + 1 = 5.'),
+                            ->helperText('Untuk 1 juz: juz akhir = juz awal. Untuk 5 juz: rentang harus tepat 5 juz, boleh naik atau turun.'),
                         TextInput::make('exam_day_label')
                             ->label('Label Hari')
                             ->placeholder('Mis. Hari 1')

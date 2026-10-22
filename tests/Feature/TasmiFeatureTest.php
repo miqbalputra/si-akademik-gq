@@ -150,6 +150,9 @@ class TasmiFeatureTest extends TestCase
         $resp->assertSee('NIS 12345');
         $resp->assertSee('Tasmi\' 1 Juz');
         $resp->assertSee('Tasmi\' 5 Juz');
+        $resp->assertSee('Juz 30 → 26');
+        $resp->assertSee('id="juz-five-feedback"', false);
+        $resp->assertSee('Pilih 5 juz berurutan. Boleh dari depan');
         $resp->assertSee('Maqbul');
         $resp->assertSee('Mumtaz');
         $resp->assertSee('>Senin</option>', false);
@@ -309,6 +312,39 @@ class TasmiFeatureTest extends TestCase
         $dashboard->assertOk()->assertSee('Juz 1 - 5');
     }
 
+    public function test_examiner_can_store_and_view_5_juz_from_juz_30_to_26(): void
+    {
+        $ctx = $this->makeContext('male');
+        TasmiExaminerAssignment::create([
+            'academic_term_id' => $ctx['term']->id,
+            'teacher_id' => $ctx['teacher']->id,
+            'status' => 'active',
+        ]);
+
+        $resp = $this->actingAs($ctx['user'])->post(route('guru.tasmi.store'), [
+            'classroom_term_id' => $ctx['classroomTerm']->id,
+            'student_id' => $ctx['student']->id,
+            'exam_type' => TasmiRecord::EXAM_TYPE_FIVE_JUZ,
+            'juz_start' => 30,
+            'juz_end' => 26,
+            'exam_day_label' => 'Senin',
+            'exam_date' => '2026-08-21',
+            'predicate' => TasmiRecord::PREDICATE_JAYYID,
+        ]);
+
+        $resp->assertRedirect();
+        $this->assertDatabaseHas('tasmi_records', [
+            'student_id' => $ctx['student']->id,
+            'exam_type' => TasmiRecord::EXAM_TYPE_FIVE_JUZ,
+            'juz_start' => 30,
+            'juz_end' => 26,
+            'predicate' => TasmiRecord::PREDICATE_JAYYID,
+        ]);
+
+        $dashboard = $this->actingAs($ctx['user'])->get(route('guru.tasmi.index'));
+        $dashboard->assertOk()->assertSee('Juz 30 - 26');
+    }
+
     public function test_examiner_cannot_store_5_juz_with_wrong_range(): void
     {
         $ctx = $this->makeContext('male');
@@ -328,7 +364,9 @@ class TasmiFeatureTest extends TestCase
             'predicate' => TasmiRecord::PREDICATE_MAQBUL,
         ]);
 
-        $resp->assertSessionHasErrors(['juz_end']);
+        $resp->assertSessionHasErrors([
+            'juz_end' => 'Untuk Tasmi\' 5 Juz, pilih rentang tepat 5 juz. Juz awal dan akhir boleh naik atau turun.',
+        ]);
         $this->assertDatabaseMissing('tasmi_records', ['exam_type' => '5_juz']);
     }
 

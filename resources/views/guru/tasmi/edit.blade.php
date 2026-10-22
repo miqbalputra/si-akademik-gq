@@ -90,20 +90,22 @@
                 <div id="juz-five-block" style="display:none;margin-bottom:12px;">
                     <p class="form-label" style="margin-bottom:8px;">Rentang 5 Juz</p>
                     <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;">
-                        <select id="juz_start" name="juz_start" class="form-input text-theme-sm font-normal" onchange="tasmiUpdateFiveEnd()">
+                        <select id="juz_start" name="juz_start" class="form-input text-theme-sm font-normal" onchange="tasmiValidateFiveRange()">
                             <option value="">Dari juz</option>
-                            @for($i = 1; $i <= 26; $i++)
+                            @for($i = 1; $i <= 30; $i++)
                                 <option value="{{ $i }}" @if((int)old('juz_start', $record->juz_start) === $i) selected @endif>Juz {{ $i }}</option>
                             @endfor
                         </select>
                         <span style="font-weight:500;color:var(--ui-text);">→</span>
-                        <select id="juz_end" name="juz_end" class="form-input text-theme-sm font-normal">
+                        <select id="juz_end" name="juz_end" class="form-input text-theme-sm font-normal" onchange="tasmiValidateFiveRange()">
                             <option value="">Sampai juz</option>
-                            @for($i = 5; $i <= 30; $i++)
+                            @for($i = 1; $i <= 30; $i++)
                                 <option value="{{ $i }}" @if((int)old('juz_end', $record->juz_end) === $i) selected @endif>Juz {{ $i }}</option>
                             @endfor
                         </select>
                     </div>
+                    <p class="form-hint">Pilih 5 juz berurutan. Boleh dari depan maupun dari belakang.</p>
+                    <p id="juz-five-feedback" role="status" aria-live="polite" style="min-height:20px;margin:8px 0 0;font-size:13px;font-weight:500;"></p>
                 </div>
             </div>
 
@@ -126,7 +128,7 @@
         </div>
 
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-            <button type="submit" class="btn btn-primary text-theme-sm font-medium">
+            <button id="tasmi-submit-button" type="submit" class="btn btn-primary text-theme-sm font-medium">
                 <svg style="width:14px;height:14px;" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
                 Simpan Perubahan
             </button>
@@ -153,16 +155,38 @@
             var fiveBlock = document.getElementById('juz-five-block');
             if (oneBlock) oneBlock.style.display = (type === '1_juz') ? 'block' : 'none';
             if (fiveBlock) fiveBlock.style.display = (type === '5_juz') ? 'block' : 'none';
+            tasmiValidateFiveRange();
         }
-        function tasmiUpdateFiveEnd() {
+        function tasmiValidateFiveRange() {
             var start = document.getElementById('juz_start');
             var end = document.getElementById('juz_end');
-            if (!start || !end) return;
-            var s = parseInt(start.value, 10);
-            if (!s) return;
-            var computed = s + 4;
-            if (computed > 30) computed = 30;
-            end.value = String(computed);
+            var feedback = document.getElementById('juz-five-feedback');
+            var submitButton = document.getElementById('tasmi-submit-button');
+            var selectedType = document.querySelector('input[name="exam_type"]:checked');
+            var isFiveJuz = selectedType && selectedType.value === '5_juz';
+            if (!start || !end || !feedback) return;
+            if (!isFiveJuz) {
+                feedback.textContent = '';
+                if (submitButton) submitButton.disabled = false;
+                return;
+            }
+
+            var startJuz = parseInt(start.value, 10);
+            var endJuz = parseInt(end.value, 10);
+            if (!Number.isInteger(startJuz) || !Number.isInteger(endJuz)) {
+                feedback.textContent = 'Pilih juz awal dan juz akhir. Sistem akan menghitung jumlahnya otomatis.';
+                feedback.style.color = 'var(--ui-muted)';
+                if (submitButton) submitButton.disabled = true;
+                return;
+            }
+
+            var count = Math.abs(endJuz - startJuz) + 1;
+            var valid = count === 5;
+            feedback.textContent = valid
+                ? 'Rentang Juz ' + startJuz + ' sampai Juz ' + endJuz + ' tepat 5 juz.'
+                : 'Rentang Juz ' + startJuz + ' sampai Juz ' + endJuz + ' berjumlah ' + count + ' juz, bukan 5. Pilih dua juz dengan jarak 4.';
+            feedback.style.color = valid ? 'var(--ui-success-ink, #15803d)' : 'var(--ui-danger-ink)';
+            if (submitButton) submitButton.disabled = !valid;
         }
         function tasmiAutofillHijriDate() {
             var dateInput = document.getElementById('exam_date');

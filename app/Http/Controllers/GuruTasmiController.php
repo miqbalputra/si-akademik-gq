@@ -333,7 +333,7 @@ class GuruTasmiController extends Controller
     /**
      * Validasi rentang juz sesuai tipe ujian:
      * - 1_juz: juz_start harus sama dengan juz_end.
-     * - 5_juz: rentang harus tepat 5 juz (juz_end - juz_start + 1 = 5).
+     * - 5_juz: rentang harus tepat 5 juz, boleh naik atau turun.
      */
     private function assertValidJuzRange(array $data): void
     {
@@ -346,10 +346,10 @@ class GuruTasmiController extends Controller
         }
 
         if ($data['exam_type'] === TasmiRecord::EXAM_TYPE_FIVE_JUZ) {
-            $range = (int) $data['juz_end'] - (int) $data['juz_start'] + 1;
+            $range = abs((int) $data['juz_end'] - (int) $data['juz_start']) + 1;
             if ($range !== 5) {
                 throw \Illuminate\Validation\ValidationException::withMessages([
-                    'juz_end' => 'Untuk Tasmi\' 5 Juz, rentang dari juz awal sampai juz akhir harus tepat 5 juz.',
+                    'juz_end' => 'Untuk Tasmi\' 5 Juz, pilih rentang tepat 5 juz. Juz awal dan akhir boleh naik atau turun.',
                 ]);
             }
         }
