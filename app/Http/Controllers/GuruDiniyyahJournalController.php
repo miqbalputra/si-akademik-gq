@@ -13,9 +13,11 @@ use App\Services\DiniyyahJournalReportService;
 use App\Services\TafsirScheduleGroupingService;
 use App\Support\SessionTimetable;
 use Illuminate\Database\QueryException;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class GuruDiniyyahJournalController extends Controller
 {
@@ -85,7 +87,13 @@ class GuruDiniyyahJournalController extends Controller
 
             // Fetch existing journals for THIS class and THIS date, by ALL teachers, so they can see the whole log.
             // Termasuk jurnal pengganti (substituteTeacher) agar guru asli melihat tanda "digantikan oleh ...".
-            $existingJournals = DiniyyahClassJournal::with(['teacherAssignment.teacher', 'substituteTeacher', 'teacherAssignment.classSubject.subject', 'absences.classEnrollment.student'])
+            // Riwayat tetap menyertakan referensi arsip tanpa mengaktifkannya kembali.
+            $existingJournals = DiniyyahClassJournal::with([
+                'teacherAssignment.teacher' => fn ($query) => $query->withTrashed(),
+                'substituteTeacher' => fn ($query) => $query->withTrashed(),
+                'teacherAssignment.classSubject.subject',
+                'absences.classEnrollment.student' => fn ($query) => $query->withTrashed(),
+            ])
                 ->whereDate('date', $selectedDate)
                 ->whereHas('teacherAssignment.classSubject', function ($query) use ($selectedClassroomTermId) {
                     $query->where('classroom_term_id', $selectedClassroomTermId);
@@ -488,22 +496,24 @@ class GuruDiniyyahJournalController extends Controller
                 $validated['session_hour'],
             );
 
-            $journal = DiniyyahClassJournal::create([
-                'diniyyah_teacher_assignment_id' => $validated['diniyyah_teacher_assignment_id'],
-                'date' => $validated['date'],
-                'session_hour' => $validated['session_hour'],
-                'session_starts_at' => $time['starts_at'] ?? null,
-                'session_ends_at' => $time['ends_at'] ?? null,
-                'material' => $validated['material'],
-                'jp_count' => 1,
-            ]);
-
-            foreach ($absences as $enrollmentId => $status) {
-                $journal->absences()->create([
-                    'class_enrollment_id' => $enrollmentId,
-                    'status' => $status,
+            DB::transaction(function () use ($validated, $time, $absences): void {
+                $journal = DiniyyahClassJournal::create([
+                    'diniyyah_teacher_assignment_id' => $validated['diniyyah_teacher_assignment_id'],
+                    'date' => $validated['date'],
+                    'session_hour' => $validated['session_hour'],
+                    'session_starts_at' => $time['starts_at'] ?? null,
+                    'session_ends_at' => $time['ends_at'] ?? null,
+                    'material' => $validated['material'],
+                    'jp_count' => 1,
                 ]);
-            }
+
+                foreach ($absences as $enrollmentId => $status) {
+                    $journal->absences()->create([
+                        'class_enrollment_id' => $enrollmentId,
+                        'status' => $status,
+                    ]);
+                }
+            });
         } catch (QueryException $e) {
             // Backstop untuk race kondisi double-submit yang lolos pengecekan exists()
             // di atas: unique index (diniyyah_teacher_assignment_id, date, session_hour).
@@ -551,15 +561,11 @@ class GuruDiniyyahJournalController extends Controller
     }
 
     /**
-     * Deteksi QueryException pelanggaran unique constraint lintas driver
-     * (SQLite error code 19 / MySQL SQLSTATE 23000).
+     * Laravel mengenali unique constraint tiap driver, termasuk PostgreSQL 23505.
      */
     private function isDuplicateKeyException(QueryException $e): bool
     {
-        $sqlstate = $e->errorInfo[0] ?? null;
-        $driverCode = $e->errorInfo[1] ?? null;
-
-        return $sqlstate === '23000' || $driverCode === 19;
+        return $e instanceof UniqueConstraintViolationException;
     }
 
 }

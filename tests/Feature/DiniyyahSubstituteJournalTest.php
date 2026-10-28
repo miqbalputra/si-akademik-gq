@@ -4,16 +4,24 @@ namespace Tests\Feature;
 
 use App\Models\AcademicTerm;
 use App\Models\AcademicYear;
+use App\Models\ClassEnrollment;
 use App\Models\Classroom;
 use App\Models\ClassroomTerm;
 use App\Models\DiniyyahClassJournal;
+use App\Models\DiniyyahClassJournalAbsence;
 use App\Models\DiniyyahClassSubject;
 use App\Models\DiniyyahSubject;
 use App\Models\DiniyyahTeacherAssignment;
 use App\Models\School;
+use App\Models\Student;
 use App\Models\Teacher;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Facades\Event;
+use PDOException;
+use PHPUnit\Framework\Attributes\DataProvider;
+use RuntimeException;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -151,6 +159,153 @@ class DiniyyahSubstituteJournalTest extends TestCase
             ->assertRedirect();
 
         $this->assertSoftDeleted('diniyyah_class_journals', ['id' => $journal->id]);
+    }
+
+    public function test_old_journal_with_archived_student_remains_readable_in_both_forms(): void
+    {
+        $ctx = $this->makeContext();
+        $enrollment = $this->makeEnrollment($ctx['classroomTerm'], 'Santri Riwayat');
+        $journal = $this->makeOldJournal($ctx);
+        $absence = $journal->absences()->create(['class_enrollment_id' => $enrollment->id, 'status' => 'sick']);
+        $enrollment->student->delete();
+        $before = $journal->fresh()->getRawOriginal();
+
+        foreach (['guru.diniyyah-substitute-journals.index', 'guru.diniyyah-journals.index'] as $route) {
+            $response = $this->actingAs($ctx['userA'])->get(route($route, [
+                'classroom_term_id' => $ctx['classroomTerm']->id,
+                'date' => '2026-10-19',
+            ]));
+            $response->assertOk()->assertSee('Santri Riwayat')->assertSee('Materi lama');
+            $this->assertFalse($response->viewData('students')->contains('id', $enrollment->id));
+        }
+
+        $this->assertSame($before, $journal->fresh()->getRawOriginal());
+        $this->assertDatabaseHas('diniyyah_class_journal_absences', ['id' => $absence->id, 'status' => 'sick']);
+        $this->assertSoftDeleted('students', ['id' => $enrollment->student_id]);
+    }
+
+    public function test_old_journal_still_shows_archived_original_teacher(): void
+    {
+        $ctx = $this->makeContext();
+        $journal = $this->makeOldJournal($ctx);
+        $ctx['teacherA']->delete();
+
+        $this->actingAs($ctx['userB'])->get(route('guru.diniyyah-substitute-journals.index', [
+            'classroom_term_id' => $ctx['classroomTerm']->id,
+            'date' => '2026-10-19',
+        ]))->assertOk()->assertSee('Guru A')->assertSee('Materi lama');
+
+        $this->assertDatabaseHas('diniyyah_class_journals', ['id' => $journal->id, 'material' => 'Materi lama']);
+        $this->assertSoftDeleted('teachers', ['id' => $ctx['teacherA']->id]);
+    }
+
+    public function test_old_journal_still_shows_archived_substitute_teacher(): void
+    {
+        $ctx = $this->makeContext();
+        $this->makeOldJournal($ctx, ['substitute_teacher_id' => $ctx['teacherB']->id]);
+        $ctx['teacherB']->delete();
+
+        foreach (['guru.diniyyah-substitute-journals.index', 'guru.diniyyah-journals.index'] as $route) {
+            $this->actingAs($ctx['userA'])->get(route($route, [
+                'classroom_term_id' => $ctx['classroomTerm']->id,
+                'date' => '2026-10-19',
+            ]))->assertOk()->assertSee('Guru B');
+        }
+        $this->assertSoftDeleted('teachers', ['id' => $ctx['teacherB']->id]);
+    }
+
+    #[DataProvider('journalStoreRoutes')]
+    public function test_postgres_duplicate_does_not_cause_500_or_overwrite_old_journal(string $route, string $actor): void
+    {
+        $ctx = $this->makeContext();
+        $old = $this->makeOldJournal($ctx);
+        $before = $old->fresh()->getRawOriginal();
+        $previous = new PDOException('duplicate key', 23505);
+        $previous->errorInfo = ['23505', 7, 'duplicate key'];
+        Event::listen('eloquent.creating: '.DiniyyahClassJournal::class, function () use ($previous): void {
+            throw new UniqueConstraintViolationException('pgsql', 'insert into diniyyah_class_journals ...', [], $previous);
+        });
+        $payload = $this->substitutePayload($ctx);
+
+        $this->actingAs($ctx[$actor])->post(route($route), $payload)
+            ->assertRedirect()->assertSessionHas('error')->assertSessionHasInput('material', $payload['material']);
+
+        $this->assertSame($before, $old->fresh()->getRawOriginal());
+        $this->assertDatabaseCount('diniyyah_class_journals', 1);
+    }
+
+    #[DataProvider('journalStoreRoutes')]
+    public function test_failed_absence_save_rolls_back_new_journal_and_preserves_old_data(string $route, string $actor): void
+    {
+        $ctx = $this->makeContext();
+        $old = $this->makeOldJournal($ctx);
+        $first = $this->makeEnrollment($ctx['classroomTerm'], 'Santri Pertama');
+        $second = $this->makeEnrollment($ctx['classroomTerm'], 'Santri Kedua');
+        $oldAbsence = $old->absences()->create(['class_enrollment_id' => $first->id, 'status' => 'permission']);
+        $before = $old->fresh()->getRawOriginal();
+        Event::listen('eloquent.creating: '.DiniyyahClassJournalAbsence::class, function ($absence) use ($second): void {
+            if ((int) $absence->class_enrollment_id === $second->id) {
+                throw new RuntimeException('Simulasi gagal menyimpan presensi kedua');
+            }
+        });
+        $payload = $this->substitutePayload($ctx);
+        $payload['absences'] = [$first->id => 'sick', $second->id => 'absent'];
+        $this->withoutExceptionHandling();
+
+        try {
+            $this->actingAs($ctx[$actor])->post(route($route), $payload);
+            $this->fail('Penyimpanan presensi kedua seharusnya gagal.');
+        } catch (RuntimeException $e) {
+            $this->assertSame('Simulasi gagal menyimpan presensi kedua', $e->getMessage());
+        }
+
+        $this->assertDatabaseCount('diniyyah_class_journals', 1);
+        $this->assertDatabaseCount('diniyyah_class_journal_absences', 1);
+        $this->assertSame($before, $old->fresh()->getRawOriginal());
+        $this->assertDatabaseHas('diniyyah_class_journal_absences', ['id' => $oldAbsence->id, 'status' => 'permission']);
+    }
+
+    public static function journalStoreRoutes(): array
+    {
+        return [
+            'pengganti' => ['guru.diniyyah-substitute-journals.store', 'userB'],
+            'reguler' => ['guru.diniyyah-journals.store', 'userA'],
+        ];
+    }
+
+    private function makeOldJournal(array $ctx, array $attributes = []): DiniyyahClassJournal
+    {
+        return DiniyyahClassJournal::create(array_merge([
+            'diniyyah_teacher_assignment_id' => $ctx['assignmentA']->id,
+            'date' => '2026-10-19',
+            'session_hour' => '1',
+            'material' => 'Materi lama',
+            'jp_count' => 1,
+        ], $attributes));
+    }
+
+    private function makeEnrollment(ClassroomTerm $classroomTerm, string $name): ClassEnrollment
+    {
+        $student = Student::create(['name' => $name, 'nis' => $name, 'gender' => 'male', 'status' => 'active']);
+
+        return ClassEnrollment::create([
+            'academic_term_id' => $classroomTerm->academic_term_id,
+            'classroom_term_id' => $classroomTerm->id,
+            'student_id' => $student->id,
+            'status' => 'active',
+        ]);
+    }
+
+    private function substitutePayload(array $ctx): array
+    {
+        return [
+            'diniyyah_teacher_assignment_id' => $ctx['assignmentA']->id,
+            'date' => '2026-10-19',
+            'session_hour' => '2',
+            'material' => 'Materi baru pengganti',
+            'classroom_term_id' => $ctx['classroomTerm']->id,
+            'absences' => [],
+        ];
     }
 
     private function makeContext(): array

@@ -16,6 +16,9 @@ use App\Models\Teacher;
 use App\Models\User;
 use App\Support\SessionTimetable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Facades\Event;
+use PDOException;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -29,6 +32,35 @@ class GuruDiniyyahTafsirJournalTest extends TestCase
 
     /** 2026-07-16 = Kamis. */
     private const KAMIS = '2026-07-16';
+
+    public function test_postgres_duplicate_does_not_stop_other_selected_classes_or_overwrite_history(): void
+    {
+        $ctx = $this->makeTafsirTeacher(['Mustawa 2 Ikhwan', 'Mustawa 3 Ikhwan', 'Mustawa 4 Ikhwan']);
+        [$oldSlot, $duplicateSlot, $newSlot] = $ctx['assignments'];
+        $old = DiniyyahClassJournal::create([
+            'diniyyah_teacher_assignment_id' => $oldSlot->id,
+            'date' => self::KAMIS, 'session_hour' => 'tafsir', 'material' => 'Materi lama', 'jp_count' => 1,
+        ]);
+        $before = $old->fresh()->getRawOriginal();
+        $previous = new PDOException('duplicate key', 23505);
+        $previous->errorInfo = ['23505', 7, 'duplicate key'];
+        Event::listen('eloquent.creating: '.DiniyyahClassJournal::class, function ($journal) use ($duplicateSlot, $previous): void {
+            if ((int) $journal->diniyyah_teacher_assignment_id === $duplicateSlot->id) {
+                throw new UniqueConstraintViolationException('pgsql', 'insert into diniyyah_class_journals ...', [], $previous);
+            }
+        });
+
+        $this->actingAs($ctx['user'])->post(route('guru.diniyyah-tafsir-journals.store'), [
+            'date' => self::KAMIS, 'material' => 'Materi baru',
+            'assignments' => [$oldSlot->id, $duplicateSlot->id, $newSlot->id],
+        ])->assertRedirect()->assertSessionHas('success');
+
+        $this->assertDatabaseCount('diniyyah_class_journals', 2);
+        $this->assertSame($before, $old->fresh()->getRawOriginal());
+        $this->assertDatabaseHas('diniyyah_class_journals', [
+            'diniyyah_teacher_assignment_id' => $newSlot->id, 'material' => 'Materi baru',
+        ]);
+    }
 
     public function test_store_creates_one_journal_per_checked_tafsir_class(): void
     {

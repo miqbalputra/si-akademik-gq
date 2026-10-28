@@ -17,6 +17,9 @@ use App\Models\Teacher;
 use App\Models\User;
 use App\Support\SessionTimetable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Facades\Event;
+use PDOException;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -31,6 +34,37 @@ class GuruDiniyyahSubstituteTafsirJournalTest extends TestCase
 
     /** 2026-07-16 = Kamis. */
     private const KAMIS = '2026-07-16';
+
+    public function test_postgres_duplicate_does_not_stop_other_selected_classes_or_overwrite_history(): void
+    {
+        $original = $this->makeTafsirTeacher('Guru Asli', ['Mustawa 2 Ikhwan', 'Mustawa 3 Ikhwan', 'Mustawa 4 Ikhwan']);
+        $substitute = $this->makeSubstitute('Pengganti');
+        [$oldSlot, $duplicateSlot, $newSlot] = $original['assignments'];
+        $old = DiniyyahClassJournal::create([
+            'diniyyah_teacher_assignment_id' => $oldSlot->id,
+            'date' => self::KAMIS, 'session_hour' => 'tafsir', 'material' => 'Materi lama', 'jp_count' => 1,
+        ]);
+        $before = $old->fresh()->getRawOriginal();
+        $previous = new PDOException('duplicate key', 23505);
+        $previous->errorInfo = ['23505', 7, 'duplicate key'];
+        Event::listen('eloquent.creating: '.DiniyyahClassJournal::class, function ($journal) use ($duplicateSlot, $previous): void {
+            if ((int) $journal->diniyyah_teacher_assignment_id === $duplicateSlot->id) {
+                throw new UniqueConstraintViolationException('pgsql', 'insert into diniyyah_class_journals ...', [], $previous);
+            }
+        });
+
+        $this->actingAs($substitute['user'])->post(route('guru.diniyyah-substitute-tafsir-journals.store'), [
+            'date' => self::KAMIS, 'material' => 'Materi baru',
+            'assignments' => [$oldSlot->id, $duplicateSlot->id, $newSlot->id],
+        ])->assertRedirect()->assertSessionHas('success');
+
+        $this->assertDatabaseCount('diniyyah_class_journals', 2);
+        $this->assertSame($before, $old->fresh()->getRawOriginal());
+        $this->assertDatabaseHas('diniyyah_class_journals', [
+            'diniyyah_teacher_assignment_id' => $newSlot->id,
+            'substitute_teacher_id' => $substitute['teacher']->id, 'material' => 'Materi baru',
+        ]);
+    }
 
     public function test_index_lists_other_teachers_tafsir_assignments_grouped_by_teacher(): void
     {

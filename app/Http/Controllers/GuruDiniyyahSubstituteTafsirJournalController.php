@@ -10,6 +10,7 @@ use App\Services\DiniyyahNoKbmAgendaService;
 use App\Services\TafsirScheduleGroupingService;
 use App\Support\SessionTimetable;
 use Illuminate\Database\QueryException;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -218,15 +219,11 @@ class GuruDiniyyahSubstituteTafsirJournalController extends Controller
     }
 
     /**
-     * Deteksi QueryException pelanggaran unique constraint lintas driver
-     * (SQLite error code 19 / MySQL SQLSTATE 23000).
+     * Laravel mengenali unique constraint tiap driver, termasuk PostgreSQL 23505.
      */
     private function isDuplicateKeyException(QueryException $e): bool
     {
-        $sqlstate = $e->errorInfo[0] ?? null;
-        $driverCode = $e->errorInfo[1] ?? null;
-
-        return $sqlstate === '23000' || $driverCode === 19;
+        return $e instanceof UniqueConstraintViolationException;
     }
 
     private function hasActiveScheduleFor(Teacher $teacher, string $date): bool
