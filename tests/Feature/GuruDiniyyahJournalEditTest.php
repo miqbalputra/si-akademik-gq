@@ -8,6 +8,7 @@ use App\Models\ClassEnrollment;
 use App\Models\Classroom;
 use App\Models\ClassroomTerm;
 use App\Models\DiniyyahClassJournal;
+use App\Models\DiniyyahClassJournalAbsence;
 use App\Models\DiniyyahClassSubject;
 use App\Models\DiniyyahSubject;
 use App\Models\DiniyyahTeacherAssignment;
@@ -16,6 +17,9 @@ use App\Models\Student;
 use App\Models\Teacher;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
+use RuntimeException;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -182,6 +186,33 @@ class GuruDiniyyahJournalEditTest extends TestCase
             ->assertForbidden();
 
         $this->assertSame('Materi asli', $journal->fresh()->material);
+    }
+
+    public function test_failed_absence_update_preserves_original_material_and_all_absences(): void
+    {
+        $ctx = $this->makeContext();
+        $journal = $this->createJournal($ctx, '2026-10-26', '2', 'Materi asli');
+        $journal->absences()->create(['class_enrollment_id' => $ctx['enrollments'][0]->id, 'status' => 'sick']);
+        $journal->absences()->create(['class_enrollment_id' => $ctx['enrollments'][1]->id, 'status' => 'permission']);
+        $before = $journal->fresh()->getRawOriginal();
+        $absences = DB::table('diniyyah_class_journal_absences')->orderBy('id')->get()->all();
+        Event::listen('eloquent.creating: '.DiniyyahClassJournalAbsence::class, function (): void {
+            throw new RuntimeException('Simulasi gagal menyimpan perubahan presensi');
+        });
+        $this->withoutExceptionHandling();
+
+        try {
+            $this->actingAs($ctx['teacher']->user)->put(route('guru.diniyyah-journals.update', $journal), [
+                'material' => 'Materi yang gagal disimpan',
+                'absences' => [$ctx['enrollments'][0]->id => 'skipped'],
+            ]);
+            $this->fail('Penyimpanan presensi seharusnya gagal.');
+        } catch (RuntimeException $e) {
+            $this->assertSame('Simulasi gagal menyimpan perubahan presensi', $e->getMessage());
+        }
+
+        $this->assertSame($before, $journal->fresh()->getRawOriginal());
+        $this->assertEquals($absences, DB::table('diniyyah_class_journal_absences')->orderBy('id')->get()->all());
     }
 
     /**

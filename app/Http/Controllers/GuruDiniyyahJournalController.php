@@ -353,20 +353,21 @@ class GuruDiniyyahJournalController extends Controller
         $absences = collect($validated['absences'] ?? [])
             ->filter(fn ($status, $enrollmentId) => in_array((int) $enrollmentId, $validEnrollmentIds, true));
 
-        $diniyyah_journal->material = $validated['material'];
-        $diniyyah_journal->save();
+        DB::transaction(function () use ($diniyyah_journal, $validated, $validEnrollmentIds, $absences): void {
+            $diniyyah_journal->material = $validated['material'];
+            $diniyyah_journal->save();
 
-        // Sync presensi roster aktif; catatan enrollment yang sudah tidak aktif
-        // (termasuk siswa arsip) tetap dipertahankan sebagai riwayat.
-        // Form mengirim hidden input untuk daily-locked (status harian) + checkbox 'skipped'
-        // untuk manual — replikasi state form, sama seperti create.
-        $diniyyah_journal->absences()->whereIn('class_enrollment_id', $validEnrollmentIds)->delete();
-        foreach ($absences as $enrollmentId => $status) {
-            $diniyyah_journal->absences()->create([
-                'class_enrollment_id' => $enrollmentId,
-                'status' => $status,
-            ]);
-        }
+            // Sync presensi roster aktif; catatan enrollment yang sudah tidak aktif
+            // (termasuk siswa arsip) tetap dipertahankan sebagai riwayat.
+            // Materi dan seluruh perubahan presensi dibatalkan bersama bila gagal.
+            $diniyyah_journal->absences()->whereIn('class_enrollment_id', $validEnrollmentIds)->delete();
+            foreach ($absences as $enrollmentId => $status) {
+                $diniyyah_journal->absences()->create([
+                    'class_enrollment_id' => $enrollmentId,
+                    'status' => $status,
+                ]);
+            }
+        });
 
         return redirect()->route('guru.diniyyah-journals.index', [
             'classroom_term_id' => $classroomTerm->id,

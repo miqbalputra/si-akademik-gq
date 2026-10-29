@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Validation\ValidationException;
 use DomainException;
 
 #[Fillable(['diniyyah_teacher_assignment_id', 'substitute_teacher_id', 'date', 'session_hour', 'session_starts_at', 'session_ends_at', 'material', 'jp_count', 'status', 'validated_by', 'validated_at', 'validation_revoked_by', 'validation_revoked_at', 'validation_revocation_reason'])]
@@ -45,6 +46,21 @@ class DiniyyahClassJournal extends Model
         static::deleting(function (DiniyyahClassJournal $journal): void {
             if (static::query()->whereKey($journal->getKey())->where('status', 'validated')->exists()) {
                 throw new DomainException('Jurnal tervalidasi harus dibatalkan validasinya oleh admin sebelum dihapus.');
+            }
+        });
+
+        static::restoring(function (DiniyyahClassJournal $journal): void {
+            $slotIsOccupied = static::query()
+                ->where('diniyyah_teacher_assignment_id', $journal->diniyyah_teacher_assignment_id)
+                ->whereDate('date', $journal->date->toDateString())
+                ->where('session_hour', $journal->session_hour)
+                ->whereKeyNot($journal->getKey())
+                ->exists();
+
+            if ($slotIsOccupied) {
+                throw ValidationException::withMessages([
+                    'date' => 'Jurnal arsip tidak dapat dipulihkan karena slot tanggal dan sesi ini sudah diisi jurnal aktif. Riwayat arsip tetap tersimpan.',
+                ]);
             }
         });
     }
