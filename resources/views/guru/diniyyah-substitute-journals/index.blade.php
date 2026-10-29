@@ -211,7 +211,10 @@
                 @endif
             </p>
 
-            <form method="POST" action="{{ route('guru.diniyyah-substitute-journals.store') }}">
+            <x-journal-attendance-status :eligibility="$attendanceEligibility" />
+            <form method="POST" action="{{ route('guru.diniyyah-substitute-journals.store') }}"
+                  x-data="{ attendanceAllowed: @js($attendanceEligibility['allowed']) }"
+                  @journal-attendance-checked.window="attendanceAllowed = $event.detail.allowed">
                 @csrf
                 <input type="hidden" name="classroom_term_id" value="{{ $selectedClassroomTermId }}">
                 <input type="hidden" name="date" value="{{ $selectedDate }}">
@@ -232,7 +235,8 @@
                                             data-session="{{ $slot->session_name }}"
                                             data-start="{{ $slotStart }}"
                                             data-end="{{ $slotEnd }}"
-                                            {{ $slot->filled ? 'disabled' : '' }}>
+                                            {{ $slot->filled ? 'disabled' : '' }}
+                                            @selected((string) old('diniyyah_teacher_assignment_id') === (string) $slot->assignment_id && (string) old('session_hour') === (string) $slot->session_name)>
                                         {{ \App\Support\SessionTimetable::label($slot->session_name) }} — {{ $slot->subject_name }} — {{ $slot->teacher_name }}@if($slotStart) ({{ $slotStart }} - {{ $slotEnd }}) @endif{{ $slot->filled ? ' (sudah terisi)' : '' }}
                                     </option>
                                 @endforeach
@@ -245,7 +249,7 @@
                         <input type="hidden" name="session_hour" id="session_hour_input">
                         <div>
                             <label class="block text-body mb-1 ui-form-label">Materi</label>
-                            <textarea name="material" rows="5" required class="w-full rounded-xl border-line-strong shadow-sm focus:ring-warning-500 focus:border-warning-500 text-theme-sm font-normal" placeholder="Tuliskan materi yang diajarkan..."></textarea>
+                            <textarea name="material" rows="5" required class="w-full rounded-xl border-line-strong shadow-sm focus:ring-warning-500 focus:border-warning-500 text-theme-sm font-normal" placeholder="Tuliskan materi yang diajarkan...">{{ old('material') }}</textarea>
                         </div>
                     </div>
 
@@ -266,7 +270,7 @@
                                                 <input type="hidden" name="absences[{{ $enrollment->id }}]" value="{{ $dailyStatus }}">
                                                 <input type="checkbox" checked disabled class="h-5 w-5 text-warning-ink rounded border-line-strong pointer-events-none">
                                             @else
-                                                <input id="sub_student_{{ $enrollment->id }}" type="checkbox" name="absences[{{ $enrollment->id }}]" value="skipped" class="h-5 w-5 text-warning-ink rounded border-line-strong focus:ring-warning-500 cursor-pointer" onclick="event.stopPropagation()">
+                                                <input id="sub_student_{{ $enrollment->id }}" type="checkbox" name="absences[{{ $enrollment->id }}]" value="{{ old('absences.'.$enrollment->id, 'skipped') }}" @checked(old('absences.'.$enrollment->id)) class="h-5 w-5 text-warning-ink rounded border-line-strong focus:ring-warning-500 cursor-pointer" onclick="event.stopPropagation()">
                                             @endif
                                         </div>
                                         <div class="ml-3 flex-1 flex justify-between items-center text-theme-sm">
@@ -283,7 +287,7 @@
                 </div>
 
                 <div class="mt-6 flex justify-start">
-                    <button type="submit" class="w-full sm:w-auto rounded-xl bg-warning-600 px-6 py-3 text-white hover:bg-warning-700 shadow-sm transition-colors text-theme-sm font-medium">
+                    <button type="submit" @disabled(! $attendanceEligibility['allowed']) :disabled="!attendanceAllowed" class="w-full sm:w-auto rounded-xl bg-warning-600 px-6 py-3 text-white hover:bg-warning-700 shadow-sm transition-colors text-theme-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed">
                         Simpan Jurnal Pengganti
                     </button>
                 </div>

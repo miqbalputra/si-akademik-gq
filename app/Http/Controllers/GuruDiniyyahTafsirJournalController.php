@@ -6,6 +6,7 @@ use App\Models\DiniyyahClassJournal;
 use App\Models\DiniyyahTeacherAssignment;
 use App\Models\DiniyyahTeachingSchedule;
 use App\Services\DiniyyahNoKbmAgendaService;
+use App\Services\JournalAttendanceEligibilityService;
 use App\Services\TafsirScheduleGroupingService;
 use App\Support\SessionTimetable;
 use Illuminate\Database\QueryException;
@@ -45,6 +46,11 @@ class GuruDiniyyahTafsirJournalController extends Controller
 
         $tafsirAssignments = $this->tafsirAssignmentsFor($teacher);
         $selectedDate = $request->query('date', $this->defaultTafsirDate());
+        $request->validate(['date' => ['nullable', 'date_format:Y-m-d']]);
+        $attendanceEligibility = app(JournalAttendanceEligibilityService::class)->check($teacher, $selectedDate);
+        if ($request->boolean('attendance_check')) {
+            return response()->json($attendanceEligibility)->header('Cache-Control', 'private, no-store');
+        }
         $schedules = $this->tafsirSchedulesFor($teacher, $selectedDate);
         $requestedAssignmentIds = collect($request->query('assignment_ids', []))
             ->map(fn ($id) => (int) $id)
@@ -90,6 +96,7 @@ class GuruDiniyyahTafsirJournalController extends Controller
             });
 
         return view('guru.diniyyah-tafsir-journals.index', [
+            'attendanceEligibility' => $attendanceEligibility,
             'tafsirAssignments' => $tafsirAssignments,
             'selectedDate' => $selectedDate,
             'teacher' => $teacher,
@@ -142,10 +149,15 @@ class GuruDiniyyahTafsirJournalController extends Controller
             Carbon::parse($validated['date'], 'Asia/Jakarta')->startOfDay(),
             Carbon::parse($validated['date'], 'Asia/Jakarta')->endOfDay(),
         );
-        $agendaAssignments = $selected->filter(fn ($assignment) =>
-            $this->noKbmAgendaService->forClassroomTerm($agendaEvents, $assignment->classSubject->classroomTerm, $validated['date']) !== null
+        $agendaAssignments = $selected->filter(fn ($assignment) => $this->noKbmAgendaService->forClassroomTerm($agendaEvents, $assignment->classSubject->classroomTerm, $validated['date']) !== null
         );
         $selected = $selected->reject(fn ($assignment) => $agendaAssignments->contains('id', $assignment->id))->values();
+
+        $attendanceEligibility = app(JournalAttendanceEligibilityService::class)->check($teacher, $validated['date']);
+        if (! $attendanceEligibility['allowed']) {
+            return redirect()->route('guru.diniyyah-tafsir-journals.index', ['date' => $validated['date']])
+                ->withInput()->with('error', $attendanceEligibility['message']);
+        }
 
         $created = 0;
         $skipped = 0;

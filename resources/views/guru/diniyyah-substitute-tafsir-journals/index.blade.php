@@ -26,9 +26,20 @@
             <a href="{{ route('guru.diniyyah-substitute-journals.index', ['date' => $selectedDate]) }}" class="mt-5 inline-flex rounded-xl border border-warning-600 bg-surface px-4 py-2 text-warning-ink hover:bg-warning-soft-strong text-theme-sm font-medium">Buka Jurnal Pengganti</a>
         </div>
     @else
+        <x-journal-attendance-status :eligibility="$attendanceEligibility" />
         @foreach($simultaneousGroups as $group)
-            <form method="POST" action="{{ route('guru.diniyyah-substitute-tafsir-journals.store') }}" x-data="{ checked() { return [...$root.querySelectorAll('input[name=\'assignments[]\']')].filter(c => c.checked && !c.disabled).length } }" class="mb-6">
+            @php
+                $selectableAssignmentIds = $group['assignments']
+                    ->reject(fn ($assignment) => $group['agenda_assignments']->has($assignment->id))
+                    ->map(fn ($assignment) => (string) $assignment->id)
+                    ->values()
+                    ->all();
+                $selectedAssignmentIds = array_values(array_intersect($selectableAssignmentIds, array_map('strval', old('assignments', []))));
+                $retryGroup = old('journal_group') === $group['key'] || (session()->hasOldInput('material') && count($selectedAssignmentIds) > 0);
+            @endphp
+            <form method="POST" action="{{ route('guru.diniyyah-substitute-tafsir-journals.store') }}" x-data="{ attendanceAllowed: @js($attendanceEligibility['allowed']), selectedAssignments: @js($selectedAssignmentIds), selectableAssignments: @js($selectableAssignmentIds) }" @journal-attendance-checked.window="attendanceAllowed = $event.detail.allowed" class="mb-6">
                 @csrf
+                <input type="hidden" name="journal_group" value="{{ $group['key'] }}">
                 <input type="hidden" name="date" value="{{ $selectedDate }}">
                 <div class="glass-card rounded-2xl border border-line p-6">
                     <div class="mb-4 flex flex-wrap items-start justify-between gap-3 border-b border-line pb-4">
@@ -37,8 +48,8 @@
                             <p class="mt-1 text-theme-xs text-muted font-normal">Guru asli: {{ $group['assignments']->first()?->teacher?->name ?? '-' }} · {{ \Carbon\Carbon::parse($selectedDate)->locale('id')->translatedFormat('l, d F Y') }}</p>
                         </div>
                         <div class="flex gap-2">
-                            <button type="button" @click="[...$root.querySelectorAll('input[name=\'assignments[]\']')].filter(c => !c.disabled).forEach(c => c.checked = true)" class="rounded-lg border border-warning-line bg-warning-soft px-2 py-1 text-warning-ink hover:bg-warning-soft-strong text-theme-sm font-medium">Centang Semua</button>
-                            <button type="button" @click="[...$root.querySelectorAll('input[name=\'assignments[]\']')].forEach(c => c.checked = false)" class="rounded-lg border border-line bg-surface-subtle px-2 py-1 text-body hover:bg-surface-muted text-theme-sm font-medium">Kosongkan</button>
+                            <button type="button" @click="selectedAssignments = [...selectableAssignments]" class="rounded-lg border border-warning-line bg-warning-soft px-2 py-1 text-warning-ink hover:bg-warning-soft-strong text-theme-sm font-medium">Centang Semua</button>
+                            <button type="button" @click="selectedAssignments = []" class="rounded-lg border border-line bg-surface-subtle px-2 py-1 text-body hover:bg-surface-muted text-theme-sm font-medium">Kosongkan</button>
                         </div>
                     </div>
 
@@ -46,7 +57,7 @@
                         @foreach($group['assignments'] as $assignment)
                             @php($agenda = $group['agenda_assignments'][$assignment->id] ?? null)
                             <label for="sub-tafsir-{{ $group['key'] }}-{{ $assignment->id }}" class="flex items-start gap-2 rounded-xl border p-3 transition-colors {{ $agenda ? 'cursor-not-allowed border-info-line bg-info-soft' : 'cursor-pointer border-line bg-surface hover:bg-surface-subtle has-[:checked]:border-warning-500 has-[:checked]:bg-warning-soft' }} ui-form-label">
-                                <input type="checkbox" name="assignments[]" value="{{ $assignment->id }}" id="sub-tafsir-{{ $group['key'] }}-{{ $assignment->id }}" @disabled($agenda) class="mt-0.5 rounded border-line-strong text-warning-ink focus:ring-warning-500 disabled:cursor-not-allowed">
+                                <input type="checkbox" name="assignments[]" value="{{ $assignment->id }}" x-model="selectedAssignments" id="sub-tafsir-{{ $group['key'] }}-{{ $assignment->id }}" @checked(in_array((string) $assignment->id, $selectedAssignmentIds, true)) @disabled($agenda) class="mt-0.5 rounded border-line-strong text-warning-ink focus:ring-warning-500 disabled:cursor-not-allowed">
                                 <span>
                                     <span class="block text-theme-sm font-medium text-heading">{{ $assignment->classSubject->classroomTerm->name }}</span>
                                     <span class="mt-0.5 block text-theme-xs font-normal uppercase text-soft">Tafsir · {{ \Carbon\Carbon::parse($group['starts_at'])->format('H:i') }}–{{ \Carbon\Carbon::parse($group['ends_at'])->format('H:i') }}</span>
@@ -59,10 +70,10 @@
                     <div class="mt-6 grid grid-cols-1 gap-4 border-t border-line pt-5 md:grid-cols-[1fr_auto] md:items-end">
                         <div>
                             <label class="mb-1 block text-body ui-form-label">Materi Tafsir</label>
-                            <textarea name="material" rows="4" required class="w-full rounded-xl border-line-strong shadow-sm focus:border-warning-500 focus:ring-warning-500 text-theme-sm font-normal" placeholder="Tuliskan materi yang diajarkan..."></textarea>
-                            <p class="mt-2 text-theme-xs text-muted font-normal"><span x-text="checked()"></span> dari {{ $group['assignments']->count() }} kelas tercentang.</p>
+                            <textarea name="material" rows="4" required class="w-full rounded-xl border-line-strong shadow-sm focus:border-warning-500 focus:ring-warning-500 text-theme-sm font-normal" placeholder="Tuliskan materi yang diajarkan...">{{ $retryGroup ? old('material') : '' }}</textarea>
+                            <p class="mt-2 text-theme-xs text-muted font-normal"><span x-text="selectedAssignments.length"></span> dari {{ $group['assignments']->count() }} kelas tercentang.</p>
                         </div>
-                        <button type="submit" class="rounded-xl bg-warning-600 px-5 py-3 text-white shadow-sm transition-colors hover:bg-warning-700 disabled:cursor-not-allowed disabled:opacity-50 text-theme-sm font-medium" :disabled="checked() === 0">Simpan Jurnal Pengganti</button>
+                        <button type="submit" @disabled(! $attendanceEligibility['allowed']) class="rounded-xl bg-warning-600 px-5 py-3 text-white shadow-sm transition-colors hover:bg-warning-700 disabled:cursor-not-allowed disabled:opacity-50 text-theme-sm font-medium" :disabled="!attendanceAllowed || selectedAssignments.length === 0">Simpan Jurnal Pengganti</button>
                     </div>
                 </div>
             </form>

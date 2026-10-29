@@ -13,7 +13,9 @@ use Illuminate\Support\Carbon;
 class TeachingAttendanceReconciliationService
 {
     public const HADIR_TANPA_JURNAL = 'hadir_tanpa_jurnal';
+
     public const PRESENSI_BELUM_TERCATAT = 'presensi_belum_tercatat';
+
     public const PRESENSI_DAN_JURNAL_BELUM_TERCATAT = 'presensi_dan_jurnal_belum_tercatat';
 
     public function __construct(private readonly AttendanceStatusClient $attendanceStatusClient) {}
@@ -30,10 +32,15 @@ class TeachingAttendanceReconciliationService
         bool $isSubstituteJournal = false,
         bool $isExcluded = false,
         ?Carbon $now = null,
+        bool $attendanceExempt = false,
     ): array {
         $due = $this->isDue($date, $endsAt, $now);
         $attendanceLabel = $this->attendanceLabel($attendanceStatus, $attendanceAvailable);
         $journalLabel = $isSubstituteJournal ? 'Diisi guru pengganti' : ($hasJournal ? 'Sudah diisi' : 'Belum diisi');
+
+        if ($attendanceExempt) {
+            return $this->result('dikecualikan', null, false, $due, JournalAttendanceEligibilityService::EXEMPT_LABEL, $journalLabel);
+        }
 
         if (! $due) {
             return $this->result('belum_jatuh_tempo', null, false, false, $attendanceLabel, $journalLabel);

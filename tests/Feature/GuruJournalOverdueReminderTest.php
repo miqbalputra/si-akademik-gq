@@ -23,11 +23,13 @@ use App\Support\SessionTimetable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Spatie\Permission\Models\Role;
+use Tests\Concerns\WithPresentJournalAttendance;
 use Tests\TestCase;
 
 class GuruJournalOverdueReminderTest extends TestCase
 {
     use RefreshDatabase;
+    use WithPresentJournalAttendance;
 
     private const TODAY = '2026-08-10';
 

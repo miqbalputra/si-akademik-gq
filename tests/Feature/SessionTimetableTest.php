@@ -6,7 +6,6 @@ use App\Models\AcademicTerm;
 use App\Models\AcademicYear;
 use App\Models\Classroom;
 use App\Models\ClassroomTerm;
-use App\Models\DiniyyahClassJournal;
 use App\Models\DiniyyahClassSubject;
 use App\Models\DiniyyahSubject;
 use App\Models\DiniyyahTeacherAssignment;
@@ -16,6 +15,7 @@ use App\Models\User;
 use App\Support\SessionTimetable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
+use Tests\Concerns\WithPresentJournalAttendance;
 use Tests\TestCase;
 
 /**
@@ -26,6 +26,7 @@ use Tests\TestCase;
 class SessionTimetableTest extends TestCase
 {
     use RefreshDatabase;
+    use WithPresentJournalAttendance;
 
     public function test_label_for_tafsir_and_numeric(): void
     {

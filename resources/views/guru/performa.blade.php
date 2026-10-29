@@ -100,7 +100,9 @@
             @endif
         </div>
 
-        @if(! ($reconciliation['available'] ?? false))
+        @if($reconciliation['exempt'] ?? false)
+            <div class="mt-4 rounded-xl border border-info-line bg-info-soft px-4 py-3 text-theme-sm font-medium text-info-ink">{{ $reconciliation['message'] }}</div>
+        @elseif(! ($reconciliation['available'] ?? false))
             <div class="mt-4 rounded-xl border border-warning-line bg-surface/80 px-4 py-3 text-theme-sm font-medium text-warning-ink">{{ $reconciliation['message'] ?? 'Status presensi belum dapat diverifikasi dari GeoPresensi.' }}</div>
         @elseif($reconciliationRows->isEmpty())
             <div class="mt-4 rounded-xl border border-success-line bg-success-soft px-4 py-3 text-theme-sm font-medium text-success-ink">Tidak ada ketidaksesuaian pada periode ini.</div>

@@ -16,11 +16,12 @@ use App\Models\School;
 use App\Models\Teacher;
 use App\Models\User;
 use App\Support\SessionTimetable;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use PDOException;
 use Spatie\Permission\Models\Role;
+use Tests\Concerns\WithPresentJournalAttendance;
 use Tests\TestCase;
 
 /**
@@ -31,6 +32,7 @@ use Tests\TestCase;
 class GuruDiniyyahSubstituteTafsirJournalTest extends TestCase
 {
     use RefreshDatabase;
+    use WithPresentJournalAttendance;
 
     /** 2026-07-16 = Kamis. */
     private const KAMIS = '2026-07-16';

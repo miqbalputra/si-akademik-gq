@@ -6,6 +6,7 @@ use App\Models\AcademicTerm;
 use App\Models\AcademicYear;
 use App\Models\Classroom;
 use App\Models\ClassroomTerm;
+use App\Models\ClassSession;
 use App\Models\DiniyyahClassJournal;
 use App\Models\DiniyyahClassSubject;
 use App\Models\DiniyyahSubject;
@@ -15,11 +16,12 @@ use App\Models\School;
 use App\Models\Teacher;
 use App\Models\User;
 use App\Support\SessionTimetable;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use PDOException;
 use Spatie\Permission\Models\Role;
+use Tests\Concerns\WithPresentJournalAttendance;
 use Tests\TestCase;
 
 /**
@@ -29,6 +31,7 @@ use Tests\TestCase;
 class GuruDiniyyahTafsirJournalTest extends TestCase
 {
     use RefreshDatabase;
+    use WithPresentJournalAttendance;
 
     /** 2026-07-16 = Kamis. */
     private const KAMIS = '2026-07-16';
@@ -269,7 +272,7 @@ class GuruDiniyyahTafsirJournalTest extends TestCase
     /**
      * Buat guru + tafsir assignment untuk tiap nama kelas (satu gender, M2-M6).
      *
-     * @param string[] $classroomNames
+     * @param  string[]  $classroomNames
      */
     private function makeTafsirTeacher(array $classroomNames, bool $withFiqihAssignment = false): array
     {
@@ -306,7 +309,7 @@ class GuruDiniyyahTafsirJournalTest extends TestCase
                 'teacher_id' => $teacher->id,
                 'assignment_role' => 'primary',
             ]);
-            $tafsirSession = \App\Models\ClassSession::where('session_name', SessionTimetable::SESSION_TAFSIR)->firstOrFail();
+            $tafsirSession = ClassSession::where('session_name', SessionTimetable::SESSION_TAFSIR)->firstOrFail();
             DiniyyahTeachingSchedule::create([
                 'diniyyah_teacher_assignment_id' => $assignments[array_key_last($assignments)]->id,
                 'class_session_id' => $tafsirSession->id,
@@ -356,7 +359,7 @@ class GuruDiniyyahTafsirJournalTest extends TestCase
             'teacher_id' => $teacher->id,
             'assignment_role' => 'primary',
         ]);
-        $sessionTwo = \App\Models\ClassSession::where('session_name', '2')->firstOrFail();
+        $sessionTwo = ClassSession::where('session_name', '2')->firstOrFail();
         DiniyyahTeachingSchedule::create([
             'diniyyah_teacher_assignment_id' => $assignment->id,
             'class_session_id' => $sessionTwo->id,

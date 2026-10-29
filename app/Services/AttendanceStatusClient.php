@@ -19,6 +19,7 @@ use Throwable;
 class AttendanceStatusClient
 {
     public const EXEMPT_STATUSES = ['izin', 'sakit'];
+
     public const PRESENT_STATUSES = ['hadir', 'hadir_terlambat', 'hadir_izin_terlambat'];
 
     private const VALID_STATUSES = [
@@ -46,12 +47,13 @@ class AttendanceStatusClient
             ]];
         })->all();
 
-        if (! (bool) config('services.attendance_journal.enabled', false) || $teachers->isEmpty()) {
+        if (! (bool) config('services.attendance_journal.enabled', false) || $teachers->isEmpty()
+            || $teachers->every(fn (Teacher $teacher): bool => (bool) $teacher->journal_attendance_exempt)) {
             return $result;
         }
 
         $mappedTeachers = $teachers->filter(function (Teacher $teacher): bool {
-            return trim((string) $teacher->niy) !== '';
+            return ! $teacher->journal_attendance_exempt && trim((string) $teacher->niy) !== '';
         });
 
         $duplicateExternalIds = $mappedTeachers
@@ -220,7 +222,7 @@ class AttendanceStatusClient
     }
 
     /** @param Collection<int, string> $externalIds
-     *  @return Collection<int, string>
+     * @return Collection<int, string>
      */
     private function knownTeacherIds(Collection $externalIds): Collection
     {

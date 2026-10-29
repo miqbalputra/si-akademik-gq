@@ -16,13 +16,14 @@ use App\Models\School;
 use App\Models\Student;
 use App\Models\Teacher;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use PDOException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use Spatie\Permission\Models\Role;
+use Tests\Concerns\WithPresentJournalAttendance;
 use Tests\TestCase;
 
 /**
@@ -33,6 +34,7 @@ use Tests\TestCase;
 class DiniyyahSubstituteJournalTest extends TestCase
 {
     use RefreshDatabase;
+    use WithPresentJournalAttendance;
 
     public function test_substitute_teacher_without_assignment_can_store_journal(): void
     {

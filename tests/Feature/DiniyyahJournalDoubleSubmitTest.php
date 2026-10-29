@@ -13,8 +13,10 @@ use App\Models\DiniyyahTeacherAssignment;
 use App\Models\School;
 use App\Models\Teacher;
 use App\Models\User;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
+use Tests\Concerns\WithPresentJournalAttendance;
 use Tests\TestCase;
 
 /**
@@ -25,6 +27,7 @@ use Tests\TestCase;
 class DiniyyahJournalDoubleSubmitTest extends TestCase
 {
     use RefreshDatabase;
+    use WithPresentJournalAttendance;
 
     public function test_second_identical_submit_is_rejected_without_duplicate(): void
     {
@@ -66,7 +69,7 @@ class DiniyyahJournalDoubleSubmitTest extends TestCase
             'jp_count' => 1,
         ]);
 
-        $this->expectException(\Illuminate\Database\QueryException::class);
+        $this->expectException(QueryException::class);
 
         DiniyyahClassJournal::create([
             'diniyyah_teacher_assignment_id' => $context['assignment']->id,

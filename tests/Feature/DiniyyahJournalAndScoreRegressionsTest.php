@@ -22,6 +22,7 @@ use App\Models\Teacher;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
+use Tests\Concerns\WithPresentJournalAttendance;
 use Tests\TestCase;
 
 /**
@@ -35,6 +36,7 @@ use Tests\TestCase;
 class DiniyyahJournalAndScoreRegressionsTest extends TestCase
 {
     use RefreshDatabase;
+    use WithPresentJournalAttendance;
 
     // ---------------------------------------------------------------- #14 / #15
 
@@ -104,7 +106,7 @@ class DiniyyahJournalAndScoreRegressionsTest extends TestCase
 
     public function test_journal_store_rejects_cross_classroom_term(): void
     {
-        [$assessmentSet, $teacher, , ,] = $this->makeJournalContext();
+        [$assessmentSet, $teacher] = $this->makeJournalContext();
 
         // Buat classroom + classroom_term lain untuk dipalsukan.
         $otherClassroom = Classroom::create(['name' => 'Mustawa 2 Ikhwan']);
@@ -132,7 +134,7 @@ class DiniyyahJournalAndScoreRegressionsTest extends TestCase
 
     public function test_journal_store_ignores_absence_for_foreign_enrollment(): void
     {
-        [$assessmentSet, $teacher, $enrollmentA, ,] = $this->makeJournalContext();
+        [$assessmentSet, $teacher, $enrollmentA] = $this->makeJournalContext();
 
         // Enrollment dari classroom_term lain.
         $otherClassroom = Classroom::create(['name' => 'Mustawa 2 Ikhwan']);
@@ -298,7 +300,8 @@ class DiniyyahJournalAndScoreRegressionsTest extends TestCase
             'is_required' => true,
         ]);
 
-        $teacherBag = new class($teacher->user_id, $assignment->id, $teacher->user) {
+        $teacherBag = new class($teacher->user_id, $assignment->id, $teacher->user)
+        {
             public function __construct(public int $user_id, public int $assignment_id, public User $user) {}
         };
 

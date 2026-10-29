@@ -20,6 +20,7 @@ use App\Models\User;
 use App\Services\StudentDepartureWorkflow;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
+use Tests\Concerns\WithPresentJournalAttendance;
 use Tests\TestCase;
 
 /**
@@ -29,6 +30,7 @@ use Tests\TestCase;
 class DiniyyahJournalDestroyTest extends TestCase
 {
     use RefreshDatabase;
+    use WithPresentJournalAttendance;
 
     public function test_user_without_teacher_gets_403_not_500(): void
     {

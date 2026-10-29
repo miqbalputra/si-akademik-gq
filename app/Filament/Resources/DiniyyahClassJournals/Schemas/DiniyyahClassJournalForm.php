@@ -5,13 +5,16 @@ namespace App\Filament\Resources\DiniyyahClassJournals\Schemas;
 use App\Models\ClassSession;
 use App\Models\DiniyyahTeacherAssignment;
 use App\Support\SessionTimetable;
+use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Actions;
 use Filament\Schemas\Components\Callout;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rules\Unique;
 
 /**
@@ -43,12 +46,14 @@ class DiniyyahClassJournalForm
                     ->optionsLimit(200)
                     ->required()
                     ->live()
+                    ->afterStateUpdated(fn ($livewire) => $livewire->checkJournalAttendance())
                     ->helperText('Pilih tugas mengajar (kelas + mapel + guru pemilik assignment) yang berlaku pada tanggal jurnal.'),
 
                 DatePicker::make('date')
                     ->label('Tanggal Mengajar')
                     ->required()
                     ->live()
+                    ->afterStateUpdated(fn ($livewire) => $livewire->checkJournalAttendance())
                     ->helperText('Tanggal jurnal dilaksanakan — boleh tanggal lalu (untuk backfill jurnal terlewat).'),
 
                 Select::make('session_hour')
@@ -93,7 +98,7 @@ class DiniyyahClassJournalForm
                             // menabrak unique index DB. whereDate membandingkan tanggal
                             // saja, konsisten lintas DB. Lihat jebakan date-cast SQLite.
                             $date = $get('date');
-                            $dateStr = is_string($date) ? $date : (string) \Illuminate\Support\Carbon::parse($date)->format('Y-m-d');
+                            $dateStr = is_string($date) ? $date : (string) Carbon::parse($date)->format('Y-m-d');
                             $assignmentId = $get('diniyyah_teacher_assignment_id');
 
                             return $rule->where(function ($query) use ($dateStr, $assignmentId): void {
@@ -110,9 +115,21 @@ class DiniyyahClassJournalForm
                     ->label('Guru Pengganti (yang benar-benar mengajar)')
                     ->relationship('substituteTeacher', 'name')
                     ->nullable()
+                    ->live()
+                    ->afterStateUpdated(fn ($livewire) => $livewire->checkJournalAttendance())
                     ->searchable()
                     ->preload()
                     ->helperText('Kosongkan jika guru pemilik assignment yang mengajar. Untuk kasus tukar guru: isi guru yang benar-benar mengajar tanggal itu (guru lama) agar JP/gaji tercatat ke dia.'),
+
+                Callout::make('Presensi guru pada tanggal jurnal')
+                    ->description(fn ($livewire): string => $livewire->journalAttendanceEligibility['message'] ?? 'Pilih tugas mengajar dan tanggal jurnal untuk memeriksa GeoPresensi.')
+                    ->color(fn ($livewire): string => ($livewire->journalAttendanceEligibility['allowed'] ?? false) ? 'info' : 'warning')
+                    ->columnSpanFull(),
+                Actions::make([
+                    Action::make('checkJournalAttendance')
+                        ->label('Cek ulang presensi')
+                        ->action(fn ($livewire) => $livewire->checkJournalAttendance()),
+                ])->columnSpanFull(),
 
                 Textarea::make('material')
                     ->label('Materi')

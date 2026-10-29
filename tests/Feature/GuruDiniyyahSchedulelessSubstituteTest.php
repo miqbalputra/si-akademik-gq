@@ -17,11 +17,13 @@ use App\Models\User;
 use App\Support\SessionTimetable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
+use Tests\Concerns\WithPresentJournalAttendance;
 use Tests\TestCase;
 
 class GuruDiniyyahSchedulelessSubstituteTest extends TestCase
 {
     use RefreshDatabase;
+    use WithPresentJournalAttendance;
 
     private const SENIN = '2026-07-13';
 

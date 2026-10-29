@@ -18,6 +18,10 @@
         </div>
     @endif
 
+    @if(session('error'))
+        <div class="mb-6 rounded-xl border border-danger-line bg-danger-soft p-4 text-theme-sm text-danger-ink">{{ session('error') }}</div>
+    @endif
+    <x-journal-attendance-status :eligibility="$attendanceEligibility" />
     <div class="glass-card rounded-2xl p-6 border border-line">
         <!-- Konteks read-only: kelas, mapel, tanggal, sesi tidak bisa diubah -->
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5 p-4 bg-surface-subtle rounded-xl border border-line">
@@ -44,13 +48,15 @@
             </div>
         </div>
 
-        <form method="POST" action="{{ route('guru.diniyyah-journals.update', $journal) }}">
+        <form method="POST" action="{{ route('guru.diniyyah-journals.update', $journal) }}"
+              x-data="{ attendanceAllowed: @js($attendanceEligibility['allowed']) }"
+              @journal-attendance-checked.window="attendanceAllowed = $event.detail.allowed">
             @csrf
             @method('PUT')
 
             <div class="mb-5">
                 <label for="material" class="block text-body mb-1.5 ui-form-label">Materi</label>
-                <textarea id="material" name="material" rows="3" required class="w-full rounded-xl border-line-strong shadow-sm focus:ring-success-500 focus:border-success-500 text-theme-sm font-normal">{{ $journal->material }}</textarea>
+                <textarea id="material" name="material" rows="3" required class="w-full rounded-xl border-line-strong shadow-sm focus:ring-success-500 focus:border-success-500 text-theme-sm font-normal">{{ old('material', $journal->material) }}</textarea>
             </div>
 
             <div class="bg-surface-subtle border border-line rounded-xl p-4">
@@ -68,7 +74,7 @@
                 <a href="{{ route('guru.diniyyah-journals.index', ['classroom_term_id' => $classroomTerm->id, 'date' => $journal->date->format('Y-m-d')]) }}" class="text-center rounded-xl px-6 py-3 text-theme-sm font-medium text-body border border-line-strong hover:bg-surface-subtle transition-colors">
                     Batal
                 </a>
-                <button type="submit" class="rounded-xl bg-success-600 px-6 py-3 text-white hover:bg-success-700 shadow-sm transition-colors text-theme-sm font-medium">
+                <button type="submit" @disabled(! $attendanceEligibility['allowed']) :disabled="!attendanceAllowed" class="rounded-xl bg-success-600 px-6 py-3 text-white hover:bg-success-700 shadow-sm transition-colors text-theme-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed">
                     Simpan Perubahan
                 </button>
             </div>

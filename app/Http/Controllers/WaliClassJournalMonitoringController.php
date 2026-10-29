@@ -293,6 +293,7 @@ class WaliClassJournalMonitoringController extends Controller
                         $journal !== null,
                         $journal?->substitute_teacher_id !== null,
                         $holiday !== null || $agenda !== null || $isSimultaneousTafsir,
+                        attendanceExempt: (bool) $schedule->teacherAssignment?->teacher?->journal_attendance_exempt,
                     );
 
                     $dayData['items'][] = [

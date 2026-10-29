@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use RuntimeException;
 use Spatie\Permission\Models\Role;
+use Tests\Concerns\WithPresentJournalAttendance;
 use Tests\TestCase;
 
 /**
@@ -30,6 +31,7 @@ use Tests\TestCase;
 class GuruDiniyyahJournalEditTest extends TestCase
 {
     use RefreshDatabase;
+    use WithPresentJournalAttendance;
 
     public function test_riwayat_page_shows_regular_and_own_substitute_journals_only(): void
     {
@@ -290,7 +292,7 @@ class GuruDiniyyahJournalEditTest extends TestCase
 
         $enrollments = [];
         foreach (['Santri A', 'Santri B'] as $i => $name) {
-            $student = Student::create(['name' => $name, 'gender' => 'L', 'nis' => 'TEST-' . ($i + 1)]);
+            $student = Student::create(['name' => $name, 'gender' => 'L', 'nis' => 'TEST-'.($i + 1)]);
             $enrollments[] = ClassEnrollment::create([
                 'academic_term_id' => $term->id,
                 'classroom_term_id' => $classroomTerm->id,

@@ -24,11 +24,13 @@ use Illuminate\Validation\ValidationException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use Spatie\Permission\Models\Role;
+use Tests\Concerns\WithPresentJournalAttendance;
 use Tests\TestCase;
 
 class DiniyyahJournalReentryTest extends TestCase
 {
     use RefreshDatabase;
+    use WithPresentJournalAttendance;
 
     private const MIGRATION = 'migrations/2026_10_29_000001_limit_journal_slot_uniqueness_to_active_records.php';
 

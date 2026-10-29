@@ -7,8 +7,8 @@ use App\Filament\Resources\DiniyyahClassJournals\Pages\CreateDiniyyahClassJourna
 use App\Models\AcademicTerm;
 use App\Models\AcademicYear;
 use App\Models\Classroom;
-use App\Models\ClassSession;
 use App\Models\ClassroomTerm;
+use App\Models\ClassSession;
 use App\Models\DiniyyahClassJournal;
 use App\Models\DiniyyahClassJournalAbsence;
 use App\Models\DiniyyahClassSubject;
@@ -18,12 +18,14 @@ use App\Models\DiniyyahTeachingSchedule;
 use App\Models\School;
 use App\Models\Teacher;
 use App\Models\User;
-use App\Support\SessionTimetable;
 use App\Services\DiniyyahJournalValidationWorkflow;
-use DomainException;
+use App\Support\SessionTimetable;
 use Database\Seeders\RolePermissionSeeder;
+use DomainException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Livewire\Livewire;
+use Tests\Concerns\WithPresentJournalAttendance;
 use Tests\TestCase;
 
 /**
@@ -36,6 +38,7 @@ use Tests\TestCase;
 class DiniyyahClassJournalAdminCreateTest extends TestCase
 {
     use RefreshDatabase;
+    use WithPresentJournalAttendance;
 
     /** Selasa 2026-08-04 — di luar jadwal saat ini (Senin). */
     private const SELASA_LAMA = '2026-08-04';
@@ -53,7 +56,7 @@ class DiniyyahClassJournalAdminCreateTest extends TestCase
         [$assignment] = $this->makeAssignmentWithSchedule($guru['teacher'], 'Fiqih', 1, '1'); // Senin sesi 1
 
         // Backfill tanggal Selasa (di luar jadwal Senin) — tanpa gate, harus berhasil.
-        \Livewire\Livewire::actingAs($admin, 'admin')
+        Livewire::actingAs($admin, 'admin')
             ->test(CreateDiniyyahClassJournal::class)
             ->fillForm([
                 'diniyyah_teacher_assignment_id' => $assignment->id,
@@ -89,7 +92,7 @@ class DiniyyahClassJournalAdminCreateTest extends TestCase
         [$assignment] = $this->makeAssignmentWithSchedule($guru['teacher'], 'Fiqih', 1, '1');
 
         // Catat jurnal terlewat sekali (berhasil).
-        \Livewire\Livewire::actingAs($admin, 'admin')
+        Livewire::actingAs($admin, 'admin')
             ->test(CreateDiniyyahClassJournal::class)
             ->fillForm([
                 'diniyyah_teacher_assignment_id' => $assignment->id,
@@ -102,7 +105,7 @@ class DiniyyahClassJournalAdminCreateTest extends TestCase
             ->assertHasNoFormErrors();
 
         // Submit kedua dengan (assignment, date, session) yang sama → ditolak.
-        \Livewire\Livewire::actingAs($admin, 'admin')
+        Livewire::actingAs($admin, 'admin')
             ->test(CreateDiniyyahClassJournal::class)
             ->fillForm([
                 'diniyyah_teacher_assignment_id' => $assignment->id,
@@ -126,7 +129,7 @@ class DiniyyahClassJournalAdminCreateTest extends TestCase
         [$assignment] = $this->makeAssignmentWithSchedule($guruPemilik['teacher'], 'Fiqih', 1, '1');
 
         // Kasus tukar guru: admin isi substitute = guru lama yang mengajar tanggal itu.
-        \Livewire\Livewire::actingAs($admin, 'admin')
+        Livewire::actingAs($admin, 'admin')
             ->test(CreateDiniyyahClassJournal::class)
             ->fillForm([
                 'diniyyah_teacher_assignment_id' => $assignment->id,

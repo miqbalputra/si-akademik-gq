@@ -4,11 +4,11 @@ namespace Tests\Feature;
 
 use App\Models\AcademicTerm;
 use App\Models\AcademicYear;
-use App\Models\ClassSession;
 use App\Models\Classroom;
 use App\Models\ClassroomTerm;
-use App\Models\DiniyyahClassSubject;
+use App\Models\ClassSession;
 use App\Models\DiniyyahClassJournal;
+use App\Models\DiniyyahClassSubject;
 use App\Models\DiniyyahSubject;
 use App\Models\DiniyyahTeacherAssignment;
 use App\Models\DiniyyahTeachingSchedule;
@@ -16,17 +16,19 @@ use App\Models\School;
 use App\Models\SchoolEvent;
 use App\Models\Teacher;
 use App\Models\User;
-use App\Services\DiniyyahNoKbmAgendaService;
 use App\Services\DiniyyahJournalReportService;
+use App\Services\DiniyyahNoKbmAgendaService;
 use App\Services\GuruPerformaService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Spatie\Permission\Models\Role;
+use Tests\Concerns\WithPresentJournalAttendance;
 use Tests\TestCase;
 
 class GuruNoKbmAgendaTest extends TestCase
 {
     use RefreshDatabase;
+    use WithPresentJournalAttendance;
 
     protected function tearDown(): void
     {

@@ -244,7 +244,10 @@
                 </div>
             @endif
 
-            <form method="POST" action="{{ route('guru.diniyyah-journals.store') }}">
+            <x-journal-attendance-status :eligibility="$attendanceEligibility" />
+            <form method="POST" action="{{ route('guru.diniyyah-journals.store') }}"
+                  x-data="{ attendanceAllowed: @js($attendanceEligibility['allowed']) }"
+                  @journal-attendance-checked.window="attendanceAllowed = $event.detail.allowed">
                 @csrf
                 <input type="hidden" name="classroom_term_id" value="{{ $selectedClassroomTermId }}">
                 <input type="hidden" name="date" value="{{ $selectedDate }}">
@@ -267,7 +270,9 @@
                                     data-start="{{ $slotStart }}"
                                     data-end="{{ $slotEnd }}"
                                     @disabled($slot->filled || $slot->agenda !== null)
-                                    @selected($selectedScheduleSlot && $selectedScheduleSlot->assignment_id === $slot->assignment_id && $selectedScheduleSlot->session_name === $slot->session_name)>
+                                    @selected(old('diniyyah_teacher_assignment_id')
+                                        ? ((string) old('diniyyah_teacher_assignment_id') === (string) $slot->assignment_id && (string) old('session_hour') === (string) $slot->session_name)
+                                        : ($selectedScheduleSlot && $selectedScheduleSlot->assignment_id === $slot->assignment_id && $selectedScheduleSlot->session_name === $slot->session_name))>
                                 {{ \App\Support\SessionTimetable::label($slot->session_name) }} — {{ $slot->subject_name }}{{ $slotStart ? " ({$slotStart} - {$slotEnd})" : '' }}{{ $slotStatusSuffix }}
                             </option>
                         @endforeach
@@ -282,7 +287,7 @@
                 @if($hasFillableSchedule)
                 <div class="mt-5">
                     <label for="material" class="block text-body mb-1.5 ui-form-label">Materi</label>
-                    <textarea id="material" name="material" rows="3" required class="form-input text-theme-sm font-normal" placeholder="Tuliskan materi yang diajarkan..."></textarea>
+                    <textarea id="material" name="material" rows="3" required class="form-input text-theme-sm font-normal" placeholder="Tuliskan materi yang diajarkan...">{{ old('material') }}</textarea>
                 </div>
 
                 <div class="mt-5 bg-surface-subtle border border-line rounded-xl p-4">
@@ -293,7 +298,7 @@
                 </div>
 
                 <div class="mt-6 flex justify-end">
-                    <button type="submit" class="btn btn-primary w-full sm:w-auto text-theme-sm font-medium">
+                    <button type="submit" @disabled(! $attendanceEligibility['allowed']) :disabled="!attendanceAllowed" class="btn btn-primary w-full sm:w-auto text-theme-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed">
                         Simpan Jurnal Jam Ini
                     </button>
                 </div>

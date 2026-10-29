@@ -8,8 +8,9 @@ use App\Models\DiniyyahClassJournal;
 use App\Models\DiniyyahTeacherAssignment;
 use App\Models\DiniyyahTeachingSchedule;
 use App\Models\StudentAttendance;
-use App\Services\DiniyyahNoKbmAgendaService;
 use App\Services\DiniyyahJournalReportService;
+use App\Services\DiniyyahNoKbmAgendaService;
+use App\Services\JournalAttendanceEligibilityService;
 use App\Services\TafsirScheduleGroupingService;
 use App\Support\SessionTimetable;
 use Illuminate\Database\QueryException;
@@ -36,6 +37,11 @@ class GuruDiniyyahJournalController extends Controller
         // Default hari ini menggunakan tanggal WIB dan semua jadwal di bawah
         // harus mengikuti versi yang berlaku pada tanggal jurnal terpilih.
         $selectedDate = $request->query('date', Carbon::now('Asia/Jakarta')->toDateString());
+        $request->validate(['date' => ['nullable', 'date_format:Y-m-d']]);
+        $attendanceEligibility = app(JournalAttendanceEligibilityService::class)->check($teacher, $selectedDate);
+        if ($request->boolean('attendance_check')) {
+            return response()->json($attendanceEligibility)->header('Cache-Control', 'private, no-store');
+        }
 
         // Active assignments for this teacher. eager-load `schedules.classSession` agar
         // pengecekan jadwal (hari & sesi) di kelas terpilih tidak menambah query (N+1).
@@ -199,6 +205,7 @@ class GuruDiniyyahJournalController extends Controller
         $hasFillableSchedule = $scheduledSlots->contains(fn ($slot): bool => ! $slot->filled && $slot->agenda === null);
 
         return view('guru.diniyyah-journals.index', compact(
+            'attendanceEligibility',
             'classes',
             'selectedClassroomTermId',
             'selectedDate',
@@ -256,7 +263,7 @@ class GuruDiniyyahJournalController extends Controller
      * Form edit jurnal yang sudah terisi (materi + presensi santri).
      * Hanya pemilik assignment asli (bukan jurnal pengganti) yang bisa edit.
      */
-    public function edit(DiniyyahClassJournal $diniyyah_journal)
+    public function edit(Request $request, DiniyyahClassJournal $diniyyah_journal)
     {
         $teacher = Auth::user()->teacher;
         if (! $teacher) {
@@ -265,6 +272,11 @@ class GuruDiniyyahJournalController extends Controller
         abort_unless($diniyyah_journal->substitute_teacher_id === null, 403, 'Jurnal pengganti tidak dapat diedit dari menu ini.');
         abort_unless($diniyyah_journal->teacherAssignment->teacher_id === $teacher->id, 403);
         abort_unless($diniyyah_journal->status !== 'validated', 403, 'Jurnal tervalidasi harus dibatalkan validasinya oleh admin sebelum diedit.');
+
+        $attendanceEligibility = app(JournalAttendanceEligibilityService::class)->check($teacher, $diniyyah_journal->date);
+        if ($request->boolean('attendance_check')) {
+            return response()->json($attendanceEligibility)->header('Cache-Control', 'private, no-store');
+        }
 
         $diniyyah_journal->load([
             'teacherAssignment.classSubject.subject',
@@ -311,6 +323,7 @@ class GuruDiniyyahJournalController extends Controller
         $journal = $diniyyah_journal;
 
         return view('guru.diniyyah-journals.edit', compact(
+            'attendanceEligibility',
             'journal',
             'classroomTerm',
             'students',
@@ -352,6 +365,12 @@ class GuruDiniyyahJournalController extends Controller
 
         $absences = collect($validated['absences'] ?? [])
             ->filter(fn ($status, $enrollmentId) => in_array((int) $enrollmentId, $validEnrollmentIds, true));
+
+        $attendanceEligibility = app(JournalAttendanceEligibilityService::class)->check($teacher, $diniyyah_journal->date);
+        if (! $attendanceEligibility['allowed']) {
+            return redirect()->route('guru.diniyyah-journals.edit', $diniyyah_journal)
+                ->withInput()->with('error', $attendanceEligibility['message']);
+        }
 
         DB::transaction(function () use ($diniyyah_journal, $validated, $validEnrollmentIds, $absences): void {
             $diniyyah_journal->material = $validated['material'];
@@ -433,8 +452,7 @@ class GuruDiniyyahJournalController extends Controller
             'teacherAssignment.classSubject.classroomTerm.classroom',
             'classSession',
         ])->whereHas('teacherAssignment', fn ($query) => $query->where('teacher_id', $teacher->id))->get();
-        $scheduledTafsir = $teacherSchedules->first(fn ($schedule) =>
-            (int) $schedule->diniyyah_teacher_assignment_id === (int) $assignment->id
+        $scheduledTafsir = $teacherSchedules->first(fn ($schedule) => (int) $schedule->diniyyah_teacher_assignment_id === (int) $assignment->id
             && (int) $schedule->day_of_week === $dayOfWeek
             && (string) ($schedule->classSession?->session_name ?? '') === $validated['session_hour']
         );
@@ -486,6 +504,13 @@ class GuruDiniyyahJournalController extends Controller
                 'classroom_term_id' => $validated['classroom_term_id'],
                 'date' => $validated['date'],
             ])->withInput()->with('error', 'Jurnal untuk kelas, tanggal, dan jam sesi ini sudah pernah diisi.');
+        }
+
+        $attendanceEligibility = app(JournalAttendanceEligibilityService::class)->check($teacher, $validated['date']);
+        if (! $attendanceEligibility['allowed']) {
+            return redirect()->route('guru.diniyyah-journals.index', [
+                'classroom_term_id' => $validated['classroom_term_id'], 'date' => $validated['date'],
+            ])->withInput()->with('error', $attendanceEligibility['message']);
         }
 
         try {
@@ -568,5 +593,4 @@ class GuruDiniyyahJournalController extends Controller
     {
         return $e instanceof UniqueConstraintViolationException;
     }
-
 }

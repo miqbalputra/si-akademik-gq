@@ -163,7 +163,9 @@
                     <div>
                         <p class="text-theme-xs font-normal uppercase {{ ($reconciliation['available'] ?? false) ? 'text-brand-ink' : 'text-warning-ink' }}">Sinkronisasi operasional</p>
                         <h2 id="attendance-journal-heading" class="mt-1 text-heading ui-card-title">Kesesuaian Presensi &amp; Jurnal</h2>
-                        @if(! ($reconciliation['available'] ?? false))
+                        @if($reconciliation['exempt'] ?? false)
+                            <p class="mt-1 text-theme-sm text-info-ink">{{ $reconciliation['message'] }}</p>
+                        @elseif(! ($reconciliation['available'] ?? false))
                             <p class="mt-1 text-theme-sm text-warning-ink">{{ $reconciliation['message'] ?? 'Status presensi belum dapat diverifikasi.' }}</p>
                         @elseif($reconciliationCount > 0)
                             <p class="mt-1 text-theme-sm text-brand-ink">Ada {{ $reconciliationCount }} slot yang perlu dicek setelah sesi berakhir.</p>

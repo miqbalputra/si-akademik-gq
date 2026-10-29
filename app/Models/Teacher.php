@@ -9,14 +9,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-#[Fillable(['user_id', 'name', 'gender', 'niy', 'phone', 'whatsapp', 'email', 'address', 'started_at', 'status'])]
+#[Fillable(['user_id', 'name', 'gender', 'niy', 'phone', 'whatsapp', 'email', 'address', 'started_at', 'status', 'journal_attendance_exempt'])]
 class Teacher extends Model
 {
     use HasFactory, SoftDeletes;
 
     protected function casts(): array
     {
-        return ['started_at' => 'date'];
+        return ['started_at' => 'date', 'journal_attendance_exempt' => 'boolean'];
     }
 
     public function user(): BelongsTo
@@ -46,7 +46,7 @@ class Teacher extends Model
 
     public function tahfidzAssistantHalaqahs(): HasMany
     {
-        return $this->hasMany(TahfidzHalaqah::class, "assistant_teacher_id");
+        return $this->hasMany(TahfidzHalaqah::class, 'assistant_teacher_id');
     }
 
     public function tasmiExaminerAssignments(): HasMany

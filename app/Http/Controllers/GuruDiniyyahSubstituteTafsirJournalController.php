@@ -7,6 +7,7 @@ use App\Models\DiniyyahClassJournal;
 use App\Models\DiniyyahTeachingSchedule;
 use App\Models\Teacher;
 use App\Services\DiniyyahNoKbmAgendaService;
+use App\Services\JournalAttendanceEligibilityService;
 use App\Services\TafsirScheduleGroupingService;
 use App\Support\SessionTimetable;
 use Illuminate\Database\QueryException;
@@ -49,6 +50,11 @@ class GuruDiniyyahSubstituteTafsirJournalController extends Controller
         }
 
         $selectedDate = $request->query('date', Carbon::now('Asia/Jakarta')->toDateString());
+        $request->validate(['date' => ['nullable', 'date_format:Y-m-d']]);
+        $attendanceEligibility = app(JournalAttendanceEligibilityService::class)->check($teacher, $selectedDate);
+        if ($request->boolean('attendance_check')) {
+            return response()->json($attendanceEligibility)->header('Cache-Control', 'private, no-store');
+        }
         $fallbackGenderGroup = ! $this->hasActiveScheduleFor($teacher, $selectedDate)
             ? $this->teacherGenderGroup($teacher)
             : null;
@@ -86,6 +92,7 @@ class GuruDiniyyahSubstituteTafsirJournalController extends Controller
             });
 
         return view('guru.diniyyah-substitute-tafsir-journals.index', [
+            'attendanceEligibility' => $attendanceEligibility,
             'simultaneousGroups' => $simultaneousGroups,
             'selectedDate' => $selectedDate,
             'teacher' => $teacher,
@@ -142,6 +149,12 @@ class GuruDiniyyahSubstituteTafsirJournalController extends Controller
             ) !== null)
             ->pluck('id')
             ->all();
+
+        $attendanceEligibility = app(JournalAttendanceEligibilityService::class)->check($teacher, $validated['date']);
+        if (! $attendanceEligibility['allowed']) {
+            return redirect()->route('guru.diniyyah-substitute-tafsir-journals.index', ['date' => $validated['date']])
+                ->withInput()->with('error', $attendanceEligibility['message']);
+        }
 
         $created = 0;
         $skipped = 0;

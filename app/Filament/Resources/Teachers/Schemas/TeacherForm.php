@@ -6,6 +6,7 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 
@@ -27,13 +28,17 @@ class TeacherForm
                 Select::make('gender')
                     ->label('Jenis Kelamin')
                     ->options([
-                        'male'   => 'Laki-laki',
+                        'male' => 'Laki-laki',
                         'female' => 'Perempuan',
                     ])
                     ->required(),
                 TextInput::make('niy')
                     ->label('NIY (Nomor Induk Yayasan)')
                     ->helperText('Kode identitas guru di yayasan ini.'),
+                Toggle::make('journal_attendance_exempt')
+                    ->label('Bebas syarat GeoPresensi untuk jurnal')
+                    ->helperText('Khusus guru yang dikecualikan oleh admin. Jurnal dan JP tetap tercatat tanpa presensi GeoPresensi.')
+                    ->default(false),
                 TextInput::make('phone')
                     ->label('Nomor Telepon')
                     ->tel(),
@@ -51,7 +56,7 @@ class TeacherForm
                 Select::make('status')
                     ->label('Status')
                     ->options([
-                        'active'   => 'Aktif',
+                        'active' => 'Aktif',
                         'inactive' => 'Tidak Aktif',
                     ])
                     ->required()

@@ -9,6 +9,7 @@ use App\Models\DiniyyahTeacherAssignment;
 use App\Models\DiniyyahTeachingSchedule;
 use App\Models\StudentAttendance;
 use App\Models\Teacher;
+use App\Services\JournalAttendanceEligibilityService;
 use App\Services\TafsirScheduleGroupingService;
 use App\Support\SessionTimetable;
 use Illuminate\Database\QueryException;
@@ -44,6 +45,11 @@ class GuruDiniyyahSubstituteJournalController extends Controller
         // bukan tanggal saat halaman dibuka. Dengan begitu penugasan historis
         // yang aktif pada tanggal tersebut tetap dapat ditangani dengan benar.
         $selectedDate = $request->query('date', Carbon::now('Asia/Jakarta')->toDateString());
+        $request->validate(['date' => ['nullable', 'date_format:Y-m-d']]);
+        $attendanceEligibility = app(JournalAttendanceEligibilityService::class)->check($teacher, $selectedDate);
+        if ($request->boolean('attendance_check')) {
+            return response()->json($attendanceEligibility)->header('Cache-Control', 'private, no-store');
+        }
 
         // Guru tanpa jadwal sendiri mendapat mode pengganti khusus. Ia tidak
         // dibatasi oleh jadwal miliknya, tetapi tetap dibatasi oleh gender kelas.
@@ -225,6 +231,7 @@ class GuruDiniyyahSubstituteJournalController extends Controller
         }
 
         return view('guru.diniyyah-substitute-journals.index', compact(
+            'attendanceEligibility',
             'classes',
             'selectedClassroomTermId',
             'selectedDate',
@@ -362,6 +369,13 @@ class GuruDiniyyahSubstituteJournalController extends Controller
                 'classroom_term_id' => $validated['classroom_term_id'],
                 'date' => $validated['date'],
             ])->withInput()->with('error', 'Slot jurnal untuk kelas, tanggal, dan jam sesi ini sudah terisi (oleh guru asli atau pengganti lain).');
+        }
+
+        $attendanceEligibility = app(JournalAttendanceEligibilityService::class)->check($teacher, $validated['date']);
+        if (! $attendanceEligibility['allowed']) {
+            return redirect()->route('guru.diniyyah-substitute-journals.index', [
+                'classroom_term_id' => $validated['classroom_term_id'], 'date' => $validated['date'],
+            ])->withInput()->with('error', $attendanceEligibility['message']);
         }
 
         try {

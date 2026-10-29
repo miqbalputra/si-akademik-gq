@@ -45,55 +45,56 @@ class AttendanceTeacherReportClient
         }
 
         try {
-            /** @var array{ok: bool, code: string, message: string, report: ?array<string, mixed>} $result */
-            $result = Cache::remember(
+            $fetch = function () use ($idGuru, $start, $end): array {
+                $baseUrl = rtrim((string) config('services.attendance_journal.base_url'), '/');
+                $apiKey = trim((string) config('services.attendance_journal.api_key'));
+
+                if ($baseUrl === '' || $apiKey === '') {
+                    return $this->failure('integration_unconfigured', 'Konfigurasi GeoPresensi belum lengkap.');
+                }
+
+                $response = Http::acceptJson()
+                    ->withHeaders(['X-API-Key' => $apiKey])
+                    ->timeout(max(1, (int) config('services.attendance_journal.timeout', 5)))
+                    ->get($baseUrl.'/api/v1/integrations/journal/teacher-report', [
+                        'id_guru' => $idGuru,
+                        'start_date' => $start,
+                        'end_date' => $end,
+                    ]);
+
+                if ($response->status() === 404) {
+                    return $this->failure('mapping_not_found', 'NIY Anda tidak ditemukan sebagai guru aktif di GeoPresensi. Hubungi admin.');
+                }
+
+                if (! $response->successful()) {
+                    throw new \RuntimeException('GeoPresensi returned HTTP '.$response->status().'.');
+                }
+
+                $payload = $response->json();
+                $report = is_array($payload) ? ($payload['data'] ?? null) : null;
+                if (($payload['success'] ?? false) !== true || ! is_array($report)
+                    || ! is_array($report['teacher'] ?? null)
+                    || trim((string) ($report['teacher']['id_guru'] ?? '')) !== $idGuru
+                    || ! is_array($report['summary'] ?? null)
+                    || ! is_array($report['rows'] ?? null)) {
+                    throw new \RuntimeException('GeoPresensi returned an invalid teacher report payload.');
+                }
+
+                return [
+                    'ok' => true,
+                    'code' => 'ok',
+                    'message' => 'Data presensi berhasil disinkronkan.',
+                    'report' => $report,
+                ];
+            };
+
+            // Refresh must bypass the cache read even if another request fills
+            // the key between forget() and the outgoing request.
+            return $refresh ? $fetch() : Cache::remember(
                 $cacheKey,
                 now()->addSeconds(max(1, (int) config('services.attendance_journal.cache_seconds', 60))),
-                function () use ($idGuru, $start, $end): array {
-                    $baseUrl = rtrim((string) config('services.attendance_journal.base_url'), '/');
-                    $apiKey = trim((string) config('services.attendance_journal.api_key'));
-
-                    if ($baseUrl === '' || $apiKey === '') {
-                        return $this->failure('integration_unconfigured', 'Konfigurasi GeoPresensi belum lengkap.');
-                    }
-
-                    $response = Http::acceptJson()
-                        ->withHeaders(['X-API-Key' => $apiKey])
-                        ->timeout(max(1, (int) config('services.attendance_journal.timeout', 5)))
-                        ->get($baseUrl.'/api/v1/integrations/journal/teacher-report', [
-                            'id_guru' => $idGuru,
-                            'start_date' => $start,
-                            'end_date' => $end,
-                        ]);
-
-                    if ($response->status() === 404) {
-                        return $this->failure('mapping_not_found', 'NIY Anda tidak ditemukan sebagai guru aktif di GeoPresensi. Hubungi admin.');
-                    }
-
-                    if (! $response->successful()) {
-                        throw new \RuntimeException('GeoPresensi returned HTTP '.$response->status().'.');
-                    }
-
-                    $payload = $response->json();
-                    $report = is_array($payload) ? ($payload['data'] ?? null) : null;
-                    if (($payload['success'] ?? false) !== true || ! is_array($report)
-                        || ! is_array($report['teacher'] ?? null)
-                        || trim((string) ($report['teacher']['id_guru'] ?? '')) !== $idGuru
-                        || ! is_array($report['summary'] ?? null)
-                        || ! is_array($report['rows'] ?? null)) {
-                        throw new \RuntimeException('GeoPresensi returned an invalid teacher report payload.');
-                    }
-
-                    return [
-                        'ok' => true,
-                        'code' => 'ok',
-                        'message' => 'Data presensi berhasil disinkronkan.',
-                        'report' => $report,
-                    ];
-                },
+                $fetch,
             );
-
-            return $result;
         } catch (Throwable $exception) {
             Log::warning('GeoPresensi teacher report unavailable.', [
                 'teacher_id' => $teacher->id,

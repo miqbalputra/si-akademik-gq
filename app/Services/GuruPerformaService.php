@@ -110,6 +110,7 @@ class GuruPerformaService
             'agenda_rows' => collect($summary['agenda_rows']),
             'empty_slots' => $summary['empty_slots'],
             'reconciliation' => [
+                'exempt' => (bool) $teacher->journal_attendance_exempt,
                 'available' => $summary['attendance_verification']['available'],
                 'mapped' => $summary['attendance_verification']['mapped'],
                 'message' => $summary['attendance_verification']['message'],
@@ -346,6 +347,7 @@ class GuruPerformaService
                         $journal !== null,
                         $journal?->substitute_teacher_id !== null,
                         $agenda !== null,
+                        attendanceExempt: (bool) $teacher->journal_attendance_exempt,
                     );
                     if ($reconciliation['actionable']) {
                         $reconciliationRows[] = array_merge(
@@ -403,6 +405,7 @@ class GuruPerformaService
                         $tafsirJournals->isNotEmpty(),
                         $allSubstitute,
                         $agenda !== null,
+                        attendanceExempt: (bool) $teacher->journal_attendance_exempt,
                     );
                     if ($reconciliation['actionable']) {
                         $reconciliationRows[] = array_merge(
@@ -495,6 +498,10 @@ class GuruPerformaService
     {
         if (! $requested) {
             return ['available' => false, 'mapped' => false, 'message' => null];
+        }
+        if ($teacher->journal_attendance_exempt) {
+            return ['available' => false, 'mapped' => false,
+                'message' => JournalAttendanceEligibilityService::EXEMPT_LABEL.'. Kewajiban mengisi jurnal tetap berlaku.'];
         }
         if (! (bool) config('services.attendance_journal.enabled', false)) {
             return ['available' => false, 'mapped' => false, 'message' => 'Integrasi GeoPresensi belum diaktifkan.'];

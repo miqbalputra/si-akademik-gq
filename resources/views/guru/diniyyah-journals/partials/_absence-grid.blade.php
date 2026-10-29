@@ -3,7 +3,7 @@
     // $students         : Collection ClassEnrollment (active) with('student')
     // $dailyAbsences    : map [class_enrollment_id => status] dari StudentAttendance (sick/permission/absent) — terkunci.
     // $existingAbsences : map [class_enrollment_id => status] dari jurnal yang sudah ada (untuk prefill edit); kosong di create.
-    $existingAbsences = $existingAbsences ?? [];
+    $existingAbsences = session()->hasOldInput('material') ? old('absences', []) : ($existingAbsences ?? []);
 @endphp
 
 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[60vh] sm:max-h-60 overflow-y-auto pr-2">
