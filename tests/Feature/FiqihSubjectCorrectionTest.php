@@ -25,10 +25,12 @@ use App\Services\DiniyyahKkmAssignmentRoster;
 use App\Services\FiqihCorrectionBackup;
 use App\Services\FiqihSubjectCorrection;
 use App\Services\RekapJurnalGuruService;
+use Illuminate\Contracts\Foundation\MaintenanceMode;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Mockery;
+use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -147,6 +149,99 @@ class FiqihSubjectCorrectionTest extends TestCase
         $this->assertEmpty(Storage::disk('fiqih-test')->allFiles());
     }
 
+    public function test_downloaded_coolify_backup_keeps_a_verified_undo_snapshot_without_using_s3(): void
+    {
+        $c = $this->context();
+        $before = $this->rows();
+        config(['backup.disk' => 'unconfigured-s3']);
+        // The safety archive must persist even if optional event logging is disabled.
+        activity()->disableLogging();
+        $maintenance = Mockery::mock(MaintenanceMode::class);
+        $maintenance->shouldReceive('active')->andReturnTrue();
+        $this->app->instance(MaintenanceMode::class, $maintenance);
+        $this->app['env'] = 'production';
+        try {
+            $service = app(FiqihSubjectCorrection::class);
+            $result = $service->apply($service->preview()['fingerprint'], $this->coolifyBackup());
+        } finally {
+            $this->app['env'] = 'testing';
+            activity()->enableLogging();
+        }
+        $this->assertTrue($result['changed']);
+        $this->assertTrue($result['backup']['snapshot_verified']);
+        $this->assertSame('operator_confirmed_download', $result['backup']['external_backup']['verification']);
+        $this->assertSame($this->coolifyBackup()['file'], $result['backup']['external_backup']['file']);
+        $archive = DB::table('activity_log')->where('id', $result['backup']['activity_log_id'])->first();
+        $this->assertSame('fiqih_correction_snapshot', $archive->event);
+        $properties = json_decode($archive->properties, true, flags: JSON_THROW_ON_ERROR);
+        foreach (['diniyyah_subjects', 'diniyyah_class_subjects', 'diniyyah_kkm_scopes'] as $table) {
+            $this->assertSame($before[$table], $properties['snapshot']['before'][$table]);
+        }
+        $this->assertSame($before['diniyyah_class_journals'], $this->rows()['diniyyah_class_journals']);
+        $this->assertSame($before['diniyyah_class_journal_absences'], $this->rows()['diniyyah_class_journal_absences']);
+        $this->assertSame($before['diniyyah_scores'], $this->rows()['diniyyah_scores']);
+        $this->assertSame($c['target']->id, $c['sourceClass']->fresh()->subject_id);
+        $this->assertEmpty(Storage::disk('fiqih-test')->allFiles());
+    }
+
+    public static function invalidCoolifyBackups(): array
+    {
+        return [
+            'missing filename' => [['file' => '', 'sha256' => str_repeat('a', 64)]],
+            'missing digest' => [['file' => 'school.dump.gz', 'sha256' => '']],
+            'invalid digest' => [['file' => 'school.dump.gz', 'sha256' => 'not-a-digest']],
+            'path instead of filename' => [['file' => '../school.dump.gz', 'sha256' => str_repeat('a', 64)]],
+            'URL instead of filename' => [['file' => 'https://backup.invalid/file?secret=value', 'sha256' => str_repeat('a', 64)]],
+        ];
+    }
+
+    #[DataProvider('invalidCoolifyBackups')]
+    public function test_incomplete_coolify_backup_details_do_not_disable_backup_protection(array $backup): void
+    {
+        $this->context();
+        $before = $this->rows();
+        $service = app(FiqihSubjectCorrection::class);
+        try {
+            $service->apply($service->preview()['fingerprint'], $backup);
+            $this->fail('Rujukan backup tidak valid wajib ditolak.');
+        } catch (RuntimeException $exception) {
+            $this->assertStringContainsString('nama file backup Coolify', $exception->getMessage());
+        }
+        $this->assertSame($before, $this->rows());
+        $this->assertSame(0, DB::table('activity_log')->where('event', 'fiqih_correction_snapshot')->count());
+    }
+
+    public function test_coolify_snapshot_corruption_prevents_all_subject_changes(): void
+    {
+        $this->context();
+        DB::unprepared("CREATE TRIGGER corrupt_fiqih_archive AFTER INSERT ON activity_log WHEN NEW.event = 'fiqih_correction_snapshot' BEGIN UPDATE activity_log SET properties = '{}' WHERE id = NEW.id; END");
+        $before = $this->rows();
+        $service = app(FiqihSubjectCorrection::class);
+        try {
+            $service->apply($service->preview()['fingerprint'], $this->coolifyBackup());
+            $this->fail('Arsip yang tidak cocok setelah dibaca ulang harus ditolak.');
+        } catch (RuntimeException $exception) {
+            $this->assertStringContainsString('Snapshot database gagal diverifikasi', $exception->getMessage());
+        } finally {
+            DB::unprepared('DROP TRIGGER corrupt_fiqih_archive');
+        }
+        $this->assertSame($before, $this->rows());
+        $this->assertSame(0, DB::table('activity_log')->where('event', 'fiqih_correction_snapshot')->count());
+    }
+
+    public function test_coolify_command_supports_explicit_downloaded_backup_and_its_digest(): void
+    {
+        $c = $this->context();
+        $service = app(FiqihSubjectCorrection::class);
+        $this->artisan('diniyyah:correct-fiqih', [
+            '--apply' => true, '--fingerprint' => $service->preview()['fingerprint'],
+            '--coolify-backup' => $this->coolifyBackup()['file'],
+            '--coolify-backup-sha256' => $this->coolifyBackup()['sha256'],
+        ])->assertSuccessful();
+        $this->assertSame($c['target']->id, $c['sourceClass']->fresh()->subject_id);
+        $this->assertSame(1, DB::table('activity_log')->where('event', 'fiqih_correction_snapshot')->count());
+    }
+
     public function test_locked_historical_documents_block_all_semesters_without_rewriting_snapshots(): void
     {
         $c = $this->context();
@@ -230,14 +325,20 @@ class FiqihSubjectCorrectionTest extends TestCase
         $this->assertSame($before, $this->rows());
     }
 
-    public function test_unexpected_database_side_effect_rolls_back_the_entire_correction(): void
+    public static function backupModes(): array
+    {
+        return ['S3 snapshot' => [false], 'downloaded Coolify dump' => [true]];
+    }
+
+    #[DataProvider('backupModes')]
+    public function test_unexpected_database_side_effect_rolls_back_the_entire_correction(bool $coolify): void
     {
         $c = $this->context();
         DB::unprepared('CREATE TRIGGER fiqih_side_effect AFTER UPDATE OF subject_id ON diniyyah_class_subjects BEGIN UPDATE diniyyah_class_journals SET material = \'BERUBAH\'; END');
         $before = $this->rows();
         $service = app(FiqihSubjectCorrection::class);
         try {
-            $service->apply($service->preview()['fingerprint']);
+            $service->apply($service->preview()['fingerprint'], $coolify ? $this->coolifyBackup() : null);
             $this->fail('Perubahan jurnal harus membatalkan seluruh koreksi');
         } catch (RuntimeException $exception) {
             $this->assertStringContainsString('terlindungi berubah', $exception->getMessage());
@@ -247,6 +348,7 @@ class FiqihSubjectCorrectionTest extends TestCase
         $this->assertSame($before, $this->rows());
         $this->assertSame($c['source']->id, $c['sourceClass']->fresh()->subject_id);
         $this->assertTrue($c['source']->fresh()->is_active);
+        $this->assertSame(0, DB::table('activity_log')->where('event', 'fiqih_correction_snapshot')->count());
     }
 
     public function test_missing_or_ambiguous_master_never_guesses_a_subject_id(): void
@@ -338,5 +440,10 @@ class FiqihSubjectCorrectionTest extends TestCase
         $classSubject = DiniyyahClassSubject::create(['classroom_term_id' => $ct->id, 'subject_id' => $subject->id, 'assessment_method' => 'direct_final', 'kkm' => 75, 'is_active' => true]);
 
         return compact('term', 'classSubject');
+    }
+
+    private function coolifyBackup(): array
+    {
+        return ['file' => 'school-dump-2026-10-30.sql.gz', 'sha256' => str_repeat('a', 64)];
     }
 }

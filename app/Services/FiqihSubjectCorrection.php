@@ -24,13 +24,13 @@ class FiqihSubjectCorrection
         return $this->inspect()['preview'];
     }
 
-    public function apply(string $fingerprint): array
+    public function apply(string $fingerprint, ?array $coolifyBackup = null): array
     {
         if (app()->environment('production') && ! app()->isDownForMaintenance()) {
             throw new RuntimeException('Aktifkan maintenance mode sebelum koreksi production.');
         }
 
-        return DB::transaction(function () use ($fingerprint): array {
+        return DB::transaction(function () use ($fingerprint, $coolifyBackup): array {
             // FK writers also wait on these locks in PostgreSQL. SQLite obtains
             // its write reservation before reading the snapshot.
             if (DB::getDriverName() === 'sqlite') {
@@ -60,7 +60,7 @@ class FiqihSubjectCorrection
                 'preview' => $preview,
                 'before' => $state['editable'],
                 'protected' => $state['protected'],
-            ]);
+            ], $coolifyBackup);
             $now = now()->toDateTimeString();
             $expected = $state['editable'];
             $classIds = $preview['class_subject_ids'];

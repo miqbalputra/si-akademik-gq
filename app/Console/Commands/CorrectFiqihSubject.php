@@ -10,7 +10,9 @@ class CorrectFiqihSubject extends Command
 {
     protected $signature = 'diniyyah:correct-fiqih
         {--apply : Terapkan koreksi setelah pratinjau, backup, dan verifikasi}
-        {--fingerprint= : Sidik data dari pratinjau yang telah ditinjau}';
+        {--fingerprint= : Sidik data dari pratinjau yang telah ditinjau}
+        {--coolify-backup= : Nama file backup penuh Coolify yang sudah diunduh}
+        {--coolify-backup-sha256= : SHA-256 file backup Coolify yang sudah diunduh}';
 
     protected $description = 'Pratinjau/koreksi satu kali Fiqih Ibadah menjadi Fiqih tanpa menghapus riwayat.';
 
@@ -21,7 +23,11 @@ class CorrectFiqihSubject extends Command
                 if (! $this->option('fingerprint')) {
                     throw new \RuntimeException('Jalankan pratinjau dahulu dan sertakan --fingerprint. Tidak ada data diubah.');
                 }
-                $result = $correction->apply((string) $this->option('fingerprint'));
+                $coolifyFile = $this->option('coolify-backup');
+                $coolifyHash = $this->option('coolify-backup-sha256');
+                $coolifyBackup = $coolifyFile === null && $coolifyHash === null
+                    ? null : ['file' => $coolifyFile, 'sha256' => $coolifyHash];
+                $result = $correction->apply((string) $this->option('fingerprint'), $coolifyBackup);
             } else {
                 $result = $correction->preview();
             }

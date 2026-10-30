@@ -28,7 +28,10 @@ Tanpa `--apply` perintah hanya membaca database. Pratinjau tidak membuat scope K
 ## Penerapan setelah hasil pratinjau diperiksa
 
 1. Pastikan backup database lengkap production tersedia dan dapat dipulihkan melalui prosedur backup yang ada. Snapshot otomatis perintah ini hanya mencakup tiga tabel yang diizinkan berubah dan hash tabel yang dilindungi; snapshot bukan pengganti backup database lengkap.
-2. Pastikan `BACKUP_DISK` menunjuk penyimpanan S3 privat dengan konfigurasi dan akses baca/tulis yang benar. Perintah tidak membersihkan backup lama.
+2. Pilih jalur snapshot tambahan:
+   - Default: `BACKUP_DISK` menunjuk S3 privat dengan akses baca/tulis.
+   - Backup penuh Coolify sudah diunduh: sertakan nama file dan SHA-256 melalui opsi Coolify di bawah. Salinan tiga tabel sebelum perubahan disimpan di `activity_log` dan diverifikasi setelah dibaca ulang dari database, tanpa memerlukan S3 aplikasi.
+   Perintah tidak membersihkan backup lama.
 3. Aktifkan maintenance, lalu jalankan pratinjau lagi agar fingerprint mencerminkan data terakhir:
 
 ```sh
@@ -41,6 +44,18 @@ php artisan diniyyah:correct-fiqih
 ```sh
 php artisan diniyyah:correct-fiqih --apply --fingerprint=SALIN_64_KARAKTER_DARI_PRATINJAU
 ```
+
+Jika memakai backup Coolify yang sudah diunduh:
+
+```sh
+php artisan diniyyah:correct-fiqih --apply --fingerprint=SIDIK_PRATINJAU --coolify-backup="NAMA_FILE_BACKUP.gz" --coolify-backup-sha256=SHA256_FILE_BACKUP
+```
+
+Nama file harus berupa nama berkas, bukan URL atau path. Kedua opsi Coolify wajib lengkap. Nama file dan hash backup penuh dicatat sebagai konfirmasi operator (`operator_confirmed_download`); server aplikasi tidak mengaku telah membuka file yang berada di komputer operator. Keberadaan, integritas, isi database, serta kemampuan pemulihan backup penuh tetap harus diperiksa sebelum memakai opsi ini.
+
+Pada jalur Coolify, arsip tambahan berisi seluruh kolom lama tiga tabel yang boleh berubah beserta hash tabel persisten lain. Arsip dibuat pada koneksi/transaksi database yang sama sebelum pembaruan relasi dan dibaca ulang untuk verifikasi checksum. Kegagalan penyimpanan/verifikasi membatalkan koreksi. Jika transaksi dibatalkan, baris arsipnya ikut dibatalkan. Jika berhasil, hasil JSON menyertakan `activity_log_id` dan `snapshot_verified: true`. Arsip bertahan ketika container aplikasi diganti, mengikuti kebijakan retensi activity log. Simpan backup penuh Coolify di luar server aplikasi.
+
+Jalur ini tidak memakai file sementara container sebagai satu-satunya cadangan dan tidak bergantung pada status pencatatan/buffering activity log. Penulisan arsip keselamatan dilakukan langsung pada database; log keberhasilan koreksi tetap memakai mekanisme audit yang sudah ada. Maintenance, fingerprint, pemeriksaan konflik, serta pembandingan jurnal/presensi/nilai tetap berlaku pada kedua jalur.
 
 5. Periksa hasil, daftar guru/penugasan KKM Fiqih, jurnal, presensi, nilai, dan rekap JP. Aktifkan aplikasi kembali:
 
@@ -56,4 +71,6 @@ Database lokal yang diperiksa tidak memuat master Fiqih maupun Fiqih Ibadah. Per
 
 Verifikasi: 14 pengujian khusus lulus (79 assertions), ditambah 80 regresi KKM, penugasan, rekap JP, dan jurnal yang lulus. Cakupan koreksi meliputi semester lama, mapel kelas arsip, dokumen terbit yang tidak terdampak, penolakan dokumen terkunci, konflik kelas/KKM, sidik data basi, backup gagal, idempotensi, dan rollback ketika trigger mencoba mengubah jurnal. Laporan pengujian khusus tersimpan di `storage/logs/fiqih-correction-final.xml`.
 
-Pengujian menggunakan SQLite `:memory:`, bukan database production. Koneksi PostgreSQL production dan penyimpanan backup production belum diuji dalam pekerjaan ini; pratinjau production merupakan tahap berikutnya.
+Pembaruan jalur Coolify: **23 pengujian lulus, 119 assertions**, termasuk mode production tanpa S3 dengan maintenance, referensi/hash tidak lengkap, salinan database yang dirusak trigger, dan rollback jurnal pada kedua jalur. Laporan: `storage/logs/fiqih-coolify-verification.xml`.
+
+Pengujian memakai SQLite `:memory:`. Operator telah memberikan pratinjau production tanpa konflik: enam mapel kelas, enam penugasan, 165 jurnal termasuk arsip, 148 catatan ketidakhadiran, enam set penilaian, dan tanpa scope KKM sumber. Backup penuh Coolify yang diunduh diperiksa secara lokal: CRC/ukuran gzip valid, penanda akhir dump cluster ada, tabel terkait lengkap, master mapel sesuai, dan jumlah data sumber cocok dengan pratinjau. Uji pemulihan PostgreSQL penuh serta penerapan koreksi production belum dilakukan.
