@@ -23,6 +23,7 @@ Tanpa `--apply` perintah hanya membaca database. Pratinjau tidak membuat scope K
 - Perbedaan angka KKM kelas paralel/revisi aktif dan jenjang Mustawa yang belum dikenali juga memblokir koreksi. Periksa hasil pratinjau untuk menentukan perbaikan yang tepat.
 - Leger/rapor Diniyyah terkunci atau terbit dalam kelompok yang terdampak menghentikan koreksi. Perintah tidak membatalkan kunci dokumen.
 - Sidik data diverifikasi ulang dalam transaksi dengan penguncian. Jika data berbeda dari pratinjau, jalankan pratinjau ulang. Kegagalan backup, pemeriksaan, atau penulisan membatalkan seluruh transaksi.
+- Fingerprint versi `fiqih_related_records_v2` hanya mencakup kedua master Fiqih beserta kelas, penugasan, jadwal, jurnal, presensi, nilai, KKM, dokumen, dan identitas/peran guru yang terkait. Notifikasi, rotasi token login, serta perubahan mapel lain sebelum koreksi tidak membatalkan persetujuan Fiqih. Serialisasi objek dinormalisasi agar urutan kunci tidak menghasilkan perbedaan palsu.
 - Isi semua tabel persisten lain dibandingkan sebelum/sesudah. Cache, sesi, antrean, dan activity log dikecualikan dari pembandingan; koreksi berhasil dicatat pada activity log.
 
 ## Penerapan setelah hasil pratinjau diperiksa
@@ -65,6 +66,28 @@ php artisan up
 
 Jika koreksi ditolak atau gagal, pastikan aplikasi diaktifkan kembali setelah pemeriksaan. Jangan menghapus master, kelas/mapel, penugasan, jurnal, atau riwayat KKM untuk menghindari konflik. Kirim daftar `blockers` untuk penanganan khusus.
 
+### Menghindari fingerprint kedaluwarsa selama bolak-balik chat
+
+Ambil pratinjau dalam maintenance dan masukkan fingerprint dari output tersebut di terminal yang sama. Contoh untuk backup Coolify; ganti nama/hash contoh dengan arsip penuh yang sudah diperiksa:
+
+```sh
+cd /app
+(
+  trap 'php artisan up' EXIT
+  php artisan down || exit 1
+  php artisan diniyyah:correct-fiqih || exit 1
+  printf '\nTempel NILAI fingerprint di atas (64 karakter, tanpa tanda kutip), lalu Enter: '
+  IFS= read -r fingerprint || exit 1
+  fingerprint=$(printf '%s' "$fingerprint" | tr -d '\r')
+  php artisan diniyyah:correct-fiqih --apply \
+    --fingerprint="$fingerprint" \
+    --coolify-backup="NAMA_FILE_BACKUP.gz" \
+    --coolify-backup-sha256=SHA256_FILE_BACKUP
+)
+```
+
+Blok ini menampilkan pratinjau terbaru lalu menunggu operator memasukkan nilainya. Ia tidak memilih fingerprint otomatis atau melewati pengecekan. Jika pratinjau memiliki konflik, proses berhenti sebelum input/penerapan. `trap` menjalankan `up` saat blok selesai maupun ketika koreksi ditolak. Penghapusan karakter CR hanya menangani salinan dari clipboard Windows; sidik data tetap wajib cocok sepenuhnya.
+
 ## Status verifikasi
 
 Database lokal yang diperiksa tidak memuat master Fiqih maupun Fiqih Ibadah. Perintah lokal berhenti tanpa perubahan. Data production belum diperiksa atau dikoreksi; hasil pratinjau dari terminal production diperlukan.
@@ -72,5 +95,7 @@ Database lokal yang diperiksa tidak memuat master Fiqih maupun Fiqih Ibadah. Per
 Verifikasi: 14 pengujian khusus lulus (79 assertions), ditambah 80 regresi KKM, penugasan, rekap JP, dan jurnal yang lulus. Cakupan koreksi meliputi semester lama, mapel kelas arsip, dokumen terbit yang tidak terdampak, penolakan dokumen terkunci, konflik kelas/KKM, sidik data basi, backup gagal, idempotensi, dan rollback ketika trigger mencoba mengubah jurnal. Laporan pengujian khusus tersimpan di `storage/logs/fiqih-correction-final.xml`.
 
 Pembaruan jalur Coolify: **23 pengujian lulus, 119 assertions**, termasuk mode production tanpa S3 dengan maintenance, referensi/hash tidak lengkap, salinan database yang dirusak trigger, dan rollback jurnal pada kedua jalur. Laporan: `storage/logs/fiqih-coolify-verification.xml`.
+
+Perbaikan fingerprint: masalah pratinjau kedaluwarsa berhasil direproduksi dengan perubahan notifikasi/login/mapel yang tidak terkait. Sesudah perbaikan, **29 pengujian lulus, 136 assertions**. Pengujian memastikan token stabil di luar/dalam transaksi, perubahan data Fiqih tetap ditolak, dan perubahan tak terduga pada tabel lain selama penulisan tetap membatalkan seluruh transaksi. Resep terminal diuji dengan stub perintah untuk input baru, jalur sukses, dan jalur penolakan; `up` selalu dijalankan pada kedua jalur. Laporan: `storage/logs/fiqih-fingerprint-verification.xml`. Seluruh 24 tabel/kolom yang dibaca untuk fingerprint terkait juga diperiksa terhadap header COPY backup production, tanpa kekurangan kolom.
 
 Pengujian memakai SQLite `:memory:`. Operator telah memberikan pratinjau production tanpa konflik: enam mapel kelas, enam penugasan, 165 jurnal termasuk arsip, 148 catatan ketidakhadiran, enam set penilaian, dan tanpa scope KKM sumber. Backup penuh Coolify yang diunduh diperiksa secara lokal: CRC/ukuran gzip valid, penanda akhir dump cluster ada, tabel terkait lengkap, master mapel sesuai, dan jumlah data sumber cocok dengan pratinjau. Uji pemulihan PostgreSQL penuh serta penerapan koreksi production belum dilakukan.

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use RuntimeException;
@@ -193,6 +194,7 @@ class FiqihSubjectCorrection
         $journalIds = DB::table('diniyyah_class_journals')->whereIn('diniyyah_teacher_assignment_id', $assignmentIds)->pluck('id');
         $preview = [
             'source' => $source, 'target' => $target, 'scope' => 'all_terms_including_archived',
+            'fingerprint_scope' => 'fiqih_related_records_v2',
             'class_subject_ids' => $sourceClasses->pluck('id')->values()->all(),
             'kkm_scope_ids' => $sourceScopes->pluck('id')->values()->all(),
             'preserved_source_data' => [
@@ -205,9 +207,13 @@ class FiqihSubjectCorrection
             'already_corrected' => ! $source['is_active'] && $sourceClasses->isEmpty() && $sourceScopes->isEmpty(),
             'note' => 'Tidak mengganti angka/ACC KKM otomatis. Tinjau penugasan dan lakukan revisi KKM melalui alur KKM setelah identitas disatukan.',
         ];
-        $preview['fingerprint'] = hash('sha256', json_encode([
-            DB::getDriverName(), DB::connection()->getDatabaseName(), $preview, $editable, $protected,
-        ], JSON_THROW_ON_ERROR));
+        // The reviewed plan concerns Fiqih, not unrelated notifications,
+        // logins, or subjects. Whole-database hashes still protect every other
+        // persistent table during the actual write transaction below.
+        $preview['fingerprint'] = hash('sha256', $this->canonicalJson([
+            DB::getDriverName(), DB::connection()->getDatabaseName(), $preview,
+            $this->fingerprintData($editable, [$source['id'], $target['id']]),
+        ]));
 
         return compact('preview', 'editable', 'protected');
     }
@@ -241,7 +247,81 @@ class FiqihSubjectCorrection
             unset($row);
         }
 
-        return json_encode($rows, JSON_THROW_ON_ERROR);
+        return $this->canonicalJson($rows);
+    }
+
+    /** Data which can affect the reviewed Fiqih identities, history, grades, or KKM. */
+    private function fingerprintData(array $editable, array $subjectIds): array
+    {
+        $data = [];
+        foreach (['diniyyah_class_subjects', 'diniyyah_kkm_scopes'] as $table) {
+            $data[$table] = array_values(array_filter(
+                $editable[$table], fn ($row) => in_array($row['subject_id'], $subjectIds, true),
+            ));
+        }
+        $classSubjectIds = array_column($data['diniyyah_class_subjects'], 'id');
+        $classTermIds = array_column($data['diniyyah_class_subjects'], 'classroom_term_id');
+        $data['classroom_terms'] = $this->relatedRows('classroom_terms', 'id', $classTermIds);
+        $data['classrooms'] = $this->relatedRows('classrooms', 'id', array_column($data['classroom_terms'], 'classroom_id'));
+        $data['academic_terms'] = $this->relatedRows('academic_terms', 'id', array_column($data['classroom_terms'], 'academic_term_id'));
+        $data['diniyyah_teacher_assignments'] = $this->relatedRows('diniyyah_teacher_assignments', 'diniyyah_class_subject_id', $classSubjectIds);
+        $assignmentIds = array_column($data['diniyyah_teacher_assignments'], 'id');
+        $data['diniyyah_teaching_schedules'] = $this->relatedRows('diniyyah_teaching_schedules', 'diniyyah_teacher_assignment_id', $assignmentIds);
+        $data['diniyyah_schedule_change_logs'] = $this->relatedRows('diniyyah_schedule_change_logs', 'diniyyah_teacher_assignment_id', $assignmentIds);
+        $data['class_session_times'] = $this->relatedRows('class_session_times', 'classroom_id', array_column($data['classrooms'], 'id'));
+        $data['class_sessions'] = $this->relatedRows('class_sessions', 'id', array_column($data['diniyyah_teaching_schedules'], 'class_session_id'));
+        $data['diniyyah_class_journals'] = $this->relatedRows('diniyyah_class_journals', 'diniyyah_teacher_assignment_id', $assignmentIds);
+        $data['diniyyah_class_journal_absences'] = $this->relatedRows('diniyyah_class_journal_absences', 'diniyyah_class_journal_id', array_column($data['diniyyah_class_journals'], 'id'));
+        $data['student_attendances'] = $this->relatedRows('student_attendances', 'classroom_term_id', $classTermIds);
+        $data['diniyyah_student_attendances'] = $this->relatedRows('diniyyah_student_attendances', 'diniyyah_class_subject_id', $classSubjectIds);
+        $data['diniyyah_assessment_sets'] = $this->relatedRows('diniyyah_assessment_sets', 'diniyyah_class_subject_id', $classSubjectIds);
+        $setIds = array_column($data['diniyyah_assessment_sets'], 'id');
+        foreach (['diniyyah_score_components', 'diniyyah_scores', 'diniyyah_assessment_results', 'diniyyah_score_validations'] as $table) {
+            $data[$table] = $this->relatedRows($table, 'diniyyah_assessment_set_id', $setIds);
+        }
+        $data['diniyyah_kkm_revisions'] = $this->relatedRows('diniyyah_kkm_revisions', 'diniyyah_kkm_scope_id', array_column($data['diniyyah_kkm_scopes'], 'id'));
+        $teacherIds = array_merge(
+            array_column($data['diniyyah_teacher_assignments'], 'teacher_id'),
+            array_column($data['diniyyah_class_journals'], 'substitute_teacher_id'),
+            array_column($data['diniyyah_kkm_scopes'], 'assigned_teacher_id'),
+        );
+        $data['teachers'] = $this->relatedRows('teachers', 'id', $teacherIds);
+        $userIds = array_filter(array_column($data['teachers'], 'user_id'));
+        // Authentication token/password rotation does not change KKM eligibility.
+        $data['users_identity'] = DB::table('users')->whereIn('id', $userIds)->orderBy('id')->get(['id', 'deleted_at'])->all();
+        $data['teacher_roles'] = DB::table('model_has_roles')->where('model_type', (new User)->getMorphClass())
+            ->whereIn('model_id', $userIds)->orderBy('model_id')->orderBy('role_id')->get()->all();
+        $roleIds = array_map(fn ($row) => $row->role_id, $data['teacher_roles']);
+        $data['roles'] = $this->relatedRows('roles', 'id', $roleIds);
+        $data['diniyyah_ledger_snapshots'] = $this->relatedRows('diniyyah_ledger_snapshots', 'classroom_term_id', $classTermIds);
+        $data['report_cards'] = DB::table('report_cards')->where('report_type', 'diniyyah')->whereIn('classroom_term_id', $classTermIds)->orderBy('id')->get()->all();
+
+        return $data;
+    }
+
+    private function relatedRows(string $table, string $column, array $ids): array
+    {
+        return DB::table($table)->whereIn($column, array_unique(array_filter($ids)))
+            ->orderBy('id')->get()->map(fn ($row) => (array) $row)->all();
+    }
+
+    private function canonicalJson(mixed $data): string
+    {
+        $normalize = function (mixed $value) use (&$normalize): mixed {
+            if (is_object($value)) {
+                $value = (array) $value;
+            }
+            if (! is_array($value)) {
+                return $value;
+            }
+            if (! array_is_list($value)) {
+                ksort($value);
+            }
+
+            return array_map($normalize, $value);
+        };
+
+        return json_encode($normalize($data), JSON_THROW_ON_ERROR);
     }
 
     private function protectedHashes(): array
@@ -261,7 +341,7 @@ class FiqihSubjectCorrection
             if (! $primary) {
                 // Rare legacy tables without a primary key: sort serialized
                 // rows, rather than relying on unspecified database row order.
-                $rows = $query->get()->map(fn ($row) => json_encode($row, JSON_THROW_ON_ERROR))->sort()->values()->all();
+                $rows = $query->get()->map(fn ($row) => $this->canonicalJson($row))->sort()->values()->all();
                 $result[$qualified] = ['count' => count($rows), 'sha256' => hash('sha256', implode("\n", $rows))];
 
                 continue;
@@ -269,7 +349,7 @@ class FiqihSubjectCorrection
             $context = hash_init('sha256');
             $count = 0;
             foreach ($query->cursor() as $row) {
-                hash_update($context, json_encode($row, JSON_THROW_ON_ERROR)."\n");
+                hash_update($context, $this->canonicalJson($row)."\n");
                 $count++;
             }
             $result[$qualified] = ['count' => $count, 'sha256' => hash_final($context)];

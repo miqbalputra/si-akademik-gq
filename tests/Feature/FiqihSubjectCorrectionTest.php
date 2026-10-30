@@ -16,6 +16,7 @@ use App\Models\DiniyyahLedgerSnapshot;
 use App\Models\DiniyyahSubject;
 use App\Models\DiniyyahTeacherAssignment;
 use App\Models\DiniyyahTeachingSchedule;
+use App\Models\PanelNotification;
 use App\Models\School;
 use App\Models\Student;
 use App\Models\Teacher;
@@ -307,6 +308,118 @@ class FiqihSubjectCorrectionTest extends TestCase
         $this->artisan('diniyyah:correct-fiqih', ['--apply' => true])->assertFailed();
         $this->assertSame($before, $this->rows());
         $this->assertEmpty(Storage::disk('fiqih-test')->allFiles());
+    }
+
+    public function test_unrelated_notifications_logins_and_other_subjects_do_not_expire_fiqih_preview(): void
+    {
+        $c = $this->context();
+        $service = app(FiqihSubjectCorrection::class);
+        $fingerprint = $service->preview()['fingerprint'];
+        $notification = PanelNotification::create([
+            'user_id' => $c['teacher']->user_id, 'title' => 'Informasi RPP',
+            'body' => 'Aktivitas di luar koreksi Fiqih.', 'severity' => 'info',
+            'notification_type' => 'rpp_reminder', 'status' => 'unread',
+        ]);
+        $notification->markAsRead();
+        User::whereKey($c['teacher']->user_id)->update(['remember_token' => 'changed-by-another-login']);
+        $other = DiniyyahSubject::create(['code' => 'unrelated_subject', 'name' => 'Mapel lain']);
+        $otherClass = DiniyyahClassSubject::create([
+            'classroom_term_id' => $c['sourceClass']->classroom_term_id,
+            'subject_id' => $other->id, 'assessment_method' => 'direct_final', 'kkm' => 80,
+        ]);
+        $notificationBefore = $notification->fresh()->getRawOriginal();
+        $otherBefore = $otherClass->fresh()->getRawOriginal();
+        $this->assertSame($fingerprint, $service->preview()['fingerprint']);
+        $this->assertTrue($service->apply($fingerprint, $this->coolifyBackup())['changed']);
+        $this->assertSame($notificationBefore, $notification->fresh()->getRawOriginal());
+        $this->assertSame($otherBefore, $otherClass->fresh()->getRawOriginal());
+        $this->assertSame('changed-by-another-login', User::findOrFail($c['teacher']->user_id)->remember_token);
+    }
+
+    public function test_changes_to_fiqih_scores_still_expire_preview_without_overwriting_new_grades(): void
+    {
+        $this->context();
+        $service = app(FiqihSubjectCorrection::class);
+        $fingerprint = $service->preview()['fingerprint'];
+        DB::table('diniyyah_scores')->update(['score' => 91]);
+        $before = $this->rows();
+        try {
+            $service->apply($fingerprint, $this->coolifyBackup());
+            $this->fail('Nilai Fiqih yang berubah wajib memerlukan pratinjau baru.');
+        } catch (RuntimeException $exception) {
+            $this->assertStringContainsString('berbeda dari pratinjau', $exception->getMessage());
+        }
+        $this->assertSame($before, $this->rows());
+    }
+
+    public function test_unchanged_fiqih_fingerprint_is_stable_with_or_without_transaction_locks(): void
+    {
+        $this->context();
+        $service = app(FiqihSubjectCorrection::class);
+        $preview = $service->preview();
+        $this->assertSame('fiqih_related_records_v2', $preview['fingerprint_scope']);
+        $this->assertSame($preview['fingerprint'], $service->preview()['fingerprint']);
+        DB::transaction(function () use ($service, $preview): void {
+            DB::table('diniyyah_subjects')->orderBy('id')->lockForUpdate()->get();
+            DB::table('diniyyah_class_subjects')->orderBy('id')->lockForUpdate()->get();
+            DB::table('diniyyah_kkm_scopes')->orderBy('id')->lockForUpdate()->get();
+            $this->assertSame($preview['fingerprint'], $service->preview()['fingerprint']);
+        });
+    }
+
+    public function test_changed_fiqih_attendance_requires_a_new_preview(): void
+    {
+        $this->context();
+        $service = app(FiqihSubjectCorrection::class);
+        $fingerprint = $service->preview()['fingerprint'];
+        DB::table('student_attendances')->update(['status' => 'permission']);
+        $before = $this->rows();
+        try {
+            $service->apply($fingerprint, $this->coolifyBackup());
+            $this->fail('Perubahan presensi kelas terkait wajib terdeteksi.');
+        } catch (RuntimeException $exception) {
+            $this->assertStringContainsString('berbeda dari pratinjau', $exception->getMessage());
+        }
+        $this->assertSame($before, $this->rows());
+    }
+
+    public function test_changed_teacher_eligibility_requires_a_new_preview(): void
+    {
+        $c = $this->context();
+        $service = app(FiqihSubjectCorrection::class);
+        $fingerprint = $service->preview()['fingerprint'];
+        $c['teacher']->user->removeRole('guru');
+        $before = $this->rows();
+        try {
+            $service->apply($fingerprint, $this->coolifyBackup());
+            $this->fail('Perubahan kelayakan guru KKM wajib terdeteksi.');
+        } catch (RuntimeException $exception) {
+            $this->assertStringContainsString('berbeda dari pratinjau', $exception->getMessage());
+        }
+        $this->assertSame($before, $this->rows());
+    }
+
+    public function test_even_an_unrelated_notification_side_effect_during_the_write_is_rolled_back(): void
+    {
+        $c = $this->context();
+        $notification = PanelNotification::create([
+            'user_id' => $c['teacher']->user_id, 'title' => 'Di luar Fiqih',
+            'body' => 'Data asli', 'severity' => 'info', 'notification_type' => 'system', 'status' => 'unread',
+        ]);
+        $notificationBefore = $notification->fresh()->getRawOriginal();
+        DB::unprepared("CREATE TRIGGER fiqih_notification_side_effect AFTER UPDATE OF subject_id ON diniyyah_class_subjects BEGIN UPDATE panel_notifications SET body = 'BERUBAH'; END");
+        $before = $this->rows();
+        $service = app(FiqihSubjectCorrection::class);
+        try {
+            $service->apply($service->preview()['fingerprint'], $this->coolifyBackup());
+            $this->fail('Pemeriksaan semua tabel setelah penulisan harus tetap aktif.');
+        } catch (RuntimeException $exception) {
+            $this->assertStringContainsString('terlindungi berubah', $exception->getMessage());
+        } finally {
+            DB::unprepared('DROP TRIGGER fiqih_notification_side_effect');
+        }
+        $this->assertSame($before, $this->rows());
+        $this->assertSame($notificationBefore, $notification->fresh()->getRawOriginal());
     }
 
     public function test_backup_failure_stops_before_any_references_are_changed(): void
