@@ -21,7 +21,9 @@ use App\Services\AdminMonthlyJpReportService;
 use App\Services\RekapJurnalGuruService;
 use App\Services\TafsirJournalAuditService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -164,6 +166,34 @@ class AdminMonthlyJpReportTest extends TestCase
             ->get(route('admin.monthly-jp-recap.export', ['format' => 'pdf', 'academic_term_id' => $ctx['term']->id, 'month' => 8, 'year' => 2026]))
             ->assertRedirect(route('admin.monthly-jp-recap.index'))
             ->assertSessionHasErrors('pdf');
+    }
+
+    public function test_pdf_download_does_not_modify_any_database_records(): void
+    {
+        $ctx = $this->context();
+        DiniyyahClassJournal::create([
+            'diniyyah_teacher_assignment_id' => $ctx['regular']->id,
+            'date' => '2026-10-07', 'session_hour' => '1', 'material' => 'Materi Oktober', 'jp_count' => 1,
+        ]);
+        $snapshot = fn () => collect(Schema::getTableListing())->mapWithKeys(
+            fn ($table) => [$table => DB::table($table)->get()->map(fn ($row) => (array) $row)->all()],
+        )->all();
+        $before = $snapshot();
+        $url = route('admin.monthly-jp-recap.export', [
+            'format' => 'pdf', 'academic_term_id' => $ctx['term']->id, 'month' => 10, 'year' => 2026,
+        ]);
+
+        $this->actingAs($ctx['admin'], 'admin')->get($url)
+            ->assertOk()->assertHeader('Content-Type', 'application/pdf')
+            ->assertHeader('Content-Disposition', 'attachment; filename="rekap-penggajian-jp-2026-10.pdf"');
+        $this->assertSame($before, $snapshot(), 'PDF export must leave all database records unchanged.');
+
+        $renderer = \Mockery::mock(AdminMonthlyJpPdfRenderer::class);
+        $renderer->shouldReceive('render')->once()->andThrow(new \RuntimeException('Renderer gagal'));
+        $this->app->instance(AdminMonthlyJpPdfRenderer::class, $renderer);
+        $this->from(route('admin.monthly-jp-recap.index'))->get($url)
+            ->assertRedirect(route('admin.monthly-jp-recap.index'))->assertSessionHasErrors('pdf');
+        $this->assertSame($before, $snapshot(), 'A failed PDF export must also leave all records unchanged.');
     }
 
     private function context(): array
