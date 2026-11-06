@@ -33,6 +33,17 @@ class DiniyyahKkmAssignmentRoster
             ->whereIn('id', $this->assignments($scope->academicTerm)->whereIn('diniyyah_class_subject_id', $subjectIds)->select('teacher_id'));
     }
 
+    public function teachersInLevel(DiniyyahKkmScope $scope): Builder
+    {
+        $subjectIds = DiniyyahClassSubject::with('classroomTerm.classroom')
+            ->where('is_active', true)
+            ->whereHas('classroomTerm', fn ($q) => $q->where('academic_term_id', $scope->academic_term_id)->whereHas('classroom'))
+            ->get()->filter(fn ($subject) => DiniyyahKkmResolver::mustawa($subject->classroomTerm?->classroom?->level_name) === (int) $scope->mustawa)->pluck('id');
+
+        return Teacher::query()->where('status', 'active')->whereHas('user', fn ($q) => $q->role('guru'))
+            ->whereIn('id', $this->assignments($scope->academicTerm)->whereIn('diniyyah_class_subject_id', $subjectIds)->select('teacher_id'));
+    }
+
     /** Teaching scopes exist independently of whether a KKM has been assigned or approved. */
     public function teachingScopes(User $user): Collection
     {
@@ -54,7 +65,7 @@ class DiniyyahKkmAssignmentRoster
                     return null;
                 }
 
-                return ['academic_term_id' => $term->id, 'subject_id' => $subject->subject_id, 'mustawa' => $level];
+                return ['academic_term_id' => $term->id, 'mustawa' => $level];
             })->filter()->unique(fn ($s) => implode(':', $s))->values();
     }
 

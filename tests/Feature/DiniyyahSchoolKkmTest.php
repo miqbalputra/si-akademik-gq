@@ -118,8 +118,11 @@ class DiniyyahSchoolKkmTest extends TestCase
             $this->put(route('guru.kkm.save', $revision), ['action' => $action, 'criteria' => $input, 'lock_version' => 0])->assertSessionHasErrors('kkm');
         }
         $this->actingAs($c['admin'], 'admin')->post(route('admin.kkm.assign'), ['class_subject_id' => $c['subjects']['female']->id, 'teacher_id' => $c['teachers']['female']->id])->assertSessionHasErrors('kkm');
+        $kabag = User::factory()->create();
+        $kabag->assignRole('kabag_diniyyah');
+        $this->actingAs($kabag, 'web');
         foreach (['approve', 'revise'] as $decision) {
-            $this->post(route('admin.kkm.review', $revision), ['decision' => $decision, 'notes' => 'Ubah ketetapan', 'lock_version' => 0])->assertSessionHasErrors('kkm');
+            $this->post(route('kabag.kkm.review', $revision), ['decision' => $decision, 'notes' => 'Ubah ketetapan', 'lock_version' => 0])->assertSessionHasErrors('kkm');
         }
         $this->assertSame(70, $revision->fresh()->final_kkm);
         $this->assertDatabaseCount('diniyyah_kkm_revisions', 1);

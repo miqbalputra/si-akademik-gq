@@ -46,6 +46,8 @@ class DiniyyahKkmTest extends TestCase
         }
         $admin = User::factory()->create(['name' => 'Admin KKM']);
         $admin->assignRole('admin');
+        $kabag = User::factory()->create(['name' => 'Kabag Diniyyah']);
+        $kabag->assignRole('kabag_diniyyah');
         $school = School::create(['name' => 'Sekolah KKM']);
         $year = AcademicYear::create(['school_id' => $school->id, 'name' => '2026/2027']);
         $term = AcademicTerm::create(['academic_year_id' => $year->id, 'name' => 'Ganjil', 'semester' => 'ganjil', 'starts_at' => '2026-07-01', 'ends_at' => '2026-12-31', 'is_active' => true, 'kkm_workflow_enabled' => true]);
@@ -65,7 +67,7 @@ class DiniyyahKkmTest extends TestCase
         }
         $scope = app(DiniyyahKkmWorkflow::class)->assign($subjects['female'], $teachers['female']->id, $admin);
 
-        return compact('admin', 'term', 'subject', 'teachers', 'subjects', 'users', 'scope');
+        return compact('admin', 'kabag', 'term', 'subject', 'teachers', 'subjects', 'users', 'scope');
     }
 
     private function input(int $score = 75): array
@@ -84,7 +86,7 @@ class DiniyyahKkmTest extends TestCase
     private function approved(array $c, int $score = 75): DiniyyahKkmRevision
     {
         $revision = $this->submitted($c, $score);
-        app(DiniyyahKkmWorkflow::class)->review($revision, $c['admin'], $revision->lock_version, true);
+        app(DiniyyahKkmWorkflow::class)->review($revision, $c['kabag'], $revision->lock_version, true);
 
         return $revision->fresh();
     }
@@ -144,7 +146,7 @@ class DiniyyahKkmTest extends TestCase
         $this->actingAs($c['users']['male'], 'web')->get(route('guru.kkm.show', $c['scope']))->assertForbidden();
         $this->get(route('guru.kkm.export', [$revision, 'xlsx']))->assertForbidden();
         $this->put(route('guru.kkm.save', $revision), ['action' => 'save', 'lock_version' => $revision->lock_version, 'criteria' => $this->input()])->assertForbidden();
-        app(DiniyyahKkmWorkflow::class)->review($revision, $c['admin'], $revision->lock_version, true);
+        app(DiniyyahKkmWorkflow::class)->review($revision, $c['kabag'], $revision->lock_version, true);
         $this->get(route('guru.kkm.show', $c['scope']))->assertOk()->assertSee('75')->assertDontSee('Ajukan untuk ACC');
         $this->get(route('guru.kkm.export', [$revision, 'xlsx']))->assertOk()->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         $pdf = $this->get(route('guru.kkm.export', [$revision, 'pdf']))->assertOk();
@@ -157,6 +159,35 @@ class DiniyyahKkmTest extends TestCase
             $this->assertSame($revision->id, $cs->fresh()->kkm_revision_id);
         }
         $this->assertDatabaseHas('panel_notifications', ['user_id' => $c['users']['male']->id, 'notification_type' => 'kkm_approved']);
+    }
+
+    public function test_kabag_review_and_same_level_other_subject_read_only_through_portals(): void
+    {
+        $c = $this->context();
+        $otherSubject = DiniyyahSubject::create(['code' => 'fiqih_reader', 'name' => 'Fiqih']);
+        $otherClassSubject = DiniyyahClassSubject::create(['classroom_term_id' => $c['subjects']['male']->classroom_term_id, 'subject_id' => $otherSubject->id, 'assessment_method' => 'direct_final', 'is_active' => true]);
+        $reader = User::factory()->create();
+        $reader->assignRole('guru');
+        $teacher = Teacher::create(['user_id' => $reader->id, 'name' => 'Guru Fiqih', 'status' => 'active']);
+        DiniyyahTeacherAssignment::create(['diniyyah_class_subject_id' => $otherClassSubject->id, 'teacher_id' => $teacher->id]);
+
+        $this->actingAs($c['users']['female'], 'web')->post(route('guru.kkm.start', $c['scope']))->assertRedirect();
+        $revision = $c['scope']->fresh()->workingRevision;
+        $this->put(route('guru.kkm.save', $revision), ['action' => 'submit', 'lock_version' => $revision->lock_version, 'criteria' => $this->input(78)])->assertRedirect()->assertSessionHasNoErrors();
+        $revision->refresh();
+        $this->actingAs($reader, 'web')->get(route('guru.kkm.show', $c['scope']))->assertForbidden();
+        $this->actingAs($c['admin'], 'admin')->get(route('admin.kkm.show', $c['scope']))->assertOk()->assertDontSee('Setujui KKM');
+        $this->post(route('admin.kkm.review', $revision), ['decision' => 'approve', 'lock_version' => $revision->lock_version])->assertForbidden();
+        $this->actingAs($c['kabag'], 'web')->get(route('kabag.kkm.show', $c['scope']))->assertOk()->assertSee('Setujui KKM');
+        $this->post(route('kabag.kkm.review', $revision), ['decision' => 'approve', 'lock_version' => $revision->lock_version])->assertRedirect()->assertSessionHasNoErrors();
+        $this->actingAs($reader, 'web')->get(route('guru.kkm.index'))->assertOk()->assertSee('Akidah Akhlak');
+        $this->get(route('guru.kkm.show', $c['scope']))->assertOk()->assertSee('78')->assertDontSee('Ajukan untuk ACC');
+        $this->post(route('guru.kkm.start', $c['scope']))->assertForbidden();
+        $this->assertDatabaseHas('panel_notifications', ['user_id' => $reader->id, 'notification_type' => 'kkm_approved']);
+        $this->assertNull($otherClassSubject->fresh()->kkm);
+        foreach ($c['subjects'] as $subject) {
+            $this->assertSame('78.00', $subject->fresh()->kkm);
+        }
     }
 
     public function test_author_and_management_pages_render_and_guards_stay_separate(): void
@@ -181,7 +212,7 @@ class DiniyyahKkmTest extends TestCase
         $this->assertSame($old->id, $c['scope']->fresh()->active_revision_id);
         $this->actingAs($c['users']['male'])->get(route('guru.kkm.show', $c['scope']))->assertOk()->assertDontSee('Menunggu ACC');
         $this->get(route('guru.kkm.export', [$new, 'pdf']))->assertForbidden();
-        app(DiniyyahKkmWorkflow::class)->review($new, $c['admin'], $new->lock_version, true);
+        app(DiniyyahKkmWorkflow::class)->review($new, $c['kabag'], $new->lock_version, true);
         $this->assertSame($new->id, $c['scope']->fresh()->active_revision_id);
         $this->assertSame('superseded', $old->fresh()->status);
         $this->assertSame(2, $new->version);
@@ -195,14 +226,14 @@ class DiniyyahKkmTest extends TestCase
         $this->assertSame('draft', $revision->fresh()->status);
         $this->assertFalse(app(DiniyyahKkmAccess::class)->writes($c['users']['female'], $c['scope']->fresh()));
         $this->expectException(ValidationException::class);
-        app(DiniyyahKkmWorkflow::class)->review($revision, $c['admin'], $revision->lock_version, true);
+        app(DiniyyahKkmWorkflow::class)->review($revision, $c['kabag'], $revision->lock_version, true);
     }
 
-    public function test_self_approval_is_denied_even_with_admin_role(): void
+    public function test_self_approval_is_denied_even_with_kabag_role(): void
     {
         $c = $this->context();
         $revision = $this->submitted($c);
-        $c['users']['female']->assignRole('admin');
+        $c['users']['female']->assignRole('kabag_diniyyah');
         $this->expectException(ValidationException::class);
         app(DiniyyahKkmWorkflow::class)->review($revision, $c['users']['female'], $revision->lock_version, true);
     }
@@ -211,8 +242,8 @@ class DiniyyahKkmTest extends TestCase
     {
         $c = $this->context();
         $revision = $this->submitted($c);
-        $this->actingAs($c['admin'], 'admin')->post(route('admin.kkm.review', $revision), ['decision' => 'revise', 'lock_version' => $revision->lock_version])->assertSessionHasErrors('kkm');
-        app(DiniyyahKkmWorkflow::class)->review($revision, $c['admin'], $revision->lock_version, false, 'Lengkapi pertimbangan fasilitas.');
+        $this->actingAs($c['kabag'], 'web')->post(route('kabag.kkm.review', $revision), ['decision' => 'revise', 'lock_version' => $revision->lock_version])->assertSessionHasErrors('kkm');
+        app(DiniyyahKkmWorkflow::class)->review($revision, $c['kabag'], $revision->lock_version, false, 'Lengkapi pertimbangan fasilitas.');
         $this->assertSame('needs_revision', $revision->fresh()->status);
         $revision = $revision->fresh();
         $new = app(DiniyyahKkmWorkflow::class)->save($revision, $this->input(80), $c['users']['female'], $revision->lock_version, true);
@@ -225,10 +256,10 @@ class DiniyyahKkmTest extends TestCase
         $c = $this->context();
         $revision = $this->submitted($c);
         $version = $revision->lock_version;
-        app(DiniyyahKkmWorkflow::class)->review($revision, $c['admin'], $version, true);
+        app(DiniyyahKkmWorkflow::class)->review($revision, $c['kabag'], $version, true);
         $count = PanelNotification::where('notification_type', 'kkm_approved')->count();
         try {
-            app(DiniyyahKkmWorkflow::class)->review($revision, $c['admin'], $version, true);
+            app(DiniyyahKkmWorkflow::class)->review($revision, $c['kabag'], $version, true);
             $this->fail('ACC ganda harus ditolak.');
         } catch (ValidationException) {
         }
@@ -241,7 +272,7 @@ class DiniyyahKkmTest extends TestCase
         $revision = $this->submitted($c);
         DiniyyahLedgerSnapshot::create(['academic_term_id' => $c['term']->id, 'classroom_term_id' => $c['subjects']['male']->classroom_term_id, 'title' => 'Leger historis', 'status' => 'locked']);
         $this->expectException(ValidationException::class);
-        app(DiniyyahKkmWorkflow::class)->review($revision, $c['admin'], $revision->lock_version, true);
+        app(DiniyyahKkmWorkflow::class)->review($revision, $c['kabag'], $revision->lock_version, true);
     }
 
     public function test_old_kkm_cannot_bypass_approval_or_locking_ledger(): void

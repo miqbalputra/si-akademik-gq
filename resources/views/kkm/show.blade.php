@@ -38,7 +38,7 @@
                     @include('kkm.partials.criteria', ['item'=>$revision])
                 @endif
                 <div class="mt-5 flex flex-wrap gap-3"><a class="btn" href="{{ route($prefix.'export', ['revision'=>$revision,'format'=>'xlsx']) }}">Ekspor Excel</a><a class="btn" href="{{ route($prefix.'export', ['revision'=>$revision,'format'=>'pdf']) }}">Ekspor PDF</a></div>
-                @if($manager && $revision->status === 'submitted' && !$frozen && $revision->submitted_by !== auth()->id() && $scope->assignedTeacher?->user_id !== auth()->id())
+                @if(app(\App\Services\DiniyyahKkmAccess::class)->reviews(auth()->user()) && $revision->status === 'submitted' && !$frozen && $revision->submitted_by !== auth()->id() && $scope->assignedTeacher?->user_id !== auth()->id())
                     <form method="POST" action="{{ route($prefix.'review', $revision) }}" class="mt-5 space-y-3 border-t border-line pt-5">@csrf<input type="hidden" name="lock_version" value="{{ $revision->lock_version }}"><label class="ui-field"><span>Catatan peninjauan (wajib untuk permintaan revisi)</span><textarea class="form-input" name="notes" rows="3" maxlength="4000">{{ old('notes') }}</textarea></label><div class="flex gap-3"><button class="btn btn-primary" name="decision" value="approve">Setujui KKM</button><button class="btn" name="decision" value="revise">Kembalikan untuk revisi</button></div></form>
                 @endif
             </section>

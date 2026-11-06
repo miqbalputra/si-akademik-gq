@@ -112,7 +112,7 @@ class DiniyyahKkmWorkflow
 
     public function review(DiniyyahKkmRevision $revision, User $actor, int $expectedVersion, bool $approve, ?string $notes = null): void
     {
-        abort_unless($this->access->manages($actor), 403);
+        abort_unless($this->access->reviews($actor), 403);
         $this->locked($revision->scope, function ($scope) use ($revision, $actor, $expectedVersion, $approve, $notes): void {
             $revision = $this->current($scope, $revision, $expectedVersion);
             if ($revision->status !== 'submitted') {
@@ -137,7 +137,7 @@ class DiniyyahKkmWorkflow
                 $this->synchronize($scope, $revision);
             }
             $this->audit($scope, $actor, $approve ? 'approved' : 'revision_requested', ['revision' => $revision->toArray()]);
-            $teachers = $approve ? $this->access->eligibleTeachers($scope)->pluck('user_id')->all() : [$scope->assignedTeacher?->user_id];
+            $teachers = $approve ? app(DiniyyahKkmAssignmentRoster::class)->teachersInLevel($scope)->pluck('user_id')->all() : [$scope->assignedTeacher?->user_id];
             $this->notify($scope, $teachers, $approve ? 'KKM telah disetujui' : 'KKM perlu revisi', $scope->label.' versi '.$revision->version.'. '.($notes ?? ''), $approve ? 'kkm_approved' : 'kkm_needs_revision');
         });
     }

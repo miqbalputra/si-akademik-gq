@@ -133,7 +133,7 @@ DB_PASSWORD=change_me
 
 - Menu pengelola: `/admin/kkm` pada sesi panel admin, atau `/kabag/kkm` pada portal Kabag. Guru menggunakan `/guru/kkm`.
 - Admin/Kabag menunjuk satu guru pengampu untuk mapel, Mustawa 1–6, dan semester. Penulisan tingkat `M1` dan `Mustawa 1` dipetakan ke jenjang yang sama.
-- Guru mengisi angka bulat 60–100 dan alasan tiga unsur. Kategori otomatis; KKM adalah rata-rata dibulatkan untuk semua mapel. Draf harus diajukan dan disetujui oleh pengelola yang berbeda dari pengaju.
+- Admin atau Kabag Diniyyah menugaskan guru pengampu sebagai penyusun. Guru mengisi angka bulat 60–100 dan alasan tiga unsur; kategori dan KKM rata-rata dibulatkan otomatis. Draf diajukan kepada Kabag Diniyyah untuk ditinjau dan disetujui oleh orang yang berbeda dari pengaju. Guru lain yang mengajar pada mustawa dan semester yang sama dapat membaca KKM resmi.
 - Revisi mempertahankan versi aktif sampai ACC baru. Dokumen terkunci/terbit memblokir perubahan KKM. Nilai akhir santri tidak berubah ketika KKM berubah; ketuntasan diperbarui dan penilaian tervalidasi menunggu validasi ulang.
 - Migrasi mengaktifkan workflow pada semester aktif/masih terbuka tanpa dokumen terkunci. Semester baru dari panel mengaktifkan `academic_terms.kkm_workflow_enabled`; pemanggil programatik yang membuat semester baru juga harus mengisi atribut tersebut dengan `true`. Semester historis mempertahankan KKM lama. Penugasan pertama pada semester lama yang sepenuhnya terbuka mengaktifkan workflow untuk semester itu.
 - Ekspor Excel/PDF memakai hak akses yang sama dengan tampilan. Alasan panjang dipaginasi, dan teks pengguna tidak dievaluasi sebagai formula Excel. Notifikasi admin memakai guard `admin`, sedangkan portal guru/Kabag memakai guard `web`.

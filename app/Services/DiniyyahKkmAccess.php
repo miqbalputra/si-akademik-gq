@@ -21,6 +21,11 @@ class DiniyyahKkmAccess
         return $this->roster->eligibleTeachers($scope);
     }
 
+    public function reviews(User $user): bool
+    {
+        return $user->hasRole('kabag_diniyyah');
+    }
+
     public function writes(User $user, DiniyyahKkmScope $scope): bool
     {
         return ! $scope->activeRevision?->is_school_fixed && $scope->subject?->schoolKkm() === null && $user->hasRole('guru') && $user->teacher?->id === $scope->assigned_teacher_id
@@ -31,7 +36,7 @@ class DiniyyahKkmAccess
     {
         return $this->manages($user) || $this->writes($user, $scope)
             || ($scope->active_revision_id && $user->hasRole('guru') && $user->teacher
-                && $this->eligibleTeachers($scope)->whereKey($user->teacher->id)->exists());
+                && $this->roster->teachersInLevel($scope)->whereKey($user->teacher->id)->exists());
     }
 
     public function viewsRevision(User $user, DiniyyahKkmRevision $revision): bool
