@@ -161,7 +161,7 @@ class DiniyyahKkmTest extends TestCase
         $this->assertDatabaseHas('panel_notifications', ['user_id' => $c['users']['male']->id, 'notification_type' => 'kkm_approved']);
     }
 
-    public function test_kabag_review_and_same_level_other_subject_read_only_through_portals(): void
+    public function test_admin_can_review_and_teachers_of_other_subjects_cannot_see_official_kkm(): void
     {
         $c = $this->context();
         $otherSubject = DiniyyahSubject::create(['code' => 'fiqih_reader', 'name' => 'Fiqih']);
@@ -176,14 +176,18 @@ class DiniyyahKkmTest extends TestCase
         $this->put(route('guru.kkm.save', $revision), ['action' => 'submit', 'lock_version' => $revision->lock_version, 'criteria' => $this->input(78)])->assertRedirect()->assertSessionHasNoErrors();
         $revision->refresh();
         $this->actingAs($reader, 'web')->get(route('guru.kkm.show', $c['scope']))->assertForbidden();
-        $this->actingAs($c['admin'], 'admin')->get(route('admin.kkm.show', $c['scope']))->assertOk()->assertDontSee('Setujui KKM');
-        $this->post(route('admin.kkm.review', $revision), ['decision' => 'approve', 'lock_version' => $revision->lock_version])->assertForbidden();
         $this->actingAs($c['kabag'], 'web')->get(route('kabag.kkm.show', $c['scope']))->assertOk()->assertSee('Setujui KKM');
-        $this->post(route('kabag.kkm.review', $revision), ['decision' => 'approve', 'lock_version' => $revision->lock_version])->assertRedirect()->assertSessionHasNoErrors();
-        $this->actingAs($reader, 'web')->get(route('guru.kkm.index'))->assertOk()->assertSee('Akidah Akhlak');
-        $this->get(route('guru.kkm.show', $c['scope']))->assertOk()->assertSee('78')->assertDontSee('Ajukan untuk ACC');
+        $this->actingAs($c['admin'], 'admin')->get(route('admin.kkm.show', $c['scope']))->assertOk()->assertSee('Setujui KKM');
+        $this->post(route('admin.kkm.review', $revision), ['decision' => 'approve', 'lock_version' => $revision->lock_version])->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame($c['admin']->id, $revision->fresh()->reviewed_by);
+        $this->actingAs($reader, 'web')->get(route('guru.kkm.index'))->assertOk()->assertDontSee('Akidah Akhlak');
+        $this->get(route('guru.kkm.show', $c['scope']))->assertForbidden();
+        $this->get(route('guru.kkm.export', [$revision, 'xlsx']))->assertForbidden();
+        $this->get(route('guru.kkm.export', [$revision, 'pdf']))->assertForbidden();
+        $recap = $this->get(route('guru.kkm.recap', ['format' => 'xlsx', 'academic_term_id' => $c['term']->id, 'mustawa' => 1]))->assertOk();
+        $this->assertNull($this->readRecapKkm($recap->getContent()));
         $this->post(route('guru.kkm.start', $c['scope']))->assertForbidden();
-        $this->assertDatabaseHas('panel_notifications', ['user_id' => $reader->id, 'notification_type' => 'kkm_approved']);
+        $this->assertDatabaseMissing('panel_notifications', ['user_id' => $reader->id, 'notification_type' => 'kkm_approved']);
         $this->assertNull($otherClassSubject->fresh()->kkm);
         foreach ($c['subjects'] as $subject) {
             $this->assertSame('78.00', $subject->fresh()->kkm);
@@ -210,8 +214,19 @@ class DiniyyahKkmTest extends TestCase
         $old = $this->approved($c, 70);
         $new = $this->submitted($c, 80);
         $this->assertSame($old->id, $c['scope']->fresh()->active_revision_id);
-        $this->actingAs($c['users']['male'])->get(route('guru.kkm.show', $c['scope']))->assertOk()->assertDontSee('Menunggu ACC');
+        $c['users']['male']->assignRole('kabag_diniyyah');
+        $this->actingAs($c['users']['male'])->get(route('guru.kkm.show', $c['scope']))->assertOk()->assertDontSee('Menunggu ACC')->assertDontSee('Ubah guru penyusun');
         $this->get(route('guru.kkm.export', [$new, 'pdf']))->assertForbidden();
+        $this->get(route('guru.kkm.index', ['status' => 'submitted']))->assertOk()->assertDontSee('Akidah Akhlak');
+        $this->get(route('guru.kkm.index', ['status' => 'approved']))->assertOk()->assertSee('Akidah Akhlak');
+        $recap = $this->get(route('guru.kkm.recap', ['format' => 'xlsx']))->assertOk();
+        $this->assertSame(70, $this->readRecapKkm($recap->getContent()));
+        $this->get(route('kabag.kkm.show', $c['scope']))->assertOk()->assertSee('Setujui KKM');
+        $this->get(route('kabag.kkm.export', [$new, 'pdf']))->assertOk();
+        $this->post('/guru/kkm/versi/'.$new->id.'/review', ['decision' => 'approve', 'lock_version' => $new->lock_version])->assertNotFound();
+        $this->post('/guru/kkm/penugasan')->assertStatus(405);
+        $this->actingAs($c['users']['female'], 'web')->get(route('guru.kkm.index', ['status' => 'submitted']))->assertOk()->assertSee('Akidah Akhlak');
+        $this->get(route('guru.kkm.index', ['status' => 'approved']))->assertOk()->assertDontSee('Akidah Akhlak');
         app(DiniyyahKkmWorkflow::class)->review($new, $c['kabag'], $new->lock_version, true);
         $this->assertSame($new->id, $c['scope']->fresh()->active_revision_id);
         $this->assertSame('superseded', $old->fresh()->status);
@@ -355,6 +370,21 @@ class DiniyyahKkmTest extends TestCase
         }
     }
 
+    private function readRecapKkm(string $bytes): mixed
+    {
+        $path = tempnam(sys_get_temp_dir(), 'kkm-recap-');
+        try {
+            file_put_contents($path, $bytes);
+            $workbook = IOFactory::load($path);
+            $value = $workbook->getSheetByName('Rekap KKM')->getCell('J6')->getValue();
+            $workbook->disconnectWorksheets();
+
+            return $value;
+        } finally {
+            @unlink($path);
+        }
+    }
+
     public function test_approved_version_is_snapshotted_in_ledger_and_report_card(): void
     {
         $c = $this->context();
@@ -394,12 +424,17 @@ class DiniyyahKkmTest extends TestCase
     public function test_admin_and_kabag_notifications_link_to_their_authenticated_portal(): void
     {
         $c = $this->context();
+        $c['admin']->assignRole('guru');
+        $c['kabag']->assignRole('guru');
         $this->submitted($c);
         $response = $this->actingAs($c['admin'], 'admin')->getJson(route('admin.notifications.feed'))->assertOk();
         $links = collect($response->json('notifications'))->where('type', 'kkm_submitted')->pluck('link_url');
         $this->assertContains(route('admin.kkm.show', $c['scope']), $links);
         $this->post(route('admin.notifications.read-all'))->assertRedirect();
         $this->assertDatabaseHas('panel_notifications', ['user_id' => $c['admin']->id, 'notification_type' => 'kkm_submitted', 'status' => 'read']);
+        $response = $this->actingAs($c['kabag'], 'web')->getJson(route('notifications.feed'))->assertOk();
+        $links = collect($response->json('notifications'))->where('type', 'kkm_submitted')->pluck('link_url');
+        $this->assertContains(route('kabag.kkm.show', $c['scope']), $links);
     }
 
     public function test_pdf_and_xlsx_handle_long_reasons_without_losing_text(): void

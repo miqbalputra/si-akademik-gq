@@ -347,8 +347,8 @@ class DiniyyahKkmAssignmentTest extends TestCase
         $response = $this->get(route('guru.kkm.index', ['mustawa' => 2]))->assertOk();
         $this->assertSame([], $response->viewData('scopes')->items());
         $this->assertSame(['1'], $this->filterOptionValues($response->getContent(), 'mustawa'));
-        $c['female']->user->removeRole('admin');
         $this->get(route('guru.kkm.show', $scope))->assertForbidden();
+        $this->actingAs($c['female']->user, 'admin')->get(route('admin.kkm.show', $scope))->assertOk();
     }
 
     private function filterOptionValues(string $html, string $name): array

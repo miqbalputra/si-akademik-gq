@@ -97,16 +97,17 @@ Route::middleware(['auth:web', 'role:kabag_diniyyah'])->group(function () {
 foreach ([['admin', 'admin.kkm.', 'admin/kkm', 'admin|kabag_diniyyah'], ['web', 'kabag.kkm.', 'kabag/kkm', 'admin|kabag_diniyyah'], ['web', 'guru.kkm.', 'guru/kkm', 'guru']] as [$guard, $name, $path, $roles]) {
     Route::middleware(['auth:'.$guard, 'role:'.$roles])->prefix($path)->name($name)->group(function () use ($name): void {
         Route::get('/', [DiniyyahKkmController::class, 'index'])->name('index');
-        Route::post('/penugasan', [DiniyyahKkmController::class, 'assign'])->name('assign');
-        if ($name !== 'guru.kkm.') {
+        if ($name === 'guru.kkm.') {
+            Route::put('/versi/{revision}', [DiniyyahKkmController::class, 'save'])->name('save');
+            Route::post('/{scope}/mulai', [DiniyyahKkmController::class, 'start'])->name('start');
+        } else {
+            Route::post('/penugasan', [DiniyyahKkmController::class, 'assign'])->name('assign');
             Route::get('/penugasan-massal', [DiniyyahKkmController::class, 'bulkPreview'])->name('bulk.preview');
             Route::post('/penugasan-massal', [DiniyyahKkmController::class, 'bulkApply'])->name('bulk.apply');
+            Route::post('/versi/{revision}/review', [DiniyyahKkmController::class, 'review'])->name('review');
         }
         Route::get('/rekap/{format}', [DiniyyahKkmController::class, 'recap'])->whereIn('format', ['xlsx', 'pdf'])->name('recap');
         Route::get('/versi/{revision}/export/{format}', [DiniyyahKkmController::class, 'export'])->whereIn('format', ['xlsx', 'pdf'])->name('export');
-        Route::put('/versi/{revision}', [DiniyyahKkmController::class, 'save'])->name('save');
-        Route::post('/versi/{revision}/review', [DiniyyahKkmController::class, 'review'])->name('review');
-        Route::post('/{scope}/mulai', [DiniyyahKkmController::class, 'start'])->name('start');
         Route::get('/{scope}', [DiniyyahKkmController::class, 'show'])->name('show');
     });
 }

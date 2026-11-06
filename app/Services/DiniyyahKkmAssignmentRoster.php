@@ -33,17 +33,6 @@ class DiniyyahKkmAssignmentRoster
             ->whereIn('id', $this->assignments($scope->academicTerm)->whereIn('diniyyah_class_subject_id', $subjectIds)->select('teacher_id'));
     }
 
-    public function teachersInLevel(DiniyyahKkmScope $scope): Builder
-    {
-        $subjectIds = DiniyyahClassSubject::with('classroomTerm.classroom')
-            ->where('is_active', true)
-            ->whereHas('classroomTerm', fn ($q) => $q->where('academic_term_id', $scope->academic_term_id)->whereHas('classroom'))
-            ->get()->filter(fn ($subject) => DiniyyahKkmResolver::mustawa($subject->classroomTerm?->classroom?->level_name) === (int) $scope->mustawa)->pluck('id');
-
-        return Teacher::query()->where('status', 'active')->whereHas('user', fn ($q) => $q->role('guru'))
-            ->whereIn('id', $this->assignments($scope->academicTerm)->whereIn('diniyyah_class_subject_id', $subjectIds)->select('teacher_id'));
-    }
-
     /** Teaching scopes exist independently of whether a KKM has been assigned or approved. */
     public function teachingScopes(User $user): Collection
     {
@@ -65,8 +54,25 @@ class DiniyyahKkmAssignmentRoster
                     return null;
                 }
 
-                return ['academic_term_id' => $term->id, 'mustawa' => $level];
+                return ['academic_term_id' => $term->id, 'mustawa' => $level, 'subject_id' => $subject->subject_id];
             })->filter()->unique(fn ($s) => implode(':', $s))->values();
+    }
+
+    public function constrainToTeachingScopes(Builder $query, Collection $scopes): void
+    {
+        if ($scopes->isEmpty()) {
+            $query->whereIn('id', []);
+
+            return;
+        }
+
+        $query->where(function (Builder $query) use ($scopes): void {
+            foreach ($scopes->groupBy(fn ($scope) => $scope['academic_term_id'].':'.$scope['mustawa']) as $group) {
+                $query->orWhere(fn (Builder $query) => $query->where('academic_term_id', $group->first()['academic_term_id'])
+                    ->where('mustawa', $group->first()['mustawa'])
+                    ->whereIn('subject_id', $group->pluck('subject_id')));
+            }
+        });
     }
 
     /** Derived data only: visiting this roster must never create scopes or assignments. */
@@ -150,9 +156,9 @@ class DiniyyahKkmAssignmentRoster
                 $classScopes[$subject->classroom_term_id][$subject->subject_id.':'.$level] = true;
             }
         }
-        $documents = DiniyyahLedgerSnapshot::whereIn('classroom_term_id', array_keys($classScopes))->whereIn('status', ['locked', 'published'])->orderBy('id')->get()
+        $documents = DiniyyahLedgerSnapshot::whereIn('classroom_term_id', array_keys($classScopes))->whereIn('status', ['locked', 'published'])->orderBy('id')->get(['id', 'classroom_term_id', 'title'])
             ->map(fn ($s) => ['classroom_term_id' => $s->classroom_term_id, 'label' => 'Leger #'.$s->id.' '.$s->title]);
-        $documents = $documents->concat(ReportCard::whereIn('classroom_term_id', array_keys($classScopes))->where('report_type', 'diniyyah')->whereIn('status', ['locked', 'published'])->orderBy('id')->get()
+        $documents = $documents->concat(ReportCard::whereIn('classroom_term_id', array_keys($classScopes))->where('report_type', 'diniyyah')->whereIn('status', ['locked', 'published'])->orderBy('id')->get(['id', 'classroom_term_id'])
             ->map(fn ($r) => ['classroom_term_id' => $r->classroom_term_id, 'label' => 'Rapor #'.$r->id]));
         $frozen = [];
         foreach ($documents as $document) {

@@ -30,6 +30,7 @@ class DiniyyahKkmWorkflow
                 $this->invalid('Jenjang kelas harus diisi Mustawa 1–6 atau M1–M6.');
             }
             $scope = DiniyyahKkmScope::whereKey($scope->id)->lockForUpdate()->firstOrFail();
+            $this->ensureTeacherManaged($scope->subject?->schoolKkm(), (bool) $scope->activeRevision?->is_school_fixed);
             $this->resolver->ensureOpen($scope);
             if (! $this->access->eligibleTeachers($scope)->whereKey($teacherId)->exists()) {
                 $this->invalid('Pilih guru aktif yang memiliki akun guru dan penugasan mengajar mapel/mustawa pada semester ini.');
@@ -137,7 +138,7 @@ class DiniyyahKkmWorkflow
                 $this->synchronize($scope, $revision);
             }
             $this->audit($scope, $actor, $approve ? 'approved' : 'revision_requested', ['revision' => $revision->toArray()]);
-            $teachers = $approve ? app(DiniyyahKkmAssignmentRoster::class)->teachersInLevel($scope)->pluck('user_id')->all() : [$scope->assignedTeacher?->user_id];
+            $teachers = $approve ? $this->access->eligibleTeachers($scope)->pluck('user_id')->all() : [$scope->assignedTeacher?->user_id];
             $this->notify($scope, $teachers, $approve ? 'KKM telah disetujui' : 'KKM perlu revisi', $scope->label.' versi '.$revision->version.'. '.($notes ?? ''), $approve ? 'kkm_approved' : 'kkm_needs_revision');
         });
     }
@@ -195,10 +196,9 @@ class DiniyyahKkmWorkflow
     private function notify(DiniyyahKkmScope $scope, array $users, string $title, string $body, string $type): void
     {
         foreach (User::whereIn('id', array_filter($users))->get() as $user) {
-            $prefix = $this->access->manages($user) && ! $user->hasRole('guru') ? 'admin.kkm.' : 'guru.kkm.';
-            if ($user->hasRole('kabag_diniyyah') && ! $user->hasRole('guru')) {
-                $prefix = 'kabag.kkm.';
-            }
+            $prefix = $type === 'kkm_submitted'
+                ? ($user->hasRole('kabag_diniyyah') ? 'kabag.kkm.' : 'admin.kkm.')
+                : 'guru.kkm.';
             $this->notifications->dispatchToUsers([$user->id], $title, $body, $type, route($prefix.'show', $scope), $type === 'kkm_approved' ? 'success' : 'info');
         }
     }

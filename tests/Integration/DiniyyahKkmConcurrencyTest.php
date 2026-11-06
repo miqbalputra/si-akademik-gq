@@ -8,6 +8,7 @@ use App\Models\Classroom;
 use App\Models\ClassroomTerm;
 use App\Models\DiniyyahAssessmentSet;
 use App\Models\DiniyyahClassSubject;
+use App\Models\DiniyyahKkmRevision;
 use App\Models\DiniyyahKkmScope;
 use App\Models\DiniyyahLedgerSnapshot;
 use App\Models\DiniyyahSubject;
@@ -20,6 +21,7 @@ use App\Services\DiniyyahKkmAssignmentRoster;
 use App\Services\DiniyyahKkmBulkAssignment;
 use App\Services\DiniyyahKkmCalculator;
 use App\Services\DiniyyahKkmResolver;
+use App\Services\DiniyyahKkmWorkflow;
 use App\Services\DiniyyahLedgerWorkflow;
 use Illuminate\Foundation\Bootstrap\HandleExceptions;
 use Illuminate\Support\Facades\Artisan;
@@ -73,7 +75,7 @@ class DiniyyahKkmConcurrencyTest extends TestCase
 
     private function context(): array
     {
-        foreach (['admin', 'guru'] as $role) {
+        foreach (['admin', 'guru', 'kabag_diniyyah'] as $role) {
             Role::firstOrCreate(['name' => $role, 'guard_name' => 'web']);
         }
         $admin = User::factory()->create();
@@ -134,6 +136,75 @@ class DiniyyahKkmConcurrencyTest extends TestCase
         $this->assertTrue($process->isSuccessful(), $process->getErrorOutput().$process->getOutput());
 
         return json_decode($process->getOutput(), true, 512, JSON_THROW_ON_ERROR);
+    }
+
+    private function submittedRevision(array $c): DiniyyahKkmRevision
+    {
+        $teacher = $c['teachers']['female'];
+        $workflow = app(DiniyyahKkmWorkflow::class);
+        $scope = $workflow->assign($c['cs'], $teacher->id, $c['admin']);
+        $revision = $workflow->startRevision($scope, $teacher->user);
+        $criteria = array_fill_keys(array_keys(DiniyyahKkmCalculator::CRITERIA), ['score' => 75, 'reason' => 'Kondisi kelas']);
+
+        return $workflow->save($revision, $criteria, $teacher->user, $revision->lock_version, true);
+    }
+
+    private function approveWorker(DiniyyahKkmRevision $revision, User $reviewer, string $name): Process
+    {
+        $process = new Process([PHP_BINARY, dirname(__DIR__).'/Support/kkm-postgres-worker.php'], dirname(__DIR__, 2));
+        $process->setInput(json_encode([
+            'settings' => $this->settings, 'name' => $name, 'action' => 'approve', 'actor' => $reviewer->id,
+            'revision' => $revision->id, 'lock_version' => $revision->lock_version,
+        ], JSON_THROW_ON_ERROR));
+        $process->setTimeout(60)->start();
+        $this->processes[] = $process;
+
+        return $process;
+    }
+
+    public function test_two_simultaneous_approvals_only_activate_one_revision(): void
+    {
+        $c = $this->context();
+        $revision = $this->submittedRevision($c);
+        $reviewers = User::factory()->count(2)->create()->each(fn (User $user) => $user->assignRole('kabag_diniyyah'));
+        DB::beginTransaction();
+        DiniyyahKkmScope::whereKey($c['scope']->id)->lockForUpdate()->firstOrFail();
+        $first = $this->approveWorker($revision, $reviewers[0], 'kkm_concurrent_acc_first');
+        $second = $this->approveWorker($revision, $reviewers[1], 'kkm_concurrent_acc_second');
+        $this->awaitBlocked(2);
+        DB::commit();
+
+        $results = [$this->processResult($first), $this->processResult($second)];
+        $this->assertCount(1, array_filter($results, fn ($r) => $r['ok']));
+        $this->assertSame($revision->id, $c['scope']->fresh()->active_revision_id);
+        $this->assertNull($c['scope']->fresh()->working_revision_id);
+        $this->assertSame(1, DB::table('activity_log')->where('log_name', 'kkm')->where('event', 'approved')->count());
+        $this->assertSame(2, PanelNotification::where('notification_type', 'kkm_approved')->count());
+    }
+
+    public function test_approval_waits_for_ledger_finalization_and_preserves_the_active_version(): void
+    {
+        $c = $this->context();
+        $reviewer = User::factory()->create();
+        $reviewer->assignRole('kabag_diniyyah');
+        $active = $this->submittedRevision($c);
+        app(DiniyyahKkmWorkflow::class)->review($active, $reviewer, $active->lock_version, true);
+        $pending = $this->submittedRevision($c);
+        $set = DiniyyahAssessmentSet::create(['diniyyah_class_subject_id' => $c['cs']->id, 'title' => 'Akidah', 'assessment_method' => 'direct_final', 'status' => 'validated', 'appears_on_ledger' => true]);
+        $snapshot = DiniyyahLedgerSnapshot::create(['academic_term_id' => $c['term']->id, 'classroom_term_id' => $c['ct']->id, 'title' => 'Leger PG', 'status' => 'validated', 'snapshot_data' => ['columns' => [['source_type' => 'diniyyah_assessment_set', 'assessment_set_id' => $set->id, 'kkm_revision_id' => $active->id]], 'summary' => ['blocking_issues' => 0]]]);
+        DB::beginTransaction();
+        app(DiniyyahLedgerWorkflow::class)->lock($snapshot, $c['admin']);
+        $worker = $this->approveWorker($pending, $reviewer, 'kkm_concurrent_acc_ledger');
+        $this->awaitBlocked(1);
+        DB::commit();
+
+        $result = $this->processResult($worker);
+        $this->assertFalse($result['ok']);
+        $this->assertStringContainsString('Leger #'.$snapshot->id, $result['errors']['kkm'][0]);
+        $this->assertSame($active->id, $c['scope']->fresh()->active_revision_id);
+        $this->assertSame('submitted', $pending->fresh()->status);
+        $this->assertSame('locked', $snapshot->fresh()->status);
+        $this->assertSame($active->id, $snapshot->fresh()->snapshot_data['columns'][0]['kkm_revision_id']);
     }
 
     public function test_two_managers_cannot_overwrite_each_other_or_duplicate_notifications(): void

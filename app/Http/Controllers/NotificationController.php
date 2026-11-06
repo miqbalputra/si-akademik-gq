@@ -145,7 +145,15 @@ class NotificationController extends Controller
     private function contextLink(Request $request, PanelNotification $notification): ?string
     {
         if (str_starts_with($notification->notification_type, 'kkm_') && preg_match('~/kkm/(\d+)$~', $notification->link_url ?? '', $match)) {
-            $prefix = $request->routeIs('admin.notifications.*') ? 'admin.kkm.' : ($request->user()->hasRole('guru') ? 'guru.kkm.' : 'kabag.kkm.');
+            $user = $request->user();
+            $prefix = match (true) {
+                $request->routeIs('admin.notifications.*') => 'admin.kkm.',
+                $notification->notification_type === 'kkm_submitted' && $user->hasRole('kabag_diniyyah') => 'kabag.kkm.',
+                $notification->notification_type === 'kkm_submitted' && $user->hasRole('admin') => 'admin.kkm.',
+                $user->hasRole('guru') => 'guru.kkm.',
+                default => 'kabag.kkm.',
+            };
+
             return route($prefix.'show', (int) $match[1]);
         }
 

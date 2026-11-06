@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Services\Exports\SpreadsheetTheme;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
@@ -13,7 +14,8 @@ class DiniyyahKkmExportService
     public function download(Collection $revisions, string $format)
     {
         abort_unless(in_array($format, ['xlsx', 'pdf'], true), 404);
-        $revisions->each->load(['scope.subject', 'scope.academicTerm.academicYear', 'scope.assignedTeacher', 'submitter', 'reviewer']);
+        $revisions = new EloquentCollection($revisions->all());
+        $revisions->load(['scope.subject', 'scope.academicTerm.academicYear', 'scope.assignedTeacher', 'submitter', 'reviewer']);
         $headers = ['Cache-Control' => 'private, no-store, max-age=0', 'X-Content-Type-Options' => 'nosniff'];
         if ($format === 'pdf') {
             return Pdf::loadView('kkm.pdf', ['revisions' => $revisions, 'criteriaLabels' => DiniyyahKkmCalculator::CRITERIA])->setPaper('a4', 'landscape')->download('penetapan-kkm.pdf')->withHeaders($headers);

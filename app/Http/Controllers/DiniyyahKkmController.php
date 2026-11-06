@@ -6,6 +6,7 @@ use App\Models\AcademicTerm;
 use App\Models\DiniyyahClassSubject;
 use App\Models\DiniyyahKkmRevision;
 use App\Models\DiniyyahKkmScope;
+use App\Models\DiniyyahSubject;
 use App\Services\DiniyyahKkmAccess;
 use App\Services\DiniyyahKkmAssignmentRoster;
 use App\Services\DiniyyahKkmBulkAssignment;
@@ -13,8 +14,8 @@ use App\Services\DiniyyahKkmCalculator;
 use App\Services\DiniyyahKkmExportService;
 use App\Services\DiniyyahKkmResolver;
 use App\Services\DiniyyahKkmWorkflow;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 
 class DiniyyahKkmController extends Controller
@@ -26,50 +27,54 @@ class DiniyyahKkmController extends Controller
         return $request->routeIs('admin.kkm.*') ? 'admin.kkm.' : ($request->routeIs('kabag.kkm.*') ? 'kabag.kkm.' : 'guru.kkm.');
     }
 
-    private function scopes(Request $request, ?Collection $teachingScopes = null)
+    /** @return array{Builder, Collection} */
+    private function scopeQuery(Request $request, ?Collection $teachingScopes = null): array
     {
         $filters = $request->validate(['academic_term_id' => ['nullable', 'integer', 'exists:academic_terms,id'], 'mustawa' => ['nullable', 'integer', 'between:1,6'], 'status' => ['nullable', 'in:draft,submitted,needs_revision,approved,unassigned,school_fixed']]);
-        if ($request->routeIs('guru.kkm.*')) {
+        $teacherPortal = $request->routeIs('guru.kkm.*');
+        $writerIds = collect();
+        $query = DiniyyahKkmScope::query()
+            ->when($filters['academic_term_id'] ?? null, fn ($q, $id) => $q->where('academic_term_id', $id))
+            ->when($filters['mustawa'] ?? null, fn ($q, $level) => $q->where('mustawa', $level));
+        if ($teacherPortal) {
             $teachingScopes ??= $this->roster->teachingScopes($request->user());
+            $this->roster->constrainToTeachingScopes($query, $teachingScopes);
+            if ($teachingScopes->isNotEmpty()) {
+                $writerIds = (clone $query)->where('assigned_teacher_id', $request->user()->teacher->id)
+                    ->with(['subject', 'activeRevision'])->get()->filter($this->access->teacherManaged(...))->pluck('id');
+            }
+            $query->where(fn (Builder $q) => $q->whereIn('id', $writerIds)->orWhereNotNull('active_revision_id'));
         }
 
-        return DiniyyahKkmScope::with(['subject', 'academicTerm.academicYear', 'activeRevision', 'workingRevision', 'assignedTeacher'])
-            ->when($teachingScopes !== null, function ($query) use ($teachingScopes) {
-                if ($teachingScopes->isEmpty()) {
-                    $query->whereIn('id', []);
+        $status = $filters['status'] ?? null;
+        if ($status === 'unassigned') {
+            $fixedSubjects = DiniyyahSubject::get(['id', 'code', 'name'])->filter(fn ($subject) => $subject->schoolKkm() !== null)->pluck('id');
+            $query->whereNull('assigned_teacher_id')->whereNotIn('subject_id', $fixedSubjects)
+                ->whereDoesntHave('activeRevision', fn ($q) => $q->where('status', 'school_fixed'));
+        } elseif ($status) {
+            $matches = fn (Builder $q) => $q->where('status', $status);
+            $workingOrActive = fn (Builder $q) => $q->whereHas('workingRevision', $matches)
+                ->orWhere(fn (Builder $q) => $q->whereNull('working_revision_id')->whereHas('activeRevision', $matches));
+            $query->where(function (Builder $q) use ($teacherPortal, $writerIds, $workingOrActive, $matches): void {
+                if ($teacherPortal) {
+                    $q->where(fn (Builder $q) => $q->whereIn('id', $writerIds)->where($workingOrActive))
+                        ->orWhere(fn (Builder $q) => $q->whereNotIn('id', $writerIds)->whereHas('activeRevision', $matches));
                 } else {
-                    $query->where(function ($query) use ($teachingScopes) {
-                        foreach ($teachingScopes as $scope) {
-                            $query->orWhere(fn ($query) => $query->where($scope));
-                        }
-                    });
+                    $q->where($workingOrActive);
                 }
-            })
-            ->when($filters['academic_term_id'] ?? null, fn ($q, $id) => $q->where('academic_term_id', $id))
-            ->when($filters['mustawa'] ?? null, fn ($q, $level) => $q->where('mustawa', $level))
-            ->orderByDesc('academic_term_id')->orderBy('mustawa')->orderBy('subject_id')->get()
-            ->filter(fn ($scope) => $this->access->views($request->user(), $scope))
-            ->filter(function ($scope) use ($filters, $request) {
-                $status = $filters['status'] ?? null;
-                if (! $status) {
-                    return true;
-                }
-                if ($status === 'unassigned') {
-                    return ! $scope->assigned_teacher_id && ! $scope->activeRevision?->is_school_fixed && $scope->subject?->schoolKkm() === null;
-                }
-                // Do not expose a pending revision's existence to read-only teachers.
-                $visible = $this->access->manages($request->user()) || $this->access->writes($request->user(), $scope);
+            });
+        }
 
-                return ($visible ? ($scope->workingRevision ?? $scope->activeRevision) : $scope->activeRevision)?->status === $status;
-            })->values();
+        return [$query->with(['subject', 'academicTerm.academicYear', 'activeRevision', 'workingRevision', 'assignedTeacher'])
+            ->orderByDesc('academic_term_id')->orderBy('mustawa')->orderBy('subject_id'), $writerIds->flip()];
     }
 
     public function index(Request $request)
     {
         $teacherPortal = $request->routeIs('guru.kkm.*');
         $teachingScopes = $teacherPortal ? $this->roster->teachingScopes($request->user()) : null;
-        $all = $this->scopes($request, $teachingScopes);
-        $scopes = new LengthAwarePaginator($all->forPage(max(1, (int) $request->input('page', 1)), 20)->values(), $all->count(), 20, max(1, (int) $request->input('page', 1)), ['path' => $request->url(), 'query' => $request->query()]);
+        [$query, $writers] = $this->scopeQuery($request, $teachingScopes);
+        $scopes = $query->paginate(20)->withQueryString();
         $manager = ! $teacherPortal && $this->access->manages($request->user());
         $terms = AcademicTerm::with('academicYear')->when($teacherPortal, fn ($q) => $q->whereIn('id', $teachingScopes->pluck('academic_term_id')))->latest('id')->get();
         $mustawaOptions = $teacherPortal
@@ -81,7 +86,7 @@ class DiniyyahKkmController extends Controller
             $roster['rows'] = array_values(array_filter($roster['rows'], fn ($r) => ! $r['assigned_teacher_id'] && ! $r['school_managed']));
         }
 
-        return view('kkm.index', ['scopes' => $scopes, 'terms' => $terms, 'mustawaOptions' => $mustawaOptions, 'teacherPortal' => $teacherPortal, 'manager' => $manager, 'prefix' => $this->prefix($request), 'roster' => $roster, 'rosterTerm' => $rosterTerm, 'access' => $this->access]);
+        return view('kkm.index', ['scopes' => $scopes, 'terms' => $terms, 'mustawaOptions' => $mustawaOptions, 'teacherPortal' => $teacherPortal, 'manager' => $manager, 'prefix' => $this->prefix($request), 'roster' => $roster, 'rosterTerm' => $rosterTerm, 'writers' => $writers]);
     }
 
     public function bulkPreview(Request $request, DiniyyahKkmBulkAssignment $bulk)
@@ -144,14 +149,16 @@ class DiniyyahKkmController extends Controller
 
     public function show(Request $request, DiniyyahKkmScope $scope)
     {
-        abort_unless($this->access->views($request->user(), $scope), 403);
+        $manager = ! $request->routeIs('guru.kkm.*') && $this->access->manages($request->user());
         $scope->load(['subject', 'academicTerm.academicYear', 'activeRevision', 'workingRevision', 'assignedTeacher']);
-        $writer = $this->access->writes($request->user(), $scope);
-        $manager = $this->access->manages($request->user());
-        $revisions = $scope->revisions()->with(['submitter', 'reviewer'])->orderByDesc('version')->get()->filter(fn ($revision) => $this->access->viewsRevision($request->user(), $revision));
+        abort_unless($this->access->views($request->user(), $scope, $manager), 403);
+        $writer = ! $manager && $this->access->writes($request->user(), $scope);
+        $reviewer = $manager && $this->access->reviews($request->user()) && $this->access->teacherManaged($scope);
+        $revisions = $scope->revisions()->with(['submitter', 'reviewer'])->orderByDesc('version')
+            ->when(! $writer && ! $manager, fn ($q) => $q->whereIn('status', DiniyyahKkmAccess::OFFICIAL_STATUSES))->get();
         $revision = $writer || $manager ? ($scope->workingRevision ?? $scope->activeRevision) : $scope->activeRevision;
 
-        return view('kkm.show', ['scope' => $scope, 'revision' => $revision, 'revisions' => $revisions, 'writer' => $writer, 'manager' => $manager, 'prefix' => $this->prefix($request), 'frozen' => $this->resolver->frozen($scope), 'criteriaLabels' => DiniyyahKkmCalculator::CRITERIA]);
+        return view('kkm.show', ['scope' => $scope, 'revision' => $revision, 'revisions' => $revisions, 'writer' => $writer, 'manager' => $manager, 'reviewer' => $reviewer, 'prefix' => $this->prefix($request), 'frozen' => $this->resolver->frozen($scope), 'criteriaLabels' => DiniyyahKkmCalculator::CRITERIA]);
     }
 
     public function start(Request $request, DiniyyahKkmScope $scope, DiniyyahKkmWorkflow $workflow)
@@ -179,15 +186,17 @@ class DiniyyahKkmController extends Controller
 
     public function export(Request $request, DiniyyahKkmRevision $revision, string $format, DiniyyahKkmExportService $exports)
     {
-        abort_unless($this->access->viewsRevision($request->user(), $revision), 403);
+        abort_unless($this->access->viewsRevision($request->user(), $revision, ! $request->routeIs('guru.kkm.*')), 403);
 
         return $exports->download(collect([$revision]), $format);
     }
 
     public function recap(Request $request, string $format, DiniyyahKkmExportService $exports)
     {
-        $revisions = $this->scopes($request)->map(function ($scope) use ($request) {
-            return $this->access->manages($request->user()) || $this->access->writes($request->user(), $scope)
+        [$query, $writers] = $this->scopeQuery($request);
+        $manager = ! $request->routeIs('guru.kkm.*');
+        $revisions = $query->get()->map(function ($scope) use ($manager, $writers) {
+            return $manager || $writers->has($scope->id)
                 ? ($scope->workingRevision ?? $scope->activeRevision) : $scope->activeRevision;
         })->filter()->values();
 

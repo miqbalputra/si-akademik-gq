@@ -18,7 +18,7 @@
         <section class="overflow-x-auto rounded-2xl border border-line bg-surface">
             <table class="w-full text-left text-theme-sm"><thead><tr class="border-b border-line"><th class="p-4">Mapel / Semester</th><th class="p-4">Mustawa</th><th class="p-4">Penyusun</th><th class="p-4">Status</th><th class="p-4">KKM resmi</th><th class="p-4">Detail</th></tr></thead><tbody>
                 @forelse($scopes as $scope)
-                    @php($visibleRevision = ($manager || $access->writes(auth()->user(), $scope)) ? ($scope->workingRevision ?? $scope->activeRevision) : $scope->activeRevision)
+                    @php($visibleRevision = ($manager || $writers->has($scope->id)) ? ($scope->workingRevision ?? $scope->activeRevision) : $scope->activeRevision)
                     <tr class="border-b border-line"><td class="p-4"><strong>{{ $scope->subject?->name }}</strong><p class="mt-1 text-muted">{{ $scope->academicTerm?->academicYear?->name }} {{ $scope->academicTerm?->name }}</p></td><td class="p-4">{{ $scope->mustawa }}</td><td class="p-4">{{ $visibleRevision?->is_school_fixed ? 'Sekolah/Kabag Diniyyah' : ($scope->assignedTeacher?->name ?? 'Belum ditugaskan') }}</td><td class="p-4">{{ $visibleRevision?->status_label ?? 'Belum dibuat' }}</td><td class="p-4">{{ $scope->activeRevision?->final_kkm ?? 'Menunggu ACC' }}</td><td class="p-4"><a class="font-medium underline" href="{{ route($prefix.'show', $scope) }}">Buka KKM</a></td></tr>
                 @empty<tr><td colspan="6" class="p-6 text-muted">Belum ada KKM yang dapat ditampilkan.</td></tr>@endforelse
             </tbody></table>

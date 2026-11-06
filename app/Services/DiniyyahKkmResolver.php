@@ -76,8 +76,8 @@ class DiniyyahKkmResolver
     public function frozen(DiniyyahKkmScope $scope): array
     {
         $classIds = $this->classSubjects($scope, true)->pluck('classroom_term_id');
-        $ledgers = DiniyyahLedgerSnapshot::whereIn('classroom_term_id', $classIds)->whereIn('status', ['locked', 'published'])->get()->map(fn ($s) => 'Leger #'.$s->id.' '.$s->title);
-        $reports = ReportCard::whereIn('classroom_term_id', $classIds)->where('report_type', 'diniyyah')->whereIn('status', ['locked', 'published'])->get()->map(fn ($r) => 'Rapor #'.$r->id);
+        $ledgers = DiniyyahLedgerSnapshot::whereIn('classroom_term_id', $classIds)->whereIn('status', ['locked', 'published'])->get(['id', 'title'])->map(fn ($s) => 'Leger #'.$s->id.' '.$s->title);
+        $reports = ReportCard::whereIn('classroom_term_id', $classIds)->where('report_type', 'diniyyah')->whereIn('status', ['locked', 'published'])->pluck('id')->map(fn ($id) => 'Rapor #'.$id);
 
         return $ledgers->merge($reports)->all();
     }
