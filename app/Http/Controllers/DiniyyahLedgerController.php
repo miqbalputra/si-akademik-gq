@@ -8,6 +8,7 @@ use App\Models\DiniyyahLedgerSnapshot;
 use App\Models\ReportExportRequest;
 use App\Services\DiniyyahLedgerAccess;
 use App\Services\DiniyyahLedgerGenerator;
+use App\Services\DiniyyahLedgerPresentation;
 use App\Services\DiniyyahLedgerWorkflow;
 use App\Services\Exports\DiniyyahLedgerExporter;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -69,8 +70,9 @@ class DiniyyahLedgerController extends Controller
         $summary['incomplete_rows'] = $visibleRows->count() - $completeRows;
         $summary['blocking_issues'] = $issues->where('level', 'blocking')->count();
         $exports = ReportExportRequest::where('requested_by', $request->user()->id)->where('export_type', 'diniyyah_ledger_excel')->where('filters->snapshot_id', $snapshot->id)->latest('id')->limit(5)->get();
+        $ledger = app(DiniyyahLedgerPresentation::class)->build($snapshot);
 
-        return view('diniyyah.ledger.show', compact('snapshot', 'columns', 'summary', 'issues', 'exports'));
+        return view('diniyyah.ledger.show', compact('snapshot', 'columns', 'summary', 'issues', 'exports', 'ledger'));
     }
 
     /**
@@ -136,8 +138,8 @@ class DiniyyahLedgerController extends Controller
         $snapshot->load(['classroomTerm', 'academicTerm.academicYear', 'rows.cells', 'rows.classEnrollment.student']);
         $snapshot->setRelation('rows', $snapshot->rows->filter(fn ($row) => $row->classEnrollment?->student?->status === 'active')->values());
 
-        return Pdf::loadView('diniyyah.ledger.pdf', ['snapshot' => $snapshot, 'columns' => collect($snapshot->snapshot_data['columns'] ?? [])])
-            ->setPaper('a3', 'landscape')->download('leger-kelas.pdf')->withHeaders(['Cache-Control' => 'private, no-store']);
+        return Pdf::loadView('diniyyah.ledger.pdf', ['snapshot' => $snapshot, 'ledger' => app(DiniyyahLedgerPresentation::class)->build($snapshot)])
+            ->setPaper('a4', 'landscape')->download('leger-kelas.pdf')->withHeaders(['Cache-Control' => 'private, no-store']);
     }
 
     public function downloadExport(Request $request, ReportExportRequest $exportRequest)

@@ -64,7 +64,13 @@ class DiniyyahLedgerExportTest extends TestCase
         $sheet = $workbook->getSheetByName('Leger');
         $this->assertNotNull($sheet);
         $this->assertSame('LEGER NILAI DINIYYAH', $sheet->getCell('A1')->getValue());
-        $this->assertSame('Santri Export', $sheet->getCell('B9')->getValue());
+        $this->assertSame('Santri Export', $sheet->getCell('B10')->getValue());
+        $this->assertSame('000042', $sheet->getCell('C10')->getValue());
+        $this->assertSame('s', $sheet->getCell('C10')->getDataType());
+        $this->assertSame('@', $sheet->getStyle('C10')->getNumberFormat()->getFormatCode());
+        $this->assertSame('D10', $sheet->getFreezePane());
+        $this->assertSame('Identitas santri', $sheet->getCell('A8')->getValue());
+        $this->assertSame([8, 9], $sheet->getPageSetup()->getRowsToRepeatAtTop());
         $workbook->disconnectWorksheets();
     }
 
@@ -144,7 +150,7 @@ class DiniyyahLedgerExportTest extends TestCase
         $classroom = Classroom::create(['name' => 'M1 Test']);
         $classroomTerm = ClassroomTerm::create(['academic_term_id' => $term->id, 'classroom_id' => $classroom->id, 'name' => 'M1 Test']);
 
-        $student = Student::create(['name' => 'Santri Export', 'gender' => 'male', 'nis' => 'EXP-'.uniqid(), 'status' => 'active']);
+        $student = Student::create(['name' => 'Santri Export', 'gender' => 'male', 'nis' => '000042', 'status' => 'active']);
         ClassEnrollment::create(['academic_term_id' => $term->id, 'classroom_term_id' => $classroomTerm->id, 'student_id' => $student->id]);
 
         $subject = DiniyyahSubject::create(['code' => 'fiqih', 'name' => 'Fiqih', 'default_assessment_method' => 'weighted']);

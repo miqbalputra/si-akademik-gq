@@ -94,7 +94,7 @@ class DiniyyahWorkbookWorkflowTest extends TestCase
         $c = $this->context();
         $this->actingAs($c['teachers']['wali']->user)->post(route('diniyyah.ledger.generate', $c['ct']))->assertRedirect();
         $snapshot = DiniyyahLedgerSnapshot::sole();
-        $this->get(route('diniyyah.ledger.show', $snapshot))->assertOk()->assertSee('UAS Tahfidz')->assertSee('Juz 28–30')->assertSee('560.00');
+        $this->get(route('diniyyah.ledger.show', $snapshot))->assertOk()->assertSee('UAS Tahfidz')->assertSee('Juz 28–30')->assertSee('>560</td>', false);
         $row = $snapshot->rows()->with('cells')->sole();
         $this->assertSame('240.00', $row->total_diniyyah_score);
         $this->assertSame('560.00', $row->cells->firstWhere('column_key', 'combined_total')->value_numeric);
