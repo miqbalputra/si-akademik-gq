@@ -1,4 +1,7 @@
-<x-layouts.portal :title="$snapshot->title" portalLabel="Portal Manajemen" breadcrumb="Leger Diniyyah">
+<x-layouts.portal :title="$snapshot->title" portalLabel="Portal Guru" breadcrumb="Wali Kelas / Leger">
+    @php
+        $combined = ($snapshot->snapshot_data['layout_version'] ?? '') === 'combined-v1';
+    @endphp
     <div class="space-y-6">
         <header class="school-dashboard-hero p-6 sm:p-8">
             <div class="relative z-10 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
@@ -17,9 +20,19 @@
         </header>
 
         <div class="flex flex-wrap gap-2">
-            <a href="{{ route('diniyyah.monitoring.index') }}" class="btn btn-outline min-h-11 text-theme-sm font-medium">Kembali ke Monitoring</a>
+            <a href="{{ route('diniyyah.ledger.index') }}" class="btn btn-outline min-h-11 text-theme-sm font-medium">Kembali ke kelas saya</a>
             <a href="{{ route('diniyyah.ledger.export-excel', $snapshot) }}" class="btn min-h-11 bg-success-600 text-white hover:bg-success-700 text-theme-sm font-medium">Unduh Excel</a>
+            <a href="{{ route('diniyyah.ledger.export-pdf', $snapshot) }}" class="btn min-h-11">Unduh PDF</a>
+            @if(!in_array($snapshot->status, ['locked','published'], true))
+                <form method="POST" action="{{ route('diniyyah.ledger.generate', $snapshot->classroom_term_id) }}">@csrf<button class="btn">Segarkan leger</button></form>
+                <form method="POST" action="{{ route('diniyyah.ledger.lock', $snapshot) }}">@csrf<button class="btn btn-primary" @disabled(($summary['blocking_issues'] ?? 0) > 0)>Kunci leger final</button></form>
+            @endif
         </div>
+        @foreach($exports as $export)
+            @if($export->status === 'completed')<a class="btn" href="{{ route('diniyyah.ledger.download', $export) }}">Unduh Excel yang selesai diproses</a>
+            @elseif(in_array($export->status, ['queued','processing'],true))<p class="text-muted" role="status">Ekspor Excel sedang diproses. Muat ulang halaman untuk memeriksa hasilnya.</p>
+            @elseif($export->status === 'failed')<p class="text-danger-ink" role="alert">Ekspor Excel gagal. Silakan unduh ulang.</p>@endif
+        @endforeach
 
         @if (session('status'))
             <div class="inline-feedback inline-feedback-success" role="status" aria-live="polite">{{ session('status') }}</div>
@@ -35,39 +48,6 @@
             <div class="metric-card border-warning-line bg-warning-soft"><p class="metric-label text-warning-ink ui-metric-label">Belum lengkap</p><p class="metric-value text-warning-ink">{{ $summary['incomplete_rows'] ?? 0 }}</p></div>
             <div class="metric-card {{ ($summary['blocking_issues'] ?? 0) > 0 ? 'border-danger-line bg-danger-soft' : 'border-success-line bg-success-soft' }}"><p class="metric-label {{ ($summary['blocking_issues'] ?? 0) > 0 ? 'text-danger-ink' : 'text-success-ink' }} ui-metric-label">Masalah</p><p class="metric-value {{ ($summary['blocking_issues'] ?? 0) > 0 ? 'text-danger-ink' : 'text-success-ink' }}">{{ $summary['blocking_issues'] ?? 0 }}</p></div>
         </section>
-
-        @if (auth()->user()?->hasAnyRole(['admin', 'kabag_diniyyah']))
-            <section class="card-lg p-5 sm:p-6" aria-labelledby="report-actions-heading">
-                <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <div>
-                        <p class="text-theme-xs font-normal uppercase text-warning-ink">Workflow rapor</p>
-                        <h2 id="report-actions-heading" class="mt-1 text-heading ui-card-title">Manajemen rapor kelas</h2>
-                        <p class="mt-1 text-theme-sm font-normal text-muted">Generate, kunci, dan terbitkan rapor Diniyyah untuk seluruh santri.</p>
-                    </div>
-                    <div class="flex flex-wrap gap-2">
-                        <form method="POST" action="{{ route('report-cards.generate', $snapshot) }}">
-                            @csrf
-                            <button type="submit" class="btn min-h-11 bg-warning-600 text-white hover:bg-warning-700 text-theme-sm font-medium" @disabled(!in_array($snapshot->status, ['locked', 'published'], true) || ($summary['blocking_issues'] ?? 0) > 0)>Generate Rapor</button>
-                        </form>
-                        <form method="POST" action="{{ route('report-cards.ledger.lock', $snapshot) }}">
-                            @csrf
-                            <button type="submit" class="btn min-h-11 bg-gray-950 text-white hover:bg-gray-800 text-theme-sm font-medium" @disabled(($reportCardSummary['missing'] ?? 0) > 0 || ($reportCardSummary['draft'] ?? 0) === 0)>Kunci Semua</button>
-                        </form>
-                        <form method="POST" action="{{ route('report-cards.ledger.publish', $snapshot) }}">
-                            @csrf
-                            <button type="submit" class="btn min-h-11 bg-success-600 text-white hover:bg-success-700 text-theme-sm font-medium" @disabled(($reportCardSummary['missing'] ?? 0) > 0 || ($reportCardSummary['draft'] ?? 0) > 0 || ($reportCardSummary['locked'] ?? 0) === 0)>Terbitkan Semua</button>
-                        </form>
-                    </div>
-                </div>
-                <dl class="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-5">
-                    <div class="rounded-xl bg-surface-subtle p-3 text-center"><dt class="metric-label">Target</dt><dd class="mt-1 text-lg font-semibold text-heading">{{ $reportCardSummary['expected'] ?? 0 }}</dd></div>
-                    <div class="rounded-xl bg-danger-soft p-3 text-center"><dt class="metric-label text-danger-ink">Belum dibuat</dt><dd class="mt-1 text-lg font-semibold text-danger-ink">{{ $reportCardSummary['missing'] ?? 0 }}</dd></div>
-                    <div class="rounded-xl bg-warning-soft p-3 text-center"><dt class="metric-label text-warning-ink">Draf</dt><dd class="mt-1 text-lg font-semibold text-warning-ink">{{ $reportCardSummary['draft'] ?? 0 }}</dd></div>
-                    <div class="rounded-xl bg-surface-subtle p-3 text-center"><dt class="metric-label">Dikunci</dt><dd class="mt-1 text-lg font-semibold text-heading">{{ $reportCardSummary['locked'] ?? 0 }}</dd></div>
-                    <div class="rounded-xl bg-success-soft p-3 text-center"><dt class="metric-label text-success-ink">Sudah terbit</dt><dd class="mt-1 text-lg font-semibold text-success-ink">{{ $reportCardSummary['published'] ?? 0 }}</dd></div>
-                </dl>
-            </section>
-        @endif
 
         @if ($issues->isNotEmpty())
             <section class="rounded-2xl border border-warning-line bg-warning-soft p-5" aria-labelledby="ledger-issues-heading">
@@ -92,7 +72,7 @@
         <section class="card-lg overflow-hidden" aria-labelledby="ledger-table-heading">
             <div class="border-b border-line px-5 py-4 sm:px-6">
                 <h2 id="ledger-table-heading" class="text-heading ui-card-title">Data leger santri</h2>
-                <p class="mt-1 text-theme-xs font-normal text-muted">Geser tabel secara horizontal pada layar kecil untuk melihat seluruh kolom.</p>
+                <p class="mt-1 text-theme-xs font-normal text-muted">Geser tabel secara horizontal pada layar kecil untuk melihat seluruh kolom. @if($combined)Total gabungan menjumlahkan nilai Diniyyah dan Tahfidz; juz dan jumlah presensi tidak masuk perhitungan.@endif</p>
             </div>
             <div class="overflow-x-auto">
                 <table class="min-w-[1100px] w-full text-left text-theme-sm" aria-label="Data leger {{ $snapshot->title }}">
@@ -118,7 +98,13 @@
                     </thead>
                     <tbody class="divide-y divide-line">
                         @foreach ($snapshot->rows->sortBy('row_number') as $row)
-                            @php $rowIncomplete = $row->rank_in_class === null; @endphp
+                            @php
+                                $cells = $row->cells->keyBy('column_key');
+                                $total = $combined ? $cells->get('combined_total')?->value_numeric : $row->total_diniyyah_score;
+                                $average = $combined ? $cells->get('combined_average')?->value_numeric : $row->average_diniyyah_score;
+                                $rank = $combined ? $cells->get('combined_rank')?->value_numeric : $row->rank_in_class;
+                                $rowIncomplete = $total === null;
+                            @endphp
                             <tr class="{{ $rowIncomplete ? 'bg-warning-soft/50' : ($loop->even ? 'bg-surface-subtle/50' : 'bg-surface') }}">
                                 <th scope="row" class="sticky left-0 z-10 bg-inherit px-4 py-3 text-left text-soft text-theme-xs font-medium">{{ $row->row_number }}</th>
                                 <td class="sticky left-12 z-10 bg-inherit px-4 py-3">
@@ -128,16 +114,17 @@
                                 <td class="px-4 py-3 text-muted text-theme-sm">{{ $row->student_nis }}</td>
                                 @foreach ($columns as $column)
                                     @php
-                                        $cell = $row->cells->firstWhere('column_key', $column['key']);
+                                        $cell = $cells->get($column['key']);
                                         $isAttendance = ($column['source_type'] ?? null) === 'student_attendance_recap';
+                                        $missing = ($column['numeric'] ?? true) ? $cell?->value_numeric === null : $cell?->value_text === null;
                                     @endphp
-                                    <td class="border-l border-line px-4 py-3 font-medium {{ !$isAttendance && $cell?->value_numeric === null ? 'text-warning-ink' : 'text-body' }}">
-                                        {{ $isAttendance ? ($cell?->value_text ?? '0') : ($cell?->value_numeric ?? 'Belum ada') }}
+                                    <td class="border-l border-line px-4 py-3 font-medium {{ $missing ? 'text-warning-ink' : 'text-body' }}">
+                                        {{ $isAttendance || !($column['numeric'] ?? true) ? ($cell?->value_text ?? 'Belum ada') : ($cell?->value_numeric ?? 'Belum ada') }}
                                     </td>
                                 @endforeach
-                                <td class="border-l-2 border-line px-4 py-3 font-medium text-heading">{{ $row->total_diniyyah_score ?? '—' }}</td>
-                                <td class="px-4 py-3 font-medium text-body">{{ $row->average_diniyyah_score ?? '—' }}</td>
-                                <td class="px-4 py-3 font-medium text-warning-ink">{{ $row->rank_in_class ? '#'.$row->rank_in_class : '—' }}</td>
+                                <td class="border-l-2 border-line px-4 py-3 font-medium text-heading">{{ $total ?? '—' }}</td>
+                                <td class="px-4 py-3 font-medium text-body">{{ $average ?? '—' }}</td>
+                                <td class="px-4 py-3 font-medium text-warning-ink">{{ $rank !== null ? '#'.(int)$rank : '—' }}</td>
                             </tr>
                         @endforeach
                     </tbody>

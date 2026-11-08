@@ -30,13 +30,13 @@ class DiniyyahScoreResource extends Resource
 
     protected const VIEW_ROLES = ['admin', 'kabag_diniyyah', 'kepala_sekolah'];
 
-    protected const MANAGE_ROLES = ['admin', 'kabag_diniyyah'];
+    protected const MANAGE_ROLES = []; // Input nilai melalui portal guru/wali kelas dengan pemeriksaan penugasan.
 
     protected static ?string $model = DiniyyahScore::class;
 
     protected static ?string $modelLabel = 'Nilai Ujian';
-    protected static ?string $pluralModelLabel = 'Nilai Ujian';
 
+    protected static ?string $pluralModelLabel = 'Nilai Ujian';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedChartBar;
 

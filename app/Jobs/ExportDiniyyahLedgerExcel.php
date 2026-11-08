@@ -2,7 +2,9 @@
 
 namespace App\Jobs;
 
+use App\Models\DiniyyahLedgerSnapshot;
 use App\Models\ReportExportRequest;
+use App\Services\DiniyyahLedgerAccess;
 use App\Services\Exports\DiniyyahLedgerExporter;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -32,9 +34,13 @@ class ExportDiniyyahLedgerExcel implements ShouldQueue
         try {
             $filters = $exportRequest->filters ?? [];
             $snapshotId = $filters['snapshot_id'] ?? null;
+            $snapshot = DiniyyahLedgerSnapshot::findOrFail($snapshotId);
+            if (! $exportRequest->requestedBy || ! app(DiniyyahLedgerAccess::class)->allows($exportRequest->requestedBy, $snapshot->classroom_term_id)) {
+                throw new \DomainException('Penugasan wali kelas tidak lagi berlaku. Ekspor ditolak.');
+            }
 
             $exporter = app(DiniyyahLedgerExporter::class);
-            $content = $exporter->export($snapshotId, $exportRequest->requestedBy?->hasRole('admin') ?? false);
+            $content = $exporter->export($snapshotId, false);
 
             $filename = 'exports/leger-diniyyah-'.now()->format('YmdHis').'.xlsx';
             Storage::disk('local')->put($filename, $content);

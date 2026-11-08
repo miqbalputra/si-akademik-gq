@@ -131,6 +131,17 @@ DB_PASSWORD=change_me
 
 ## Penetapan KKM Diniyyah
 
+### Input nilai dan leger wali kelas
+
+- Portal guru menampilkan lembar nilai berdasarkan penugasan mapel dan kelas. Suluk memakai nilai akhir langsung dari wali kelas aktif pada kelas itu, walaupun ada guru mapel Suluk yang berbeda.
+- Set berbobot yang baru memakai rata-rata nilai harian × 40% + nilai ujian × 60%. Keaktifan/presensi tetap otomatis dari jurnal; ulangan dan tugas yang opsional boleh kosong dan tidak menjadi nol. Konfigurasi komponen set lama tidak diubah otomatis.
+- Perubahan skor presensi dari jurnal menghitung ulang hasil yang masih terbuka dan mengembalikan set submitted/validated ke perlu revisi. Skor dan hasil pada kelas dengan leger/rapor terkunci dipertahankan.
+- Praktik Ibadah dapat dibuat menjadi beberapa set dalam mapel yang sama, masing-masing dengan judul dan materi ujian. KKM tetap menggunakan ketetapan sekolah 70.
+- Wali kelas membuka `/diniyyah/ledger`, membuat/menyegarkan leger, meninjau kelengkapan, lalu mengunci hasil final. Admin, Kabag, kepala sekolah, dan guru mapel tanpa penugasan wali kelas tersebut tidak dapat membuka atau mengekspor leger, termasuk lewat URL langsung. Pengelola tetap memantau dan memvalidasi pengajuan nilai.
+- Leger gabungan menyalin nilai Diniyyah, Suluk, Praktik Ibadah, juz/UAS Tahfidz, rekap semester Sabaq–Sabqi–Manzil, dan presensi S/I/A. Tahfidz dicocokkan lewat ID santri dan semester; data yang belum tervalidasi/terkunci, hilang, atau memiliki beberapa sumber ditandai belum lengkap. Juz dan jumlah presensi tidak masuk total nilai.
+- Total/peringkat gabungan disimpan terpisah dalam snapshot; total Diniyyah untuk rapor yang sudah ada tetap terpisah. Perubahan sumber Tahfidz setelah penyegaran memblokir penguncian sampai leger disegarkan ulang. Leger/rapor terkunci tidak dihitung ulang, dan tidak ada impor data workbook maupun migrasi data historis otomatis.
+- Excel/PDF hanya dapat diunduh wali kelas terkait. Ekspor antrean memeriksa kembali penugasan saat pekerjaan dijalankan maupun saat file diunduh.
+
 - Menu pengelola: `/admin/kkm` pada sesi panel admin, atau `/kabag/kkm` pada portal Kabag. Guru menggunakan `/guru/kkm`.
 - Admin/Kabag menunjuk satu guru pengampu untuk mapel, Mustawa 1–6, dan semester. Penulisan tingkat `M1` dan `Mustawa 1` dipetakan ke jenjang yang sama.
 - Guru penyusun mengisi angka bulat 60–100 dan alasan tiga unsur; kategori dan KKM rata-rata dibulatkan otomatis. Admin atau Kabag Diniyyah dapat meninjau pengajuan lewat portal pengelola, selama bukan pengaju. Di portal guru, KKM resmi hanya dapat dibaca oleh guru yang mengajar mapel, mustawa, dan semester tersebut.

@@ -5,6 +5,12 @@ namespace App\Services;
 use App\Models\ClassEnrollment;
 use App\Models\DiniyyahAssessmentResult;
 use App\Models\DiniyyahAssessmentSet;
+use App\Models\DiniyyahClassJournal;
+use App\Models\DiniyyahClassJournalAbsence;
+use App\Models\DiniyyahLedgerSnapshot;
+use App\Models\DiniyyahScore;
+use App\Models\DiniyyahTeacherAssignment;
+use App\Models\ReportCard;
 use Illuminate\Support\Collection;
 
 class DiniyyahScoreCalculator
@@ -12,19 +18,26 @@ class DiniyyahScoreCalculator
     public function syncAttendanceScores(DiniyyahAssessmentSet $assessmentSet, ?ClassEnrollment $enrollment = null): void
     {
         $assessmentSet->loadMissing('components', 'classSubject');
+        if ($this->frozen($assessmentSet)) {
+            return;
+        }
         $attendanceComponent = $assessmentSet->components->firstWhere('code', 'keaktifan_presensi');
-        if (! $attendanceComponent) return;
+        if (! $attendanceComponent) {
+            return;
+        }
 
         $classSubjectId = $assessmentSet->diniyyah_class_subject_id;
 
-        $assignmentIds = \App\Models\DiniyyahTeacherAssignment::where('diniyyah_class_subject_id', $classSubjectId)->pluck('id');
-        $journalIds = \App\Models\DiniyyahClassJournal::whereIn('diniyyah_teacher_assignment_id', $assignmentIds)->pluck('id');
+        $assignmentIds = DiniyyahTeacherAssignment::where('diniyyah_class_subject_id', $classSubjectId)->pluck('id');
+        $journalIds = DiniyyahClassJournal::whereIn('diniyyah_teacher_assignment_id', $assignmentIds)->pluck('id');
 
         $totalDays = $journalIds->count();
 
-        if ($totalDays === 0) return;
+        if ($totalDays === 0) {
+            return;
+        }
 
-        $query = \App\Models\DiniyyahClassJournalAbsence::whereIn('diniyyah_class_journal_id', $journalIds)
+        $query = DiniyyahClassJournalAbsence::whereIn('diniyyah_class_journal_id', $journalIds)
             ->selectRaw('class_enrollment_id, count(*) as total_absen')
             ->whereIn('status', ['sick', 'permission', 'absent', 'skipped'])
             ->groupBy('class_enrollment_id');
@@ -60,8 +73,8 @@ class DiniyyahScoreCalculator
             ];
         }
 
-        if (!empty($upsertData)) {
-            \App\Models\DiniyyahScore::upsert(
+        if (! empty($upsertData)) {
+            DiniyyahScore::upsert(
                 $upsertData,
                 // Cocokkan constraint unik DB: (component_id, enrollment_id).
                 // set_id redundan (komponen sudah terikat ke satu set) dan TIDAK
@@ -85,14 +98,32 @@ class DiniyyahScoreCalculator
      */
     public function syncAttendanceForClassSubject(int $classSubjectId): void
     {
-        $assessmentSetIds = \App\Models\DiniyyahAssessmentSet::query()
+        $assessmentSetIds = DiniyyahAssessmentSet::query()
             ->where('diniyyah_class_subject_id', $classSubjectId)
             ->pluck('id');
 
         foreach ($assessmentSetIds as $assessmentSetId) {
-            $this->syncAttendanceScores(DiniyyahAssessmentSet::find($assessmentSetId));
+            $set = DiniyyahAssessmentSet::find($assessmentSetId);
+            if ($this->frozen($set)) {
+                continue;
+            }
+            app(DiniyyahKkmResolver::class)->withAssessmentLock($set, function () use ($set): void {
+                if ($this->frozen($set)) {
+                    return;
+                }
+                $before = $set->scores()->whereHas('component', fn ($q) => $q->where('code', 'keaktifan_presensi'))->orderBy('class_enrollment_id')->pluck('score', 'class_enrollment_id')->all();
+                $this->syncAttendanceScores($set);
+                $after = $set->scores()->whereHas('component', fn ($q) => $q->where('code', 'keaktifan_presensi'))->orderBy('class_enrollment_id')->pluck('score', 'class_enrollment_id')->all();
+                if ($before !== $after) {
+                    if (in_array($set->status, ['submitted', 'validated'], true)) {
+                        $set->update(['status' => 'needs_revision']);
+                    }
+                    $this->calculateAssessmentSetLocked($set);
+                }
+            });
         }
     }
+
     public function calculateAssessmentSet(DiniyyahAssessmentSet $assessmentSet): int
     {
         return app(DiniyyahKkmResolver::class)->withAssessmentLock($assessmentSet, fn () => $this->calculateAssessmentSetLocked($assessmentSet));
@@ -101,6 +132,9 @@ class DiniyyahScoreCalculator
     private function calculateAssessmentSetLocked(DiniyyahAssessmentSet $assessmentSet): int
     {
         $assessmentSet->loadMissing('classSubject');
+        if ($this->frozen($assessmentSet)) {
+            throw new \DomainException('Nilai tidak dihitung ulang karena leger atau rapor kelas sudah terkunci.');
+        }
         $resolvedKkm = app(DiniyyahKkmResolver::class)->resolve($assessmentSet->classSubject, $assessmentSet->kkm === null ? null : (float) $assessmentSet->kkm);
         $assessmentSet->forceFill($resolvedKkm);
 
@@ -119,12 +153,12 @@ class DiniyyahScoreCalculator
 
         $upsertResults = [];
         $now = now();
-        
+
         $assessmentSet->loadMissing('components');
 
         foreach ($enrollments as $enrollment) {
             $scores = $allScores->get($enrollment->id, collect())->keyBy('diniyyah_score_component_id');
-            
+
             $payload = match ($assessmentSet->assessment_method) {
                 'direct_final' => $this->calculateDirectFinal($assessmentSet, $scores),
                 'practical', 'weighted' => $this->calculateWeighted($assessmentSet, $scores),
@@ -146,7 +180,7 @@ class DiniyyahScoreCalculator
             ], $payload);
         }
 
-        if (!empty($upsertResults)) {
+        if (! empty($upsertResults)) {
             DiniyyahAssessmentResult::upsert(
                 $upsertResults,
                 ['diniyyah_assessment_set_id', 'class_enrollment_id'],
@@ -164,6 +198,9 @@ class DiniyyahScoreCalculator
 
     private function calculateLocked(DiniyyahAssessmentSet $assessmentSet, ClassEnrollment $enrollment): DiniyyahAssessmentResult
     {
+        if ($this->frozen($assessmentSet)) {
+            throw new \DomainException('Nilai tidak dihitung ulang karena leger atau rapor kelas sudah terkunci.');
+        }
         $resolvedKkm = app(DiniyyahKkmResolver::class)->resolve($assessmentSet->classSubject, $assessmentSet->kkm === null ? null : (float) $assessmentSet->kkm);
         $assessmentSet->forceFill($resolvedKkm);
         $assessmentSet->loadMissing('components');
@@ -197,7 +234,7 @@ class DiniyyahScoreCalculator
     }
 
     /**
-     * @param  Collection<int, \App\Models\DiniyyahScore>  $scores
+     * @param  Collection<int, DiniyyahScore>  $scores
      * @return array<string, mixed>
      */
     private function calculateWeighted(DiniyyahAssessmentSet $assessmentSet, Collection $scores): array
@@ -211,13 +248,13 @@ class DiniyyahScoreCalculator
         $isComplete = $this->requiredComponentsComplete($dailyComponents, $scores)
             && $this->requiredComponentsComplete($examComponents, $scores);
 
-        $dailyRaw = $dailyScores->isNotEmpty() ? round($dailyScores->avg(), 2) : null;
-        $examRaw = $examScores->isNotEmpty() ? round($examScores->avg(), 2) : null;
+        $dailyRaw = $dailyScores->isNotEmpty() ? $dailyScores->avg() : null;
+        $examRaw = $examScores->isNotEmpty() ? $examScores->avg() : null;
         $dailyWeight = $assessmentSet->daily_weight ?? 40;
         $examWeight = $assessmentSet->exam_weight ?? 60;
 
-        $dailyWeighted = $dailyRaw !== null ? round($dailyRaw * $dailyWeight / 100, 2) : null;
-        $examWeighted = $examRaw !== null ? round($examRaw * $examWeight / 100, 2) : null;
+        $dailyWeighted = $dailyRaw !== null ? $dailyRaw * $dailyWeight / 100 : null;
+        $examWeighted = $examRaw !== null ? $examRaw * $examWeight / 100 : null;
         $finalScore = $isComplete && $dailyWeighted !== null && $examWeighted !== null
             ? round($dailyWeighted + $examWeighted, 2)
             : null;
@@ -233,7 +270,7 @@ class DiniyyahScoreCalculator
     }
 
     /**
-     * @param  Collection<int, \App\Models\DiniyyahScore>  $scores
+     * @param  Collection<int, DiniyyahScore>  $scores
      * @return array<string, mixed>
      */
     private function calculateDirectFinal(DiniyyahAssessmentSet $assessmentSet, Collection $scores): array
@@ -271,5 +308,11 @@ class DiniyyahScoreCalculator
         }
 
         return $requiredComponents->every(fn ($component) => $scores->get($component->id)?->score !== null);
+    }
+
+    private function frozen(DiniyyahAssessmentSet $set): bool
+    {
+        return DiniyyahLedgerSnapshot::where('classroom_term_id', $set->classSubject->classroom_term_id)->whereIn('status', ['locked', 'published'])->exists()
+            || ReportCard::where('classroom_term_id', $set->classSubject->classroom_term_id)->whereIn('status', ['locked', 'published'])->exists();
     }
 }

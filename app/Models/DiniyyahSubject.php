@@ -34,4 +34,9 @@ class DiniyyahSubject extends Model
 
         return null;
     }
+
+    public function isSuluk(): bool
+    {
+        return strtolower(trim($this->code ?? '')) === 'suluk' || strtolower(trim($this->name ?? '')) === 'suluk';
+    }
 }

@@ -58,6 +58,7 @@
         ['label' => 'Input Nilai', 'href' => route('guru.diniyyah-scores.index'), 'match' => ['guru.diniyyah-scores.*']],
     ];
     if ($isHomeroomTeacher) {
+        $guruClassItems[] = ['label' => 'Leger Kelas Saya', 'href' => route('diniyyah.ledger.index'), 'match' => ['diniyyah.ledger.*']];
         $guruClassItems[] = ['label' => 'Tasmi\' Kelas Saya', 'href' => route('guru.tasmi-wali.index'), 'match' => ['guru.tasmi-wali.*']];
         $guruClassItems[] = ['label' => 'Monitoring Jurnal Kelas', 'href' => route('wali.diniyyah-journals.index'), 'match' => ['wali.diniyyah-journals.*']];
         $guruClassItems[] = ['label' => 'Rekap JP Kelas', 'href' => route('wali.jp-recap.index'), 'match' => ['wali.jp-recap.*']];
@@ -116,7 +117,7 @@
         ['label' => 'Penugasan Guru', 'href' => \App\Filament\Resources\DiniyyahTeacherAssignments\DiniyyahTeacherAssignmentResource::getUrl(), 'match' => ['filament.admin.resources.diniyyah-teacher-assignments.*']],
         ['label' => 'Mapel & Kelas', 'href' => \App\Filament\Resources\DiniyyahClassSubjects\DiniyyahClassSubjectResource::getUrl(), 'match' => ['filament.admin.resources.diniyyah-class-subjects.*']],
         ['label' => 'Set & Validasi Nilai', 'href' => \App\Filament\Resources\DiniyyahAssessmentSets\DiniyyahAssessmentSetResource::getUrl(), 'match' => ['filament.admin.resources.diniyyah-assessment-sets.*', 'filament.admin.resources.diniyyah-score-validations.*']],
-        ['label' => 'Leger & Rapor', 'href' => \App\Filament\Resources\DiniyyahLedgerSnapshots\DiniyyahLedgerSnapshotResource::getUrl(), 'match' => ['filament.admin.resources.diniyyah-ledger-snapshots.*', 'filament.admin.resources.report-cards.*']],
+        ['label' => 'Rapor', 'href' => \App\Filament\Resources\ReportCards\ReportCardResource::getUrl(), 'match' => ['filament.admin.resources.report-cards.*']],
         ['label' => 'Monitoring RPP', 'href' => \App\Filament\Resources\Rpps\RppResource::getUrl(), 'match' => ['filament.admin.resources.rpps.*', 'filament.admin.resources.rpp-promes.*']],
     ];
     $managementTodayItems = [

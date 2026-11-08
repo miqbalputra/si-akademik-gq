@@ -3,7 +3,8 @@
 namespace App\Jobs;
 
 use App\Models\ClassroomTerm;
-use App\Models\DiniyyahLedgerSnapshot;
+use App\Models\User;
+use App\Services\DiniyyahLedgerAccess;
 use App\Services\DiniyyahLedgerGenerator;
 use DomainException;
 use Illuminate\Bus\Queueable;
@@ -29,9 +30,13 @@ class GenerateDiniyyahLedger implements ShouldQueue
     public function handle(DiniyyahLedgerGenerator $generator): void
     {
         $classroomTerm = ClassroomTerm::findOrFail($this->classroomTermId);
+        $actor = User::find($this->generatedBy);
+        if (! $actor || ! app(DiniyyahLedgerAccess::class)->allows($actor, $classroomTerm->id)) {
+            return;
+        }
 
         try {
-            $snapshot = $generator->generate($classroomTerm, $this->generatedBy);
+            $snapshot = $generator->generate($classroomTerm, $this->generatedBy, true);
 
             Log::info('Leger diniyyah generated via queue', [
                 'snapshot_id' => $snapshot->id,

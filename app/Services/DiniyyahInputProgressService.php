@@ -19,7 +19,7 @@ class DiniyyahInputProgressService
                 },
                 'classSubject.subject',
                 'classSubject.teacherAssignments.teacher',
-                'results'
+                'results',
             ])
             ->latest()
             ->get()
@@ -37,7 +37,7 @@ class DiniyyahInputProgressService
             },
             'classSubject.subject',
             'classSubject.teacherAssignments.teacher',
-            'results'
+            'results',
         ]);
 
         $totalStudents = $assessmentSet->classSubject?->classroomTerm?->active_enrollments_count;
@@ -52,12 +52,17 @@ class DiniyyahInputProgressService
         $completeStudents = $assessmentSet->results->where('is_complete', true)->count();
         $incompleteStudents = max($totalStudents - $completeStudents, 0);
         $progressPercentage = $totalStudents > 0 ? round($completeStudents / $totalStudents * 100, 2) : 0.0;
+        $teachers = $assessmentSet->classSubject?->subject?->isSuluk()
+            ? $assessmentSet->classSubject->classroomTerm->homeroomAssignments()->with('teacher')
+                ->where(fn ($q) => $q->whereNull('starts_at')->orWhereDate('starts_at', '<=', today()))
+                ->where(fn ($q) => $q->whereNull('ends_at')->orWhereDate('ends_at', '>=', today()))->get()
+            : $assessmentSet->classSubject?->teacherAssignments;
 
         return [
             'assessment_set' => $assessmentSet,
             'classroom_name' => $assessmentSet->classSubject?->classroomTerm?->name,
             'subject_name' => $assessmentSet->classSubject?->subject?->name,
-            'teacher_names' => $assessmentSet->classSubject?->teacherAssignments
+            'teacher_names' => $teachers
                 ?->pluck('teacher.name')
                 ->filter()
                 ->unique()

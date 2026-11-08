@@ -25,15 +25,15 @@ class DiniyyahLedgerSnapshotResource extends Resource
 
     protected const NAVIGATION_SORT = 10;
 
-    protected const VIEW_ROLES = ['admin', 'kabag_diniyyah', 'kepala_sekolah'];
+    protected const VIEW_ROLES = []; // Leger tersedia hanya di portal wali kelas terkait.
 
-    protected const MANAGE_ROLES = ['admin', 'kabag_diniyyah'];
+    protected const MANAGE_ROLES = [];
 
     protected static ?string $model = DiniyyahLedgerSnapshot::class;
 
     protected static ?string $modelLabel = 'Leger Nilai';
-    protected static ?string $pluralModelLabel = 'Leger Nilai';
 
+    protected static ?string $pluralModelLabel = 'Leger Nilai';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedTableCells;
 

@@ -8,16 +8,22 @@ use App\Models\DiniyyahAssessmentResult;
 use App\Models\DiniyyahAssessmentSet;
 use App\Models\DiniyyahLedgerSnapshot;
 use App\Models\DiniyyahScore;
+use App\Models\ReportCard;
 use App\Models\SchoolEvent;
 use App\Models\SchoolHoliday;
+use App\Services\DiniyyahAssessmentAccess;
+use App\Services\DiniyyahAssessmentComponentBuilder;
 use App\Services\DiniyyahAssessmentWorkflow;
 use App\Services\DiniyyahInputProgressService;
+use App\Services\DiniyyahKkmResolver;
 use App\Services\DiniyyahScoreCalculator;
+use Carbon\CarbonInterface;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 
 class GuruDiniyyahScoreController extends Controller
 {
@@ -26,46 +32,45 @@ class GuruDiniyyahScoreController extends Controller
         $teacher = $request->user()->teacher;
 
         // Auto-create assessment sets for assignments that don't have one yet
-        if ($teacher && ! $request->user()->hasAnyRole(['admin', 'kabag_diniyyah'])) {
-            $assignments = \App\Models\DiniyyahTeacherAssignment::with('classSubject.subject')
-                ->where('teacher_id', $teacher->id)
-                ->where(function ($query) {
-                    $query->whereNull('starts_at')->orWhere('starts_at', '<=', now()->toDateString());
-                })
-                ->where(function ($query) {
-                    $query->whereNull('ends_at')->orWhere('ends_at', '>=', now()->toDateString());
-                })
-                ->get();
-                
-            $builder = new \App\Services\DiniyyahAssessmentComponentBuilder();
-            
-            foreach ($assignments as $assignment) {
-                $classSubject = $assignment->classSubject;
-                if ($classSubject) {
-                    $exists = DiniyyahAssessmentSet::where('diniyyah_class_subject_id', $classSubject->id)->exists();
-                    if (!$exists) {
-                        $newSet = DiniyyahAssessmentSet::create([
-                            'diniyyah_class_subject_id' => $classSubject->id,
-                            'title' => 'Penilaian ' . $classSubject->subject?->name,
-                            'tested_material' => '-',
-                            'assessment_method' => $classSubject->assessment_method ?? 'weighted',
-                            'kkm' => $classSubject->kkm,
-                            'daily_weight' => $classSubject->daily_weight ?? 40,
-                            'exam_weight' => $classSubject->exam_weight ?? 60,
-                            'appears_on_ledger' => $classSubject->appears_on_ledger ?? true,
-                            'appears_on_report' => $classSubject->appears_on_report ?? true,
-                            'sort_order' => $classSubject->sort_order ?? 10,
-                            'status' => 'active',
-                            'created_by' => $request->user()->id,
-                            'updated_by' => $request->user()->id,
-                        ]);
-                        $builder->createDefaults($newSet);
-                    }
+        $ownedSubjects = app(DiniyyahAssessmentAccess::class)->classSubjects($request->user());
+        if ($teacher) {
+            $subjects = (clone $ownedSubjects)->with('subject')->get();
+
+            $builder = new DiniyyahAssessmentComponentBuilder;
+
+            foreach ($subjects as $classSubject) {
+                if (! $this->frozen($classSubject->classroom_term_id)) {
+                    DB::transaction(function () use ($classSubject, $request, $builder): void {
+                        $classSubject->classroomTerm->academicTerm()->lockForUpdate()->firstOrFail();
+                        if ($this->frozen($classSubject->classroom_term_id)) {
+                            return;
+                        }
+                        $exists = DiniyyahAssessmentSet::where('diniyyah_class_subject_id', $classSubject->id)->exists();
+                        if (! $exists) {
+                            $newSet = DiniyyahAssessmentSet::create([
+                                'diniyyah_class_subject_id' => $classSubject->id,
+                                'title' => 'Penilaian '.$classSubject->subject?->name,
+                                'tested_material' => '-',
+                                'assessment_method' => $classSubject->subject?->isSuluk() ? 'direct_final' : ($classSubject->assessment_method ?? 'weighted'),
+                                'kkm' => $classSubject->kkm,
+                                'daily_weight' => $classSubject->daily_weight ?? 40,
+                                'exam_weight' => $classSubject->exam_weight ?? 60,
+                                'appears_on_ledger' => $classSubject->appears_on_ledger ?? true,
+                                'appears_on_report' => $classSubject->appears_on_report ?? true,
+                                'sort_order' => $classSubject->sort_order ?? 10,
+                                'status' => 'active',
+                                'created_by' => $request->user()->id,
+                                'updated_by' => $request->user()->id,
+                            ]);
+                            $builder->createDefaults($newSet);
+                        }
+                    });
                 }
             }
         }
 
         $assessmentSets = DiniyyahAssessmentSet::query()
+            ->whereIn('diniyyah_class_subject_id', (clone $ownedSubjects)->select('id'))
             ->with([
                 'classSubject.classroomTerm' => function ($query) {
                     $query->withCount(['enrollments as active_enrollments_count' => function ($q) {
@@ -74,21 +79,8 @@ class GuruDiniyyahScoreController extends Controller
                 },
                 'classSubject.subject',
                 'components',
-                'results'
+                'results',
             ])
-            ->when(! $request->user()->hasAnyRole(['admin', 'kabag_diniyyah']), function ($query) use ($request) {
-                $teacher = $request->user()->teacher;
-
-                $query->whereHas('classSubject.teacherAssignments', function ($query) use ($teacher) {
-                    $query->where('teacher_id', $teacher?->id ?? 0)
-                        ->where(function ($query) {
-                            $query->whereNull('starts_at')->orWhere('starts_at', '<=', now()->toDateString());
-                        })
-                        ->where(function ($query) {
-                            $query->whereNull('ends_at')->orWhere('ends_at', '>=', now()->toDateString());
-                        });
-                });
-            })
             ->latest()
             ->get();
 
@@ -133,15 +125,16 @@ class GuruDiniyyahScoreController extends Controller
         $upcomingAlerts = $this->buildUpcomingAlerts($schoolEvents, $schoolHolidays);
 
         foreach ($assessmentSets as $set) {
-            $set->forceFill(app(\App\Services\DiniyyahKkmResolver::class)->resolve($set->classSubject, $set->kkm === null ? null : (float) $set->kkm));
+            $set->forceFill(app(DiniyyahKkmResolver::class)->resolve($set->classSubject, $set->kkm === null ? null : (float) $set->kkm));
         }
+
         return view('guru.diniyyah-scores.index', compact('assessmentSets', 'summaries', 'schoolEvents', 'upcomingAlerts'));
     }
 
     public function edit(Request $request, DiniyyahAssessmentSet $assessmentSet): View
     {
-        $assessmentSet->forceFill(app(\App\Services\DiniyyahKkmResolver::class)->resolve($assessmentSet->classSubject, $assessmentSet->kkm === null ? null : (float) $assessmentSet->kkm));
         Gate::authorize('inputScores', $assessmentSet);
+        $assessmentSet->forceFill(app(DiniyyahKkmResolver::class)->resolve($assessmentSet->classSubject, $assessmentSet->kkm === null ? null : (float) $assessmentSet->kkm));
 
         $assessmentSet->load(['classSubject.classroomTerm', 'classSubject.subject', 'components' => fn ($query) => $query->orderBy('sort_order')]);
 
@@ -169,7 +162,7 @@ class GuruDiniyyahScoreController extends Controller
         $totalCells = $enrollments->count() * $assessmentSet->components->count();
         $filledCells = $scores->filter(fn (DiniyyahScore $score): bool => $score->score !== null)->count();
         $completeStudents = $results->where('is_complete', true)->count();
-        $completionPercentage = $totalCells > 0 ? round($filledCells / $totalCells * 100, 2) : 0.0;
+        $completionPercentage = $enrollments->isNotEmpty() ? round($completeStudents / $enrollments->count() * 100, 2) : 0.0;
 
         return view('guru.diniyyah-scores.edit', compact(
             'assessmentSet',
@@ -186,11 +179,7 @@ class GuruDiniyyahScoreController extends Controller
     public function update(Request $request, DiniyyahAssessmentSet $assessmentSet, DiniyyahScoreCalculator $calculator): RedirectResponse
     {
         Gate::authorize('inputScores', $assessmentSet);
-        abort_if(
-            ! $request->user()->hasAnyRole(['admin', 'kabag_diniyyah'])
-            && ! in_array($assessmentSet->status, ['active', 'needs_revision'], true),
-            403,
-        );
+        abort_unless(in_array($assessmentSet->status, ['active', 'needs_revision'], true), 403);
 
         // Cegah mengubah nilai setelah leger kelas dikunci/dipublikasikan —
         // nilai sumber sudah dibekukan ke snapshot leger, mengubahnya akan
@@ -200,11 +189,6 @@ class GuruDiniyyahScoreController extends Controller
             ->whereIn('status', ['locked', 'published'])
             ->exists();
         abort_if($ledgerFrozen, 403, 'Nilai tidak dapat diubah karena leger kelas sudah dikunci atau dipublikasikan.');
-
-        // Catat apakah set yang akan diedit sudah submitted/validated — admin
-        // masih diperbolehkan mengeditnya, tetapi setelah edit set harus kembali
-        // ke needs_revision agar status set konsisten dengan isi skor (draft).
-        $wasSubmitted = in_array($assessmentSet->status, ['submitted', 'validated'], true);
 
         $validated = $request->validate([
             'scores' => ['array'],
@@ -221,41 +205,43 @@ class GuruDiniyyahScoreController extends Controller
             ->pluck('id')
             ->all();
 
-        foreach ($validated['scores'] ?? [] as $enrollmentId => $componentScores) {
-            if (! in_array((int) $enrollmentId, $enrollmentIds, true)) {
-                continue;
-            }
-
-            foreach ($componentScores as $componentId => $score) {
-                if (! in_array((int) $componentId, $componentIds, true)) {
+        app(DiniyyahKkmResolver::class)->withClassLocks($assessmentSet->classSubject->classroomTerm, function () use ($assessmentSet, $validated, $componentIds, $enrollmentIds, $request, $calculator): void {
+            $assessmentSet->refresh();
+            Gate::authorize('inputScores', $assessmentSet);
+            abort_unless(in_array($assessmentSet->status, ['active', 'needs_revision'], true), 403);
+            abort_if($this->frozen($assessmentSet->classSubject->classroom_term_id), 403, 'Leger atau rapor kelas sudah terkunci.');
+            foreach ($validated['scores'] ?? [] as $enrollmentId => $componentScores) {
+                if (! in_array((int) $enrollmentId, $enrollmentIds, true)) {
                     continue;
                 }
 
-                DiniyyahScore::updateOrCreate(
-                    [
-                        'diniyyah_score_component_id' => $componentId,
-                        'class_enrollment_id' => $enrollmentId,
-                    ],
-                    [
-                        'diniyyah_assessment_set_id' => $assessmentSet->id,
-                        'score' => $score,
-                        'input_by' => $request->user()->id,
-                        'input_at' => now(),
-                        'status' => 'draft',
-                    ],
-                );
+                foreach ($componentScores as $componentId => $score) {
+                    if (! in_array((int) $componentId, $componentIds, true)) {
+                        continue;
+                    }
+                    if ($assessmentSet->components->firstWhere('id', (int) $componentId)?->code === 'keaktifan_presensi') {
+                        continue; // Browser input may never replace the journal-derived score.
+                    }
+
+                    DiniyyahScore::updateOrCreate(
+                        [
+                            'diniyyah_score_component_id' => $componentId,
+                            'class_enrollment_id' => $enrollmentId,
+                        ],
+                        [
+                            'diniyyah_assessment_set_id' => $assessmentSet->id,
+                            'score' => $score,
+                            'input_by' => $request->user()->id,
+                            'input_at' => now(),
+                            'status' => 'draft',
+                        ],
+                    );
+                }
+
+                $calculator->calculate($assessmentSet, ClassEnrollment::findOrFail($enrollmentId));
             }
 
-            $calculator->calculate($assessmentSet, ClassEnrollment::findOrFail($enrollmentId));
-        }
-
-        // Bila admin/kabag mengedit set yang sudah submitted/validated, kembalikan
-        // set ke needs_revision agar set tidak ditinggalkan dalam status
-        // "submitted"/"validated" berisi skor draft (inkonsisten). Set perlu
-        // ditinjau & disubmit ulang sebelum leger dibekukan.
-        if ($wasSubmitted && $assessmentSet->status !== 'needs_revision') {
-            $assessmentSet->update(['status' => 'needs_revision']);
-        }
+        });
 
         return redirect()
             ->route('guru.diniyyah-scores.edit', $assessmentSet)
@@ -267,24 +253,37 @@ class GuruDiniyyahScoreController extends Controller
         Gate::authorize('inputScores', $assessmentSet);
         abort_unless(in_array($assessmentSet->status, ['active', 'needs_revision'], true), 403);
 
-        $summary = $progressService->summary($assessmentSet);
+        return app(DiniyyahKkmResolver::class)->withClassLocks($assessmentSet->classSubject->classroomTerm, function () use ($assessmentSet, $progressService, $workflow): RedirectResponse {
+            $assessmentSet->refresh();
+            Gate::authorize('inputScores', $assessmentSet);
+            abort_unless(in_array($assessmentSet->status, ['active', 'needs_revision'], true), 403);
+            abort_if($this->frozen($assessmentSet->classSubject->classroom_term_id), 403, 'Leger atau rapor kelas sudah terkunci.');
+            app(DiniyyahScoreCalculator::class)->calculateAssessmentSet($assessmentSet);
+            $summary = $progressService->summary($assessmentSet->fresh());
 
-        if ($summary['total_students'] === 0 || $summary['incomplete_students'] > 0) {
+            if ($summary['total_students'] === 0 || $summary['incomplete_students'] > 0) {
+                return redirect()
+                    ->route('guru.diniyyah-scores.edit', $assessmentSet)
+                    ->withErrors(['scores' => 'Nilai belum lengkap, belum bisa disubmit ke Kabag Diniyyah.']);
+            }
+
+            $workflow->submit($assessmentSet);
+
             return redirect()
-                ->route('guru.diniyyah-scores.edit', $assessmentSet)
-                ->withErrors(['scores' => 'Nilai belum lengkap, belum bisa disubmit ke Kabag Diniyyah.']);
-        }
+                ->route('guru.diniyyah-scores.index')
+                ->with('status', 'Nilai berhasil disubmit ke Kabag Diniyyah.');
+        });
+    }
 
-        $workflow->submit($assessmentSet);
-
-        return redirect()
-            ->route('guru.diniyyah-scores.index')
-            ->with('status', 'Nilai berhasil disubmit ke Kabag Diniyyah.');
+    private function frozen(int $classroomTermId): bool
+    {
+        return DiniyyahLedgerSnapshot::where('classroom_term_id', $classroomTermId)->whereIn('status', ['locked', 'published'])->exists()
+            || ReportCard::where('classroom_term_id', $classroomTermId)->whereIn('status', ['locked', 'published'])->exists();
     }
 
     /** @param Collection<int, SchoolEvent> $events
-     *  @param Collection<int, SchoolHoliday> $holidays
-     *  @return Collection<int, array<string, mixed>>
+     * @param  Collection<int, SchoolHoliday>  $holidays
+     * @return Collection<int, array<string, mixed>>
      */
     private function buildUpcomingAlerts(Collection $events, Collection $holidays): Collection
     {
@@ -329,7 +328,7 @@ class GuruDiniyyahScoreController extends Controller
             ->take(5);
     }
 
-    private function countdownLabel(\Carbon\CarbonInterface $date): string
+    private function countdownLabel(CarbonInterface $date): string
     {
         $days = today()->diffInDays($date, false);
 

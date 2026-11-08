@@ -2,23 +2,26 @@
 
 namespace Tests\Feature;
 
+use App\Models\AcademicTerm;
+use App\Models\AcademicYear;
 use App\Models\ClassEnrollment;
 use App\Models\Classroom;
 use App\Models\ClassroomTerm;
-use Spatie\Permission\Models\Role;
 use App\Models\DiniyyahAssessmentSet;
 use App\Models\DiniyyahClassSubject;
 use App\Models\DiniyyahLedgerSnapshot;
 use App\Models\DiniyyahScore;
 use App\Models\DiniyyahScoreComponent;
 use App\Models\DiniyyahSubject;
-use App\Models\AcademicTerm;
-use App\Models\AcademicYear;
+use App\Models\HomeroomAssignment;
 use App\Models\School;
 use App\Models\Student;
+use App\Models\Teacher;
+use App\Models\User;
 use App\Services\DiniyyahLedgerGenerator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class DiniyyahLedgerExportTest extends TestCase
@@ -28,15 +31,18 @@ class DiniyyahLedgerExportTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        foreach (["admin", "wali_santri", "kepala_sekolah", "guru", "kabag_diniyyah"] as $role) {
-            Role::firstOrCreate(["name" => $role, "guard_name" => "web"]);
+        foreach (['admin', 'wali_santri', 'kepala_sekolah', 'guru', 'kabag_diniyyah'] as $role) {
+            Role::firstOrCreate(['name' => $role, 'guard_name' => 'web']);
         }
     }
 
-    public function test_admin_can_export_ledger_as_excel(): void
+    public function test_assigned_homeroom_can_export_ledger_as_excel(): void
     {
         $admin = $this->adminUser();
         $snapshot = $this->createLedgerSnapshot();
+        $admin->assignRole('guru');
+        $teacher = Teacher::create(['user_id' => $admin->id, 'name' => 'Wali kelas', 'status' => 'active']);
+        HomeroomAssignment::create(['classroom_term_id' => $snapshot->classroom_term_id, 'teacher_id' => $teacher->id]);
 
         $response = $this->actingAs($admin)
             ->get(route('diniyyah.ledger.export-excel', $snapshot));
@@ -62,7 +68,7 @@ class DiniyyahLedgerExportTest extends TestCase
         $workbook->disconnectWorksheets();
     }
 
-    public function test_kepala_sekolah_can_export_ledger(): void
+    public function test_kepala_sekolah_without_homeroom_assignment_cannot_export_ledger(): void
     {
         $kepala = $this->kepalaSekolahUser();
         $snapshot = $this->createLedgerSnapshot();
@@ -70,21 +76,17 @@ class DiniyyahLedgerExportTest extends TestCase
         $response = $this->actingAs($kepala)
             ->get(route('diniyyah.ledger.export-excel', $snapshot));
 
-        $response->assertOk();
+        $response->assertForbidden();
     }
 
-    public function test_kepala_sekolah_can_open_ledger_in_management_portal(): void
+    public function test_kepala_sekolah_without_homeroom_assignment_cannot_open_ledger(): void
     {
         $kepala = $this->kepalaSekolahUser();
         $snapshot = $this->createLedgerSnapshot();
 
         $this->actingAs($kepala)
             ->get(route('diniyyah.ledger.show', $snapshot))
-            ->assertOk()
-            ->assertSee('Portal Manajemen')
-            ->assertSee('Data leger santri')
-            ->assertSee('aria-label="Menu portal"', false)
-            ->assertSee('scope="col"', false);
+            ->assertForbidden();
     }
 
     public function test_guru_cannot_export_ledger(): void
@@ -100,9 +102,9 @@ class DiniyyahLedgerExportTest extends TestCase
 
     private function adminUser()
     {
-        $user = \App\Models\User::create([
+        $user = User::create([
             'name' => 'Admin',
-            'email' => 'admin-export-' . uniqid() . '@example.com',
+            'email' => 'admin-export-'.uniqid().'@example.com',
             'password' => bcrypt('password'),
         ]);
         $user->assignRole('admin');
@@ -112,9 +114,9 @@ class DiniyyahLedgerExportTest extends TestCase
 
     private function kepalaSekolahUser()
     {
-        $user = \App\Models\User::create([
+        $user = User::create([
             'name' => 'Kepala',
-            'email' => 'kepala-export-' . uniqid() . '@example.com',
+            'email' => 'kepala-export-'.uniqid().'@example.com',
             'password' => bcrypt('password'),
         ]);
         $user->assignRole('kepala_sekolah');
@@ -124,9 +126,9 @@ class DiniyyahLedgerExportTest extends TestCase
 
     private function guruUser()
     {
-        $user = \App\Models\User::create([
+        $user = User::create([
             'name' => 'Guru',
-            'email' => 'guru-export-' . uniqid() . '@example.com',
+            'email' => 'guru-export-'.uniqid().'@example.com',
             'password' => bcrypt('password'),
         ]);
         $user->assignRole('guru');
@@ -142,7 +144,7 @@ class DiniyyahLedgerExportTest extends TestCase
         $classroom = Classroom::create(['name' => 'M1 Test']);
         $classroomTerm = ClassroomTerm::create(['academic_term_id' => $term->id, 'classroom_id' => $classroom->id, 'name' => 'M1 Test']);
 
-        $student = Student::create(['name' => 'Santri Export', 'gender' => 'male', 'nis' => 'EXP-' . uniqid(), 'status' => 'active']);
+        $student = Student::create(['name' => 'Santri Export', 'gender' => 'male', 'nis' => 'EXP-'.uniqid(), 'status' => 'active']);
         ClassEnrollment::create(['academic_term_id' => $term->id, 'classroom_term_id' => $classroomTerm->id, 'student_id' => $student->id]);
 
         $subject = DiniyyahSubject::create(['code' => 'fiqih', 'name' => 'Fiqih', 'default_assessment_method' => 'weighted']);

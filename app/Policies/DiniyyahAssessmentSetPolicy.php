@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\DiniyyahAssessmentSet;
 use App\Models\User;
+use App\Services\DiniyyahAssessmentAccess;
 
 class DiniyyahAssessmentSetPolicy
 {
@@ -38,11 +39,8 @@ class DiniyyahAssessmentSetPolicy
 
     public function inputScores(User $user, DiniyyahAssessmentSet $assessmentSet): bool
     {
-        if ($user->hasAnyRole(['admin', 'kabag_diniyyah'])) {
-            return true;
-        }
-
-        return $this->isAssignedTeacher($user, $assessmentSet);
+        return app(DiniyyahAssessmentAccess::class)->classSubjects($user)
+            ->whereKey($assessmentSet->diniyyah_class_subject_id)->exists();
     }
 
     private function isAssignedTeacher(User $user, DiniyyahAssessmentSet $assessmentSet): bool

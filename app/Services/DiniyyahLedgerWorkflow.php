@@ -2,9 +2,9 @@
 
 namespace App\Services;
 
+use App\Models\DiniyyahAssessmentSet;
 use App\Models\DiniyyahLedgerSnapshot;
 use App\Models\User;
-use App\Services\NotificationDispatcher;
 use DomainException;
 
 class DiniyyahLedgerWorkflow
@@ -21,8 +21,8 @@ class DiniyyahLedgerWorkflow
 
     private function lockOpenSnapshot(DiniyyahLedgerSnapshot $snapshot, User $user): void
     {
-        if ($snapshot->status === 'published') {
-            throw new DomainException('Leger yang sudah published tidak bisa dikunci ulang.');
+        if (in_array($snapshot->status, ['locked', 'published'], true)) {
+            throw new DomainException('Leger yang sudah terkunci atau terbit tidak bisa dikunci ulang.');
         }
 
         if (($snapshot->snapshot_data['summary']['blocking_issues'] ?? 0) > 0) {
@@ -57,12 +57,19 @@ class DiniyyahLedgerWorkflow
     // ── Notifikasi ────────────────────────────────────────────────────────
     private function ensureKkmCurrent(DiniyyahLedgerSnapshot $snapshot): void
     {
-        if (! $snapshot->classroomTerm?->academicTerm?->kkm_workflow_enabled) return;
-        if ($snapshot->snapshot_data['kkm_stale'] ?? false) throw new DomainException('KKM berubah. Generate ulang leger.');
-        $sets = \App\Models\DiniyyahAssessmentSet::where('appears_on_ledger', true)
+        app(DiniyyahCombinedLedger::class)->ensureCurrent($snapshot);
+        if (! $snapshot->classroomTerm?->academicTerm?->kkm_workflow_enabled) {
+            return;
+        }
+        if ($snapshot->snapshot_data['kkm_stale'] ?? false) {
+            throw new DomainException('KKM berubah. Generate ulang leger.');
+        }
+        $sets = DiniyyahAssessmentSet::where('appears_on_ledger', true)
             ->whereHas('classSubject', fn ($q) => $q->where('classroom_term_id', $snapshot->classroom_term_id)->where('is_active', true)->where('appears_on_ledger', true))->get();
         $columns = collect($snapshot->snapshot_data['columns'] ?? [])->where('source_type', 'diniyyah_assessment_set');
-        if ($sets->isEmpty() || $sets->count() !== $columns->count()) throw new DomainException('Struktur leger berubah atau belum lengkap. Generate ulang leger.');
+        if ($sets->isEmpty() || $sets->count() !== $columns->count()) {
+            throw new DomainException('Struktur leger berubah atau belum lengkap. Generate ulang leger.');
+        }
         foreach ($sets as $set) {
             $column = $columns->firstWhere('assessment_set_id', $set->id);
             $current = app(DiniyyahKkmResolver::class)->ensureApproved($set);
@@ -141,7 +148,7 @@ class DiniyyahLedgerWorkflow
         }
 
         // Guru pemilik nilai kelas tsb (nilai dibekukan).
-        $assessmentSets = \App\Models\DiniyyahAssessmentSet::query()
+        $assessmentSets = DiniyyahAssessmentSet::query()
             ->whereHas('classSubject', function ($q) use ($snapshot) {
                 $q->where('classroom_term_id', $snapshot->classroom_term_id);
             })

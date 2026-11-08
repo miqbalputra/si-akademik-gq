@@ -1,11 +1,13 @@
 <?php
 
+use App\Models\DiniyyahAssessmentSet;
 use App\Models\DiniyyahClassSubject;
 use App\Models\DiniyyahKkmRevision;
 use App\Models\User;
 use App\Services\DiniyyahKkmBulkAssignment;
 use App\Services\DiniyyahKkmWorkflow;
 use App\Services\DiniyyahSchoolKkm;
+use App\Services\DiniyyahScoreCalculator;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\DB;
@@ -49,12 +51,13 @@ if (realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) {
     DB::select("SELECT set_config('application_name', ?, false)", [$input['name']]);
     try {
         $result = match ($input['action'] ?? 'bulk') {
+            'score_recalculate' => app(DiniyyahScoreCalculator::class)->calculateAssessmentSet(DiniyyahAssessmentSet::findOrFail($input['assessment_set'])),
             'school_initialize' => ['revision_id' => app(DiniyyahSchoolKkm::class)->ensure(DiniyyahClassSubject::findOrFail($input['subject']))?->id],
             'approve' => app(DiniyyahKkmWorkflow::class)->review(DiniyyahKkmRevision::findOrFail($input['revision']), User::findOrFail($input['actor']), $input['lock_version'], true),
             'bulk' => app(DiniyyahKkmBulkAssignment::class)->apply($input['term'], $input['entries'], $input['token'], User::findOrFail($input['actor'])),
         };
         echo json_encode(['ok' => true, 'result' => $result], JSON_THROW_ON_ERROR);
-    } catch (ValidationException $exception) {
-        echo json_encode(['ok' => false, 'errors' => $exception->errors()], JSON_THROW_ON_ERROR);
+    } catch (ValidationException|DomainException $exception) {
+        echo json_encode(['ok' => false, 'errors' => $exception instanceof ValidationException ? $exception->errors() : ['ledger' => [$exception->getMessage()]]], JSON_THROW_ON_ERROR);
     }
 }

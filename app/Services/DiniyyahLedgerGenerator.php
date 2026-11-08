@@ -8,15 +8,14 @@ use App\Models\DiniyyahAssessmentResult;
 use App\Models\DiniyyahAssessmentSet;
 use App\Models\DiniyyahLedgerSnapshot;
 use DomainException;
-use Illuminate\Support\Facades\DB;
 
 class DiniyyahLedgerGenerator
 {
     public function __construct(private readonly AttendanceRecapService $attendanceRecapService) {}
 
-    public function generate(ClassroomTerm $classroomTerm, ?int $generatedBy = null): DiniyyahLedgerSnapshot
+    public function generate(ClassroomTerm $classroomTerm, ?int $generatedBy = null, bool $includeTahfidz = false): DiniyyahLedgerSnapshot
     {
-        return app(DiniyyahKkmResolver::class)->withClassLocks($classroomTerm, function () use ($classroomTerm, $generatedBy) {
+        return app(DiniyyahKkmResolver::class)->withClassLocks($classroomTerm, function () use ($classroomTerm, $generatedBy, $includeTahfidz) {
             $classroomTerm->loadMissing('academicTerm');
 
             $existingSnapshot = DiniyyahLedgerSnapshot::query()
@@ -27,6 +26,7 @@ class DiniyyahLedgerGenerator
             if ($existingSnapshot && in_array($existingSnapshot->status, ['locked', 'published'], true)) {
                 throw new DomainException('Leger sudah dikunci dan tidak bisa digenerate ulang.');
             }
+            $includeTahfidz = $includeTahfidz || ($existingSnapshot?->snapshot_data['layout_version'] ?? '') === 'combined-v1';
 
             $assessmentSets = DiniyyahAssessmentSet::query()
                 ->with('classSubject.subject')
@@ -213,6 +213,10 @@ class DiniyyahLedgerGenerator
                 ],
             ]);
 
+            if ($includeTahfidz) {
+                app(DiniyyahCombinedLedger::class)->append($snapshot);
+            }
+
             $this->notifyGenerated($snapshot);
 
             return $snapshot->fresh(['rows.cells']);
@@ -222,13 +226,12 @@ class DiniyyahLedgerGenerator
     private function notifyGenerated(DiniyyahLedgerSnapshot $snapshot): void
     {
         $kelas = $snapshot->classroomTerm?->name ?? 'kelas';
-        $dispatcher = app(\App\Services\NotificationDispatcher::class);
+        $dispatcher = app(NotificationDispatcher::class);
         $linkUrl = route('diniyyah.ledger.show', $snapshot);
         $body = "Leger kelas {$kelas} berhasil di-generate, menunggu validasi.";
 
         // Kabag diniyyah + kepala sekolah.
-        $dispatcher->dispatchToRole('kabag_diniyyah', "Leger {$kelas} di-generate", $body, 'ledger_generated', $linkUrl, 'success');
-        $dispatcher->dispatchToRole('kepala_sekolah', "Leger {$kelas} di-generate", $body, 'ledger_generated', $linkUrl, 'info');
+        // Pengelola memantau pengajuan nilai; rincian leger hanya untuk wali kelas.
 
         // Wali kelas kelas tsb.
         if ($snapshot->classroom_term_id) {

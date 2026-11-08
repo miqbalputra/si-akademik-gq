@@ -249,6 +249,29 @@ class DiniyyahKkmConcurrencyTest extends TestCase
         $this->assertSame(0, PanelNotification::where('notification_type', 'kkm_assigned')->count());
     }
 
+    public function test_score_recalculation_waits_for_ledger_lock_and_cannot_change_frozen_grades(): void
+    {
+        $c = $this->context();
+        $criteria = array_fill_keys(array_keys(DiniyyahKkmCalculator::CRITERIA), ['score' => 75, 'reason' => 'Kondisi kelas']);
+        $revision = $c['scope']->revisions()->create(['version' => 1, 'status' => 'approved'] + app(DiniyyahKkmCalculator::class)->calculate($criteria, true));
+        $c['scope']->update(['active_revision_id' => $revision->id]);
+        $set = DiniyyahAssessmentSet::create(['diniyyah_class_subject_id' => $c['cs']->id, 'title' => 'Akidah', 'assessment_method' => 'direct_final', 'status' => 'validated', 'appears_on_ledger' => true]);
+        $snapshot = DiniyyahLedgerSnapshot::create(['academic_term_id' => $c['term']->id, 'classroom_term_id' => $c['ct']->id, 'title' => 'Leger PG', 'status' => 'validated', 'snapshot_data' => ['columns' => [['source_type' => 'diniyyah_assessment_set', 'assessment_set_id' => $set->id, 'kkm_revision_id' => $revision->id]], 'summary' => ['blocking_issues' => 0]]]);
+        DB::beginTransaction();
+        app(DiniyyahLedgerWorkflow::class)->lock($snapshot, $c['admin']);
+        $process = new Process([PHP_BINARY, dirname(__DIR__).'/Support/kkm-postgres-worker.php'], dirname(__DIR__, 2));
+        $process->setInput(json_encode(['settings' => $this->settings, 'name' => 'kkm_concurrent_scores', 'action' => 'score_recalculate', 'assessment_set' => $set->id], JSON_THROW_ON_ERROR));
+        $process->setTimeout(60)->start();
+        $this->processes[] = $process;
+        $this->awaitBlocked(1);
+        DB::commit();
+        $result = $this->processResult($process);
+        $this->assertFalse($result['ok']);
+        $this->assertStringContainsString('terkunci', $result['errors']['ledger'][0]);
+        $this->assertSame('locked', $snapshot->fresh()->status);
+        $this->assertSame($revision->id, $set->fresh()->kkm_revision_id);
+    }
+
     public function test_concurrent_school_initialization_creates_one_fixed_version_and_one_notification_per_teacher(): void
     {
         $c = $this->context();

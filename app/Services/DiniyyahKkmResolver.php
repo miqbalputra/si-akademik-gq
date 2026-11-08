@@ -94,6 +94,7 @@ class DiniyyahKkmResolver
     public function withClassLocks(ClassroomTerm $classroomTerm, callable $callback): mixed
     {
         return DB::transaction(function () use ($classroomTerm, $callback) {
+            ClassroomTerm::whereKey($classroomTerm->id)->lockForUpdate()->firstOrFail();
             if ($classroomTerm->academicTerm?->kkm_workflow_enabled) {
                 $subjects = $classroomTerm->diniyyahClassSubjects()->with('subject')->where('is_active', true)->get();
                 foreach ($subjects as $subject) {
@@ -125,6 +126,7 @@ class DiniyyahKkmResolver
     public function withAssessmentLock(DiniyyahAssessmentSet $set, callable $callback): mixed
     {
         return DB::transaction(function () use ($set, $callback) {
+            ClassroomTerm::whereKey($set->classSubject->classroom_term_id)->lockForUpdate()->firstOrFail();
             if ($set->classSubject?->subject?->schoolKkm() !== null) {
                 $this->resolve($set->classSubject, $set->kkm === null ? null : (float) $set->kkm);
             }

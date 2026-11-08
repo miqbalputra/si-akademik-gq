@@ -268,9 +268,13 @@ Route::middleware('auth:web')->prefix('diniyyah')->name('diniyyah.')->group(func
     Route::get('/monitoring', [DiniyyahMonitoringController::class, 'index'])->name('monitoring.index');
     Route::post('/assessment-sets/{assessmentSet}/approve', [DiniyyahMonitoringController::class, 'approve'])->name('assessment-sets.approve');
     Route::post('/assessment-sets/{assessmentSet}/revision', [DiniyyahMonitoringController::class, 'requestRevision'])->name('assessment-sets.revision');
+    Route::get('/ledger', [DiniyyahLedgerController::class, 'index'])->name('ledger.index');
     Route::post('/ledger/generate/{classroomTerm}', [DiniyyahLedgerController::class, 'generate'])->name('ledger.generate');
+    Route::get('/ledger/exports/{exportRequest}', [DiniyyahLedgerController::class, 'downloadExport'])->name('ledger.download');
     Route::get('/ledger/{snapshot}', [DiniyyahLedgerController::class, 'show'])->name('ledger.show');
+    Route::post('/ledger/{snapshot}/lock', [DiniyyahLedgerController::class, 'finalize'])->name('ledger.lock');
     Route::get('/ledger/{snapshot}/export-excel', [DiniyyahLedgerController::class, 'exportExcel'])->name('ledger.export-excel');
+    Route::get('/ledger/{snapshot}/export-pdf', [DiniyyahLedgerController::class, 'exportPdf'])->name('ledger.export-pdf');
 });
 
 // Ekspor lengkap seluruh jurnal diniyyah (reguler + pengganti) untuk admin/kabag/kepala_sekolah.

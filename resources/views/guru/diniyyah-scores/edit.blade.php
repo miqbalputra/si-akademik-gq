@@ -47,6 +47,12 @@
                 <p class="mt-2 text-theme-sm font-normal text-muted">
                     {{ $assessmentSet->classSubject?->classroomTerm?->name }} &middot; {{ $assessmentSet->classSubject?->subject?->name }}
                 </p>
+                @if($assessmentSet->classSubject?->subject?->isSuluk())
+                    <p class="mt-2 text-theme-sm text-muted">Suluk diisi wali kelas. KKM tetap 70 dari Sekolah/Kabag Diniyyah.</p>
+                @else
+                    <p class="mt-2 text-theme-sm text-muted">Nilai akhir = {{ $assessmentSet->daily_weight ?? 40 }}% rata-rata nilai harian + {{ $assessmentSet->exam_weight ?? 60 }}% nilai ujian. Keaktifan/presensi otomatis dari jurnal. Kolom opsional yang kosong tidak dihitung sebagai nol.</p>
+                    @if($assessmentSet->tested_material && $assessmentSet->tested_material !== '-')<p class="mt-1 text-theme-sm text-muted">Materi ujian: {{ $assessmentSet->tested_material }}</p>@endif
+                @endif
             </div>
             
             <div class="grid grid-cols-2 gap-3 text-center sm:grid-cols-4 lg:min-w-[450px]">
@@ -128,7 +134,7 @@
                     <tr class="bg-surface-subtle border-b border-line text-theme-xs font-normal uppercase text-muted">
                         <th class="md:sticky md:left-0 md:z-10 md:bg-surface-subtle px-6 py-4 text-theme-xs font-medium">Santri</th>
                         @foreach ($assessmentSet->components as $component)
-                            <th class="px-6 py-4 text-theme-xs font-medium">{{ $component->name }}</th>
+                            <th class="px-6 py-4 text-theme-xs font-medium">{{ $component->name }} @if(! $component->is_required)<span class="normal-case text-muted">(opsional)</span>@endif</th>
                         @endforeach
                         <th class="px-6 py-4 text-theme-xs font-medium">Nilai Akhir</th>
                     </tr>
@@ -165,7 +171,7 @@
                                         placeholder="0.00"
                                         class="w-24 rounded-xl border-2 {{ $component->code === 'keaktifan_presensi' ? 'border-brand-line bg-brand-soft/50 text-brand-ink' : 'border-line bg-surface/50 text-heading' }} px-3 py-2 text-center shadow-sm outline-none transition-all focus:border-brand-500 focus:bg-surface focus:ring-4 focus:ring-brand-500/10 text-theme-sm font-normal"
                                         @readonly($component->code === 'keaktifan_presensi')
-                                        @disabled(! in_array($assessmentSet->status, ['active', 'needs_revision'], true) && ! auth()->user()?->hasAnyRole(['admin', 'kabag_diniyyah']))
+                                        @disabled(! in_array($assessmentSet->status, ['active', 'needs_revision'], true))
                                     >
                                     @if($component->code === 'keaktifan_presensi')
                                         <div class="mt-1 text-theme-xs font-normal text-center text-brand-400 uppercase">Otomatis</div>
@@ -185,9 +191,9 @@
         <div class="sticky bottom-0 flex items-center justify-between gap-3 border-t border-line/60 bg-surface/90 p-5 backdrop-blur-md">
             <p class="text-theme-xs font-normal text-muted">Simpan perubahan Anda sebagai draf kapan saja untuk dihitung otomatis.</p>
             <button
-                class="rounded-xl px-5 py-3 text-white shadow-md transition-all {{ in_array($assessmentSet->status, ['active', 'needs_revision'], true) || auth()->user()?->hasAnyRole(['admin', 'kabag_diniyyah']) ? 'bg-warning-600 hover:bg-warning-700 hover:shadow-brand-500/20' : 'bg-gray-400' }} text-theme-sm font-medium"
+                class="rounded-xl px-5 py-3 text-white shadow-md transition-all {{ in_array($assessmentSet->status, ['active', 'needs_revision'], true) ? 'bg-warning-600 hover:bg-warning-700 hover:shadow-brand-500/20' : 'bg-gray-400' }} text-theme-sm font-medium"
                 type="submit"
-                @disabled(! in_array($assessmentSet->status, ['active', 'needs_revision'], true) && ! auth()->user()?->hasAnyRole(['admin', 'kabag_diniyyah']))
+                @disabled(! in_array($assessmentSet->status, ['active', 'needs_revision'], true))
             >
                 Simpan Perubahan
             </button>

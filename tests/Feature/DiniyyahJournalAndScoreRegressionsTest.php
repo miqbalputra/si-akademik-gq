@@ -30,8 +30,8 @@ use Tests\TestCase;
  *  - #14: observer jurnal/absensi diniyyah → recompute skor keaktifan_presensi.
  *  - #15: recompute presensi tidak menurunkan status skor yang sudah submitted/validated.
  *  - #16: store jurnal menolak classroom_term silang & absensi enrollment asing.
- *  - #17: admin mengedit set submitted/validated → kembali ke needs_revision;
- *         leger terkunci → 403.
+ *  - #17: portal guru memeriksa penugasan dan status pengajuan;
+ *         admin tidak dapat melewati penguncian nilai.
  */
 class DiniyyahJournalAndScoreRegressionsTest extends TestCase
 {
@@ -100,6 +100,24 @@ class DiniyyahJournalAndScoreRegressionsTest extends TestCase
         $this->assertNotNull($score);
         $this->assertSame(100.00, (float) $score->score);   // nilai di-refresh
         $this->assertSame('submitted', $score->status);      // status TIDAK diturunkan ke draft
+    }
+
+    public function test_journal_score_changes_refresh_open_results_and_require_validation_again_but_preserve_locked_results(): void
+    {
+        [$set, $teacher, $enrollmentA, $enrollmentB] = $this->makeJournalContext();
+        $exam = DiniyyahScoreComponent::create(['diniyyah_assessment_set_id' => $set->id, 'code' => 'exam', 'name' => 'Ujian', 'component_group' => 'exam', 'is_required' => true]);
+        foreach ([$enrollmentA, $enrollmentB] as $enrollment) {
+            DiniyyahScore::create(['diniyyah_assessment_set_id' => $set->id, 'diniyyah_score_component_id' => $exam->id, 'class_enrollment_id' => $enrollment->id, 'score' => 90]);
+        }
+        $journal = DiniyyahClassJournal::create(['diniyyah_teacher_assignment_id' => $teacher->assignment_id, 'date' => '2026-07-09', 'session_hour' => '1', 'material' => 'Bab 1', 'jp_count' => 1]);
+        $this->assertSame('94.00', $set->results()->where('class_enrollment_id', $enrollmentA->id)->sole()->final_score);
+        $set->update(['status' => 'validated']);
+        $absence = DiniyyahClassJournalAbsence::create(['diniyyah_class_journal_id' => $journal->id, 'class_enrollment_id' => $enrollmentA->id, 'status' => 'skipped']);
+        $this->assertSame('needs_revision', $set->fresh()->status);
+        $this->assertSame('54.00', $set->results()->where('class_enrollment_id', $enrollmentA->id)->sole()->final_score);
+        DiniyyahLedgerSnapshot::create(['academic_term_id' => $enrollmentA->academic_term_id, 'classroom_term_id' => $enrollmentA->classroom_term_id, 'title' => 'Leger terkunci', 'status' => 'locked']);
+        $absence->delete();
+        $this->assertSame('54.00', $set->results()->where('class_enrollment_id', $enrollmentA->id)->sole()->final_score);
     }
 
     // ---------------------------------------------------------------- #16
@@ -176,7 +194,7 @@ class DiniyyahJournalAndScoreRegressionsTest extends TestCase
 
     // ---------------------------------------------------------------- #17
 
-    public function test_admin_editing_submitted_set_reverts_to_needs_revision(): void
+    public function test_admin_cannot_bypass_submission_lock_from_the_teacher_portal(): void
     {
         [$assessmentSet, $teacher, $enrollment, , $dailyComponent] = $this->makeInputContext();
         $admin = $this->makeAdmin();
@@ -189,10 +207,10 @@ class DiniyyahJournalAndScoreRegressionsTest extends TestCase
                     $enrollment->id => [$dailyComponent->id => 75],
                 ],
             ])
-            ->assertRedirect();
+            ->assertForbidden();
 
-        $this->assertSame('needs_revision', $assessmentSet->refresh()->status);
-        $this->assertDatabaseHas('diniyyah_scores', [
+        $this->assertSame('submitted', $assessmentSet->refresh()->status);
+        $this->assertDatabaseMissing('diniyyah_scores', [
             'diniyyah_assessment_set_id' => $assessmentSet->id,
             'diniyyah_score_component_id' => $dailyComponent->id,
             'class_enrollment_id' => $enrollment->id,

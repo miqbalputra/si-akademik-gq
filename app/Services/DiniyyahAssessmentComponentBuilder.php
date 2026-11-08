@@ -34,9 +34,9 @@ class DiniyyahAssessmentComponentBuilder
     {
         return [
             ['code' => 'keaktifan_presensi', 'name' => 'Keaktifan/Presensi', 'component_group' => 'daily', 'sort_order' => 10],
-            ['code' => 'ulangan_harian_1', 'name' => 'Ulangan Harian 1', 'component_group' => 'daily', 'sort_order' => 20],
-            ['code' => 'ulangan_harian_2', 'name' => 'Ulangan Harian 2', 'component_group' => 'daily', 'sort_order' => 30],
-            ['code' => 'nilai_tugas', 'name' => 'Nilai Tugas', 'component_group' => 'daily', 'sort_order' => 40],
+            ['code' => 'ulangan_harian_1', 'name' => 'Ulangan Harian 1', 'component_group' => 'daily', 'sort_order' => 20, 'is_required' => false],
+            ['code' => 'ulangan_harian_2', 'name' => 'Ulangan Harian 2', 'component_group' => 'daily', 'sort_order' => 30, 'is_required' => false],
+            ['code' => 'nilai_tugas', 'name' => 'Nilai Tugas', 'component_group' => 'daily', 'sort_order' => 40, 'is_required' => false],
             ['code' => 'nilai_ujian_mentah', 'name' => 'Nilai Ujian', 'component_group' => 'exam', 'sort_order' => 50],
         ];
     }

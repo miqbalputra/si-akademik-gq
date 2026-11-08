@@ -2,20 +2,15 @@
 
 namespace App\Services;
 
-use App\Models\ClassEnrollment;
-use App\Models\ClassroomTerm;
 use App\Models\DiniyyahAssessmentSet;
 use App\Models\Guardian;
 use App\Models\HomeroomAssignment;
 use App\Models\PanelNotification;
 use App\Models\SchoolEvent;
-use App\Models\Student;
 use App\Models\TahfidzHalaqah;
 use App\Models\Teacher;
-use App\Models\TasmiExaminerAssignment;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -257,9 +252,12 @@ class NotificationDispatcher
         string $linkUrl,
         string $severity = 'info',
     ): int {
-        $set = DiniyyahAssessmentSet::with('classSubject.teacherAssignments.teacher.user')->find($assessmentSetId);
+        $set = DiniyyahAssessmentSet::with('classSubject.teacherAssignments.teacher.user', 'classSubject.subject')->find($assessmentSetId);
         if (! $set || ! $set->classSubject) {
             return 0;
+        }
+        if ($set->classSubject->subject?->isSuluk()) {
+            return $this->dispatchToHomeroomTeacher($set->classSubject->classroom_term_id, $title, $body, $type, $linkUrl, $severity);
         }
         $today = now()->toDateString();
         $userIds = $set->classSubject->teacherAssignments
