@@ -20,6 +20,7 @@ use App\Models\Student;
 use App\Models\Teacher;
 use App\Models\User;
 use App\Services\DiniyyahAssessmentComponentBuilder;
+use App\Services\DiniyyahTeacherScoreEditor;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -185,6 +186,48 @@ class GuruDiniyyahScoreInputTest extends TestCase
         ]])->assertConflict();
         $this->assertSame('90.00', $set->scores()->where('diniyyah_score_component_id', $exam->id)->sole()->score);
         $this->assertSame('80.00', $set->scores()->where('diniyyah_score_component_id', $daily->id)->sole()->score);
+    }
+
+    public function test_final_below_kkm_shows_warning_but_preserves_input_and_disappears_at_the_threshold(): void
+    {
+        [$set, $teacher, $enrollment, $daily, $exam] = $this->makeInputContext();
+        $this->actingAs($teacher->user);
+        $url = route('guru.diniyyah-scores.autosave', $set);
+        $this->putJson($url, ['changes' => [
+            ['enrollment_id' => $enrollment->id, 'component_id' => $daily->id, 'score' => 50, 'original' => null],
+            ['enrollment_id' => $enrollment->id, 'component_id' => $exam->id, 'score' => 75, 'original' => null],
+        ]])->assertOk()->assertJsonPath('rows.0.final_score', '65.00')
+            ->assertJsonPath('progress.kkm', 70)->assertJsonPath('progress.below_kkm_students', 1)
+            ->assertJsonPath('progress.below_kkm_enrollment_ids', [$enrollment->id]);
+        $this->assertSame('50.00', $set->scores()->where('diniyyah_score_component_id', $daily->id)->sole()->score);
+        $this->assertSame('65.00', $set->results()->sole()->final_score);
+        $this->get(route('guru.diniyyah-scores.edit', $set))->assertOk()
+            ->assertViewHas('kkmFeedback', fn ($feedback) => $feedback['below_kkm_students'] === 1)
+            ->assertSee('Nilai akhir perlu mencapai KKM.');
+        $this->putJson($url, ['changes' => [
+            ['enrollment_id' => $enrollment->id, 'component_id' => $daily->id, 'score' => 62.5, 'original' => 50],
+        ]])->assertOk()->assertJsonPath('rows.0.final_score', '70.00')->assertJsonPath('progress.below_kkm_students', 0);
+        $this->get(route('guru.diniyyah-scores.edit', $set))->assertOk()
+            ->assertViewHas('kkmFeedback', fn ($feedback) => $feedback['below_kkm_students'] === 0);
+    }
+
+    public function test_kkm_feedback_uses_the_actual_kkm_and_never_guesses_unapproved_or_incomplete_results(): void
+    {
+        [$set, , $enrollment] = $this->makeInputContext();
+        $set->update(['kkm' => 80]);
+        $result = $set->results()->create(['class_enrollment_id' => $enrollment->id, 'is_complete' => true, 'final_score' => 75]);
+        $editor = app(DiniyyahTeacherScoreEditor::class);
+        $this->assertSame(1, $editor->kkmFeedback($set, collect([$result]))['below_kkm_students']);
+        $result->update(['is_complete' => false]);
+        $this->assertSame(0, $editor->kkmFeedback($set, collect([$result]))['below_kkm_students']);
+        $result->update(['is_complete' => true, 'final_score' => null]);
+        $this->assertSame(0, $editor->kkmFeedback($set, collect([$result]))['below_kkm_students']);
+        $result->update(['final_score' => 65]);
+        $set->classSubject->classroomTerm->classroom->update(['level_name' => 'Mustawa 1']);
+        $set->classSubject->classroomTerm->academicTerm->update(['kkm_workflow_enabled' => true]);
+        $feedback = $editor->kkmFeedback($set->fresh(), collect([$result]));
+        $this->assertNull($feedback['kkm']);
+        $this->assertSame(0, $feedback['below_kkm_students']);
     }
 
     public function test_autosave_rejects_invalid_scores_and_foreign_cells_and_automatic_attendance(): void

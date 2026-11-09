@@ -138,7 +138,7 @@ class DiniyyahWorkbookWorkflowTest extends TestCase
         $this->assertSame('82.00', $result->final_score);
         $this->assertTrue($result->is_complete);
         $this->assertSame('60.00', $components['keaktifan_presensi']->scores()->sole()->score);
-        $this->get(route('guru.diniyyah-scores.edit', $set))->assertOk()->assertSee('(opsional)');
+        $this->get(route('guru.diniyyah-scores.edit', $set))->assertOk()->assertSee('(bawaan)');
     }
 
     public function test_expired_homeroom_assignment_revokes_detail_and_queued_download_access(): void

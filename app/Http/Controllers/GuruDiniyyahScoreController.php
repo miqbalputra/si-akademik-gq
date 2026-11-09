@@ -169,6 +169,7 @@ class GuruDiniyyahScoreController extends Controller
         $filledCells = $scores->filter(fn (DiniyyahScore $score): bool => $score->score !== null)->count();
         $completeStudents = $results->where('is_complete', true)->count();
         $completionPercentage = $enrollments->isNotEmpty() ? round($completeStudents / $enrollments->count() * 100, 2) : 0.0;
+        $kkmFeedback = app(DiniyyahTeacherScoreEditor::class)->kkmFeedback($assessmentSet, $results);
 
         return view('guru.diniyyah-scores.edit', compact(
             'assessmentSet',
@@ -181,6 +182,7 @@ class GuruDiniyyahScoreController extends Controller
             'completionPercentage',
             'canEdit',
             'nextComponents',
+            'kkmFeedback',
         ));
     }
 

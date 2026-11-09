@@ -8,6 +8,7 @@ use App\Models\DiniyyahLedgerSnapshot;
 use App\Models\DiniyyahScore;
 use App\Models\ReportCard;
 use App\Models\User;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
@@ -123,14 +124,26 @@ class DiniyyahTeacherScoreEditor
     {
         $ids ??= ClassEnrollment::where('classroom_term_id', $set->classSubject->classroom_term_id)->where('status', 'active')->forVisibleStudents()->pluck('id')->all();
         $total = count($ids);
-        $complete = $set->results()->whereIn('class_enrollment_id', $ids)->where('is_complete', true)->count();
+        $results = $set->results()->whereIn('class_enrollment_id', $ids)->get();
+        $complete = $results->where('is_complete', true)->count();
 
         return [
             'total_cells' => $total * $set->components()->count(),
             'filled_cells' => $set->scores()->whereIn('class_enrollment_id', $ids)->whereNotNull('score')->count(),
             'total_students' => $total, 'complete_students' => $complete,
             'percentage' => $total ? round($complete / $total * 100, 2) : 0,
-        ];
+        ] + $this->kkmFeedback($set, $results);
+    }
+
+    /** Feedback never changes saved scores or assumes a KKM that has not been approved. */
+    public function kkmFeedback(DiniyyahAssessmentSet $set, Collection $results): array
+    {
+        $kkm = app(DiniyyahKkmResolver::class)->resolve($set->classSubject, $set->kkm === null ? null : (float) $set->kkm)['kkm'];
+        $belowIds = $kkm === null ? [] : $results
+            ->filter(fn ($result) => $result->is_complete && $result->final_score !== null && (float) $result->final_score < (float) $kkm)
+            ->pluck('class_enrollment_id')->map(fn ($id) => (int) $id)->values()->all();
+
+        return ['kkm' => $kkm === null ? null : (float) $kkm, 'below_kkm_students' => count($belowIds), 'below_kkm_enrollment_ids' => $belowIds];
     }
 
     private function value(mixed $score): ?string

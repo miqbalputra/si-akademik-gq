@@ -117,6 +117,11 @@
         </div>
     @endif
 
+    <section data-kkm-warning role="status" aria-live="polite" class="mb-4 rounded-2xl border border-warning-line bg-warning-soft p-4 text-warning-ink" @if($kkmFeedback['below_kkm_students'] === 0) hidden @endif>
+        <p class="font-medium text-theme-sm">Perhatian: <span data-below-kkm-count>{{ $kkmFeedback['below_kkm_students'] }}</span> santri memiliki nilai akhir di bawah KKM <span data-warning-kkm>{{ $kkmFeedback['kkm'] }}</span>.</p>
+        <p class="mt-1 text-theme-sm">Nilai akhir perlu mencapai KKM. Periksa santri yang ditandai dan lakukan tindak lanjut. Nilai tetap tersimpan sesuai hasil perhitungan.</p>
+    </section>
+
     <!-- Filter bar -->
     <div class="mb-6 rounded-2xl glass-card p-4 animate-fade-in-up" style="animation-delay:100ms;">
         <label for="student-filter" class="text-muted ui-form-label">Cari santri</label>
@@ -198,7 +203,10 @@
                                 </td>
                             @endforeach
                             <td data-row-result data-label="Nilai Akhir" class="px-6 py-3 font-medium text-heading text-theme-sm">
-                                {{ $result?->final_score ?? '-' }}
+                                <div class="text-right md:text-left">
+                                    <span data-row-final-score>{{ $result?->final_score ?? '-' }}</span>
+                                    <span data-row-kkm-warning class="mt-1 block whitespace-normal text-theme-xs text-warning-ink" @if(! in_array($enrollment->id, $kkmFeedback['below_kkm_enrollment_ids'], true)) hidden @endif>Perlu tindak lanjut: di bawah KKM <span data-row-kkm>{{ $kkmFeedback['kkm'] }}</span></span>
+                                </div>
                             </td>
                         </tr>
                     @endforeach
@@ -208,7 +216,11 @@
 
         <!-- Footer Action Block -->
         <div class="sticky bottom-0 flex flex-col items-stretch justify-between gap-3 border-t border-line/60 bg-surface/90 p-5 backdrop-blur-md sm:flex-row sm:items-center">
-            <div><p data-save-status role="status" aria-live="polite" class="text-theme-sm font-medium text-heading">{{ $canEdit ? 'Autosave aktif. Perubahan disimpan sebagai draf.' : 'Nilai hanya dapat dibaca.' }}</p><p data-save-error role="alert" class="mt-1 text-theme-xs text-danger-ink" hidden></p></div>
+            <div>
+                <p data-save-status role="status" aria-live="polite" class="text-theme-sm font-medium text-heading">{{ $canEdit ? 'Autosave aktif. Perubahan disimpan sebagai draf.' : 'Nilai hanya dapat dibaca.' }}</p>
+                <p data-kkm-save-warning class="mt-1 text-theme-xs text-warning-ink" @if($kkmFeedback['below_kkm_students'] === 0) hidden @endif>Perhatian: ada nilai akhir di bawah KKM. Periksa santri yang ditandai.</p>
+                <p data-save-error role="alert" class="mt-1 text-theme-xs text-danger-ink" hidden></p>
+            </div>
             <button
                 data-save-button
                 class="rounded-xl px-5 py-3 text-white shadow-md transition-all {{ in_array($assessmentSet->status, ['active', 'needs_revision'], true) ? 'bg-warning-600 hover:bg-warning-700 hover:shadow-brand-500/20' : 'bg-gray-400' }} text-theme-sm font-medium"

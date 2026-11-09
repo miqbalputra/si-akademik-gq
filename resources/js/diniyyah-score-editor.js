@@ -98,6 +98,18 @@ export function initDiniyyahScoreEditor() {
                 submitButton.classList.toggle('bg-success-600', complete);
                 submitButton.classList.toggle('bg-line-strong', !complete);
             }
+            const below = new Set(data.below_kkm_enrollment_ids ?? []);
+            const kkm = data.kkm == null ? '' : new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2 }).format(data.kkm);
+            root.querySelector('[data-kkm-warning]').hidden = below.size === 0;
+            root.querySelector('[data-kkm-save-warning]').hidden = below.size === 0;
+            root.querySelector('[data-below-kkm-count]').textContent = below.size;
+            root.querySelector('[data-warning-kkm]').textContent = kkm;
+            rows.forEach(row => {
+                const warning = below.has(Number(row.dataset.enrollmentId));
+                row.querySelector('[data-row-kkm-warning]').hidden = !warning;
+                row.querySelector('[data-row-kkm]').textContent = kkm;
+                row.querySelector('[data-row-final-score]').classList.toggle('text-warning-ink', warning);
+            });
         }
         const queue = new ScoreSaveQueue(changes => request(root.dataset.autosaveUrl, 'PUT', { changes }), data => {
             data.saved.forEach(cell => {
@@ -107,7 +119,7 @@ export function initDiniyyahScoreEditor() {
             (data.rows ?? []).forEach(result => {
                 const row = rows.find(row => Number(row.dataset.enrollmentId) === result.enrollment_id);
                 if (!row) return;
-                row.querySelector('[data-row-result]').textContent = result.final_score ?? '-';
+                row.querySelector('[data-row-final-score]').textContent = result.final_score ?? '-';
                 const badge = row.querySelector('[data-row-complete]');
                 badge.textContent = result.complete ? 'Lengkap' : 'Belum';
                 ['bg-success-soft', 'text-success-ink', 'border-success-line'].forEach(c => badge.classList.toggle(c, result.complete));
