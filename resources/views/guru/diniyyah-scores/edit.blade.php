@@ -32,6 +32,11 @@
     </style>
     @endpush
 
+    <div data-score-editor data-can-edit="{{ $canEdit ? '1' : '0' }}"
+        data-autosave-url="{{ route('guru.diniyyah-scores.autosave', $assessmentSet) }}"
+        data-component-url="{{ route('guru.diniyyah-scores.components.store', $assessmentSet) }}"
+        data-next-ulangan="{{ $nextComponents['ulangan'] }}" data-next-tugas="{{ $nextComponents['tugas'] }}">
+
     <!-- Header Info -->
     <header class="mb-6 rounded-2xl glass-card p-6 sm:p-8 animate-fade-in-up">
         <div class="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
@@ -62,15 +67,15 @@
                 </div>
                 <div class="rounded-2xl bg-surface/60 p-3 border border-line">
                     <p class="text-theme-xs font-normal uppercase text-muted">Terisi</p>
-                    <p class="mt-1 font-semibold text-heading text-lg">{{ $filledCells }}/{{ $totalCells }}</p>
+                    <p data-filled-cells class="mt-1 font-semibold text-heading text-lg">{{ $filledCells }}/{{ $totalCells }}</p>
                 </div>
                 <div class="rounded-2xl bg-surface/60 p-3 border border-line">
                     <p class="text-theme-xs font-normal uppercase text-muted">Lengkap</p>
-                    <p class="mt-1 font-semibold text-heading text-lg">{{ $completeStudents }}/{{ $enrollments->count() }}</p>
+                    <p data-complete-students class="mt-1 font-semibold text-heading text-lg">{{ $completeStudents }}/{{ $enrollments->count() }}</p>
                 </div>
                 <div class="rounded-2xl border border-warning-line bg-warning-soft/80 p-3">
                     <p class="text-theme-xs font-normal uppercase text-warning-ink">Progres</p>
-                    <p class="mt-1 font-semibold text-warning-ink text-lg">{{ $completionPercentage }}%</p>
+                    <p data-completion-percentage class="mt-1 font-semibold text-warning-ink text-lg">{{ $completionPercentage }}%</p>
                 </div>
             </div>
         </div>
@@ -81,8 +86,8 @@
                 <p class="text-theme-xs font-normal uppercase text-soft">Status Validasi</p>
                 <p class="mt-1 text-theme-sm font-medium text-heading">{{ \App\Support\UiLabel::statusLabel($assessmentSet->status) }}</p>
             </div>
-            @if (in_array($assessmentSet->status, ['active', 'needs_revision'], true))
-                <form method="POST" action="{{ route('guru.diniyyah-scores.submit', $assessmentSet) }}" class="w-full sm:w-auto">
+            @if ($canEdit)
+                <form data-score-submit method="POST" action="{{ route('guru.diniyyah-scores.submit', $assessmentSet) }}" class="w-full sm:w-auto">
                     @csrf
                     <button
                         type="submit"
@@ -123,8 +128,18 @@
         >
     </div>
 
-    <!-- Form Table -->
-    <form method="POST" action="{{ route('guru.diniyyah-scores.update', $assessmentSet) }}" class="rounded-2xl glass-card shadow-sm overflow-hidden animate-fade-in-up" style="animation-delay:150ms;">
+    @if($canEdit && in_array($assessmentSet->assessment_method, ['weighted', 'practical'], true) && ! $assessmentSet->classSubject?->subject?->isSuluk())
+        <section class="mb-4 rounded-2xl glass-card p-4" aria-label="Tambah kolom nilai">
+            <div class="flex flex-wrap items-center gap-3">
+                <button type="button" data-add-component="ulangan" class="btn btn-outline min-h-11">+ Ulangan Harian</button>
+                <button type="button" data-add-component="tugas" class="btn btn-outline min-h-11">+ Nilai Tugas</button>
+            </div>
+            <p class="mt-2 text-theme-xs text-muted">Kolom bawaan tersedia sejak awal: Ulangan Harian 1, Ulangan Harian 2, dan Nilai Tugas 1. Tombol di atas menambah Ulangan Harian 3 atau Nilai Tugas 2 dan seterusnya sesuai kebutuhan. Kolom tambahan opsional; yang kosong tidak masuk rata-rata.</p>
+        </section>
+    @endif
+
+    <!-- Existing IDs and saved values are preserved when adding optional columns. -->
+    <form data-score-form method="POST" action="{{ route('guru.diniyyah-scores.update', $assessmentSet) }}" class="rounded-2xl glass-card shadow-sm overflow-hidden animate-fade-in-up" style="animation-delay:150ms;">
         @csrf
         @method('PUT')
 
@@ -134,9 +149,9 @@
                     <tr class="bg-surface-subtle border-b border-line text-theme-xs font-normal uppercase text-muted">
                         <th class="md:sticky md:left-0 md:z-10 md:bg-surface-subtle px-6 py-4 text-theme-xs font-medium">Santri</th>
                         @foreach ($assessmentSet->components as $component)
-                            <th class="px-6 py-4 text-theme-xs font-medium">{{ $component->name }} @if(! $component->is_required)<span class="normal-case text-muted">(opsional)</span>@endif</th>
+                            <th data-component-id="{{ $component->id }}" class="px-6 py-4 text-theme-xs font-medium">{{ $component->inputLabel() }} @if($component->isDefaultInputColumn())<span class="normal-case text-muted">(bawaan)</span>@elseif(! $component->is_required)<span class="normal-case text-muted">(tambahan opsional)</span>@endif</th>
                         @endforeach
-                        <th class="px-6 py-4 text-theme-xs font-medium">Nilai Akhir</th>
+                        <th data-result-heading class="px-6 py-4 text-theme-xs font-medium">Nilai Akhir</th>
                     </tr>
                 </thead>
                 <tbody id="score-rows" class="divide-y divide-line">
@@ -145,22 +160,26 @@
                             $result = $results->get($enrollment->id);
                             $studentComplete = (bool) $result?->is_complete;
                         @endphp
-                        <tr class="hover:bg-surface-subtle/50 transition-colors" data-student="{{ Str::lower($enrollment->student?->name.' '.$enrollment->student?->nis) }}">
+                        <tr class="hover:bg-surface-subtle/50 transition-colors" data-enrollment-id="{{ $enrollment->id }}" data-student-name="{{ $enrollment->student?->name }}" data-student="{{ Str::lower($enrollment->student?->name.' '.$enrollment->student?->nis) }}">
                             <td data-label="Santri" class="md:sticky md:left-0 md:z-10 md:bg-surface px-6 py-4 font-medium">
                                 <div class="flex items-center gap-3">
                                     <div class="min-w-0">
                                         <div class="text-heading text-theme-sm font-medium truncate">{{ $enrollment->student?->name }}</div>
                                         <div class="text-theme-xs font-normal text-soft mt-0.5">NIS {{ $enrollment->student?->nis }}</div>
                                     </div>
-                                    <span class="rounded-full px-2 py-0.5 shrink-0 {{ $studentComplete ? 'bg-success-soft text-success-ink border border-success-line' : 'bg-warning-soft text-warning-ink border border-warning-line' }} text-theme-xs font-medium">
+                                    <span data-row-complete class="rounded-full px-2 py-0.5 shrink-0 {{ $studentComplete ? 'bg-success-soft text-success-ink border border-success-line' : 'bg-warning-soft text-warning-ink border border-warning-line' }} text-theme-xs font-medium">
                                         {{ $studentComplete ? 'Lengkap' : 'Belum' }}
                                     </span>
                                 </div>
                             </td>
                             @foreach ($assessmentSet->components as $component)
-                                @php($score = $scores->get($enrollment->id.'-'.$component->id)?->score)
-                                <td data-label="{{ $component->name }}" class="px-6 py-3">
+                                @php
+                                    $score = $scores->get($enrollment->id.'-'.$component->id)?->score;
+                                @endphp
+                                <td data-component-id="{{ $component->id }}" data-label="{{ $component->inputLabel() }}" class="px-6 py-3">
                                     <input
+                                        data-score data-saved="{{ $score }}" data-enrollment-id="{{ $enrollment->id }}" data-component-id="{{ $component->id }}"
+                                        aria-label="{{ $enrollment->student?->name }} — {{ $component->inputLabel() }}"
                                         type="number"
                                         inputmode="decimal"
                                         step="0.01"
@@ -171,14 +190,14 @@
                                         placeholder="0.00"
                                         class="w-24 rounded-xl border-2 {{ $component->code === 'keaktifan_presensi' ? 'border-brand-line bg-brand-soft/50 text-brand-ink' : 'border-line bg-surface/50 text-heading' }} px-3 py-2 text-center shadow-sm outline-none transition-all focus:border-brand-500 focus:bg-surface focus:ring-4 focus:ring-brand-500/10 text-theme-sm font-normal"
                                         @readonly($component->code === 'keaktifan_presensi')
-                                        @disabled(! in_array($assessmentSet->status, ['active', 'needs_revision'], true))
+                                        @disabled(! $canEdit)
                                     >
                                     @if($component->code === 'keaktifan_presensi')
                                         <div class="mt-1 text-theme-xs font-normal text-center text-brand-400 uppercase">Otomatis</div>
                                     @endif
                                 </td>
                             @endforeach
-                            <td data-label="Nilai Akhir" class="px-6 py-3 font-medium text-heading text-theme-sm">
+                            <td data-row-result data-label="Nilai Akhir" class="px-6 py-3 font-medium text-heading text-theme-sm">
                                 {{ $result?->final_score ?? '-' }}
                             </td>
                         </tr>
@@ -188,30 +207,18 @@
         </div>
 
         <!-- Footer Action Block -->
-        <div class="sticky bottom-0 flex items-center justify-between gap-3 border-t border-line/60 bg-surface/90 p-5 backdrop-blur-md">
-            <p class="text-theme-xs font-normal text-muted">Simpan perubahan Anda sebagai draf kapan saja untuk dihitung otomatis.</p>
+        <div class="sticky bottom-0 flex flex-col items-stretch justify-between gap-3 border-t border-line/60 bg-surface/90 p-5 backdrop-blur-md sm:flex-row sm:items-center">
+            <div><p data-save-status role="status" aria-live="polite" class="text-theme-sm font-medium text-heading">{{ $canEdit ? 'Autosave aktif. Perubahan disimpan sebagai draf.' : 'Nilai hanya dapat dibaca.' }}</p><p data-save-error role="alert" class="mt-1 text-theme-xs text-danger-ink" hidden></p></div>
             <button
+                data-save-button
                 class="rounded-xl px-5 py-3 text-white shadow-md transition-all {{ in_array($assessmentSet->status, ['active', 'needs_revision'], true) ? 'bg-warning-600 hover:bg-warning-700 hover:shadow-brand-500/20' : 'bg-gray-400' }} text-theme-sm font-medium"
                 type="submit"
-                @disabled(! in_array($assessmentSet->status, ['active', 'needs_revision'], true))
+                @disabled(! $canEdit)
             >
                 Simpan Perubahan
             </button>
         </div>
     </form>
-
-    @push('scripts')
-    <script>
-        const filter = document.getElementById('student-filter');
-        const rows = Array.from(document.querySelectorAll('#score-rows tr'));
-
-        filter?.addEventListener('input', () => {
-            const value = filter.value.trim().toLowerCase();
-
-            rows.forEach((row) => {
-                row.hidden = value.length > 0 && ! row.dataset.student.includes(value);
-            });
-        });
-    </script>
-    @endpush
+    <template data-score-input-template><input data-score type="number" inputmode="decimal" step="0.01" min="0" max="100" placeholder="0.00" class="w-24 rounded-xl border-2 border-line bg-surface/50 text-heading px-3 py-2 text-center shadow-sm outline-none transition-all focus:border-brand-500 focus:bg-surface focus:ring-4 focus:ring-brand-500/10 text-theme-sm font-normal"></template>
+    </div>
 </x-layouts.portal>

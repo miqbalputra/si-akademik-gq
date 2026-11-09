@@ -229,6 +229,8 @@ Route::middleware(['auth:web', 'role:guru|admin|kabag_diniyyah'])
         Route::get('/', [GuruDiniyyahScoreController::class, 'index'])->name('index');
         Route::get('/{assessmentSet}', [GuruDiniyyahScoreController::class, 'edit'])->name('edit');
         Route::put('/{assessmentSet}', [GuruDiniyyahScoreController::class, 'update'])->name('update');
+        Route::put('/{assessmentSet}/autosave', [GuruDiniyyahScoreController::class, 'autosave'])->name('autosave');
+        Route::post('/{assessmentSet}/components', [GuruDiniyyahScoreController::class, 'addComponent'])->name('components.store');
         Route::post('/{assessmentSet}/submit', [GuruDiniyyahScoreController::class, 'submit'])->name('submit');
     });
 

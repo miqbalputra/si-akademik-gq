@@ -4,6 +4,7 @@ namespace Tests\Integration;
 
 use App\Models\AcademicTerm;
 use App\Models\AcademicYear;
+use App\Models\ClassEnrollment;
 use App\Models\Classroom;
 use App\Models\ClassroomTerm;
 use App\Models\DiniyyahAssessmentSet;
@@ -15,8 +16,11 @@ use App\Models\DiniyyahSubject;
 use App\Models\DiniyyahTeacherAssignment;
 use App\Models\PanelNotification;
 use App\Models\School;
+use App\Models\ScoreChangeLog;
+use App\Models\Student;
 use App\Models\Teacher;
 use App\Models\User;
+use App\Services\DiniyyahAssessmentComponentBuilder;
 use App\Services\DiniyyahKkmAssignmentRoster;
 use App\Services\DiniyyahKkmBulkAssignment;
 use App\Services\DiniyyahKkmCalculator;
@@ -298,5 +302,84 @@ class DiniyyahKkmConcurrencyTest extends TestCase
         $this->assertSame('70.00', $c['cs']->fresh()->kkm);
         $this->assertSame(2, PanelNotification::where('notification_type', 'kkm_approved')->count());
         $this->assertSame(2, PanelNotification::where('notification_type', 'kkm_approved')->where('batch_count', 1)->count());
+    }
+
+    private function scoreContext(): array
+    {
+        $c = $this->context();
+        $set = DiniyyahAssessmentSet::create(['diniyyah_class_subject_id' => $c['cs']->id, 'title' => 'Nilai PG', 'assessment_method' => 'weighted', 'status' => 'active', 'daily_weight' => 40, 'exam_weight' => 60]);
+        app(DiniyyahAssessmentComponentBuilder::class)->createDefaults($set);
+        $student = Student::create(['name' => 'Santri PG', 'gender' => 'male', 'nis' => 'PG001']);
+        $enrollment = ClassEnrollment::create(['academic_term_id' => $c['term']->id, 'classroom_term_id' => $c['ct']->id, 'student_id' => $student->id]);
+        $component = $set->components()->where('code', 'ulangan_harian_1')->sole();
+
+        return $c + compact('set', 'enrollment', 'component');
+    }
+
+    private function scoreWorker(array $c, string $action, string $name, int $score = 80): Process
+    {
+        $process = new Process([PHP_BINARY, dirname(__DIR__).'/Support/kkm-postgres-worker.php'], dirname(__DIR__, 2));
+        $process->setInput(json_encode([
+            'settings' => $this->settings, 'name' => 'kkm_concurrent_'.$name, 'action' => $action,
+            'assessment_set' => $c['set']->id, 'actor' => $c['teachers']['female']->user_id,
+            'changes' => [['enrollment_id' => $c['enrollment']->id, 'component_id' => $c['component']->id, 'score' => $score, 'original' => null]],
+        ], JSON_THROW_ON_ERROR));
+        $process->setTimeout(60)->start();
+        $this->processes[] = $process;
+
+        return $process;
+    }
+
+    public function test_concurrent_autosaves_reject_a_stale_cell_instead_of_overwriting_it(): void
+    {
+        $c = $this->scoreContext();
+        DB::beginTransaction();
+        ClassroomTerm::whereKey($c['ct']->id)->lockForUpdate()->firstOrFail();
+        $first = $this->scoreWorker($c, 'score_autosave', 'autosave_a', 80);
+        $second = $this->scoreWorker($c, 'score_autosave', 'autosave_b', 90);
+        $this->awaitBlocked(2);
+        DB::commit();
+        $results = [$this->processResult($first), $this->processResult($second)];
+        $this->assertCount(1, array_filter($results, fn ($r) => $r['ok']));
+        $this->assertSame(409, collect($results)->firstWhere('ok', false)['status']);
+        $this->assertSame(1, $c['set']->scores()->count());
+        $this->assertContains($c['set']->scores()->sole()->score, ['80.00', '90.00']);
+        $this->assertSame(1, ScoreChangeLog::count());
+    }
+
+    public function test_concurrent_column_additions_create_only_one_optional_column(): void
+    {
+        $c = $this->scoreContext();
+        DB::beginTransaction();
+        ClassroomTerm::whereKey($c['ct']->id)->lockForUpdate()->firstOrFail();
+        $first = $this->scoreWorker($c, 'score_component', 'component_a');
+        $second = $this->scoreWorker($c, 'score_component', 'component_b');
+        $this->awaitBlocked(2);
+        DB::commit();
+        $a = $this->processResult($first);
+        $b = $this->processResult($second);
+        $this->assertTrue($a['ok']);
+        $this->assertTrue($b['ok']);
+        $this->assertSame($a['result']['component']['id'], $b['result']['component']['id']);
+        $this->assertSame(6, $c['set']->components()->count());
+        $this->assertSame(1, DB::table('activity_log')->where('event', 'component_added')->count());
+    }
+
+    public function test_autosave_and_add_column_wait_for_finalization_then_preserve_frozen_data(): void
+    {
+        $c = $this->scoreContext();
+        DB::beginTransaction();
+        app(DiniyyahKkmResolver::class)->withClassLocks($c['ct'], fn () => DiniyyahLedgerSnapshot::create(['academic_term_id' => $c['term']->id, 'classroom_term_id' => $c['ct']->id, 'title' => 'Leger final PG', 'status' => 'locked']));
+        $save = $this->scoreWorker($c, 'score_autosave', 'frozen_autosave');
+        $add = $this->scoreWorker($c, 'score_component', 'frozen_component');
+        $this->awaitBlocked(2);
+        DB::commit();
+        foreach ([$save, $add] as $worker) {
+            $result = $this->processResult($worker);
+            $this->assertFalse($result['ok']);
+            $this->assertSame(403, $result['status']);
+        }
+        $this->assertSame(0, $c['set']->scores()->count());
+        $this->assertSame(5, $c['set']->components()->count());
     }
 }

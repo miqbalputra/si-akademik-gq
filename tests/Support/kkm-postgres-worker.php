@@ -8,11 +8,13 @@ use App\Services\DiniyyahKkmBulkAssignment;
 use App\Services\DiniyyahKkmWorkflow;
 use App\Services\DiniyyahSchoolKkm;
 use App\Services\DiniyyahScoreCalculator;
+use App\Services\DiniyyahTeacherScoreEditor;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Facade;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 require_once dirname(__DIR__, 2).'/vendor/autoload.php';
 
@@ -51,6 +53,8 @@ if (realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) {
     DB::select("SELECT set_config('application_name', ?, false)", [$input['name']]);
     try {
         $result = match ($input['action'] ?? 'bulk') {
+            'score_autosave' => app(DiniyyahTeacherScoreEditor::class)->save(DiniyyahAssessmentSet::findOrFail($input['assessment_set']), User::findOrFail($input['actor']), $input['changes']),
+            'score_component' => app(DiniyyahTeacherScoreEditor::class)->add(DiniyyahAssessmentSet::findOrFail($input['assessment_set']), User::findOrFail($input['actor']), 'ulangan', 'ulangan_harian_3'),
             'score_recalculate' => app(DiniyyahScoreCalculator::class)->calculateAssessmentSet(DiniyyahAssessmentSet::findOrFail($input['assessment_set'])),
             'school_initialize' => ['revision_id' => app(DiniyyahSchoolKkm::class)->ensure(DiniyyahClassSubject::findOrFail($input['subject']))?->id],
             'approve' => app(DiniyyahKkmWorkflow::class)->review(DiniyyahKkmRevision::findOrFail($input['revision']), User::findOrFail($input['actor']), $input['lock_version'], true),
@@ -59,5 +63,7 @@ if (realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) {
         echo json_encode(['ok' => true, 'result' => $result], JSON_THROW_ON_ERROR);
     } catch (ValidationException|DomainException $exception) {
         echo json_encode(['ok' => false, 'errors' => $exception instanceof ValidationException ? $exception->errors() : ['ledger' => [$exception->getMessage()]]], JSON_THROW_ON_ERROR);
+    } catch (HttpExceptionInterface $exception) {
+        echo json_encode(['ok' => false, 'status' => $exception->getStatusCode(), 'message' => $exception->getMessage()], JSON_THROW_ON_ERROR);
     }
 }

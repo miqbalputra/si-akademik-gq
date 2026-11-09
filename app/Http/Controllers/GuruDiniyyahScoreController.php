@@ -17,8 +17,10 @@ use App\Services\DiniyyahAssessmentWorkflow;
 use App\Services\DiniyyahInputProgressService;
 use App\Services\DiniyyahKkmResolver;
 use App\Services\DiniyyahScoreCalculator;
+use App\Services\DiniyyahTeacherScoreEditor;
 use Carbon\CarbonInterface;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -137,6 +139,10 @@ class GuruDiniyyahScoreController extends Controller
         $assessmentSet->forceFill(app(DiniyyahKkmResolver::class)->resolve($assessmentSet->classSubject, $assessmentSet->kkm === null ? null : (float) $assessmentSet->kkm));
 
         $assessmentSet->load(['classSubject.classroomTerm', 'classSubject.subject', 'components' => fn ($query) => $query->orderBy('sort_order')]);
+        $builder = app(DiniyyahAssessmentComponentBuilder::class);
+        $assessmentSet->setRelation('components', $builder->ordered($assessmentSet));
+        $canEdit = app(DiniyyahTeacherScoreEditor::class)->editable($assessmentSet);
+        $nextComponents = ['ulangan' => $builder->nextCode($assessmentSet, 'ulangan'), 'tugas' => $builder->nextCode($assessmentSet, 'tugas')];
 
         $enrollments = ClassEnrollment::query()
             ->with('student')
@@ -173,7 +179,32 @@ class GuruDiniyyahScoreController extends Controller
             'filledCells',
             'completeStudents',
             'completionPercentage',
+            'canEdit',
+            'nextComponents',
         ));
+    }
+
+    public function autosave(Request $request, DiniyyahAssessmentSet $assessmentSet, DiniyyahTeacherScoreEditor $editor): JsonResponse
+    {
+        Gate::authorize('inputScores', $assessmentSet);
+        $data = $request->validate([
+            'changes' => ['required', 'array', 'min:1', 'max:100'],
+            'changes.*' => ['required', 'array:enrollment_id,component_id,score,original'],
+            'changes.*.enrollment_id' => ['required', 'integer', 'min:1'],
+            'changes.*.component_id' => ['required', 'integer', 'min:1'],
+            'changes.*.score' => ['present', 'nullable', 'numeric', 'min:0', 'max:100', 'decimal:0,2'],
+            'changes.*.original' => ['present', 'nullable', 'numeric', 'min:0', 'max:100'],
+        ]);
+
+        return response()->json($editor->save($assessmentSet, $request->user(), $data['changes']))->header('Cache-Control', 'private, no-store');
+    }
+
+    public function addComponent(Request $request, DiniyyahAssessmentSet $assessmentSet, DiniyyahTeacherScoreEditor $editor): JsonResponse
+    {
+        Gate::authorize('inputScores', $assessmentSet);
+        $data = $request->validate(['type' => ['required', 'in:ulangan,tugas'], 'expected_code' => ['required', 'string', 'max:64', 'regex:/^(ulangan_harian|nilai_tugas)_[0-9]+$/']]);
+
+        return response()->json($editor->add($assessmentSet, $request->user(), $data['type'], $data['expected_code']))->header('Cache-Control', 'private, no-store');
     }
 
     public function update(Request $request, DiniyyahAssessmentSet $assessmentSet, DiniyyahScoreCalculator $calculator): RedirectResponse

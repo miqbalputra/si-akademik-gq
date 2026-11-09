@@ -13,6 +13,16 @@ class DiniyyahScoreComponent extends Model
 {
     use HasFactory;
 
+    public function inputLabel(): string
+    {
+        return $this->code === 'nilai_tugas' && $this->name === 'Nilai Tugas' ? 'Nilai Tugas 1' : $this->name;
+    }
+
+    public function isDefaultInputColumn(): bool
+    {
+        return in_array($this->code, ['ulangan_harian_1', 'ulangan_harian_2', 'nilai_tugas', 'nilai_tugas_1'], true);
+    }
+
     protected function casts(): array
     {
         return ['is_required' => 'boolean'];

@@ -1,5 +1,6 @@
 import Chart from 'chart.js/auto';
 import Alpine from 'alpinejs';
+import { initDiniyyahScoreEditor } from './diniyyah-score-editor';
 
 window.Chart = Chart;
 window.Alpine = Alpine;
@@ -587,6 +588,7 @@ function initJournalOverdueReminder() {
 }
 
 function init() {
+    initDiniyyahScoreEditor();
     initTheme();
     registerPwaServiceWorker();
     initPwaInstallPrompt();

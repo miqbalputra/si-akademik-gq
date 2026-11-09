@@ -28,6 +28,11 @@ class DiniyyahAssessmentComponentBuilderTest extends TestCase
         $this->assertSame(5, $assessmentSet->components()->count());
         $this->assertSame(4, $assessmentSet->components()->where('component_group', 'daily')->count());
         $this->assertSame(1, $assessmentSet->components()->where('component_group', 'exam')->count());
+        $defaults = $assessmentSet->components()->get()->filter(fn ($component) => $component->isDefaultInputColumn());
+        $this->assertSame(['Ulangan Harian 1', 'Ulangan Harian 2', 'Nilai Tugas 1'], $defaults->pluck('name')->values()->all());
+        $assessmentSet->load('components');
+        $this->assertSame('ulangan_harian_3', app(DiniyyahAssessmentComponentBuilder::class)->nextCode($assessmentSet, 'ulangan'));
+        $this->assertSame('nilai_tugas_2', app(DiniyyahAssessmentComponentBuilder::class)->nextCode($assessmentSet, 'tugas'));
     }
 
     public function test_it_creates_direct_final_default_component(): void
