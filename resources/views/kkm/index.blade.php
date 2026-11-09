@@ -1,6 +1,11 @@
 <x-layouts.portal title="Penetapan KKM" :portalLabel="$prefix === 'admin.kkm.' ? 'Portal Manajemen' : ($prefix === 'kabag.kkm.' ? 'Portal Kabag Diniyyah' : 'Portal Guru')" breadcrumb="KKM Diniyyah">
     <div class="space-y-6">
-        <header><h1 class="ui-page-title text-heading">Penetapan KKM</h1><p class="mt-2 text-muted">Satu KKM bersama per mapel, mustawa, dan semester untuk kelas ikhwan–akhwat.</p></header>
+        <header class="flex flex-wrap items-start justify-between gap-4">
+            <div><h1 class="ui-page-title text-heading">Penetapan KKM</h1><p class="mt-2 text-muted">Satu KKM bersama per mapel, mustawa, dan semester untuk kelas ikhwan–akhwat.</p></div>
+            @if($teacherPortal && $writers->isNotEmpty())
+                @include('kkm.partials.guide')
+            @endif
+        </header>
         @if(session('status'))<div role="status" class="rounded-xl bg-success-soft p-4 text-success-ink">{{ session('status') }}</div>@endif
         @if($errors->any())<div role="alert" class="rounded-xl border border-red-300 bg-red-50 p-4 text-red-800">@foreach($errors->all() as $error)<p>{{ $error }}</p>@endforeach</div>@endif
 

@@ -35,8 +35,13 @@
     :focus-visible { outline: 3px solid var(--color-brand-400); outline-offset: 3px; }
     ::selection { background: var(--color-brand-500); color: var(--color-neon-ink); }
     [x-cloak], [hidden] { display: none !important; }
+    html:has(.kkm-guide-modal[open]) { overflow: hidden; }
 }
 @layer components {
+    .kkm-guide-modal { width: min(60rem, calc(100% - 2rem)); max-width: none; max-height: calc(100dvh - 2rem); margin: auto; overflow: hidden; }
+    .kkm-guide-modal::backdrop { background: rgb(3 7 18 / .6); }
+    .kkm-guide-layout { display: flex; max-height: calc(100dvh - 2rem - 2px); flex-direction: column; }
+    .kkm-guide-layout > header, .kkm-guide-layout > footer { flex-shrink: 0; }
     .app-shell, .school-home { min-height: 100vh; background: var(--ui-canvas); color: var(--ui-text); }
     .eyebrow, .school-index { color: var(--ui-muted);  font-size: 12px; line-height: 18px; font-weight: 400; letter-spacing: normal; }
     .school-index { display: inline-flex; align-items: center; gap: .5rem; }

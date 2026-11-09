@@ -3,6 +3,9 @@
         <a class="underline" href="{{ route($prefix.'index') }}">Kembali ke daftar KKM</a>
         <header><h1 class="ui-page-title text-heading">{{ $scope->subject?->name }} · Mustawa {{ $scope->mustawa }}</h1><p class="mt-2 text-muted">{{ $scope->academicTerm?->academicYear?->name }} {{ $scope->academicTerm?->name }} · {{ $scope->activeRevision?->is_school_fixed ? 'Penetap: Sekolah/Kabag Diniyyah' : 'Penyusun: '.($scope->assignedTeacher?->name ?? 'Belum ditugaskan') }}</p><p class="mt-2">KKM resmi: <strong>{{ $scope->activeRevision?->final_kkm ?? 'Menunggu ACC' }}</strong>@if($scope->activeRevision) · Versi {{ $scope->activeRevision->version }}@endif</p></header>
         @if(session('status'))<div role="status" class="rounded-xl bg-success-soft p-4 text-success-ink">{{ session('status') }}</div>@endif
+        @if($writer)
+            @include('kkm.partials.guide')
+        @endif
         @if($errors->any())<div role="alert" class="rounded-xl border border-red-300 bg-red-50 p-4 text-red-800">@foreach($errors->all() as $error)<p>{{ $error }}</p>@endforeach</div>@endif
         @if($frozen)<div role="status" class="rounded-xl border border-line bg-surface p-4"><strong>KKM terkunci</strong><p class="mt-1">Perubahan dan persetujuan diblokir karena dokumen berikut sudah terkunci atau terbit:</p>@foreach($frozen as $document)<p>{{ $document }}</p>@endforeach</div>@endif
         @if($manager && ! $frozen && ! $scope->activeRevision?->is_school_fixed && $scope->subject?->schoolKkm() === null)
