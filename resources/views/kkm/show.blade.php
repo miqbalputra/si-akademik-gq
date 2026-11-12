@@ -50,6 +50,47 @@
         @if(! $revision?->is_school_fixed)
         <section class="rounded-2xl border border-line bg-surface p-5"><h2 class="ui-card-title">Kategori unsur KKM</h2><div class="mt-3 overflow-x-auto"><table class="w-full text-left text-theme-sm"><thead><tr><th class="p-2">Unsur</th><th class="p-2">60–65</th><th class="p-2">66–79</th><th class="p-2">80–100</th></tr></thead><tbody><tr><td class="p-2">Kompleksitas</td><td class="p-2">Tinggi</td><td class="p-2">Sedang</td><td class="p-2">Rendah</td></tr><tr><td class="p-2">Daya Dukung</td><td class="p-2">Kurang Mendukung</td><td class="p-2">Cukup Mendukung</td><td class="p-2">Sangat Mendukung</td></tr><tr><td class="p-2">Intake</td><td class="p-2">Rendah</td><td class="p-2">Sedang</td><td class="p-2">Tinggi</td></tr></tbody></table></div></section>
         @endif
-        <section class="space-y-3"><h2 class="ui-card-title text-heading">Riwayat versi</h2>@foreach($revisions as $item)<details class="rounded-xl border border-line bg-surface p-4"><summary class="cursor-pointer">Versi {{ $item->version }} · {{ $item->status_label }} · KKM {{ $item->final_kkm ?? 'Belum lengkap' }}</summary>@if($item->is_school_fixed)<div class="mt-3">@include('kkm.partials.school-policy', ['item' => $item])</div>@else<p class="mt-3 text-theme-sm">Diajukan: {{ $item->submitter?->name ?? '-' }} {{ $item->submitted_at?->format('d-m-Y H:i') }} · Penetap / Peninjau: {{ $item->reviewer_label }} {{ $item->reviewed_at?->format('d-m-Y H:i') }}</p>@include('kkm.partials.criteria', ['item'=>$item])@endif<div class="mt-3 flex gap-3"><a class="underline" href="{{ route($prefix.'export', ['revision'=>$item,'format'=>'xlsx']) }}">Excel versi {{ $item->version }}</a><a class="underline" href="{{ route($prefix.'export', ['revision'=>$item,'format'=>'pdf']) }}">PDF versi {{ $item->version }}</a></div></details>@endforeach</section>
+        <section class="space-y-3">
+            <h2 class="ui-card-title text-heading">Riwayat versi</h2>
+            @forelse($revisions as $item)
+                <details class="rounded-xl border border-line bg-surface p-4">
+                    <summary class="cursor-pointer">Versi {{ $item->version }} · {{ $item->status_label }} · KKM {{ $item->final_kkm ?? 'Belum lengkap' }}</summary>
+                    @if($item->is_school_fixed)
+                        <div class="mt-3">@include('kkm.partials.school-policy', ['item' => $item])</div>
+                    @else
+                        <p class="mt-3 text-theme-sm">Diajukan: {{ $item->submitter?->name ?? '-' }} {{ $item->submitted_at?->format('d-m-Y H:i') }} · Penetap / Peninjau: {{ $item->reviewer_label }} {{ $item->reviewed_at?->format('d-m-Y H:i') }}</p>
+                        @include('kkm.partials.criteria', ['item'=>$item])
+                    @endif
+                    <div class="mt-3 flex flex-wrap items-center gap-3">
+                        <a class="underline" href="{{ route($prefix.'export', ['revision'=>$item,'format'=>'xlsx']) }}">Excel versi {{ $item->version }}</a>
+                        <a class="underline" href="{{ route($prefix.'export', ['revision'=>$item,'format'=>'pdf']) }}">PDF versi {{ $item->version }}</a>
+                        @if($canDelete && ! $item->is_school_fixed)
+                            <form method="POST" action="{{ route('admin.kkm.revision.destroy', $item) }}" onsubmit="return confirm('Hapus versi KKM ini beserta pengajuan dan persetujuannya? Jika ini KKM resmi, statusnya kembali Menunggu ACC. Versi lama tidak diaktifkan kembali. Penghapusan tercatat di audit.')">
+                                @csrf @method('DELETE')
+                                <input type="hidden" name="confirmation_token" value="{{ $deleteToken }}">
+                                <button type="submit" class="btn btn-danger btn-sm" @disabled((bool) $frozen)>Hapus versi {{ $item->version }}</button>
+                            </form>
+                        @endif
+                    </div>
+                </details>
+            @empty
+                <p class="text-muted">Belum ada riwayat KKM.</p>
+            @endforelse
+        </section>
+        @if($canDelete && $revisions->isNotEmpty())
+            <section class="rounded-2xl border border-danger-line bg-surface p-5" aria-labelledby="kkm-cleanup-title">
+                <h2 id="kkm-cleanup-title" class="ui-card-title text-heading">Pembersihan KKM oleh admin</h2>
+                <p class="mt-2 text-theme-sm text-muted">Hapus data pengujian untuk mapel, mustawa, dan semester ini, termasuk seluruh draf, pengajuan, persetujuan, serta riwayat versi. KKM resmi kembali Menunggu ACC. Penugasan guru dan angka nilai siswa tetap tersimpan.</p>
+                <p class="mt-2 text-theme-sm text-muted">Guru penyusun dapat mulai mengisi ulang. Leger dan rapor draf yang terdampak perlu dibuat ulang. Penghapusan tercatat di audit.</p>
+                @if($frozen)
+                    <p class="mt-3 text-theme-sm text-danger-ink">Penghapusan tidak tersedia karena ada leger atau rapor yang sudah terkunci/terbit.</p>
+                @endif
+                <form method="POST" action="{{ route('admin.kkm.destroy', $scope) }}" class="mt-4" onsubmit="return confirm('Hapus KKM beserta SELURUH pengajuan, persetujuan, dan riwayat pada mapel/mustawa/semester ini? KKM kembali Menunggu ACC dan guru dapat menyusun ulang. Angka nilai siswa serta penugasan guru tetap tersimpan. Penghapusan tercatat di audit.')">
+                    @csrf @method('DELETE')
+                    <input type="hidden" name="confirmation_token" value="{{ $deleteToken }}">
+                    <button type="submit" class="btn btn-danger" @disabled((bool) $frozen)>Hapus KKM &amp; seluruh riwayat</button>
+                </form>
+            </section>
+        @endif
     </div>
 </x-layouts.portal>

@@ -28,6 +28,11 @@ class DiniyyahKkmAccess
         return $this->manages($user);
     }
 
+    public function deletes(User $user): bool
+    {
+        return $user->hasRole('admin');
+    }
+
     public function writes(User $user, DiniyyahKkmScope $scope): bool
     {
         return $this->teacherManaged($scope) && $user->hasRole('guru') && $user->teacher && $user->teacher->id === $scope->assigned_teacher_id

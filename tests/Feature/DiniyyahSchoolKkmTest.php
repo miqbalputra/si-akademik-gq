@@ -22,6 +22,7 @@ use App\Models\Teacher;
 use App\Models\User;
 use App\Services\DiniyyahKkmAccess;
 use App\Services\DiniyyahKkmCalculator;
+use App\Services\DiniyyahKkmDeletion;
 use App\Services\DiniyyahKkmPolicyRollout;
 use App\Services\DiniyyahKkmResolver;
 use App\Services\DiniyyahKkmWorkflow;
@@ -138,6 +139,19 @@ class DiniyyahSchoolKkmTest extends TestCase
         $this->assertSame($before, $active->fresh()->getAttributes());
         $this->assertSame(70, $c['scope']->fresh()->activeRevision->final_kkm);
         $this->assertDatabaseCount('diniyyah_kkm_revisions', 1);
+    }
+
+    public function test_admin_cleanup_cannot_delete_school_fixed_kkm(): void
+    {
+        $c = $this->context();
+        $scope = $c['scope']->fresh();
+        $active = $scope->activeRevision;
+        $data = ['confirmation_token' => app(DiniyyahKkmDeletion::class)->token($scope, $scope->revisions()->get())];
+        $this->actingAs($c['admin'], 'admin')->get(route('admin.kkm.show', $scope))->assertOk()->assertDontSee('Hapus KKM')->assertDontSee('Hapus versi');
+        $this->delete(route('admin.kkm.destroy', $scope), $data)->assertSessionHasErrors('kkm');
+        $this->delete(route('admin.kkm.revision.destroy', $active), $data)->assertSessionHasErrors('kkm');
+        $this->assertSame($active->id, $scope->fresh()->active_revision_id);
+        $this->assertSame(70, $active->fresh()->final_kkm);
     }
 
     public function test_school_policy_is_read_only_and_is_excluded_from_bulk_assignment(): void

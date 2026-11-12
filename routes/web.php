@@ -97,6 +97,10 @@ Route::middleware(['auth:web', 'role:kabag_diniyyah'])->group(function () {
 foreach ([['admin', 'admin.kkm.', 'admin/kkm', 'admin|kabag_diniyyah'], ['web', 'kabag.kkm.', 'kabag/kkm', 'admin|kabag_diniyyah'], ['web', 'guru.kkm.', 'guru/kkm', 'guru']] as [$guard, $name, $path, $roles]) {
     Route::middleware(['auth:'.$guard, 'role:'.$roles])->prefix($path)->name($name)->group(function () use ($name): void {
         Route::get('/', [DiniyyahKkmController::class, 'index'])->name('index');
+        if ($name === 'admin.kkm.') {
+            Route::delete('/versi/{revision}', [DiniyyahKkmController::class, 'destroyRevision'])->middleware('role:admin')->name('revision.destroy');
+            Route::delete('/{scope}', [DiniyyahKkmController::class, 'destroy'])->middleware('role:admin')->name('destroy');
+        }
         if ($name === 'guru.kkm.') {
             Route::put('/versi/{revision}', [DiniyyahKkmController::class, 'save'])->name('save');
             Route::post('/{scope}/mulai', [DiniyyahKkmController::class, 'start'])->name('start');

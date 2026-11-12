@@ -11,6 +11,7 @@ use App\Services\DiniyyahKkmAccess;
 use App\Services\DiniyyahKkmAssignmentRoster;
 use App\Services\DiniyyahKkmBulkAssignment;
 use App\Services\DiniyyahKkmCalculator;
+use App\Services\DiniyyahKkmDeletion;
 use App\Services\DiniyyahKkmExportService;
 use App\Services\DiniyyahKkmResolver;
 use App\Services\DiniyyahKkmWorkflow;
@@ -147,7 +148,7 @@ class DiniyyahKkmController extends Controller
         return redirect()->route($this->prefix($request).'show', $scope)->with('status', 'Guru penyusun KKM berhasil ditetapkan.');
     }
 
-    public function show(Request $request, DiniyyahKkmScope $scope)
+    public function show(Request $request, DiniyyahKkmScope $scope, DiniyyahKkmDeletion $deletion)
     {
         $manager = ! $request->routeIs('guru.kkm.*') && $this->access->manages($request->user());
         $scope->load(['subject', 'academicTerm.academicYear', 'activeRevision', 'workingRevision', 'assignedTeacher']);
@@ -157,8 +158,28 @@ class DiniyyahKkmController extends Controller
         $revisions = $scope->revisions()->with(['submitter', 'reviewer'])->orderByDesc('version')
             ->when(! $writer && ! $manager, fn ($q) => $q->whereIn('status', DiniyyahKkmAccess::OFFICIAL_STATUSES))->get();
         $revision = $writer || $manager ? ($scope->workingRevision ?? $scope->activeRevision) : $scope->activeRevision;
+        $canDelete = $request->routeIs('admin.kkm.*') && $this->access->deletes($request->user()) && $this->access->teacherManaged($scope);
 
-        return view('kkm.show', ['scope' => $scope, 'revision' => $revision, 'revisions' => $revisions, 'writer' => $writer, 'manager' => $manager, 'reviewer' => $reviewer, 'prefix' => $this->prefix($request), 'frozen' => $this->resolver->frozen($scope), 'criteriaLabels' => DiniyyahKkmCalculator::CRITERIA]);
+        return view('kkm.show', ['scope' => $scope, 'revision' => $revision, 'revisions' => $revisions, 'writer' => $writer, 'manager' => $manager, 'reviewer' => $reviewer, 'prefix' => $this->prefix($request), 'frozen' => $this->resolver->frozen($scope), 'criteriaLabels' => DiniyyahKkmCalculator::CRITERIA, 'canDelete' => $canDelete, 'deleteToken' => $canDelete ? $deletion->token($scope, $revisions) : null]);
+    }
+
+    public function destroy(Request $request, DiniyyahKkmScope $scope, DiniyyahKkmDeletion $deletion)
+    {
+        abort_unless($this->access->deletes($request->user()), 403);
+        $data = $request->validate(['confirmation_token' => ['required', 'string', 'size:64']]);
+        $deletion->deleteScope($scope, $request->user(), $data['confirmation_token']);
+
+        return redirect()->route('admin.kkm.show', $scope)->with('status', 'KKM, pengajuan, dan seluruh riwayat berhasil dihapus. Guru penyusun dapat memulai ulang.');
+    }
+
+    public function destroyRevision(Request $request, DiniyyahKkmRevision $revision, DiniyyahKkmDeletion $deletion)
+    {
+        abort_unless($this->access->deletes($request->user()), 403);
+        $data = $request->validate(['confirmation_token' => ['required', 'string', 'size:64']]);
+        $scopeId = $revision->diniyyah_kkm_scope_id;
+        $deletion->deleteRevision($revision, $request->user(), $data['confirmation_token']);
+
+        return redirect()->route('admin.kkm.show', $scopeId)->with('status', 'Versi KKM berhasil dihapus.');
     }
 
     public function start(Request $request, DiniyyahKkmScope $scope, DiniyyahKkmWorkflow $workflow)

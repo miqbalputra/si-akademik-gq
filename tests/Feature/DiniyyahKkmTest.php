@@ -11,6 +11,7 @@ use App\Models\DiniyyahAssessmentResult;
 use App\Models\DiniyyahAssessmentSet;
 use App\Models\DiniyyahClassSubject;
 use App\Models\DiniyyahKkmRevision;
+use App\Models\DiniyyahKkmScope;
 use App\Models\DiniyyahLedgerSnapshot;
 use App\Models\DiniyyahSubject;
 use App\Models\DiniyyahTeacherAssignment;
@@ -22,6 +23,7 @@ use App\Models\Teacher;
 use App\Models\User;
 use App\Services\DiniyyahKkmAccess;
 use App\Services\DiniyyahKkmCalculator;
+use App\Services\DiniyyahKkmDeletion;
 use App\Services\DiniyyahKkmExportService;
 use App\Services\DiniyyahKkmPolicyRollout;
 use App\Services\DiniyyahKkmWorkflow;
@@ -30,9 +32,11 @@ use App\Services\DiniyyahLedgerWorkflow;
 use App\Services\ReportCardGenerator;
 use App\Services\ReportCardWorkflow;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PHPUnit\Framework\Attributes\DataProvider;
+use RuntimeException;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -679,6 +683,208 @@ class DiniyyahKkmTest extends TestCase
         $this->assertStringContainsString('Sekolah (penyesuaian aturan KKM)', $newHtml);
         $this->assertSame(75, $this->readRecapKkm(app(DiniyyahKkmExportService::class)->xlsx(collect([$active]))));
         $this->assertSame(78, $this->readRecapKkm(app(DiniyyahKkmExportService::class)->xlsx(collect([$old]))));
+    }
+
+    private function deletionToken(array $c): array
+    {
+        $scope = $c['scope']->fresh();
+
+        return ['confirmation_token' => app(DiniyyahKkmDeletion::class)->token($scope, $scope->revisions()->get())];
+    }
+
+    public function test_only_admin_can_see_and_use_kkm_deletion(): void
+    {
+        $c = $this->context();
+        $revision = $this->approved($c);
+        $this->actingAs($c['users']['female'], 'web')->get(route('guru.kkm.show', $c['scope']))->assertOk()->assertDontSee('Hapus KKM')->assertDontSee('Hapus versi');
+        $this->actingAs($c['kabag'], 'web')->get(route('kabag.kkm.show', $c['scope']))->assertOk()->assertDontSee('Hapus KKM')->assertDontSee('Hapus versi');
+        foreach ([$c['kabag'], $c['users']['female']] as $user) {
+            $this->actingAs($user, 'admin')->delete(route('admin.kkm.destroy', $c['scope']), $this->deletionToken($c))->assertForbidden();
+            $this->delete(route('admin.kkm.revision.destroy', $revision), $this->deletionToken($c))->assertForbidden();
+        }
+        $page = $this->actingAs($c['admin'], 'admin')->get(route('admin.kkm.show', $c['scope']))->assertOk()->assertSee('Hapus KKM &amp; seluruh riwayat', false)->assertSee('Hapus versi 1');
+        $this->qa('admin-cleanup.html', $page->getContent());
+        $this->assertSame($revision->id, $c['scope']->fresh()->active_revision_id);
+    }
+
+    public function test_admin_can_clear_test_kkm_and_restart_without_removing_assignments_or_scores(): void
+    {
+        $c = $this->context();
+        $old = $this->approved($c, 70);
+        $active = $this->approved($c, 75);
+        $working = $this->submitted($c, 80);
+        $set = DiniyyahAssessmentSet::create(['diniyyah_class_subject_id' => $c['subjects']['male']->id, 'title' => 'Nilai asli tetap disimpan', 'assessment_method' => 'direct_final', 'status' => 'validated']);
+        $draftSet = DiniyyahAssessmentSet::create(['diniyyah_class_subject_id' => $c['subjects']['female']->id, 'title' => 'Penilaian draf', 'assessment_method' => 'direct_final', 'status' => 'draft']);
+        $enrollment = $this->enrollment($c);
+        $result = DiniyyahAssessmentResult::create(['diniyyah_assessment_set_id' => $set->id, 'class_enrollment_id' => $enrollment->id, 'final_score' => 80, 'daily_raw_score' => 81, 'exam_raw_score' => 79, 'kkm' => 75, 'kkm_revision_id' => $active->id, 'is_complete' => true, 'is_passed' => true]);
+        $snapshot = DiniyyahLedgerSnapshot::create(['academic_term_id' => $c['term']->id, 'classroom_term_id' => $enrollment->classroom_term_id, 'title' => 'Leger terbuka', 'status' => 'validated', 'snapshot_data' => ['columns' => [['kkm' => 75, 'kkm_revision_id' => $active->id, 'assessment_set_id' => $set->id]], 'summary' => ['blocking_issues' => 0]]]);
+        $report = ReportCard::create(['academic_term_id' => $c['term']->id, 'classroom_term_id' => $enrollment->classroom_term_id, 'class_enrollment_id' => $enrollment->id, 'student_id' => $enrollment->student_id, 'report_type' => 'diniyyah', 'status' => 'draft']);
+        $line = $report->lines()->create(['line_type' => 'subject', 'source_type' => 'diniyyah_assessment_set', 'source_id' => $set->id, 'subject_name' => 'Akidah', 'kkm' => 75, 'kkm_revision_id' => $active->id, 'score_numeric' => 80, 'is_passed' => true]);
+        $otherSubject = DiniyyahSubject::create(['code' => 'fiqih_reset', 'name' => 'Fiqih']);
+        $otherScope = DiniyyahKkmScope::create(['academic_term_id' => $c['term']->id, 'subject_id' => $otherSubject->id, 'mustawa' => 1]);
+        $otherRevision = $otherScope->revisions()->create(['version' => 1, 'status' => 'approved', 'final_kkm' => 70]);
+        $otherScope->update(['active_revision_id' => $otherRevision->id]);
+        $otherClassSubject = DiniyyahClassSubject::create(['classroom_term_id' => $enrollment->classroom_term_id, 'subject_id' => $otherSubject->id, 'assessment_method' => 'direct_final']);
+        $otherBefore = $otherClassSubject->fresh()->getAttributes();
+
+        $this->actingAs($c['admin'], 'admin')->delete(route('admin.kkm.destroy', $c['scope']), $this->deletionToken($c))->assertRedirect(route('admin.kkm.show', $c['scope']))->assertSessionHasNoErrors();
+
+        $this->assertDatabaseMissing('diniyyah_kkm_revisions', ['id' => $old->id]);
+        $this->assertDatabaseMissing('diniyyah_kkm_revisions', ['id' => $active->id]);
+        $this->assertDatabaseMissing('diniyyah_kkm_revisions', ['id' => $working->id]);
+        $scope = $c['scope']->fresh();
+        $this->assertNull($scope->active_revision_id);
+        $this->assertNull($scope->working_revision_id);
+        $this->assertSame($c['teachers']['female']->id, $scope->assigned_teacher_id);
+        $this->assertDatabaseCount('diniyyah_teacher_assignments', 2);
+        $this->assertSame($otherBefore, $otherClassSubject->fresh()->getAttributes());
+        $this->assertSame($otherRevision->id, $otherScope->fresh()->active_revision_id);
+        foreach ($c['subjects'] as $subject) {
+            $this->assertNull($subject->fresh()->kkm);
+            $this->assertNull($subject->fresh()->kkm_revision_id);
+        }
+        $this->assertSame('submitted', $set->fresh()->status);
+        $this->assertSame('draft', $draftSet->fresh()->status);
+        $this->assertSame('80.00', $result->fresh()->final_score);
+        $this->assertSame('81.00', $result->fresh()->daily_raw_score);
+        $this->assertSame('79.00', $result->fresh()->exam_raw_score);
+        $this->assertTrue($result->fresh()->is_complete);
+        $this->assertNull($result->fresh()->kkm);
+        $this->assertNull($result->fresh()->kkm_revision_id);
+        $this->assertFalse($result->fresh()->is_passed);
+        $this->assertSame('80.00', $line->fresh()->score_numeric);
+        $this->assertNull($line->fresh()->kkm_revision_id);
+        $this->assertSame('draft', $snapshot->fresh()->status);
+        $this->assertTrue($snapshot->fresh()->snapshot_data['kkm_stale']);
+        $this->assertNull($snapshot->fresh()->snapshot_data['columns'][0]['kkm_revision_id']);
+        $this->assertSame(0, PanelNotification::whereIn('notification_type', ['kkm_submitted', 'kkm_approved'])->whereNull('archived_at')->count());
+        $this->assertGreaterThan(0, PanelNotification::where('notification_type', 'kkm_assigned')->whereNull('archived_at')->count());
+        $this->assertDatabaseHas('activity_log', ['log_name' => 'kkm', 'event' => 'history_deleted', 'causer_id' => $c['admin']->id]);
+        $audit = DB::table('activity_log')->where('event', 'history_deleted')->first();
+        $this->assertCount(3, json_decode($audit->properties, true)['deleted_revisions']);
+        $this->get(route('admin.kkm.export', [$active->id, 'xlsx']))->assertNotFound();
+
+        $this->actingAs($c['users']['female'], 'web')->get(route('guru.kkm.show', $scope))->assertOk()->assertSee('Mulai menyusun KKM')->assertSee('Belum ada riwayat KKM.');
+        $this->post(route('guru.kkm.start', $scope))->assertRedirect()->assertSessionHasNoErrors();
+        $fresh = $scope->fresh()->workingRevision;
+        $this->put(route('guru.kkm.save', $fresh), ['action' => 'submit', 'lock_version' => $fresh->lock_version, 'criteria' => $this->input(70)])->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertGreaterThan(0, PanelNotification::where('notification_type', 'kkm_submitted')->whereNull('archived_at')->count());
+    }
+
+    public function test_deleting_only_a_submission_preserves_official_kkm(): void
+    {
+        $c = $this->context();
+        $active = $this->approved($c);
+        $working = $this->submitted($c, 70);
+        $before = $c['subjects']['male']->fresh()->getAttributes();
+        $this->actingAs($c['admin'], 'admin')->delete(route('admin.kkm.revision.destroy', $working), $this->deletionToken($c))->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertDatabaseMissing('diniyyah_kkm_revisions', ['id' => $working->id]);
+        $this->assertSame($active->id, $c['scope']->fresh()->active_revision_id);
+        $this->assertNull($c['scope']->fresh()->working_revision_id);
+        $this->assertSame($before, $c['subjects']['male']->fresh()->getAttributes());
+        $this->assertGreaterThan(0, PanelNotification::where('notification_type', 'kkm_approved')->whereNull('archived_at')->count());
+        $this->assertDatabaseHas('activity_log', ['event' => 'revision_deleted', 'causer_id' => $c['admin']->id]);
+    }
+
+    public function test_deleting_active_kkm_does_not_reactivate_test_history_or_delete_pending_work(): void
+    {
+        $c = $this->context();
+        $old = $this->approved($c, 70);
+        $active = $this->approved($c, 75);
+        $working = $this->submitted($c, 70);
+        $this->actingAs($c['admin'], 'admin')->delete(route('admin.kkm.revision.destroy', $active), $this->deletionToken($c))->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertNull($c['scope']->fresh()->active_revision_id);
+        $this->assertSame($working->id, $c['scope']->fresh()->working_revision_id);
+        $this->assertSame('superseded', $old->fresh()->status);
+        $this->assertSame('submitted', $working->fresh()->status);
+        $this->assertNull($c['subjects']['male']->fresh()->kkm);
+        $this->assertDatabaseMissing('diniyyah_kkm_revisions', ['id' => $active->id]);
+    }
+
+    public function test_deleting_old_history_preserves_current_kkm_and_other_subjects(): void
+    {
+        $c = $this->context();
+        $old = $this->approved($c, 70);
+        $active = $this->approved($c, 75);
+        $otherSubject = DiniyyahSubject::create(['code' => 'fiqih_cleanup', 'name' => 'Fiqih']);
+        $otherScope = DiniyyahKkmScope::create(['academic_term_id' => $c['term']->id, 'subject_id' => $otherSubject->id, 'mustawa' => 1]);
+        $other = $otherScope->revisions()->create(['version' => 1, 'status' => 'approved', 'final_kkm' => 70]);
+        $otherScope->update(['active_revision_id' => $other->id]);
+        $this->actingAs($c['admin'], 'admin')->delete(route('admin.kkm.revision.destroy', $old), $this->deletionToken($c))->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertDatabaseMissing('diniyyah_kkm_revisions', ['id' => $old->id]);
+        $this->assertSame($active->id, $c['scope']->fresh()->active_revision_id);
+        $this->assertSame('75.00', $c['subjects']['male']->fresh()->kkm);
+        $this->assertSame($other->id, $otherScope->fresh()->active_revision_id);
+        $this->assertSame('approved', $other->fresh()->status);
+    }
+
+    public function test_stale_or_missing_confirmation_cannot_delete_newer_kkm_work(): void
+    {
+        $c = $this->context();
+        $working = $this->submitted($c);
+        $stale = $this->deletionToken($c);
+        app(DiniyyahKkmWorkflow::class)->review($working, $c['kabag'], $working->lock_version, true);
+        $this->actingAs($c['admin'], 'admin')->delete(route('admin.kkm.destroy', $c['scope']), $stale)->assertSessionHasErrors('kkm');
+        $this->delete(route('admin.kkm.revision.destroy', $working), $stale)->assertSessionHasErrors('kkm');
+        $this->delete(route('admin.kkm.destroy', $c['scope']))->assertSessionHasErrors('confirmation_token');
+        $this->assertSame($working->id, $c['scope']->fresh()->active_revision_id);
+        $this->assertDatabaseCount('diniyyah_kkm_revisions', 1);
+    }
+
+    #[DataProvider('frozenPolicyDocuments')]
+    public function test_kkm_deletion_is_blocked_by_locked_or_published_documents(string $type, string $status): void
+    {
+        $c = $this->context();
+        $active = $this->approved($c);
+        if ($type === 'ledger') {
+            $document = DiniyyahLedgerSnapshot::create(['academic_term_id' => $c['term']->id, 'classroom_term_id' => $c['subjects']['male']->classroom_term_id, 'title' => 'Dokumen resmi', 'status' => $status]);
+        } else {
+            $enrollment = $this->enrollment($c);
+            $document = ReportCard::withoutEvents(fn () => ReportCard::create(['academic_term_id' => $c['term']->id, 'classroom_term_id' => $enrollment->classroom_term_id, 'class_enrollment_id' => $enrollment->id, 'student_id' => $enrollment->student_id, 'report_type' => 'diniyyah', 'status' => $status]));
+        }
+        $before = $document->fresh()->getAttributes();
+        $this->actingAs($c['admin'], 'admin')->delete(route('admin.kkm.destroy', $c['scope']), $this->deletionToken($c))->assertSessionHasErrors('kkm');
+        $this->delete(route('admin.kkm.revision.destroy', $active), $this->deletionToken($c))->assertSessionHasErrors('kkm');
+        $this->assertSame($before, $document->fresh()->getAttributes());
+        $this->assertSame($active->id, $c['scope']->fresh()->active_revision_id);
+        $this->assertSame('75.00', $c['subjects']['male']->fresh()->kkm);
+    }
+
+    public function test_cleanup_detaches_references_in_archived_classes_and_assessments(): void
+    {
+        $c = $this->context();
+        $active = $this->approved($c);
+        $subject = $c['subjects']['male'];
+        $set = DiniyyahAssessmentSet::create(['diniyyah_class_subject_id' => $subject->id, 'title' => 'Arsip', 'assessment_method' => 'direct_final', 'status' => 'draft']);
+        $set->delete();
+        $subject->delete();
+        $this->actingAs($c['admin'], 'admin')->delete(route('admin.kkm.destroy', $c['scope']), $this->deletionToken($c))->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertNull(DiniyyahClassSubject::withTrashed()->findOrFail($subject->id)->kkm_revision_id);
+        $this->assertNull(DiniyyahAssessmentSet::withTrashed()->findOrFail($set->id)->kkm_revision_id);
+        $this->assertDatabaseMissing('diniyyah_kkm_revisions', ['id' => $active->id]);
+    }
+
+    public function test_cleanup_failure_rolls_back_removed_pointers_references_and_audit(): void
+    {
+        $c = $this->context();
+        $active = $this->approved($c);
+        $snapshot = DiniyyahLedgerSnapshot::create(['academic_term_id' => $c['term']->id, 'classroom_term_id' => $c['subjects']['male']->classroom_term_id, 'title' => 'Leger terbuka', 'status' => 'validated']);
+        DiniyyahLedgerSnapshot::updating(function ($updated) use ($snapshot): void {
+            if ($updated->id === $snapshot->id) {
+                throw new RuntimeException('Simulasi kegagalan penyimpanan leger');
+            }
+        });
+        try {
+            app(DiniyyahKkmDeletion::class)->deleteScope($c['scope'], $c['admin'], $this->deletionToken($c)['confirmation_token']);
+            $this->fail('Kegagalan penyimpanan harus membatalkan transaksi.');
+        } catch (RuntimeException $exception) {
+            $this->assertSame('Simulasi kegagalan penyimpanan leger', $exception->getMessage());
+        }
+        $this->assertSame($active->id, $c['scope']->fresh()->active_revision_id);
+        $this->assertSame('75.00', $c['subjects']['male']->fresh()->kkm);
+        $this->assertSame('validated', $snapshot->fresh()->status);
+        $this->assertDatabaseHas('diniyyah_kkm_revisions', ['id' => $active->id]);
+        $this->assertDatabaseMissing('activity_log', ['event' => 'history_deleted']);
     }
 
     private function qa(string $name, string $content): void
