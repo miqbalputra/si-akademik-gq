@@ -38,6 +38,30 @@
     html:has(.kkm-guide-modal[open]) { overflow: hidden; }
 }
 @layer components {
+    .kkm-view-nav { display: flex; gap: .35rem; border-bottom: 1px solid var(--ui-line); }
+    .kkm-view-nav > a { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; border-bottom: 3px solid transparent; padding: .85rem 1rem; color: var(--ui-muted); font-size: 14px; font-weight: 500; text-decoration: none; }
+    .kkm-view-nav > a:hover { color: var(--ui-heading); }
+    .kkm-view-nav > a[aria-current='page'] { border-bottom-color: var(--color-brand-500); color: var(--ui-brand-ink); }
+    .kkm-stat { display: grid; min-width: 0; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: .4rem .5rem; border: 1px solid var(--ui-line); border-top: 3px solid var(--kkm-stat-accent); border-radius: 1rem; padding: .85rem 1rem; background: var(--ui-surface); text-decoration: none; transition: box-shadow .15s ease, border-color .15s ease; }
+    .kkm-stat:hover, .kkm-stat[aria-current='true'] { border-color: var(--kkm-stat-accent); box-shadow: var(--shadow-theme-sm); }
+    .kkm-stat-warning { --kkm-stat-accent: var(--ui-warning-ink); }
+    .kkm-stat-danger { --kkm-stat-accent: var(--ui-danger-ink); }
+    .kkm-stat-success { --kkm-stat-accent: var(--ui-success-ink); }
+    .kkm-stat-info { --kkm-stat-accent: var(--ui-info-ink); }
+    .kkm-stat-label { color: var(--ui-muted); font-size: 14px; line-height: 20px; }
+    .kkm-stat-value { color: var(--ui-heading); font-size: 28px; line-height: 32px; font-weight: 600; }
+    .kkm-stat-hint { display: flex; grid-column: 1 / -1; justify-content: space-between; gap: .5rem; color: var(--kkm-stat-accent); font-size: 12px; line-height: 18px; }
+    .kkm-filters[open] .kkm-filter-chevron { transform: rotate(180deg); }
+    .kkm-assignment-head { display: none; }
+    .kkm-assignment-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; padding: 1rem 0; }
+    .kkm-status-head { display: none; }
+    .kkm-status-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 1rem; }
+    .kkm-status-subject, .kkm-status-teacher, .kkm-status-action { grid-column: 1 / -1; }
+    @media (min-width: 1024px) {
+        .kkm-status-head, .kkm-status-row { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1.35fr) minmax(0, 1.3fr) minmax(0, .85fr) 10rem; gap: 1rem; }
+        .kkm-status-subject, .kkm-status-teacher, .kkm-status-action { grid-column: auto; }
+        .kkm-assignment-head, .kkm-assignment-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr) minmax(0, 1.7fr); gap: 1rem; }
+    }
     .kkm-guide-modal { width: min(60rem, calc(100% - 2rem)); max-width: none; max-height: calc(100dvh - 2rem); margin: auto; overflow: hidden; }
     .kkm-guide-modal::backdrop { background: rgb(3 7 18 / .6); }
     .kkm-guide-layout { display: flex; max-height: calc(100dvh - 2rem - 2px); flex-direction: column; }

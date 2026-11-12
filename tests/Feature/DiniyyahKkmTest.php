@@ -235,7 +235,7 @@ class DiniyyahKkmTest extends TestCase
         $this->get(route('guru.kkm.show', $c['scope']))->assertOk()->assertSee('Ajukan untuk ACC');
         $this->qa('author.html', $this->get(route('guru.kkm.show', $c['scope']))->getContent());
         $this->get(route('admin.kkm.index'))->assertRedirect();
-        $this->actingAs($c['admin'], 'admin')->get(route('admin.kkm.index'))->assertOk()->assertSee('Tetapkan guru penyusun');
+        $this->actingAs($c['admin'], 'admin')->get(route('admin.kkm.index'))->assertOk()->assertSee('Status KKM')->assertDontSee('name="teacher_id"', false);
         $this->get(route('admin.notifications.feed'))->assertOk();
         $this->get(route('admin.notifications.index'))->assertOk();
     }

@@ -28,6 +28,15 @@ class AcademicTerm extends Model
         return $this->belongsTo(AcademicYear::class);
     }
 
+    public function getKkmLabelAttribute(): string
+    {
+        $year = trim($this->academicYear?->name ?? '');
+        $name = trim($this->name ?? '');
+
+        return $year === '' || str_contains(mb_strtolower($name), mb_strtolower($year))
+            ? $name : trim($year.' · '.$name, ' ·');
+    }
+
     public function classroomTerms(): HasMany
     {
         return $this->hasMany(ClassroomTerm::class);

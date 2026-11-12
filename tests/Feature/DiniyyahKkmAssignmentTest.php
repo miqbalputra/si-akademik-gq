@@ -8,6 +8,7 @@ use App\Models\Classroom;
 use App\Models\ClassroomTerm;
 use App\Models\ClassSession;
 use App\Models\DiniyyahClassSubject;
+use App\Models\DiniyyahKkmRevision;
 use App\Models\DiniyyahKkmScope;
 use App\Models\DiniyyahLedgerSnapshot;
 use App\Models\DiniyyahSubject;
@@ -84,7 +85,7 @@ class DiniyyahKkmAssignmentTest extends TestCase
         $c = $this->context();
         DiniyyahTeacherAssignment::create(['diniyyah_class_subject_id' => $c['ikhwan']->id, 'teacher_id' => $c['female']->id, 'assignment_role' => 'assistant']);
         $this->classSubject($c['term'], $c['subject'], 'Kelas tingkat belum diisi', null);
-        $response = $this->actingAs($c['admin'], 'admin')->get(route('admin.kkm.index'))->assertOk()
+        $response = $this->actingAs($c['admin'], 'admin')->get(route('admin.kkm.index', ['view' => 'assignments']))->assertOk()
             ->assertSee('Tetapkan Massal')->assertSee('Belum dijadwalkan')->assertSee('Data jenjang perlu dilengkapi');
         $rows = $response->viewData('roster')['rows'];
         $this->assertCount(1, $rows);
@@ -349,6 +350,87 @@ class DiniyyahKkmAssignmentTest extends TestCase
         $this->assertSame(['1'], $this->filterOptionValues($response->getContent(), 'mustawa'));
         $this->get(route('guru.kkm.show', $scope))->assertForbidden();
         $this->actingAs($c['female']->user, 'admin')->get(route('admin.kkm.show', $scope))->assertOk();
+    }
+
+    public function test_kabag_dashboard_opens_status_first_with_one_shared_filter_and_no_assignment_forms(): void
+    {
+        $c = $this->context();
+        $scope = app(DiniyyahKkmWorkflow::class)->assign($c['akhwat'], $c['female']->id, $c['admin']);
+        $pending = $scope->revisions()->create(['version' => 1, 'status' => 'submitted', 'final_kkm' => 75, 'average' => 80]);
+        $scope->update(['working_revision_id' => $pending->id]);
+        foreach ([['Bahasa Arab', 'approved'], ['Fiqih', 'needs_revision'], ['Hadits', 'draft']] as [$name, $status]) {
+            $subject = DiniyyahSubject::create(['code' => str_replace(' ', '_', strtolower($name)), 'name' => $name]);
+            $cs = $this->classSubject($c['term'], $subject, 'M1 '.$name, 'M1');
+            DiniyyahTeacherAssignment::create(['diniyyah_class_subject_id' => $cs->id, 'teacher_id' => $c['female']->id]);
+            $otherScope = DiniyyahKkmScope::create(['academic_term_id' => $c['term']->id, 'subject_id' => $subject->id, 'mustawa' => 1, 'assigned_teacher_id' => $c['female']->id]);
+            $revision = $otherScope->revisions()->create(['version' => 1, 'status' => $status, 'average' => 75, 'final_kkm' => 75]);
+            $otherScope->update([$status === 'approved' ? 'active_revision_id' : 'working_revision_id' => $revision->id]);
+        }
+        $unassigned = DiniyyahSubject::create(['code' => 'tafsir_dashboard', 'name' => 'Tafsir']);
+        $this->classSubject($c['term'], $unassigned, 'M1 Tafsir', 'M1');
+        $next = AcademicTerm::create(['academic_year_id' => $c['term']->academic_year_id, 'name' => 'Genap', 'semester' => 'genap', 'is_active' => false, 'kkm_workflow_enabled' => true]);
+        $otherTermScope = DiniyyahKkmScope::create(['academic_term_id' => $next->id, 'subject_id' => $c['subject']->id, 'mustawa' => 1]);
+        $otherPending = $otherTermScope->revisions()->create(['version' => 1, 'status' => 'submitted']);
+        $otherTermScope->update(['working_revision_id' => $otherPending->id]);
+
+        $before = [DiniyyahKkmScope::count(), DiniyyahKkmRevision::count(), PanelNotification::count()];
+        $response = $this->actingAs($c['kabag'], 'web')->get(route('kabag.kkm.index'))->assertOk();
+        $this->assertSame('status', $response->viewData('activeView'));
+        $this->assertSame($c['term']->id, $response->viewData('rosterTerm')->id);
+        $this->assertSame(['submitted' => 1, 'needs_revision' => 1, 'approved' => 1, 'unassigned' => 1], $response->viewData('summary'));
+        $this->assertSame(4, $response->viewData('scopes')->total());
+        $response->assertSee('Tinjau pengajuan')->assertSee('Status KKM')->assertDontSee('name="teacher_id"', false);
+        $this->assertSame(1, substr_count($response->getContent(), 'select name="academic_term_id"'));
+        $this->assertSame($before, [DiniyyahKkmScope::count(), DiniyyahKkmRevision::count(), PanelNotification::count()]);
+        $this->qa('kabag-kkm-status.html', $response->getContent());
+
+        $filtered = $this->get(route('kabag.kkm.index', ['academic_term_id' => $c['term']->id, 'mustawa' => 1, 'status' => 'submitted']))->assertOk();
+        $this->assertSame(1, $filtered->viewData('scopes')->total());
+        $this->assertSame(1, $filtered->viewData('summary')['approved']);
+        $this->assertSame(1, $filtered->viewData('summary')['needs_revision']);
+        $filtered->assertSee(route('kabag.kkm.index', ['academic_term_id' => $c['term']->id, 'mustawa' => 1, 'view' => 'assignments']));
+        $this->qa('kabag-kkm-filtered.html', $filtered->getContent());
+
+        $assignments = $this->get(route('kabag.kkm.index', ['academic_term_id' => $c['term']->id, 'mustawa' => 1, 'view' => 'assignments']))->assertOk();
+        $assignments->assertSee('Tetapkan guru penyusun')->assertSee('name="teacher_id"', false)->assertDontSee('id="kkm-status-title"', false);
+        $this->assertSame(1, substr_count($assignments->getContent(), 'select name="academic_term_id"'));
+        $this->qa('kabag-kkm-assignments.html', $assignments->getContent());
+        $unassignedResponse = $this->get(route('kabag.kkm.index', ['academic_term_id' => $c['term']->id, 'view' => 'assignments', 'status' => 'unassigned']))->assertOk();
+        $this->assertCount(1, $unassignedResponse->viewData('roster')['rows']);
+        $this->assertSame('Tafsir', $unassignedResponse->viewData('roster')['rows'][0]['subject']);
+        $this->qa('kabag-kkm-unassigned.html', $unassignedResponse->getContent());
+        $nextResponse = $this->get(route('kabag.kkm.index', ['academic_term_id' => $next->id]))->assertOk();
+        $this->assertSame(1, $nextResponse->viewData('scopes')->total());
+        $this->assertSame(0, $nextResponse->viewData('summary')['approved']);
+    }
+
+    public function test_manager_pagination_preserves_status_context_and_summary_counts_the_entire_selection(): void
+    {
+        $c = $this->context();
+        foreach (range(1, 22) as $number) {
+            $subject = DiniyyahSubject::create(['code' => 'pagination_'.$number, 'name' => 'Mapel '.$number]);
+            $scope = DiniyyahKkmScope::create(['academic_term_id' => $c['term']->id, 'subject_id' => $subject->id, 'mustawa' => 1]);
+            $revision = $scope->revisions()->create(['version' => 1, 'status' => 'submitted']);
+            $scope->update(['working_revision_id' => $revision->id]);
+        }
+        $response = $this->actingAs($c['kabag'], 'web')->get(route('kabag.kkm.index', ['academic_term_id' => $c['term']->id, 'mustawa' => 1, 'view' => 'status', 'status' => 'submitted', 'page' => 2]))->assertOk();
+        $this->assertSame(22, $response->viewData('summary')['submitted']);
+        $this->assertCount(2, $response->viewData('scopes')->items());
+        parse_str(parse_url($response->viewData('scopes')->previousPageUrl(), PHP_URL_QUERY), $query);
+        $this->assertSame((string) $c['term']->id, $query['academic_term_id']);
+        $this->assertSame('1', $query['mustawa']);
+        $this->assertSame('submitted', $query['status']);
+        $this->assertSame('status', $query['view']);
+    }
+
+    public function test_teacher_cannot_open_manager_assignment_view_and_semester_labels_do_not_repeat_years(): void
+    {
+        $c = $this->context();
+        $c['term']->update(['name' => '2026/2027 Ganjil']);
+        $response = $this->actingAs($c['female']->user, 'web')->get(route('guru.kkm.index', ['view' => 'assignments']))->assertOk();
+        $this->assertSame('status', $response->viewData('activeView'));
+        $response->assertDontSee('name="teacher_id"', false)->assertDontSee('Tetapkan Massal')->assertDontSee('2026/2027 · 2026/2027');
+        $this->assertSame('2026/2027 Ganjil', $c['term']->fresh()->kkm_label);
     }
 
     private function filterOptionValues(string $html, string $name): array

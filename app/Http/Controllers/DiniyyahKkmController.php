@@ -29,7 +29,7 @@ class DiniyyahKkmController extends Controller
     }
 
     /** @return array{Builder, Collection} */
-    private function scopeQuery(Request $request, ?Collection $teachingScopes = null): array
+    private function scopeQuery(Request $request, ?Collection $teachingScopes = null, bool $filterStatus = true): array
     {
         $filters = $request->validate(['academic_term_id' => ['nullable', 'integer', 'exists:academic_terms,id'], 'mustawa' => ['nullable', 'integer', 'between:1,6'], 'status' => ['nullable', 'in:draft,submitted,needs_revision,approved,unassigned,school_fixed']]);
         $teacherPortal = $request->routeIs('guru.kkm.*');
@@ -47,7 +47,7 @@ class DiniyyahKkmController extends Controller
             $query->where(fn (Builder $q) => $q->whereIn('id', $writerIds)->orWhereNotNull('active_revision_id'));
         }
 
-        $status = $filters['status'] ?? null;
+        $status = $filterStatus ? ($filters['status'] ?? null) : null;
         if ($status === 'unassigned') {
             $fixedSubjects = DiniyyahSubject::get(['id', 'code', 'name'])->filter(fn ($subject) => $subject->schoolKkm() !== null)->pluck('id');
             $query->whereNull('assigned_teacher_id')->whereNotIn('subject_id', $fixedSubjects)
@@ -74,20 +74,37 @@ class DiniyyahKkmController extends Controller
     {
         $teacherPortal = $request->routeIs('guru.kkm.*');
         $teachingScopes = $teacherPortal ? $this->roster->teachingScopes($request->user()) : null;
-        [$query, $writers] = $this->scopeQuery($request, $teachingScopes);
-        $scopes = $query->paginate(20)->withQueryString();
         $manager = ! $teacherPortal && $this->access->manages($request->user());
         $terms = AcademicTerm::with('academicYear')->when($teacherPortal, fn ($q) => $q->whereIn('id', $teachingScopes->pluck('academic_term_id')))->latest('id')->get();
+        $request->validate(['view' => ['nullable', 'in:status,assignments'], 'academic_term_id' => ['nullable', 'integer', 'exists:academic_terms,id']]);
+        $rosterTerm = $terms->firstWhere('id', $request->integer('academic_term_id')) ?? $terms->firstWhere('is_active', true) ?? $terms->first();
+        if ($manager) {
+            // Status and assignment views share a single, explicit semester context.
+            $request->merge(['academic_term_id' => $rosterTerm?->id]);
+        }
+        $activeView = $manager && ($request->input('view') === 'assignments' || $request->input('status') === 'unassigned') ? 'assignments' : 'status';
+        [$query, $writers] = $this->scopeQuery($request, $teachingScopes);
+        $scopes = $query->paginate(20)->withQueryString();
         $mustawaOptions = $teacherPortal
             ? $teachingScopes->when($request->integer('academic_term_id'), fn ($scopes, $termId) => $scopes->where('academic_term_id', $termId))->pluck('mustawa')->unique()->sort()->values()->all()
             : range(1, 6);
-        $rosterTerm = $terms->firstWhere('id', $request->integer('academic_term_id')) ?? $terms->firstWhere('is_active', true) ?? $terms->first();
         $roster = $manager && $rosterTerm ? $this->roster->forTerm($rosterTerm, $request->integer('mustawa') ?: null) : ['rows' => [], 'issues' => []];
+        $summary = [];
+        if ($manager) {
+            [$summaryQuery] = $this->scopeQuery($request, filterStatus: false);
+            $statuses = $summaryQuery->get()->countBy(fn ($scope) => ($scope->workingRevision ?? $scope->activeRevision)?->status ?? 'not_started');
+            $summary = [
+                'submitted' => $statuses->get('submitted', 0),
+                'needs_revision' => $statuses->get('needs_revision', 0),
+                'approved' => $statuses->get('approved', 0),
+                'unassigned' => collect($roster['rows'])->filter(fn ($row) => ! $row['assigned_teacher_id'] && ! $row['school_managed'])->count(),
+            ];
+        }
         if ($request->input('status') === 'unassigned') {
             $roster['rows'] = array_values(array_filter($roster['rows'], fn ($r) => ! $r['assigned_teacher_id'] && ! $r['school_managed']));
         }
 
-        return view('kkm.index', ['scopes' => $scopes, 'terms' => $terms, 'mustawaOptions' => $mustawaOptions, 'teacherPortal' => $teacherPortal, 'manager' => $manager, 'prefix' => $this->prefix($request), 'roster' => $roster, 'rosterTerm' => $rosterTerm, 'writers' => $writers]);
+        return view('kkm.index', ['scopes' => $scopes, 'terms' => $terms, 'mustawaOptions' => $mustawaOptions, 'teacherPortal' => $teacherPortal, 'manager' => $manager, 'prefix' => $this->prefix($request), 'roster' => $roster, 'rosterTerm' => $rosterTerm, 'writers' => $writers, 'activeView' => $activeView, 'summary' => $summary]);
     }
 
     public function bulkPreview(Request $request, DiniyyahKkmBulkAssignment $bulk)
@@ -135,7 +152,7 @@ class DiniyyahKkmController extends Controller
         ], $data['selected']);
         $result = $bulk->apply((int) $data['academic_term_id'], $entries, $data['preview_token'], $request->user());
 
-        return redirect()->route($this->prefix($request).'index', ['academic_term_id' => $data['academic_term_id']])
+        return redirect()->route($this->prefix($request).'index', ['academic_term_id' => $data['academic_term_id'], 'view' => 'assignments'])
             ->with('status', $result['assigned'].' penyusun KKM berhasil ditetapkan. '.$result['unchanged'].' tugas sudah sesuai dan tidak diubah.');
     }
 
