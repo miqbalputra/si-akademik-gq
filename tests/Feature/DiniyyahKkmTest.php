@@ -12,6 +12,7 @@ use App\Models\DiniyyahAssessmentSet;
 use App\Models\DiniyyahClassSubject;
 use App\Models\DiniyyahKkmRevision;
 use App\Models\DiniyyahKkmScope;
+use App\Models\DiniyyahKkmSetting;
 use App\Models\DiniyyahLedgerSnapshot;
 use App\Models\DiniyyahSubject;
 use App\Models\DiniyyahTeacherAssignment;
@@ -1005,6 +1006,99 @@ class DiniyyahKkmTest extends TestCase
         }
         $this->assertDatabaseCount('diniyyah_kkm_revisions', 1);
         $this->assertNull($fresh->fresh()->final_kkm);
+    }
+
+    public function test_admin_video_setting_is_shared_with_assigned_unassigned_and_other_teachers_without_changing_kkm_or_scores(): void
+    {
+        $c = $this->context();
+        $active = $this->approved($c);
+        app(DiniyyahKkmWorkflow::class)->startRevision($c['scope']->fresh(), $c['users']['female']);
+        $set = DiniyyahAssessmentSet::create(['diniyyah_class_subject_id' => $c['subjects']['male']->id, 'title' => 'Nilai tersimpan', 'assessment_method' => 'direct_final', 'status' => 'validated']);
+        $result = DiniyyahAssessmentResult::create(['diniyyah_assessment_set_id' => $set->id, 'class_enrollment_id' => $this->enrollment($c)->id, 'final_score' => 83.25, 'kkm' => 75, 'kkm_revision_id' => $active->id, 'is_complete' => true, 'is_passed' => true]);
+        $before = [DB::table('diniyyah_kkm_scopes')->get()->toArray(), DB::table('diniyyah_kkm_revisions')->get()->toArray(), $result->fresh()->getAttributes()];
+        $this->actingAs($c['admin'], 'admin')->get(route('admin.kkm.index'))->assertOk()->assertSee('Link video YouTube');
+        $this->put(route('admin.kkm.video.update'), ['youtube_url' => 'https://youtu.be/AbCdEf12_-3?si=sharing'])
+            ->assertRedirect(route('admin.kkm.index'))->assertSessionHasNoErrors();
+        $canonical = 'https://www.youtube.com/watch?v=AbCdEf12_-3';
+        $this->assertDatabaseHas('diniyyah_kkm_settings', ['id' => 1, 'youtube_url' => $canonical]);
+        $this->assertDatabaseHas('activity_log', ['log_name' => 'kkm', 'event' => 'video_updated', 'causer_id' => $c['admin']->id]);
+        $this->qa('video-admin.html', $this->get(route('admin.kkm.index'))->assertOk()->getContent());
+        foreach ($c['users'] as $gender => $user) {
+            $this->actingAs($user, 'web')->get(route('guru.kkm.index'))->assertOk()->assertSee('Lihat Panduan')->assertSee($canonical, false)->assertDontSee('name="youtube_url"', false);
+            $page = $this->get(route('guru.kkm.show', $c['scope']))->assertOk()->assertSee('Lihat Video');
+            $document = new \DOMDocument;
+            @$document->loadHTML($page->getContent());
+            $xpath = new \DOMXPath($document);
+            $this->assertSame(1, $xpath->query('//button[@aria-controls="kkm-guide-dialog"]/following-sibling::a[@target="_blank" and @rel="noopener noreferrer" and @href="'.$canonical.'"]')->length);
+            $this->qa('video-'.$gender.'.html', $page->getContent());
+        }
+        $other = User::factory()->create();
+        $other->assignRole('guru');
+        $this->actingAs($other, 'web')->get(route('guru.kkm.index'))->assertOk()->assertSee('Lihat Panduan')->assertSee($canonical, false)->assertDontSee('name="youtube_url"', false);
+        $this->get(route('guru.kkm.show', $c['scope']))->assertForbidden();
+        $this->assertEquals($before, [DB::table('diniyyah_kkm_scopes')->get()->toArray(), DB::table('diniyyah_kkm_revisions')->get()->toArray(), $result->fresh()->getAttributes()]);
+    }
+
+    public static function youtubeVideoLinks(): array
+    {
+        return [
+            ['https://www.youtube.com/watch?v=AbCdEf12_-3&list=PLAYLIST'],
+            ['https://youtu.be/AbCdEf12_-3?si=sharing'],
+            ['https://m.youtube.com/watch?v=AbCdEf12_-3&t=10s'],
+            ['https://www.youtube.com/shorts/AbCdEf12_-3'],
+            ['https://www.youtube.com/live/AbCdEf12_-3'],
+            ['https://www.youtube.com/embed/AbCdEf12_-3'],
+        ];
+    }
+
+    #[DataProvider('youtubeVideoLinks')]
+    public function test_admin_can_replace_video_using_supported_youtube_link_formats(string $url): void
+    {
+        $c = $this->context();
+        DiniyyahKkmSetting::create(['id' => 1, 'youtube_url' => 'https://www.youtube.com/watch?v=OldVideo123']);
+        $this->actingAs($c['admin'], 'admin')->put(route('admin.kkm.video.update'), ['youtube_url' => $url])->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertDatabaseCount('diniyyah_kkm_settings', 1);
+        $this->assertSame('https://www.youtube.com/watch?v=AbCdEf12_-3', DiniyyahKkmSetting::find(1)->youtube_url);
+    }
+
+    public static function invalidYoutubeVideoLinks(): array
+    {
+        return [
+            ['javascript:alert(1)'], ['https://example.com/watch?v=AbCdEf12_-3'],
+            ['https://youtube.com.evil.example/watch?v=AbCdEf12_-3'], ['https://youtube.com@evil.example/watch?v=AbCdEf12_-3'],
+            ['https://www.youtube.com/playlist?list=PLAYLIST'], ['https://www.youtube.com/watch?v[]=AbCdEf12_-3'],
+            ['https://youtu.be/short'], [['url' => 'https://youtu.be/AbCdEf12_-3']],
+        ];
+    }
+
+    #[DataProvider('invalidYoutubeVideoLinks')]
+    public function test_invalid_video_link_cannot_overwrite_saved_setting(mixed $url): void
+    {
+        $c = $this->context();
+        $old = 'https://www.youtube.com/watch?v=AbCdEf12_-3';
+        DiniyyahKkmSetting::create(['id' => 1, 'youtube_url' => $old]);
+        $this->actingAs($c['admin'], 'admin')->from(route('admin.kkm.index'))->put(route('admin.kkm.video.update'), ['youtube_url' => $url])
+            ->assertRedirect(route('admin.kkm.index'))->assertSessionHasErrors('youtube_url');
+        $this->assertSame($old, DiniyyahKkmSetting::find(1)->youtube_url);
+        $this->assertDatabaseMissing('activity_log', ['event' => 'video_updated']);
+        session()->reflash();
+        session()->save();
+        $this->get(route('admin.kkm.index'))->assertOk()->assertSee('aria-invalid="true"', false);
+    }
+
+    public function test_only_admin_can_configure_video_and_clearing_the_link_hides_it_for_teachers(): void
+    {
+        $c = $this->context();
+        $url = 'https://www.youtube.com/watch?v=AbCdEf12_-3';
+        DiniyyahKkmSetting::create(['id' => 1, 'youtube_url' => $url]);
+        $this->actingAs($c['kabag'], 'web')->get(route('kabag.kkm.index'))->assertOk()->assertDontSee('name="youtube_url"', false);
+        foreach ([$c['kabag'], $c['users']['female'], $c['users']['male']] as $user) {
+            $this->actingAs($user, 'admin')->put(route('admin.kkm.video.update'), ['youtube_url' => ''])->assertForbidden();
+            $this->assertSame($url, DiniyyahKkmSetting::find(1)->youtube_url);
+        }
+        $this->actingAs($c['admin'], 'admin')->put(route('admin.kkm.video.update'), ['youtube_url' => ''])->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertNull(DiniyyahKkmSetting::find(1)->youtube_url);
+        $this->actingAs($c['users']['male'], 'web')->get(route('guru.kkm.index'))->assertOk()->assertSee('Lihat Panduan')->assertDontSee('Lihat Video');
     }
 
     private function qa(string $name, string $content): void

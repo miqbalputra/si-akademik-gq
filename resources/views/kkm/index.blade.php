@@ -6,12 +6,16 @@
                 <h1 class="ui-page-title text-heading">Penetapan KKM</h1>
                 <p class="mt-2 text-theme-sm text-muted">{{ $manager ? 'Pantau pengajuan, tinjau KKM, dan kelola guru penyusun dalam satu tempat.' : 'Satu KKM bersama per mapel, mustawa, dan semester untuk kelas ikhwan–akhwat.' }}</p>
             </div>
-            @if($teacherPortal && $writers->isNotEmpty())
+            @if($teacherPortal)
                 @include('kkm.partials.guide')
             @endif
         </header>
         @if(session('status'))<div role="status" class="rounded-xl bg-success-soft p-4 text-success-ink">{{ session('status') }}</div>@endif
         @if($errors->any())<div role="alert" class="rounded-xl border border-danger-line bg-danger-soft p-4 text-danger-ink">@foreach($errors->all() as $error)<p>{{ $error }}</p>@endforeach</div>@endif
+
+        @if($canManageVideo)
+            @include('kkm.partials.video-settings')
+        @endif
 
         @if($manager)
             <nav class="kkm-view-nav" aria-label="Bagian pengelolaan KKM">

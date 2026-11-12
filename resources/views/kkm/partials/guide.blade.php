@@ -1,8 +1,16 @@
-<div x-data>
+<div class="flex flex-wrap items-center gap-3" x-data>
     <button type="button" class="btn" aria-haspopup="dialog" aria-controls="kkm-guide-dialog" @click="$refs.guide.showModal()">
         <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 7v14m0-14C9.5 4.5 5.5 4 3 5v14c2.5-1 6.5-.5 9 2m0-14c2.5-2.5 6.5-3 9-2v14c-2.5-1-6.5-.5-9 2" /></svg>
         Lihat Panduan
     </button>
+
+    @if($videoUrl ?? null)
+        <a class="btn" href="{{ $videoUrl }}" target="_blank" rel="noopener noreferrer" aria-label="Lihat Video panduan KKM di YouTube (tab baru)">
+            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="4" /><path stroke-linecap="round" stroke-linejoin="round" d="m10 9 5 3-5 3V9Z" /></svg>
+            Lihat Video
+            <span class="sr-only">(YouTube, tab baru)</span>
+        </a>
+    @endif
 
     <dialog id="kkm-guide-dialog" x-ref="guide" class="kkm-guide-modal rounded-2xl border border-line bg-surface p-0 text-body shadow-2xl" aria-labelledby="kkm-guide-title" aria-describedby="kkm-guide-description">
         <div class="kkm-guide-layout">

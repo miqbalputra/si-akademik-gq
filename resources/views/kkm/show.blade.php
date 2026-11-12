@@ -3,7 +3,7 @@
         <a class="underline" href="{{ route($prefix.'index', ['academic_term_id' => $scope->academic_term_id]) }}">Kembali ke daftar KKM</a>
         <header><h1 class="ui-page-title text-heading">{{ $scope->subject?->name }} · Mustawa {{ $scope->mustawa }}</h1><p class="mt-2 text-muted">{{ $scope->academicTerm?->academicYear?->name }} {{ $scope->academicTerm?->name }} · {{ $scope->activeRevision?->is_school_fixed ? 'Penetap: Sekolah/Kabag Diniyyah' : 'Penyusun: '.($scope->assignedTeacher?->name ?? 'Belum ditugaskan') }}</p><p class="mt-2">KKM resmi: <strong>{{ $scope->activeRevision?->final_kkm ?? 'Menunggu ACC' }}</strong>@if($scope->activeRevision) · Versi {{ $scope->activeRevision->version }}@endif</p></header>
         @if(session('status'))<div role="status" class="rounded-xl bg-success-soft p-4 text-success-ink">{{ session('status') }}</div>@endif
-        @if($writer)
+        @if($prefix === 'guru.kkm.')
             @include('kkm.partials.guide')
         @endif
         @if($errors->any())<div role="alert" class="rounded-xl border border-red-300 bg-red-50 p-4 text-red-800">@foreach($errors->all() as $error)<p>{{ $error }}</p>@endforeach</div>@endif

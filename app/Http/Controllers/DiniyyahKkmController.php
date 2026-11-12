@@ -14,6 +14,7 @@ use App\Services\DiniyyahKkmCalculator;
 use App\Services\DiniyyahKkmDeletion;
 use App\Services\DiniyyahKkmExportService;
 use App\Services\DiniyyahKkmResolver;
+use App\Services\DiniyyahKkmVideo;
 use App\Services\DiniyyahKkmWorkflow;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -70,7 +71,7 @@ class DiniyyahKkmController extends Controller
             ->orderByDesc('academic_term_id')->orderBy('mustawa')->orderBy('subject_id'), $writerIds->flip()];
     }
 
-    public function index(Request $request)
+    public function index(Request $request, DiniyyahKkmVideo $video)
     {
         $teacherPortal = $request->routeIs('guru.kkm.*');
         $teachingScopes = $teacherPortal ? $this->roster->teachingScopes($request->user()) : null;
@@ -104,7 +105,14 @@ class DiniyyahKkmController extends Controller
             $roster['rows'] = array_values(array_filter($roster['rows'], fn ($r) => ! $r['assigned_teacher_id'] && ! $r['school_managed']));
         }
 
-        return view('kkm.index', ['scopes' => $scopes, 'terms' => $terms, 'mustawaOptions' => $mustawaOptions, 'teacherPortal' => $teacherPortal, 'manager' => $manager, 'prefix' => $this->prefix($request), 'roster' => $roster, 'rosterTerm' => $rosterTerm, 'writers' => $writers, 'activeView' => $activeView, 'summary' => $summary]);
+        return view('kkm.index', ['scopes' => $scopes, 'terms' => $terms, 'mustawaOptions' => $mustawaOptions, 'teacherPortal' => $teacherPortal, 'manager' => $manager, 'prefix' => $this->prefix($request), 'roster' => $roster, 'rosterTerm' => $rosterTerm, 'writers' => $writers, 'activeView' => $activeView, 'summary' => $summary, 'videoUrl' => $video->url(), 'canManageVideo' => $request->routeIs('admin.kkm.*') && $request->user()->hasRole('admin')]);
+    }
+
+    public function saveVideo(Request $request, DiniyyahKkmVideo $video)
+    {
+        $video->save($request->input('youtube_url'), $request->user());
+
+        return redirect()->route('admin.kkm.index')->with('status', 'Video panduan KKM berhasil diperbarui.');
     }
 
     public function bulkPreview(Request $request, DiniyyahKkmBulkAssignment $bulk)
@@ -165,7 +173,7 @@ class DiniyyahKkmController extends Controller
         return redirect()->route($this->prefix($request).'show', $scope)->with('status', 'Guru penyusun KKM berhasil ditetapkan.');
     }
 
-    public function show(Request $request, DiniyyahKkmScope $scope, DiniyyahKkmDeletion $deletion)
+    public function show(Request $request, DiniyyahKkmScope $scope, DiniyyahKkmDeletion $deletion, DiniyyahKkmVideo $video)
     {
         $manager = ! $request->routeIs('guru.kkm.*') && $this->access->manages($request->user());
         $scope->load(['subject', 'academicTerm.academicYear', 'activeRevision', 'workingRevision', 'assignedTeacher']);
@@ -177,7 +185,7 @@ class DiniyyahKkmController extends Controller
         $revision = $writer || $manager ? ($scope->workingRevision ?? $scope->activeRevision) : $scope->activeRevision;
         $canDelete = $request->routeIs('admin.kkm.*') && $this->access->deletes($request->user()) && $this->access->teacherManaged($scope);
 
-        return view('kkm.show', ['scope' => $scope, 'revision' => $revision, 'revisions' => $revisions, 'writer' => $writer, 'manager' => $manager, 'reviewer' => $reviewer, 'prefix' => $this->prefix($request), 'frozen' => $this->resolver->frozen($scope), 'criteriaLabels' => DiniyyahKkmCalculator::CRITERIA, 'canDelete' => $canDelete, 'deleteToken' => $canDelete ? $deletion->token($scope, $revisions) : null]);
+        return view('kkm.show', ['scope' => $scope, 'revision' => $revision, 'revisions' => $revisions, 'writer' => $writer, 'manager' => $manager, 'reviewer' => $reviewer, 'prefix' => $this->prefix($request), 'frozen' => $this->resolver->frozen($scope), 'criteriaLabels' => DiniyyahKkmCalculator::CRITERIA, 'canDelete' => $canDelete, 'deleteToken' => $canDelete ? $deletion->token($scope, $revisions) : null, 'videoUrl' => $video->url()]);
     }
 
     public function destroy(Request $request, DiniyyahKkmScope $scope, DiniyyahKkmDeletion $deletion)

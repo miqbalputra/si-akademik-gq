@@ -99,6 +99,7 @@ foreach ([['admin', 'admin.kkm.', 'admin/kkm', 'admin|kabag_diniyyah'], ['web', 
     Route::middleware(['auth:'.$guard, 'role:'.$roles, PreventStaleKkmPages::class])->prefix($path)->name($name)->group(function () use ($name): void {
         Route::get('/', [DiniyyahKkmController::class, 'index'])->name('index');
         if ($name === 'admin.kkm.') {
+            Route::put('/video-panduan', [DiniyyahKkmController::class, 'saveVideo'])->middleware('role:admin')->name('video.update');
             Route::delete('/versi/{revision}', [DiniyyahKkmController::class, 'destroyRevision'])->middleware('role:admin')->name('revision.destroy');
             Route::delete('/{scope}', [DiniyyahKkmController::class, 'destroy'])->middleware('role:admin')->name('destroy');
         }
