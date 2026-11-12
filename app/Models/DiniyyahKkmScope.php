@@ -10,6 +10,18 @@ class DiniyyahKkmScope extends Model
 {
     protected $guarded = [];
 
+    protected function casts(): array
+    {
+        return [
+            'academic_term_id' => 'integer',
+            'subject_id' => 'integer',
+            'mustawa' => 'integer',
+            'assigned_teacher_id' => 'integer',
+            'active_revision_id' => 'integer',
+            'working_revision_id' => 'integer',
+        ];
+    }
+
     public function academicTerm(): BelongsTo
     {
         return $this->belongsTo(AcademicTerm::class);

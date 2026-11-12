@@ -1,6 +1,6 @@
 <x-layouts.portal title="Penetapan KKM" :portalLabel="$prefix === 'admin.kkm.' ? 'Portal Manajemen' : ($prefix === 'kabag.kkm.' ? 'Portal Kabag Diniyyah' : 'Portal Guru')" breadcrumb="KKM Diniyyah">
     @php($contextFilters = request()->only('academic_term_id', 'mustawa'))
-    <div class="space-y-4">
+    <div class="space-y-4" x-data @pageshow.window="if ($event.persisted) window.location.reload()">
         <header class="flex flex-wrap items-start justify-between gap-4">
             <div>
                 <h1 class="ui-page-title text-heading">Penetapan KKM</h1>

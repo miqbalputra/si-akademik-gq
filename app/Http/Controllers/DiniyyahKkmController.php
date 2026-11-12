@@ -208,6 +208,8 @@ class DiniyyahKkmController extends Controller
 
     public function save(Request $request, DiniyyahKkmRevision $revision, DiniyyahKkmWorkflow $workflow)
     {
+        // Keep validation input tied to this version, including older open forms.
+        $request->merge(['revision_id' => $revision->id]);
         $data = $request->validate(['lock_version' => ['required', 'integer', 'min:0'], 'action' => ['required', 'in:save,submit'], 'criteria' => ['nullable', 'array']]);
         $workflow->save($revision, $data['criteria'] ?? [], $request->user(), (int) $data['lock_version'], $data['action'] === 'submit');
 

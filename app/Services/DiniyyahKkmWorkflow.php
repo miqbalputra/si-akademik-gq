@@ -94,7 +94,7 @@ class DiniyyahKkmWorkflow
                 $this->invalid('Pengajuan sedang ditinjau dan tidak dapat diubah.');
             }
             $before = $revision->toArray();
-            $payload = $this->calculator->calculate($input, $submit);
+            $payload = $this->calculator->calculate($input, $submit, requireReasons: true);
             $revision->fill($payload);
             $revision->lock_version++;
             if ($submit) {
@@ -119,7 +119,7 @@ class DiniyyahKkmWorkflow
             if ($revision->status !== 'submitted') {
                 $this->invalid('Hanya pengajuan menunggu ACC yang dapat ditinjau.');
             }
-            if ($revision->submitted_by === $actor->id || $scope->assignedTeacher?->user_id === $actor->id) {
+            if ($revision->submitted_by === $actor->id || (int) $scope->assignedTeacher?->user_id === $actor->id) {
                 $this->invalid('Pengaju tidak boleh menyetujui atau meninjau pengajuannya sendiri.');
             }
             if (! $approve && trim($notes ?? '') === '') {

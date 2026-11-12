@@ -40,6 +40,7 @@ use App\Http\Controllers\WaliJpRecapController;
 use App\Http\Controllers\WaliKelasTasmiController;
 use App\Http\Controllers\WaliKelasTasmiReminderController;
 use App\Http\Controllers\WorkspaceSelectionController;
+use App\Http\Middleware\PreventStaleKkmPages;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -95,7 +96,7 @@ Route::middleware(['auth:web', 'role:kabag_diniyyah'])->group(function () {
 
 // Notifikasi pusat — bell icon di pojok kanan atas (semua role).
 foreach ([['admin', 'admin.kkm.', 'admin/kkm', 'admin|kabag_diniyyah'], ['web', 'kabag.kkm.', 'kabag/kkm', 'admin|kabag_diniyyah'], ['web', 'guru.kkm.', 'guru/kkm', 'guru']] as [$guard, $name, $path, $roles]) {
-    Route::middleware(['auth:'.$guard, 'role:'.$roles])->prefix($path)->name($name)->group(function () use ($name): void {
+    Route::middleware(['auth:'.$guard, 'role:'.$roles, PreventStaleKkmPages::class])->prefix($path)->name($name)->group(function () use ($name): void {
         Route::get('/', [DiniyyahKkmController::class, 'index'])->name('index');
         if ($name === 'admin.kkm.') {
             Route::delete('/versi/{revision}', [DiniyyahKkmController::class, 'destroyRevision'])->middleware('role:admin')->name('revision.destroy');

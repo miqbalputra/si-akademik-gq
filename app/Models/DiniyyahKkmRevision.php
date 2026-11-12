@@ -14,7 +14,7 @@ class DiniyyahKkmRevision extends Model
 
     protected function casts(): array
     {
-        return ['criteria' => 'array', 'average' => 'float', 'final_kkm' => 'integer', 'submitted_at' => 'datetime', 'reviewed_at' => 'datetime', 'lock_version' => 'integer'];
+        return ['diniyyah_kkm_scope_id' => 'integer', 'version' => 'integer', 'submitted_by' => 'integer', 'reviewed_by' => 'integer', 'criteria' => 'array', 'average' => 'float', 'final_kkm' => 'integer', 'submitted_at' => 'datetime', 'reviewed_at' => 'datetime', 'lock_version' => 'integer'];
     }
 
     public function scope(): BelongsTo

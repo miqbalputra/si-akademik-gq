@@ -887,6 +887,126 @@ class DiniyyahKkmTest extends TestCase
         $this->assertDatabaseMissing('activity_log', ['event' => 'history_deleted']);
     }
 
+    public static function stringIdDeletionModes(): array
+    {
+        return [['all'], ['active'], ['working']];
+    }
+
+    #[DataProvider('stringIdDeletionModes')]
+    public function test_admin_deletion_with_database_ids_returned_as_strings_removes_approved_and_pending_versions(string $mode): void
+    {
+        $c = $this->context();
+        $active = $this->approved($c);
+        $working = $this->submitted($c, 70);
+        $set = DiniyyahAssessmentSet::create(['diniyyah_class_subject_id' => $c['subjects']['male']->id, 'title' => 'Nilai asli', 'assessment_method' => 'direct_final', 'status' => 'validated']);
+        $result = DiniyyahAssessmentResult::create(['diniyyah_assessment_set_id' => $set->id, 'class_enrollment_id' => $this->enrollment($c)->id, 'final_score' => 83.25, 'daily_raw_score' => 81, 'exam_raw_score' => 85.5, 'kkm' => 75, 'kkm_revision_id' => $active->id, 'is_complete' => true, 'is_passed' => true]);
+        DB::connection()->getPdo()->setAttribute(\PDO::ATTR_STRINGIFY_FETCHES, true);
+        try {
+            $page = $this->actingAs($c['admin'], 'admin')->get(route('admin.kkm.show', $c['scope']))->assertOk();
+            $url = $mode === 'all' ? route('admin.kkm.destroy', $c['scope']) : route('admin.kkm.revision.destroy', $mode === 'active' ? $active : $working);
+            $this->delete($url, ['confirmation_token' => $page->viewData('deleteToken')])->assertRedirect()->assertSessionHasNoErrors();
+            if ($mode !== 'working') {
+                $this->assertDatabaseMissing('diniyyah_kkm_revisions', ['id' => $active->id]);
+                $this->assertNull($c['scope']->fresh()->active_revision_id);
+                $this->assertNull($result->fresh()->kkm_revision_id);
+            } else {
+                $this->assertSame($active->id, $c['scope']->fresh()->active_revision_id);
+                $this->assertSame('75.00', $c['subjects']['male']->fresh()->kkm);
+            }
+            if ($mode !== 'active') {
+                $this->assertDatabaseMissing('diniyyah_kkm_revisions', ['id' => $working->id]);
+                $this->assertNull($c['scope']->fresh()->working_revision_id);
+            } else {
+                $this->assertSame($working->id, $c['scope']->fresh()->working_revision_id);
+            }
+            $this->assertSame('83.25', $result->fresh()->final_score);
+            $this->assertSame('81.00', $result->fresh()->daily_raw_score);
+            $this->assertSame('85.50', $result->fresh()->exam_raw_score);
+            $this->assertTrue($result->fresh()->is_complete);
+            $this->assertDatabaseCount('diniyyah_teacher_assignments', 2);
+            $this->assertSame($c['teachers']['female']->id, $c['scope']->fresh()->assigned_teacher_id);
+            if ($mode === 'all') {
+                $teacherPage = $this->actingAs($c['users']['female'], 'web')->get(route('guru.kkm.show', $c['scope']))->assertOk()->assertSee('Belum ada riwayat KKM.')->assertSee('Mulai menyusun KKM')->assertDontSee('Pertimbangan guru berdasarkan kondisi pembelajaran.');
+                $this->assertStringContainsString('no-store', $teacherPage->headers->get('Cache-Control'));
+                $this->get(route('guru.kkm.export', [$active, 'pdf']))->assertNotFound();
+                $this->put(route('guru.kkm.save', $working), ['action' => 'save', 'lock_version' => $working->lock_version, 'criteria' => $this->input()])->assertNotFound();
+                $this->assertDatabaseCount('diniyyah_kkm_revisions', 0);
+            }
+        } finally {
+            DB::connection()->getPdo()->setAttribute(\PDO::ATTR_STRINGIFY_FETCHES, false);
+        }
+    }
+
+    public static function missingReasonInputs(): array
+    {
+        return [['save', null], ['save', ''], ['save', '   '], ['submit', null], ['submit', ''], ['submit', '   ']];
+    }
+
+    #[DataProvider('missingReasonInputs')]
+    public function test_save_and_submit_require_reasons_without_overwriting_saved_data(string $action, ?string $reason): void
+    {
+        $c = $this->context();
+        $active = $this->approved($c, 70);
+        $revision = app(DiniyyahKkmWorkflow::class)->startRevision($c['scope']->fresh(), $c['users']['female']);
+        $before = $revision->fresh()->getAttributes();
+        $input = $this->input(80);
+        foreach ($input as &$criterion) {
+            $criterion['reason'] = $reason;
+        }
+        unset($criterion);
+        $url = route('guru.kkm.show', $c['scope']);
+        $this->actingAs($c['users']['female'], 'web')->from($url)->put(route('guru.kkm.save', $revision), ['action' => $action, 'lock_version' => $revision->lock_version, 'criteria' => $input])
+            ->assertRedirect($url)->assertSessionHasErrors([
+                'criteria.complexity.reason' => 'Alasan Kompleksitas wajib diisi.',
+                'criteria.support.reason' => 'Alasan Daya Dukung wajib diisi.',
+                'criteria.intake.reason' => 'Alasan Intake Peserta Didik wajib diisi.',
+            ]);
+        $this->assertSame($before, $revision->fresh()->getAttributes());
+        $this->assertSame($active->id, $c['scope']->fresh()->active_revision_id);
+        $this->assertSame('70.00', $c['subjects']['male']->fresh()->kkm);
+        // Session assertions reopen Laravel's JSON session. Persist its error bag
+        // again before simulating the browser's next request.
+        session()->reflash();
+        session()->save();
+        $page = $this->get($url)->assertOk()->assertSee('Wajib diisi')->assertSee('Alasan Kompleksitas wajib diisi.');
+        $this->qa('reason-required-errors.html', $page->getContent());
+        $document = new \DOMDocument;
+        @$document->loadHTML($page->getContent());
+        $this->assertSame(3, (new \DOMXPath($document))->query('//textarea[@required and @aria-required="true" and @aria-invalid="true"]')->length);
+    }
+
+    public function test_draft_save_with_valid_reasons_still_allows_incomplete_scores(): void
+    {
+        $c = $this->context();
+        $revision = app(DiniyyahKkmWorkflow::class)->startRevision($c['scope'], $c['users']['female']);
+        $input = $this->input(80);
+        $input['intake']['score'] = null;
+        $this->actingAs($c['users']['female'], 'web')->put(route('guru.kkm.save', $revision), ['action' => 'save', 'lock_version' => $revision->lock_version, 'criteria' => $input])->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame('draft', $revision->fresh()->status);
+        $this->assertSame(80, $revision->fresh()->criteria['complexity']['score']);
+        $this->assertSame($input['intake']['reason'], $revision->fresh()->criteria['intake']['reason']);
+        $this->assertNull($revision->fresh()->final_kkm);
+    }
+
+    public function test_old_validation_input_from_a_deleted_version_is_not_shown_in_a_new_draft(): void
+    {
+        $c = $this->context();
+        $old = $this->submitted($c);
+        app(DiniyyahKkmDeletion::class)->deleteScope($c['scope'], $c['admin'], $this->deletionToken($c)['confirmation_token']);
+        $fresh = app(DiniyyahKkmWorkflow::class)->startRevision($c['scope']->fresh(), $c['users']['female']);
+        $input = $this->input(100);
+        $input['complexity']['reason'] = 'ALASAN_VERSI_YANG_SUDAH_DIHAPUS';
+        $page = $this->actingAs($c['users']['female'], 'web')->withSession(['_old_input' => ['revision_id' => $old->id, 'criteria' => $input]])->get(route('guru.kkm.show', $c['scope']))->assertOk()->assertDontSee('ALASAN_VERSI_YANG_SUDAH_DIHAPUS');
+        $this->assertNotSame($old->id, $fresh->id);
+        $document = new \DOMDocument;
+        @$document->loadHTML($page->getContent());
+        foreach ((new \DOMXPath($document))->query('//textarea[@required]') as $textarea) {
+            $this->assertSame('', $textarea->textContent);
+        }
+        $this->assertDatabaseCount('diniyyah_kkm_revisions', 1);
+        $this->assertNull($fresh->fresh()->final_kkm);
+    }
+
     private function qa(string $name, string $content): void
     {
         if (getenv('KKM_QA') !== '1') {
