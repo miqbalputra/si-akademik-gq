@@ -7,6 +7,8 @@ use Illuminate\Validation\ValidationException;
 
 class DiniyyahKkmCalculator
 {
+    public const POLICY = 'bands_65_70_75_v1';
+
     public const CRITERIA = ['complexity' => 'Kompleksitas', 'support' => 'Daya Dukung', 'intake' => 'Intake Peserta Didik'];
 
     public function calculate(array $input, bool $complete = false): array
@@ -32,8 +34,9 @@ class DiniyyahKkmCalculator
             }
         }
         $average = count($scores) === 3 ? array_sum($scores) / 3 : null;
+        $criteria['calculation_policy'] = self::POLICY;
 
-        return ['criteria' => $criteria, 'average' => $average, 'final_kkm' => $average === null ? null : (int) round($average, 0, PHP_ROUND_HALF_UP)];
+        return ['criteria' => $criteria, 'average' => $average, 'final_kkm' => $average === null ? null : ($average < 70 ? 65 : ($average < 75 ? 70 : 75))];
     }
 
     public function category(string $criterion, int $score): string

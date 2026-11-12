@@ -23,6 +23,7 @@ use App\Models\User;
 use App\Services\DiniyyahKkmAccess;
 use App\Services\DiniyyahKkmCalculator;
 use App\Services\DiniyyahKkmExportService;
+use App\Services\DiniyyahKkmPolicyRollout;
 use App\Services\DiniyyahKkmWorkflow;
 use App\Services\DiniyyahLedgerGenerator;
 use App\Services\DiniyyahLedgerWorkflow;
@@ -103,15 +104,42 @@ class DiniyyahKkmTest extends TestCase
         $this->assertSame($complexity, $result['criteria']['complexity']['category']);
         $this->assertSame($support, $result['criteria']['support']['category']);
         $this->assertSame($intake, $result['criteria']['intake']['category']);
-        $this->assertSame($score, $result['final_kkm']);
+        $this->assertEquals($score, $result['average']);
     }
 
-    public function test_rounding_and_incomplete_draft(): void
+    public static function finalKkmBands(): array
+    {
+        return [
+            'minimum' => [[60, 60, 60], 60, 65],
+            'below lower boundary' => [[70, 70, 69], 209 / 3, 65],
+            'lower boundary' => [[70, 70, 70], 70, 70],
+            'middle band' => [[70, 75, 74], 73, 70],
+            'below upper boundary' => [[75, 75, 74], 224 / 3, 70],
+            'upper boundary' => [[80, 75, 70], 75, 75],
+            'above upper boundary' => [[80, 90, 100], 90, 75],
+            'maximum' => [[100, 100, 100], 100, 75],
+        ];
+    }
+
+    #[DataProvider('finalKkmBands')]
+    public function test_final_kkm_uses_the_unrounded_average(array $scores, float $average, int $kkm): void
+    {
+        $input = $this->input();
+        foreach (array_keys(DiniyyahKkmCalculator::CRITERIA) as $index => $key) {
+            $input[$key]['score'] = $scores[$index];
+        }
+        $result = app(DiniyyahKkmCalculator::class)->calculate($input, true);
+        $this->assertEqualsWithDelta($average, $result['average'], 0.00001);
+        $this->assertSame($kkm, $result['final_kkm']);
+        $this->assertSame(DiniyyahKkmCalculator::POLICY, $result['criteria']['calculation_policy']);
+    }
+
+    public function test_banded_calculation_and_incomplete_draft(): void
     {
         $calculator = app(DiniyyahKkmCalculator::class);
         $input = $this->input(65);
         $input['intake']['score'] = 75;
-        $this->assertSame(68, $calculator->calculate($input, true)['final_kkm']);
+        $this->assertSame(65, $calculator->calculate($input, true)['final_kkm']);
         $this->assertNull($calculator->calculate([])['final_kkm']);
     }
 
@@ -190,7 +218,7 @@ class DiniyyahKkmTest extends TestCase
         $this->assertDatabaseMissing('panel_notifications', ['user_id' => $reader->id, 'notification_type' => 'kkm_approved']);
         $this->assertNull($otherClassSubject->fresh()->kkm);
         foreach ($c['subjects'] as $subject) {
-            $this->assertSame('78.00', $subject->fresh()->kkm);
+            $this->assertSame('75.00', $subject->fresh()->kkm);
         }
     }
 
@@ -476,6 +504,181 @@ class DiniyyahKkmTest extends TestCase
         $snapshot = DiniyyahLedgerSnapshot::create(['academic_term_id' => $c['term']->id, 'classroom_term_id' => $c['subjects']['male']->classroom_term_id, 'title' => 'Leger kosong', 'status' => 'draft', 'snapshot_data' => ['summary' => ['blocking_issues' => 0]]]);
         $this->expectException(\DomainException::class);
         app(DiniyyahLedgerWorkflow::class)->lock($snapshot, $c['admin']);
+    }
+
+    private function legacyApproved(array $c, int $score = 78): DiniyyahKkmRevision
+    {
+        $revision = $this->approved($c, $score);
+        $revision->update(['criteria' => $this->input($score), 'average' => $score, 'final_kkm' => $score]);
+        app(DiniyyahKkmWorkflow::class)->synchronize($c['scope']->fresh(), $revision);
+
+        return $revision->fresh();
+    }
+
+    private function enrollment(array $c): ClassEnrollment
+    {
+        $student = Student::create(['name' => 'Santri aturan KKM', 'gender' => 'male', 'nis' => 'KKM-POLICY', 'status' => 'active']);
+
+        return ClassEnrollment::create(['academic_term_id' => $c['term']->id, 'classroom_term_id' => $c['subjects']['male']->classroom_term_id, 'student_id' => $student->id, 'status' => 'active']);
+    }
+
+    public function test_policy_rollout_versions_legacy_approval_and_updates_pass_status_without_changing_scores(): void
+    {
+        $c = $this->context();
+        $old = $this->legacyApproved($c);
+        $before = $old->getAttributes();
+        $set = DiniyyahAssessmentSet::create(['diniyyah_class_subject_id' => $c['subjects']['male']->id, 'title' => 'Akidah', 'assessment_method' => 'direct_final', 'status' => 'validated']);
+        $result = DiniyyahAssessmentResult::create(['diniyyah_assessment_set_id' => $set->id, 'class_enrollment_id' => $this->enrollment($c)->id, 'daily_raw_score' => 76, 'exam_raw_score' => 76, 'final_score' => 76, 'kkm' => 78, 'kkm_revision_id' => $old->id, 'is_complete' => true, 'is_passed' => false]);
+        $snapshot = DiniyyahLedgerSnapshot::create(['academic_term_id' => $c['term']->id, 'classroom_term_id' => $set->classSubject->classroom_term_id, 'title' => 'Leger terbuka', 'status' => 'validated', 'snapshot_data' => ['columns' => [['kkm' => 78, 'kkm_revision_id' => $old->id]], 'summary' => ['blocking_issues' => 0]]]);
+
+        (require database_path('migrations/2026_11_12_120000_apply_banded_kkm_policy.php'))->up();
+
+        $active = $c['scope']->fresh()->activeRevision;
+        $this->assertNotSame($old->id, $active->id);
+        $this->assertSame(2, $active->version);
+        $this->assertSame('approved', $active->status);
+        $this->assertSame(75, $active->final_kkm);
+        $this->assertSame(78.0, $active->average);
+        $this->assertSame($old->id, $active->criteria['policy_source_revision_id']);
+        $this->assertNull($active->reviewed_by);
+        $this->assertSame('Sekolah (penyesuaian aturan KKM)', $active->reviewer_label);
+        $this->assertSame('superseded', $old->fresh()->status);
+        foreach (['criteria', 'average', 'final_kkm', 'reviewed_by', 'reviewed_at', 'submitted_by', 'submitted_at'] as $key) {
+            $this->assertSame($before[$key], $old->fresh()->getAttributes()[$key]);
+        }
+        foreach ($c['subjects'] as $subject) {
+            $this->assertSame('75.00', $subject->fresh()->kkm);
+            $this->assertSame($active->id, $subject->fresh()->kkm_revision_id);
+        }
+        $this->assertSame('75.00', $set->fresh()->kkm);
+        $this->assertSame('submitted', $set->fresh()->status);
+        $this->assertSame('76.00', $result->fresh()->final_score);
+        $this->assertSame('76.00', $result->fresh()->daily_raw_score);
+        $this->assertSame('76.00', $result->fresh()->exam_raw_score);
+        $this->assertSame($active->id, $result->fresh()->kkm_revision_id);
+        $this->assertTrue($result->fresh()->is_passed);
+        $this->assertSame('draft', $snapshot->fresh()->status);
+        $this->assertTrue($snapshot->fresh()->snapshot_data['kkm_stale']);
+        $this->assertSame(78, $snapshot->fresh()->snapshot_data['columns'][0]['kkm']);
+        $this->assertDatabaseHas('activity_log', ['log_name' => 'kkm', 'event' => 'calculation_policy_applied']);
+
+        app(DiniyyahKkmPolicyRollout::class)->initializeExisting();
+        (require database_path('migrations/2026_11_12_120000_apply_banded_kkm_policy.php'))->down();
+        $this->assertDatabaseCount('diniyyah_kkm_revisions', 2);
+        $this->assertSame(1, $snapshot->fresh()->snapshot_data['summary']['blocking_issues']);
+    }
+
+    public function test_policy_rollout_recalculates_pending_work_preserving_submission_and_rejecting_stale_saves(): void
+    {
+        $c = $this->context();
+        $old = $this->legacyApproved($c);
+        $working = $this->submitted($c, 74);
+        $working->update(['criteria' => $this->input(74), 'final_kkm' => 74]);
+        $before = $working->getAttributes();
+        $counts = app(DiniyyahKkmPolicyRollout::class)->initializeExisting();
+        $this->assertSame(1, $counts['updated_working']);
+        $this->assertSame(1, $counts['adjusted_active']);
+        $this->assertSame($working->id, $c['scope']->fresh()->working_revision_id);
+        $this->assertSame(70, $working->fresh()->final_kkm);
+        $this->assertSame(74.0, $working->fresh()->average);
+        $this->assertSame($before['lock_version'] + 1, $working->fresh()->lock_version);
+        foreach (['status', 'submitted_by', 'submitted_at'] as $key) {
+            $this->assertSame($before[$key], $working->fresh()->getAttributes()[$key]);
+        }
+        $this->assertSame(74, $working->fresh()->criteria['support']['score']);
+        $this->assertSame($this->input(74)['support']['reason'], $working->fresh()->criteria['support']['reason']);
+        $this->assertSame(3, $c['scope']->fresh()->activeRevision->version);
+        $this->assertSame($old->id, $c['scope']->fresh()->activeRevision->criteria['policy_source_revision_id']);
+        $this->expectException(ValidationException::class);
+        app(DiniyyahKkmWorkflow::class)->review($working, $c['kabag'], $before['lock_version'], true);
+    }
+
+    public static function frozenPolicyDocuments(): array
+    {
+        return [['ledger', 'locked'], ['ledger', 'published'], ['report', 'locked'], ['report', 'published']];
+    }
+
+    #[DataProvider('frozenPolicyDocuments')]
+    public function test_policy_rollout_preserves_frozen_documents_and_kkm(string $type, string $status): void
+    {
+        $c = $this->context();
+        $old = $this->legacyApproved($c);
+        if ($type === 'ledger') {
+            $document = DiniyyahLedgerSnapshot::create(['academic_term_id' => $c['term']->id, 'classroom_term_id' => $c['subjects']['male']->classroom_term_id, 'title' => 'Dokumen historis', 'status' => $status, 'snapshot_data' => ['columns' => [['kkm' => 78, 'kkm_revision_id' => $old->id]]]]);
+        } else {
+            $enrollment = $this->enrollment($c);
+            $document = ReportCard::withoutEvents(fn () => ReportCard::create(['academic_term_id' => $c['term']->id, 'classroom_term_id' => $enrollment->classroom_term_id, 'class_enrollment_id' => $enrollment->id, 'student_id' => $enrollment->student_id, 'report_type' => 'diniyyah', 'status' => $status]));
+        }
+        $before = [$old->getAttributes(), $document->fresh()->getAttributes(), $c['subjects']['male']->fresh()->getAttributes()];
+        $counts = app(DiniyyahKkmPolicyRollout::class)->initializeExisting();
+        $this->assertSame(1, $counts['skipped_frozen']);
+        $this->assertSame($before, [$old->fresh()->getAttributes(), $document->fresh()->getAttributes(), $c['subjects']['male']->fresh()->getAttributes()]);
+        $this->assertSame($old->id, $c['scope']->fresh()->active_revision_id);
+        $this->assertDatabaseCount('diniyyah_kkm_revisions', 1);
+    }
+
+    public function test_policy_rollout_leaves_closed_semesters_unchanged(): void
+    {
+        $c = $this->context();
+        $old = $this->legacyApproved($c);
+        $c['term']->update(['is_active' => false, 'ends_at' => today()->subDay()]);
+        $before = $old->getAttributes();
+        app(DiniyyahKkmPolicyRollout::class)->initializeExisting();
+        $this->assertSame($before, $old->fresh()->getAttributes());
+        $this->assertSame($old->id, $c['scope']->fresh()->active_revision_id);
+        $this->assertDatabaseCount('diniyyah_kkm_revisions', 1);
+    }
+
+    public function test_policy_rollout_does_not_invalidate_documents_when_legacy_kkm_already_matches(): void
+    {
+        $c = $this->context();
+        $old = $this->legacyApproved($c, 70);
+        $set = DiniyyahAssessmentSet::create(['diniyyah_class_subject_id' => $c['subjects']['male']->id, 'title' => 'Akidah', 'assessment_method' => 'direct_final', 'status' => 'validated']);
+        $counts = app(DiniyyahKkmPolicyRollout::class)->initializeExisting();
+        $this->assertSame(0, $counts['adjusted_active']);
+        $this->assertSame('validated', $set->fresh()->status);
+        $this->assertSame($old->id, $c['scope']->fresh()->active_revision_id);
+    }
+
+    public function test_policy_rollout_preserves_invalid_legacy_input_for_manual_review(): void
+    {
+        $c = $this->context();
+        $old = $this->legacyApproved($c);
+        $old->update(['criteria' => ['complexity' => ['score' => 78, 'reason' => 'Isian historis tidak lengkap']]]);
+        $before = $old->getAttributes();
+        $counts = app(DiniyyahKkmPolicyRollout::class)->initializeExisting();
+        $this->assertSame(1, $counts['skipped_invalid']);
+        $this->assertSame($before, $old->fresh()->getAttributes());
+        $this->assertDatabaseCount('diniyyah_kkm_revisions', 1);
+    }
+
+    public function test_policy_rollout_keeps_incomplete_drafts_incomplete(): void
+    {
+        $c = $this->context();
+        $working = $c['scope']->revisions()->create(['version' => 1, 'criteria' => ['complexity' => ['score' => 69, 'reason' => 'Alasan kompleksitas']]]);
+        $c['scope']->update(['working_revision_id' => $working->id]);
+        $counts = app(DiniyyahKkmPolicyRollout::class)->initializeExisting();
+        $this->assertSame(1, $counts['updated_working']);
+        $this->assertSame('draft', $working->fresh()->status);
+        $this->assertNull($working->fresh()->average);
+        $this->assertNull($working->fresh()->final_kkm);
+        $this->assertSame('Alasan kompleksitas', $working->fresh()->criteria['complexity']['reason']);
+        $this->assertNull($c['scope']->fresh()->active_revision_id);
+    }
+
+    public function test_legacy_exports_describe_the_original_rule_and_new_exports_describe_the_bands(): void
+    {
+        $c = $this->context();
+        $old = $this->legacyApproved($c);
+        app(DiniyyahKkmPolicyRollout::class)->initializeExisting();
+        $active = $c['scope']->fresh()->activeRevision;
+        $oldHtml = view('kkm.pdf', ['revisions' => collect([$old->fresh()]), 'criteriaLabels' => DiniyyahKkmCalculator::CRITERIA])->render();
+        $newHtml = view('kkm.pdf', ['revisions' => collect([$active]), 'criteriaLabels' => DiniyyahKkmCalculator::CRITERIA])->render();
+        $this->assertStringContainsString('Versi aturan lama', $oldHtml);
+        $this->assertStringContainsString('Ketentuan KKM:', $newHtml);
+        $this->assertStringContainsString('Sekolah (penyesuaian aturan KKM)', $newHtml);
+        $this->assertSame(75, $this->readRecapKkm(app(DiniyyahKkmExportService::class)->xlsx(collect([$active]))));
+        $this->assertSame(78, $this->readRecapKkm(app(DiniyyahKkmExportService::class)->xlsx(collect([$old]))));
     }
 
     private function qa(string $name, string $content): void

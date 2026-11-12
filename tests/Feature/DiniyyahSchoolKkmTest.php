@@ -22,6 +22,7 @@ use App\Models\Teacher;
 use App\Models\User;
 use App\Services\DiniyyahKkmAccess;
 use App\Services\DiniyyahKkmCalculator;
+use App\Services\DiniyyahKkmPolicyRollout;
 use App\Services\DiniyyahKkmResolver;
 use App\Services\DiniyyahKkmWorkflow;
 use App\Services\DiniyyahLedgerGenerator;
@@ -125,6 +126,17 @@ class DiniyyahSchoolKkmTest extends TestCase
             $this->post(route('kabag.kkm.review', $revision), ['decision' => $decision, 'notes' => 'Ubah ketetapan', 'lock_version' => 0])->assertSessionHasErrors('kkm');
         }
         $this->assertSame(70, $revision->fresh()->final_kkm);
+        $this->assertDatabaseCount('diniyyah_kkm_revisions', 1);
+    }
+
+    public function test_banded_policy_rollout_preserves_school_fixed_kkm(): void
+    {
+        $c = $this->context();
+        $active = $c['scope']->activeRevision;
+        $before = $active->getAttributes();
+        app(DiniyyahKkmPolicyRollout::class)->initializeExisting();
+        $this->assertSame($before, $active->fresh()->getAttributes());
+        $this->assertSame(70, $c['scope']->fresh()->activeRevision->final_kkm);
         $this->assertDatabaseCount('diniyyah_kkm_revisions', 1);
     }
 

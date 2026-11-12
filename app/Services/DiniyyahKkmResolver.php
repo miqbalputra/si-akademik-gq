@@ -79,7 +79,7 @@ class DiniyyahKkmResolver
         $ledgers = DiniyyahLedgerSnapshot::whereIn('classroom_term_id', $classIds)->whereIn('status', ['locked', 'published'])->get(['id', 'title'])->map(fn ($s) => 'Leger #'.$s->id.' '.$s->title);
         $reports = ReportCard::whereIn('classroom_term_id', $classIds)->where('report_type', 'diniyyah')->whereIn('status', ['locked', 'published'])->pluck('id')->map(fn ($id) => 'Rapor #'.$id);
 
-        return $ledgers->merge($reports)->all();
+        return collect($ledgers->all())->merge($reports)->all();
     }
 
     public function ensureOpen(DiniyyahKkmScope $scope): void

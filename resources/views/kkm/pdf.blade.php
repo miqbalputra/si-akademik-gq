@@ -16,8 +16,15 @@
         <p>Penyusun: {{ $item->submitter?->name ?? $item->scope->assignedTeacher?->name ?? '-' }} · Diajukan: {{ $item->submitted_at?->format('d-m-Y H:i') ?? '-' }}</p>
         <table><thead><tr><th style="width:40%">Unsur</th><th style="width:15%">Angka</th><th style="width:45%">Kategori</th></tr></thead><tbody>@foreach($criteriaLabels as $key=>$label)<tr><td>{{ $label }}</td><td>{{ $item->criteria[$key]['score'] ?? '-' }}</td><td>{{ $item->criteria[$key]['category'] ?? '-' }}</td></tr>@endforeach</tbody></table>
         @foreach($criteriaLabels as $key=>$label)<h3 style="page-break-after:avoid">Alasan {{ $label }}</h3><p class="reason">{{ $item->criteria[$key]['reason'] ?? '-' }}</p>@endforeach
-        <div class="summary">Rumus: ROUND((Kompleksitas + Daya Dukung + Intake) / 3, 0)<br>Rata-rata: {{ $item->average === null ? 'Belum lengkap' : number_format($item->average,2,',','.') }} · <strong>KKM: {{ $item->final_kkm ?? 'Belum lengkap' }}</strong></div>
-        <p>Peninjau: {{ $item->reviewer?->name ?? '-' }} · Waktu peninjauan: {{ $item->reviewed_at?->format('d-m-Y H:i') ?? '-' }}</p>
+        <div class="summary">Rata-rata = (Kompleksitas + Daya Dukung + Intake) / 3.<br>
+            @if($item->uses_banded_kkm)
+                Ketentuan KKM: rata-rata &lt; 70 → 65; 70 sampai &lt; 75 → 70; ≥ 75 → 75. Rata-rata tidak dibulatkan terlebih dahulu.
+            @else
+                Versi aturan lama: KKM = rata-rata dibulatkan ke bilangan bulat.
+            @endif
+            <br>Rata-rata: {{ $item->average === null ? 'Belum lengkap' : number_format($item->average,2,',','.') }} · <strong>KKM: {{ $item->final_kkm ?? 'Belum lengkap' }}</strong>
+        </div>
+        <p>Penetap / Peninjau: {{ $item->reviewer_label }} · Waktu peninjauan: {{ $item->reviewed_at?->format('d-m-Y H:i') ?? '-' }}</p>
         @if($item->review_notes)<p class="reason">Catatan peninjau: {{ $item->review_notes }}</p>@endif
     @endif
     <p class="muted">Dicetak {{ now()->format('d-m-Y H:i') }} WIB. Berlaku bersama untuk mapel dan mustawa yang sama pada semester ini.</p>

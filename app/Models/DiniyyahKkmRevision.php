@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\DiniyyahKkmCalculator;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -39,5 +40,22 @@ class DiniyyahKkmRevision extends Model
     public function getIsSchoolFixedAttribute(): bool
     {
         return $this->status === 'school_fixed' || ($this->criteria['school_policy'] ?? null) === 'fixed_70_v1';
+    }
+
+    public function getUsesBandedKkmAttribute(): bool
+    {
+        return ($this->criteria['calculation_policy'] ?? null) === DiniyyahKkmCalculator::POLICY;
+    }
+
+    public function getReviewerLabelAttribute(): string
+    {
+        if ($this->is_school_fixed) {
+            return 'Sekolah/Kabag Diniyyah';
+        }
+        if (isset($this->criteria['policy_source_revision_id'])) {
+            return 'Sekolah (penyesuaian aturan KKM)';
+        }
+
+        return $this->reviewer?->name ?? '-';
     }
 }

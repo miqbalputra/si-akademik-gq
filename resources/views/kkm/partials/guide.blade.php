@@ -84,8 +84,13 @@
                 <section class="rounded-xl border border-line bg-surface-subtle p-4 sm:p-5" aria-labelledby="kkm-guide-calculation">
                     <h3 id="kkm-guide-calculation" class="font-semibold text-heading">Ketentuan Perhitungan KKM</h3>
                     <p class="mt-2">Rata-rata = (Kompleksitas + Daya Dukung + Intake) ÷ 3.</p>
-                    <p class="mt-2">Aplikasi menghitung KKM otomatis dengan membulatkan rata-rata ke bilangan bulat terdekat.</p>
-                    <p class="mt-2 text-muted">Contoh: (80 + 75 + 70) ÷ 3 = 75, sehingga KKM hasil perhitungan adalah 75. KKM resmi berlaku setelah disetujui.</p>
+                    <p class="mt-2">Rata-rata tidak dibulatkan terlebih dahulu. KKM akhir mengikuti kategori berikut:</p>
+                    <table class="mt-3 w-full text-left">
+                        <caption class="sr-only">Ketentuan nilai akhir KKM sekolah</caption>
+                        <thead><tr class="border-b border-line"><th scope="col" class="p-2">Rata-rata</th><th scope="col" class="p-2">KKM Akhir</th></tr></thead>
+                        <tbody><tr class="border-b border-line"><td class="p-2">Kurang dari 70</td><td class="p-2 font-semibold">65</td></tr><tr class="border-b border-line"><td class="p-2">70 sampai kurang dari 75</td><td class="p-2 font-semibold">70</td></tr><tr><td class="p-2">75 ke atas</td><td class="p-2 font-semibold">75</td></tr></tbody>
+                    </table>
+                    <p class="mt-3 text-muted">Contoh: (70 + 70 + 69) ÷ 3 = 69,67 → KKM 65; (75 + 75 + 74) ÷ 3 = 74,67 → KKM 70; (80 + 75 + 70) ÷ 3 = 75 → KKM 75. KKM resmi berlaku setelah disetujui.</p>
                 </section>
             </div>
 
