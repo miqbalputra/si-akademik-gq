@@ -26,7 +26,15 @@
             <section class="rounded-2xl border border-line bg-surface p-5">
                 <h2 class="ui-card-title text-heading">Versi {{ $revision->version }} · {{ $revision->status_label }}</h2>
                 @if(!in_array($revision->status, ['approved','superseded'], true))<p class="mt-2 text-muted">Belum disetujui. @if($scope->activeRevision)KKM versi {{ $scope->activeRevision->version }} tetap berlaku selama peninjauan.@endif</p>@endif
-                @if($revision->review_notes)<div class="mt-3 rounded-lg border border-line p-3"><strong>Catatan peninjau</strong><p class="whitespace-pre-wrap">{{ $revision->review_notes }}</p></div>@endif
+                @if($revision->review_notes)
+                    <div class="kkm-review-note mt-4" role="note" aria-labelledby="kkm-review-notes-title">
+                        <svg class="mt-0.5 h-6 w-6 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M8 9h8M8 13h5M21 12a9 9 0 0 1-9 9H3l2-5a9 9 0 1 1 16-4Z" /></svg>
+                        <div class="min-w-0">
+                            <h3 id="kkm-review-notes-title" class="font-semibold">Catatan Peninjau</h3>
+                            <p class="mt-2 whitespace-pre-wrap break-words leading-relaxed">{{ $revision->review_notes }}</p>
+                        </div>
+                    </div>
+                @endif
                 @if($editable)
                     @php($restoreInput = (string) old('revision_id', '') === (string) $revision->id)
                     @php($scores = collect($criteriaLabels)->mapWithKeys(fn($label,$key) => [$key => $restoreInput ? old('criteria.'.$key.'.score', $revision->criteria[$key]['score'] ?? '') : ($revision->criteria[$key]['score'] ?? '')])->all())

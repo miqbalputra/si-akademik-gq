@@ -51,6 +51,8 @@ return [
     // default. Compare with hash_equals() to avoid timing leaks.
     'n8n' => [
         'token' => env('N8N_API_TOKEN'),
+        'kkm_webhook_url' => env('N8N_KKM_WEBHOOK_URL'),
+        'kkm_webhook_timeout' => (int) env('N8N_KKM_WEBHOOK_TIMEOUT', 4),
     ],
 
     'attendance_journal' => [

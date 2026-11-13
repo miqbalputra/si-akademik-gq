@@ -16,7 +16,7 @@ use Illuminate\Validation\ValidationException;
 
 class DiniyyahKkmWorkflow
 {
-    public function __construct(private DiniyyahKkmResolver $resolver, private DiniyyahKkmAccess $access, private DiniyyahKkmCalculator $calculator, private NotificationDispatcher $notifications) {}
+    public function __construct(private DiniyyahKkmResolver $resolver, private DiniyyahKkmAccess $access, private DiniyyahKkmCalculator $calculator, private NotificationDispatcher $notifications, private DiniyyahKkmN8nWebhook $kkmWebhook) {}
 
     public function assign(DiniyyahClassSubject $subject, int $teacherId, User $actor): DiniyyahKkmScope
     {
@@ -93,6 +93,7 @@ class DiniyyahKkmWorkflow
             if (! in_array($revision->status, ['draft', 'needs_revision'], true)) {
                 $this->invalid('Pengajuan sedang ditinjau dan tidak dapat diubah.');
             }
+            $isResubmission = $revision->status === 'needs_revision';
             $before = $revision->toArray();
             $payload = $this->calculator->calculate($input, $submit, requireReasons: true);
             $revision->fill($payload);
@@ -105,6 +106,7 @@ class DiniyyahKkmWorkflow
             if ($submit) {
                 $reviewers = User::role(['admin', 'kabag_diniyyah'])->whereKeyNot($actor->id)->pluck('id')->all();
                 $this->notify($scope, $reviewers, 'KKM menunggu ACC', $scope->label.' versi '.$revision->version.' menunggu persetujuan.', 'kkm_submitted');
+                $this->kkmWebhook->notifySubmitted($scope, $revision, $actor, $isResubmission);
             }
 
             return $revision;
