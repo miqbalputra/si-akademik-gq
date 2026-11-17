@@ -7,7 +7,6 @@ use App\Models\DiniyyahLedgerRow;
 use App\Models\DiniyyahLedgerSnapshot;
 use App\Models\ReportCard;
 use DomainException;
-use Illuminate\Support\Facades\DB;
 
 class ReportCardGenerator
 {
@@ -34,7 +33,7 @@ class ReportCardGenerator
         }
         $this->ensureSnapshotCanGenerateReportCards($snapshot);
 
-        return DB::transaction(function () use ($snapshot, $generatedBy, $includeArchivedStudents) {
+        return app(DiniyyahKkmResolver::class)->withClassLocks($snapshot->classroomTerm, function () use ($snapshot, $generatedBy, $includeArchivedStudents) {
             $count = 0;
 
             foreach ($snapshot->rows->whereNotNull('rank_in_class') as $row) {
@@ -51,13 +50,24 @@ class ReportCardGenerator
 
     public function generateFromLedgerRow(DiniyyahLedgerSnapshot $snapshot, DiniyyahLedgerRow $row, ?int $generatedBy = null, bool $includeArchivedStudents = false): ReportCard
     {
+        return app(DiniyyahKkmResolver::class)->withClassLocks($snapshot->classroomTerm, fn () => $this->persistLedgerRow($snapshot, $row, $generatedBy, $includeArchivedStudents));
+    }
+
+    private function persistLedgerRow(DiniyyahLedgerSnapshot $snapshot, DiniyyahLedgerRow $row, ?int $generatedBy, bool $includeArchivedStudents): ReportCard
+    {
         $this->ensureSnapshotCanGenerateReportCards($snapshot);
+        if ((int) $row->diniyyah_ledger_snapshot_id !== (int) $snapshot->id) {
+            throw new DomainException('Baris nilai tidak berasal dari leger ini.');
+        }
 
         if ($row->rank_in_class === null || $row->total_diniyyah_score === null || $row->average_diniyyah_score === null) {
             throw new DomainException('Rapor tidak bisa dibuat dari baris leger yang belum lengkap.');
         }
 
         $row->loadMissing('classEnrollment.student');
+        if ((int) $row->classEnrollment?->classroom_term_id !== (int) $snapshot->classroom_term_id) {
+            throw new DomainException('Pendaftaran santri tidak cocok dengan kelas leger.');
+        }
         if (! $includeArchivedStudents && $row->classEnrollment?->student?->status !== 'active') {
             throw new DomainException('Rapor siswa arsip hanya dapat dibuat oleh admin.');
         }
@@ -76,22 +86,31 @@ class ReportCardGenerator
         // kembali ke draft, karena itu mencabut akses wali dan menghapus audit
         // trail (locked_at/published_at/locked_by/published_by). Kartu baru tetap
         // dibuat dengan status 'draft'.
-        $reportCard = ReportCard::firstWhere([
+        $reportCard = ReportCard::where([
             'academic_term_id' => $snapshot->academic_term_id,
             'class_enrollment_id' => $row->class_enrollment_id,
             'report_type' => 'diniyyah',
-        ]);
+        ])->lockForUpdate()->first();
 
         if ($reportCard && $reportCard->status !== 'draft') {
             throw new DomainException('Rapor terkunci atau terbit tidak boleh ditimpa generator. Buka revisi tercatat terlebih dahulu.');
         }
 
+        $savedCells = $row->cells->keyBy('column_key');
+        if (($snapshot->snapshot_data['layout_version'] ?? '') === 'combined-v1') {
+            foreach (['combined_total', 'combined_average', 'combined_rank'] as $key) {
+                if ($savedCells->get($key)?->value_numeric === null) {
+                    throw new DomainException('Ringkasan gabungan Diniyyah dan Tahfidz pada leger belum lengkap.');
+                }
+            }
+        }
+        $previousPrintOptions = $reportCard?->snapshots()->latest('id')->first()?->snapshot_data['print']['options'] ?? [];
         $scoreData = [
             'classroom_term_id' => $snapshot->classroom_term_id,
             'student_id' => $row->classEnrollment->student_id,
-            'total_score' => $row->total_diniyyah_score,
-            'average_score' => $row->average_diniyyah_score,
-            'rank_in_class' => $row->rank_in_class,
+            'total_score' => $savedCells->get('combined_total')?->value_numeric ?? $row->total_diniyyah_score,
+            'average_score' => $savedCells->get('combined_average')?->value_numeric ?? $row->average_diniyyah_score,
+            'rank_in_class' => $savedCells->get('combined_rank')?->value_numeric ?? $row->rank_in_class,
         ];
 
         if ($reportCard) {
@@ -121,7 +140,8 @@ class ReportCardGenerator
                 'source_type' => $cell->source_type,
                 'source_id' => $cell->source_id,
                 'subject_name' => $cell->label,
-                'tested_material' => $assessmentSet?->tested_material,
+                'subject_arabic_name' => $column['subject_arabic_name'] ?? $assessmentSet?->classSubject?->subject?->arabic_name,
+                'tested_material' => $column['tested_material'] ?? $assessmentSet?->tested_material,
                 'kkm' => $kkm,
                 'kkm_revision_id' => $column['kkm_revision_id'] ?? null,
                 'score_numeric' => $score,
@@ -132,11 +152,27 @@ class ReportCardGenerator
             ]);
         }
 
-        $attendance = $this->attendanceRecapService->syncReportCardAttendance($reportCard);
+        if (($snapshot->snapshot_data['layout_version'] ?? '') === 'combined-v1') {
+            $counts = [];
+            foreach (['sick_count' => 'attendance_sick', 'permission_count' => 'attendance_permission', 'absent_count' => 'attendance_absent'] as $key => $cellKey) {
+                $value = $savedCells->get($cellKey)?->value_numeric;
+                if ($value === null) {
+                    throw new DomainException('Presensi pada leger belum lengkap.');
+                }
+                $counts[$key] = (int) $value;
+            }
+            $attendance = $reportCard->attendance()->updateOrCreate([], $counts);
+        } else {
+            $attendance = $this->attendanceRecapService->syncReportCardAttendance($reportCard);
+        }
+        $reportCard->setRelation('attendance', $attendance);
+        $printData = app(ReportCardTemplateData::class)->capture($snapshot, $row, $reportCard);
+        $printData['options'] = array_replace($printData['options'], $previousPrintOptions);
 
         $reportCard->snapshots()->create([
-            'layout_version' => 'diniyyah-v1',
+            'layout_version' => config('report-cards.layout_version'),
             'snapshot_data' => [
+                'print' => $printData,
                 'student' => [
                     'name' => $row->student_name,
                     'nis' => $row->student_nis,
@@ -184,7 +220,7 @@ class ReportCardGenerator
             return;
         }
         $kelas = $snapshot->classroomTerm?->name ?? 'kelas';
-        $dispatcher = app(\App\Services\NotificationDispatcher::class);
+        $dispatcher = app(NotificationDispatcher::class);
         $linkUrl = route('diniyyah.ledger.show', $snapshot);
         $body = "{$count} rapor kelas {$kelas} berhasil di-generate dari leger.";
 

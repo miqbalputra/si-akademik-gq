@@ -3,7 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\DiniyyahLedgerSnapshot;
-use App\Services\ReportCardGenerator;
+use App\Services\ReportCardAutomation;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -24,11 +24,11 @@ class GenerateReportCards implements ShouldQueue
         public ?int $generatedBy = null,
     ) {}
 
-    public function handle(ReportCardGenerator $generator): void
+    public function handle(ReportCardAutomation $automation): void
     {
         $snapshot = DiniyyahLedgerSnapshot::findOrFail($this->snapshotId);
 
-        $count = $generator->generateFromLedgerSnapshot($snapshot, $this->generatedBy);
+        $count = $automation->createMissing($snapshot, $this->generatedBy);
 
         Log::info('Report cards generated via queue', [
             'snapshot_id' => $this->snapshotId,

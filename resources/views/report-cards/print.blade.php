@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Cetak Rapor {{ $reportCard->student?->name }}</title>
     <style>
-        @page { size: A4; margin: 13mm 11mm; }
+        @page { size: 215.9mm 330.2mm; margin: 13mm 11mm; }
         * { box-sizing: border-box; }
         body { margin: 0; background: #e8ece8; color: #111512; font-family: Arial, Helvetica, sans-serif; font-size: 11px; line-height: 1.4; }
         .toolbar { display: flex; justify-content: center; gap: 8px; padding: 16px; }

@@ -5,8 +5,6 @@ namespace App\Services;
 use App\Models\ClassroomTerm;
 use App\Models\DiniyyahAssessmentSet;
 use App\Models\DiniyyahLedgerSnapshot;
-use App\Models\TahfidzSemesterRecap;
-use App\Models\TahfidzUasResult;
 use DomainException;
 use Illuminate\Support\Collection;
 
@@ -43,29 +41,23 @@ class DiniyyahCombinedLedger
         $completeRows = 0;
         foreach ($snapshot->rows as $row) {
             $studentId = $row->classEnrollment->student_id;
-            $uas = $sources['uas']->get($studentId, collect());
-            $recaps = $sources['recaps']->get($studentId, collect());
-            $result = $uas->count() === 1 ? $uas->first() : null;
-            $recap = $recaps->count() === 1 ? $recaps->first() : null;
-            $validUas = $result && $result->is_complete && in_array($result->status, ['validated', 'locked', 'published'], true);
-            $validRecap = $recap && in_array($recap->status, ['validated', 'locked', 'published'], true);
+            $resolved = app(TahfidzReportSources::class)->resolve($sources, $studentId);
             $values = [];
             foreach (self::FIELDS as $key => [$label, $field, $numeric]) {
-                $model = str_starts_with($key, 'tahfidz_s') || $key === 'tahfidz_manzil' ? $recap : $result;
-                $valid = $model === $recap ? $validRecap : $validUas;
-                $value = $valid ? $model?->$field : null;
+                $sourceId = $resolved['entry']?->id ?? (in_array($key, ['tahfidz_juz', 'tahfidz_uas']) ? $resolved['uas_id'] : $resolved['recap_id']);
+                $value = $resolved['ready'] ? $resolved['values'][$key] : null;
                 $values[$key] = $value;
                 $row->cells()->create([
-                    'column_key' => $key, 'label' => $label, 'source_type' => 'tahfidz_snapshot', 'source_id' => $model?->id,
+                    'column_key' => $key, 'label' => $label, 'source_type' => 'tahfidz_snapshot', 'source_id' => $sourceId,
                     'value_numeric' => $numeric && $value !== null ? $value : null, 'value_text' => $value === null ? null : (string) $value,
                     'sort_order' => 500 + array_search($key, array_keys(self::FIELDS)),
                 ]);
             }
-            $data['tahfidz_sources'][$studentId] = ['uas_id' => $result?->id, 'recap_id' => $recap?->id];
+            $data['tahfidz_sources'][$studentId] = ['uas_id' => $resolved['uas_id'], 'recap_id' => $resolved['recap_id'], 'report_entry_id' => $resolved['entry']?->id];
             $complete = $row->total_diniyyah_score !== null && collect($values)->every(fn ($v) => $v !== null && $v !== '');
             if (! $complete) {
                 $data['issues'][] = ['level' => 'blocking', 'code' => 'tahfidz_incomplete', 'class_enrollment_id' => $row->class_enrollment_id,
-                    'message' => $row->student_name.': Tahfidz belum lengkap/tervalidasi atau memiliki lebih dari satu sumber semester.'];
+                    'message' => $row->student_name.': Tahfidz belum lengkap/final/diperiksa wali kelas atau sumber semester belum tunggal.'];
             } else {
                 $completeRows++;
             }
@@ -118,10 +110,6 @@ class DiniyyahCombinedLedger
 
     private function sources(ClassroomTerm $classroom, Collection $studentIds): array
     {
-        $uas = TahfidzUasResult::where('academic_term_id', $classroom->academic_term_id)->whereIn('student_id', $studentIds)->orderBy('id')->lockForUpdate()->get();
-        $recaps = TahfidzSemesterRecap::where('academic_term_id', $classroom->academic_term_id)->whereIn('student_id', $studentIds)->orderBy('id')->lockForUpdate()->get();
-
-        return ['uas' => $uas->groupBy('student_id'), 'recaps' => $recaps->groupBy('student_id'),
-            'fingerprint' => hash('sha256', json_encode([$uas->toArray(), $recaps->toArray()], JSON_THROW_ON_ERROR))];
+        return app(TahfidzReportSources::class)->load($classroom, $studentIds);
     }
 }

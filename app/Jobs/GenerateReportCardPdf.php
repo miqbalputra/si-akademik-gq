@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\ReportCard;
+use App\Services\ReportCardPrintService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -35,13 +36,16 @@ class GenerateReportCardPdf implements ShouldQueue
             'signatures',
         ])->findOrFail($this->reportCardId);
 
-        $pdf = Pdf::loadView('report-cards.print', compact('reportCard'))
-            ->setPaper('a4');
+        $targetSnapshot = $reportCard->snapshots()->latest('id')->first();
+        $service = app(ReportCardPrintService::class);
+        $content = $service->data($reportCard)
+            ? $service->pdf([$reportCard])
+            : Pdf::loadView('report-cards.print', compact('reportCard'))->setPaper([0, 0, 215.9 * 72 / 25.4, 330.2 * 72 / 25.4])->output();
 
         $filename = "rapor/rapor-{$reportCard->id}-".now()->format('YmdHis').'.pdf';
-        Storage::disk('local')->put($filename, $pdf->output());
+        Storage::disk('local')->put($filename, $content);
 
-        $reportCard->snapshots()->latest()->first()?->update([
+        $targetSnapshot?->update([
             'pdf_path' => $filename,
         ]);
 

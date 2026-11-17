@@ -4,8 +4,9 @@ namespace App\Filament\Resources\DiniyyahLedgerSnapshots\Tables;
 
 use App\Services\DiniyyahLedgerGenerator;
 use App\Services\DiniyyahLedgerWorkflow;
+use App\Services\ReportCardAutomation;
 use App\Services\ReportCardBulkWorkflow;
-use App\Services\ReportCardGenerator;
+use App\Support\UiLabel;
 use DomainException;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
@@ -25,8 +26,8 @@ class DiniyyahLedgerSnapshotsTable
                 TextColumn::make('classroomTerm.name')->label('Kelas')->searchable(),
                 TextColumn::make('academicTerm.name')->label('Periode')->searchable(),
                 TextColumn::make('status')->label('Status')->badge()
-                    ->formatStateUsing(fn ($state): string => \App\Support\UiLabel::statusLabel($state))
-                    ->color(fn ($state): string => \App\Support\UiLabel::statusColor($state)),
+                    ->formatStateUsing(fn ($state): string => UiLabel::statusLabel($state))
+                    ->color(fn ($state): string => UiLabel::statusColor($state)),
                 TextColumn::make('generated_at')->label('Dibuat Pada')->dateTime()->sortable(),
             ])
             ->filters([
@@ -98,13 +99,13 @@ class DiniyyahLedgerSnapshotsTable
                         }
                     }),
                 Action::make('generateReportCards')
-                    ->label('Generate Rapor')
+                    ->label('Buat Rapor yang Belum Ada')
                     ->authorize(fn (): bool => self::canManageDiniyyah())
                     ->requiresConfirmation()
                     ->visible(fn ($record): bool => self::canManageDiniyyah() && in_array($record->status, ['locked', 'published'], true))
                     ->action(function ($record): void {
                         try {
-                            $count = app(ReportCardGenerator::class)->generateFromLedgerSnapshot($record, auth()->id());
+                            $count = app(ReportCardAutomation::class)->createMissing($record, auth()->id());
 
                             Notification::make()
                                 ->title("{$count} rapor berhasil dibuat")

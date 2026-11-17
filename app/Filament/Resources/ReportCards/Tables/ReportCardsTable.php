@@ -2,15 +2,17 @@
 
 namespace App\Filament\Resources\ReportCards\Tables;
 
+use App\Services\ReportCardAutomation;
 use App\Services\ReportCardBulkWorkflow;
 use App\Services\ReportCardWorkflow;
-use Filament\Forms\Components\Textarea;
+use App\Support\UiLabel;
 use DomainException;
 use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -26,8 +28,8 @@ class ReportCardsTable
                 TextColumn::make('classroomTerm.name')->label('Kelas')->searchable(),
                 TextColumn::make('academicTerm.name')->label('Periode')->searchable(),
                 TextColumn::make('status')->label('Status')->badge()
-                    ->formatStateUsing(fn ($state): string => \App\Support\UiLabel::statusLabel($state))
-                    ->color(fn ($state): string => \App\Support\UiLabel::statusColor($state)),
+                    ->formatStateUsing(fn ($state): string => UiLabel::statusLabel($state))
+                    ->color(fn ($state): string => UiLabel::statusColor($state)),
                 TextColumn::make('total_score')->label('Total Nilai')->numeric(),
                 TextColumn::make('average_score')->label('Nilai Rata-rata')->numeric(),
                 TextColumn::make('rank_in_class')->label('Peringkat Kelas')->numeric(),
@@ -94,6 +96,19 @@ class ReportCardsTable
                     ]))
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Tutup'),
+                Action::make('refreshRevision')
+                    ->label('Perbarui Nilai Revisi dari Leger')
+                    ->authorize(fn (): bool => self::canManageReportCards())
+                    ->visible(fn ($record): bool => self::canManageReportCards() && $record->status === 'draft' && $record->revisionLogs()->latest('id')->first()?->action === 'opened')
+                    ->requiresConfirmation()
+                    ->action(function ($record): void {
+                        try {
+                            app(ReportCardAutomation::class)->refreshRevision($record, auth()->user());
+                            Notification::make()->title('Nilai revisi diperbarui dari leger; riwayat tersimpan')->success()->send();
+                        } catch (DomainException $exception) {
+                            Notification::make()->title($exception->getMessage())->danger()->send();
+                        }
+                    }),
                 EditAction::make()->visible(fn ($record): bool => $record->status === 'draft'),
             ])
             ->toolbarActions([

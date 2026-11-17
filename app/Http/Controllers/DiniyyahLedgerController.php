@@ -129,7 +129,7 @@ class DiniyyahLedgerController extends Controller
             return back()->withErrors(['ledger' => $exception->getMessage()]);
         }
 
-        return back()->with('status', 'Leger dikunci. Nilai sumber Diniyyah tidak dapat diubah.');
+        return back()->with('status', 'Leger dikunci. Rapor yang belum ada dibuat otomatis. Buka Rapor kelas untuk meninjau dan mencetak F4.');
     }
 
     public function exportPdf(Request $request, DiniyyahLedgerSnapshot $snapshot)

@@ -2,10 +2,10 @@
 
 namespace App\Services;
 
+use App\Models\DiniyyahAssessmentSet;
 use App\Models\ReportCard;
 use App\Models\ReportCardRevisionLog;
 use App\Models\User;
-use App\Services\NotificationDispatcher;
 use DomainException;
 use Illuminate\Support\Facades\DB;
 
@@ -17,10 +17,14 @@ class ReportCardWorkflow
             $reportCard = ReportCard::whereKey($reportCard->id)->lockForUpdate()->firstOrFail();
             if ($reportCard->classroomTerm?->academicTerm?->kkm_workflow_enabled) {
                 foreach ($reportCard->lines()->where('line_type', 'subject')->get() as $line) {
-                    $set = \App\Models\DiniyyahAssessmentSet::find($line->source_id);
-                    if (! $set) throw new DomainException('Sumber penilaian rapor tidak ditemukan.');
+                    $set = DiniyyahAssessmentSet::find($line->source_id);
+                    if (! $set) {
+                        throw new DomainException('Sumber penilaian rapor tidak ditemukan.');
+                    }
                     $resolved = app(DiniyyahKkmResolver::class)->ensureApproved($set);
-                    if ($line->kkm_revision_id !== $resolved['kkm_revision_id']) throw new DomainException('KKM rapor telah berubah. Buat ulang rapor dari leger terkini.');
+                    if ($line->kkm_revision_id !== $resolved['kkm_revision_id']) {
+                        throw new DomainException('KKM rapor telah berubah. Buat ulang rapor dari leger terkini.');
+                    }
                 }
             }
             $this->lockOpenReport($reportCard, $user);
@@ -32,6 +36,20 @@ class ReportCardWorkflow
     {
         if ($reportCard->status !== 'draft') {
             throw new DomainException('Hanya rapor draf yang dapat dikunci.');
+        }
+
+        $snapshot = $reportCard->snapshots()->latest('id')->first();
+        if (($snapshot?->snapshot_data['print']['date_policy'] ?? '') === 'admin-period-v1') {
+            $date = $reportCard->academicTerm?->report_issue_date?->format('Y-m-d');
+            if (! $date) {
+                throw new DomainException('Admin belum menetapkan tanggal rapor periode ini.');
+            }
+            $data = $snapshot->snapshot_data;
+            $data['print']['options']['issue_date'] = $date;
+            if ($data !== $snapshot->snapshot_data) {
+                $reportCard->snapshots()->create(['layout_version' => $snapshot->layout_version, 'snapshot_data' => $data, 'generated_by' => $user->id, 'generated_at' => now()]);
+            }
+            $reportCard->update(['issue_date' => $date]);
         }
 
         $reportCard->update([

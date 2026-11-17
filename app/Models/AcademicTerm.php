@@ -2,22 +2,34 @@
 
 namespace App\Models;
 
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['academic_year_id', 'name', 'semester', 'starts_at', 'ends_at', 'is_active', 'kkm_workflow_enabled'])]
+#[Fillable(['academic_year_id', 'name', 'semester', 'starts_at', 'ends_at', 'is_active', 'kkm_workflow_enabled', 'report_issue_date'])]
 class AcademicTerm extends Model
 {
     use HasFactory;
+
+    protected static function booted(): void
+    {
+        static::saving(function (self $term): void {
+            $actor = auth()->user();
+            if ($term->isDirty('report_issue_date') && $actor && ! $actor->hasRole('admin')) {
+                throw new AuthorizationException('Tanggal rapor hanya ditentukan admin.');
+            }
+        });
+    }
 
     protected function casts(): array
     {
         return [
             'starts_at' => 'date',
             'ends_at' => 'date',
+            'report_issue_date' => 'date',
             'is_active' => 'boolean',
             'kkm_workflow_enabled' => 'boolean',
         ];

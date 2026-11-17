@@ -15,6 +15,9 @@ class DiniyyahLedgerWorkflow
             $snapshot = DiniyyahLedgerSnapshot::whereKey($snapshot->id)->lockForUpdate()->firstOrFail();
             $this->ensureKkmCurrent($snapshot);
             $this->lockOpenSnapshot($snapshot, $user);
+            if (($snapshot->snapshot_data['layout_version'] ?? '') === 'combined-v1') {
+                app(ReportCardAutomation::class)->createMissing($snapshot, $user->id);
+            }
         });
         $snapshot->refresh();
     }
@@ -57,6 +60,10 @@ class DiniyyahLedgerWorkflow
     // ── Notifikasi ────────────────────────────────────────────────────────
     private function ensureKkmCurrent(DiniyyahLedgerSnapshot $snapshot): void
     {
+        if (isset($snapshot->snapshot_data['attendance_fingerprint'])
+            && $snapshot->snapshot_data['attendance_fingerprint'] !== app(AttendanceRecapService::class)->ledgerFingerprint($snapshot)) {
+            throw new DomainException('Presensi peserta didik berubah. Segarkan leger agar ketidakhadiran rapor sesuai presensi asli.');
+        }
         app(DiniyyahCombinedLedger::class)->ensureCurrent($snapshot);
         if (! $snapshot->classroomTerm?->academicTerm?->kkm_workflow_enabled) {
             return;

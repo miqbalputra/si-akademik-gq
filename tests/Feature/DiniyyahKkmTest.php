@@ -421,6 +421,7 @@ class DiniyyahKkmTest extends TestCase
     public function test_approved_version_is_snapshotted_in_ledger_and_report_card(): void
     {
         $c = $this->context();
+        $c['term']->update(['report_issue_date' => '2026-12-20']);
         $revision = $this->approved($c, 75);
         $set = DiniyyahAssessmentSet::create(['diniyyah_class_subject_id' => $c['subjects']['male']->id, 'title' => 'Akidah Akhlak', 'assessment_method' => 'direct_final', 'status' => 'validated', 'appears_on_ledger' => true, 'appears_on_report' => true]);
         $student = Student::create(['name' => 'Santri Rapor KKM', 'gender' => 'male', 'nis' => 'KKM-RAPOR', 'status' => 'active']);

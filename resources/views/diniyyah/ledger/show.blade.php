@@ -46,6 +46,8 @@
             <a href="{{ route('diniyyah.ledger.index') }}" class="btn btn-outline min-h-11 text-theme-sm font-medium">Kembali ke kelas saya</a>
             <a href="{{ route('diniyyah.ledger.export-excel', $snapshot) }}" class="btn min-h-11 bg-success-600 text-white hover:bg-success-700 text-theme-sm font-medium">Unduh Excel</a>
             <a href="{{ route('diniyyah.ledger.export-pdf', $snapshot) }}" class="btn min-h-11">Unduh PDF</a>
+            <a href="{{ route('report-cards.classroom', $snapshot) }}" class="btn btn-outline min-h-11">Rapor kelas · F4</a>
+            <a href="{{ route('guru.tahfidz-report.monitor', $snapshot->classroom_term_id) }}" class="btn btn-outline min-h-11">Periksa isian Tahfidz</a>
             @if(!in_array($snapshot->status, ['locked','published'], true))
                 <form method="POST" action="{{ route('diniyyah.ledger.generate', $snapshot->classroom_term_id) }}">@csrf<button class="btn">Segarkan leger</button></form>
                 <form method="POST" action="{{ route('diniyyah.ledger.lock', $snapshot) }}">@csrf<button class="btn btn-primary" @disabled(($summary['blocking_issues'] ?? 0) > 0)>Kunci leger final</button></form>

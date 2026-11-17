@@ -2,12 +2,22 @@
 
 namespace App\Services;
 
+use App\Models\DiniyyahLedgerSnapshot;
 use App\Models\ReportCard;
 use App\Models\ReportCardAttendance;
 use App\Models\StudentAttendance;
 
 class AttendanceRecapService
 {
+    public function ledgerFingerprint(DiniyyahLedgerSnapshot $snapshot): string
+    {
+        $rows = StudentAttendance::where('academic_term_id', $snapshot->academic_term_id)
+            ->whereIn('class_enrollment_id', $snapshot->rows()->select('class_enrollment_id'))
+            ->orderBy('id')->get(['id', 'class_enrollment_id', 'attendance_date', 'status']);
+
+        return hash('sha256', json_encode($rows->toArray(), JSON_THROW_ON_ERROR));
+    }
+
     /** @return array{sick_count: int, permission_count: int, absent_count: int} */
     public function recapForEnrollment(int $academicTermId, int $classEnrollmentId): array
     {

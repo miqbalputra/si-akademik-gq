@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\ReportCard;
 use App\Models\User;
+use App\Services\DiniyyahLedgerAccess;
 
 class ReportCardPolicy
 {
@@ -22,6 +23,10 @@ class ReportCardPolicy
             return true;
         }
 
+        if (app(DiniyyahLedgerAccess::class)->allows($user, $reportCard->classroom_term_id)) {
+            return true;
+        }
+
         if (! $user->hasRole('wali_santri') || $reportCard->status !== 'published') {
             return false;
         }
@@ -35,6 +40,12 @@ class ReportCardPolicy
     public function create(User $user): bool
     {
         return $user->hasAnyRole(['admin', 'kabag_diniyyah']);
+    }
+
+    public function configurePrint(User $user, ReportCard $reportCard): bool
+    {
+        return $reportCard->status === 'draft' && $this->view($user, $reportCard)
+            && ($user->hasAnyRole(['admin', 'kabag_diniyyah']) || app(DiniyyahLedgerAccess::class)->allows($user, $reportCard->classroom_term_id));
     }
 
     public function update(User $user, ReportCard $reportCard): bool

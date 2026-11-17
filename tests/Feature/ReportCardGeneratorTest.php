@@ -293,7 +293,7 @@ class ReportCardGeneratorTest extends TestCase
     {
         $school = School::create(['name' => 'Griya Quran']);
         $year = AcademicYear::create(['school_id' => $school->id, 'name' => '2025/2026']);
-        $term = AcademicTerm::create(['academic_year_id' => $year->id, 'name' => 'Semester Genap', 'semester' => 'genap']);
+        $term = AcademicTerm::create(['academic_year_id' => $year->id, 'name' => 'Semester Genap', 'semester' => 'genap', 'report_issue_date' => '2026-06-20']);
         $classroom = Classroom::create(['name' => 'Mustawa 1 Ikhwan']);
         $classroomTerm = ClassroomTerm::create([
             'academic_term_id' => $term->id,

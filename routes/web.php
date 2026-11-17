@@ -35,6 +35,7 @@ use App\Http\Controllers\RekapJurnalGuruExportController;
 use App\Http\Controllers\ReportCardController;
 use App\Http\Controllers\SchoolCalendarController;
 use App\Http\Controllers\SchoolEventRecapExportController;
+use App\Http\Controllers\TahfidzReportController;
 use App\Http\Controllers\WaliClassJournalMonitoringController;
 use App\Http\Controllers\WaliJpRecapController;
 use App\Http\Controllers\WaliKelasTasmiController;
@@ -133,6 +134,10 @@ Route::middleware('auth:web')->prefix('notifications')->name('notifications.')->
 });
 
 Route::middleware(['auth:web', 'role:guru'])->prefix('guru')->name('guru.')->group(function () {
+    Route::get('/tahfidz-rapor', [TahfidzReportController::class, 'index'])->name('tahfidz-report.index');
+    Route::post('/tahfidz-rapor/{enrollment}', [TahfidzReportController::class, 'save'])->name('tahfidz-report.save');
+    Route::get('/pemeriksaan-tahfidz/{classroom}', [TahfidzReportController::class, 'monitor'])->name('tahfidz-report.monitor');
+    Route::post('/pemeriksaan-tahfidz/{enrollment}', [TahfidzReportController::class, 'review'])->name('tahfidz-report.review');
     Route::get('/', [GuruDashboardController::class, 'index'])->name('dashboard');
     Route::get('/performa', [GuruDashboardController::class, 'performa'])->name('performa');
     Route::get('/performa/export/{format}', [GuruDashboardController::class, 'performaExport'])
@@ -312,6 +317,11 @@ Route::middleware('auth:admin')->prefix('admin/pengingat-jurnal')->name('admin.j
 });
 
 Route::middleware('auth:web')->group(function () {
+    Route::get('/report-cards', [ReportCardController::class, 'index'])->name('report-cards.index');
+    Route::get('/report-cards/ledger/{snapshot}', [ReportCardController::class, 'classroom'])->name('report-cards.classroom');
+    Route::get('/report-cards/ledger/{snapshot}/print', [ReportCardController::class, 'printClass'])->name('report-cards.classroom.print');
+    Route::get('/report-cards/ledger/{snapshot}/pdf', [ReportCardController::class, 'downloadClassPdf'])->name('report-cards.classroom.pdf');
+    Route::put('/report-cards/{reportCard}/print-options', [ReportCardController::class, 'savePrintOptions'])->name('report-cards.print-options');
     Route::post('/report-cards/generate/{snapshot}', [ReportCardController::class, 'generate'])->name('report-cards.generate');
     Route::post('/report-cards/ledger/{snapshot}/lock', [ReportCardController::class, 'lockFromLedgerSnapshot'])->name('report-cards.ledger.lock');
     Route::post('/report-cards/ledger/{snapshot}/publish', [ReportCardController::class, 'publishFromLedgerSnapshot'])->name('report-cards.ledger.publish');

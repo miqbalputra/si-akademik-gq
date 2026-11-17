@@ -44,6 +44,8 @@ class DiniyyahLedgerGenerator
                 'label' => $set->title,
                 'subject_name' => $set->classSubject?->subject?->name,
                 'subject_code' => $set->classSubject?->subject?->code,
+                'subject_arabic_name' => $set->classSubject?->subject?->arabic_name,
+                'appears_on_report' => $set->appears_on_report && $set->classSubject->appears_on_report,
                 'assessment_method' => $set->assessment_method,
                 'tested_material' => $set->tested_material,
                 'source_type' => 'diniyyah_assessment_set',
@@ -219,6 +221,10 @@ class DiniyyahLedgerGenerator
             if ($includeTahfidz) {
                 app(DiniyyahCombinedLedger::class)->append($snapshot);
             }
+
+            $savedData = $snapshot->snapshot_data;
+            $savedData['attendance_fingerprint'] = $this->attendanceRecapService->ledgerFingerprint($snapshot);
+            $snapshot->update(['snapshot_data' => $savedData]);
 
             $this->notifyGenerated($snapshot);
 
