@@ -18,25 +18,30 @@ class StudentForm
                 Select::make('gender')
                     ->label('Jenis Kelamin')
                     ->options([
-                        'male'   => 'Laki-laki',
+                        'male' => 'Laki-laki',
                         'female' => 'Perempuan',
                     ])
                     ->required(),
                 TextInput::make('nis')
                     ->label('NIS')
                     ->required()
-                    ->numeric()
-                    ->maxLength(10)
+                    // Identifiers must keep leading zeros and digits beyond numeric precision.
+                    ->type('text')
+                    ->inputMode('numeric')
+                    ->rule('string')
+                    ->maxLength(255)
                     ->unique(ignoreRecord: true),
                 TextInput::make('nik')
                     ->label('NIK')
-                    ->numeric()
+                    ->type('text')
+                    ->inputMode('numeric')
+                    ->rule('string')
                     ->maxLength(16)
                     ->unique(ignoreRecord: true),
                 Select::make('status')
                     ->label('Status')
                     ->options([
-                        'active'   => 'Aktif',
+                        'active' => 'Aktif',
                         'inactive' => 'Tidak Aktif',
                     ])
                     ->required()
