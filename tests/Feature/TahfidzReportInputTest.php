@@ -68,11 +68,11 @@ class TahfidzReportInputTest extends TestCase
         $female->assignRole('guru');
         Teacher::create(['user_id' => $female->id, 'name' => 'Ustadzah', 'gender' => 'female', 'status' => 'active']);
         $data = $this->values() + ['version' => 0, 'action' => 'final'];
-        $this->actingAs($male)->get(route('guru.tahfidz-report.index'))->assertOk()->assertSee('Santri Ikhwan')->assertDontSee('Santri Akhwat');
+        $this->actingAs($male)->get(route('guru.tahfidz-report.index', ['classroom_term_id' => $class->id]))->assertOk()->assertSee('Santri Ikhwan')->assertDontSee('Santri Akhwat');
         $this->actingAs($male)->post(route('guru.tahfidz-report.save', $girlEnrollment), $data)->assertForbidden();
         $male->assignRole('admin');
         $this->actingAs($male)->post(route('guru.tahfidz-report.save', $girlEnrollment), $data)->assertForbidden();
-        $this->actingAs($female)->get(route('guru.tahfidz-report.index'))->assertOk()->assertSee('Santri Akhwat')->assertDontSee('Santri Ikhwan');
+        $this->actingAs($female)->get(route('guru.tahfidz-report.index', ['classroom_term_id' => $class->id]))->assertOk()->assertSee('Santri Akhwat')->assertDontSee('Santri Ikhwan');
         $this->actingAs($female)->post(route('guru.tahfidz-report.save', $boy), $data)->assertForbidden();
         $this->actingAs($female)->post(route('guru.tahfidz-report.save', $girlEnrollment), $data)->assertSessionHasNoErrors();
         $this->assertDatabaseCount('tahfidz_report_entries', 1);
@@ -203,5 +203,49 @@ class TahfidzReportInputTest extends TestCase
         }
         $this->assertSame('final', $entry->fresh()->status);
         $this->assertSame('2026-12-20', $term->fresh()->report_issue_date->format('Y-m-d'));
+    }
+
+    public function test_class_then_student_selection_only_opens_one_form_and_rejects_mismatched_children(): void
+    {
+        [$user, $enrollment, $term, $class] = $this->context();
+        $this->actingAs($user)->get(route('guru.tahfidz-report.index'))->assertOk()
+            ->assertViewHas('selectedEnrollment', null)->assertDontSee('name="uas_score"', false);
+        $this->get(route('guru.tahfidz-report.index', ['classroom_term_id' => $class->id]))->assertOk()
+            ->assertSee('Santri Ikhwan — NIS 001')->assertDontSee('name="uas_score"', false);
+        $url = route('guru.tahfidz-report.index', ['academic_term_id' => $term->id, 'classroom_term_id' => $class->id, 'enrollment_id' => $enrollment->id]);
+        $response = $this->get($url)->assertOk()->assertSee('name="uas_score"', false);
+        $this->assertSame(1, substr_count($response->getContent(), 'name="uas_score"'));
+        $otherRoom = Classroom::create(['name' => 'Kelas Lain']);
+        $otherClass = ClassroomTerm::create(['academic_term_id' => $term->id, 'classroom_id' => $otherRoom->id, 'name' => 'Kelas Lain']);
+        $otherChild = Student::create(['name' => 'Santri Kelas Lain', 'nis' => '009', 'gender' => 'male', 'status' => 'active']);
+        $other = ClassEnrollment::create(['academic_term_id' => $term->id, 'classroom_term_id' => $otherClass->id, 'student_id' => $otherChild->id, 'status' => 'active']);
+        $this->get(route('guru.tahfidz-report.index', ['classroom_term_id' => $class->id, 'enrollment_id' => $other->id]))->assertForbidden();
+        $this->get(route('guru.tahfidz-report.index', ['enrollment_id' => $enrollment->id]))->assertForbidden();
+        $this->post(route('guru.tahfidz-report.save', $enrollment), $this->values() + ['version' => 0, 'action' => 'final'])
+            ->assertRedirect(route('guru.tahfidz-report.index', ['academic_term_id' => $term->id, 'classroom_term_id' => $class->id]));
+        $this->get(route('guru.tahfidz-report.index', ['academic_term_id' => $term->id, 'classroom_term_id' => $class->id]))
+            ->assertOk()->assertViewHas('selectedEnrollment', null)->assertSee('Juz 29 dan 30')->assertDontSee('name="uas_score"', false);
+    }
+
+    public function test_own_entries_list_preserves_teachers_contributions_and_labels_later_changes(): void
+    {
+        [$user, $enrollment, $term, $class] = $this->context();
+        $workflow = app(TahfidzReportWorkflow::class);
+        $own = $workflow->save($user, $enrollment, $this->values(), true, 0);
+        $before = $own->fresh()->toArray();
+        $other = User::factory()->create();
+        $other->assignRole('guru');
+        Teacher::create(['user_id' => $other->id, 'name' => 'Guru Lain', 'gender' => 'male', 'status' => 'active']);
+        $workflow->save($other, $enrollment, array_replace($this->values(), ['uas_score' => 55]), true, 1);
+        $anotherStudent = Student::create(['name' => 'Isian Guru Lain', 'nis' => '010', 'gender' => 'male', 'status' => 'active']);
+        $another = ClassEnrollment::create(['academic_term_id' => $term->id, 'classroom_term_id' => $class->id, 'student_id' => $anotherStudent->id, 'status' => 'active']);
+        $workflow->save($other, $another, $this->values(), true, 0);
+        $this->actingAs($user)->get(route('guru.tahfidz-report.index'))->assertOk()
+            ->assertViewHas('history', fn ($history) => $history->count() === 1 && $history->first()->id === $own->id)
+            ->assertSee('Ada pembaruan dari guru lain')->assertDontSee('Isian Guru Lain');
+        $this->get(route('guru.tahfidz-report.index', ['classroom_term_id' => $class->id, 'enrollment_id' => $enrollment->id]))
+            ->assertOk()->assertSee('value="55.00"', false);
+        $this->assertSame($before, $own->fresh()->toArray());
+        $this->assertDatabaseCount('tahfidz_report_entries', 3);
     }
 }

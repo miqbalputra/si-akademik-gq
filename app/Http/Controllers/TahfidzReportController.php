@@ -7,6 +7,7 @@ use App\Models\ClassEnrollment;
 use App\Models\ClassroomTerm;
 use App\Models\DiniyyahLedgerSnapshot;
 use App\Models\ReportCard;
+use App\Models\TahfidzReportEntry;
 use App\Models\User;
 use App\Services\DiniyyahLedgerAccess;
 use App\Services\TahfidzReportSources;
@@ -20,13 +21,39 @@ class TahfidzReportController extends Controller
         $teacher = $request->user()->teacher;
         abort_unless($request->user()->hasRole('guru') && $teacher?->status === 'active' && in_array($teacher->gender, ['male', 'female'], true), 403, 'Lengkapi gender dan status guru melalui admin.');
         $terms = AcademicTerm::with('academicYear')->orderByDesc('is_active')->orderByDesc('id')->get();
-        $termId = (int) ($request->query('academic_term_id') ?? $terms->first()?->id);
+        $filters = $request->validate([
+            'academic_term_id' => ['nullable', 'integer', 'min:1'],
+            'classroom_term_id' => ['nullable', 'integer', 'min:1'],
+            'enrollment_id' => ['nullable', 'integer', 'min:1'],
+        ]);
+        $termId = (int) ($filters['academic_term_id'] ?? $terms->first()?->id);
         $term = $terms->firstWhere('id', $termId);
         abort_unless($term, 404);
-        $enrollments = $workflow->enrollments($request->user(), $termId)->with('student', 'classroomTerm')->orderBy('classroom_term_id')->orderBy('roll_number')->paginate(25)->withQueryString();
-        $states = $this->states($enrollments->getCollection());
 
-        return view('guru.tahfidz-report.index', compact('terms', 'term', 'enrollments', 'states'));
+        $visible = $workflow->enrollments($request->user(), $termId);
+        $classrooms = ClassroomTerm::whereIn('id', (clone $visible)->select('classroom_term_id'))->orderBy('name')->get();
+        $classId = (int) ($filters['classroom_term_id'] ?? 0);
+        $selectedClass = $classId ? $classrooms->firstWhere('id', $classId) : null;
+        abort_if($classId && ! $selectedClass, 403);
+        $students = $selectedClass
+            ? (clone $visible)->where('classroom_term_id', $classId)->with('student', 'classroomTerm')->orderBy('roll_number')->orderBy('student_id')->get()
+            : collect();
+        $selectedId = (int) ($filters['enrollment_id'] ?? 0);
+        $selectedEnrollment = $selectedId ? $students->firstWhere('id', $selectedId) : null;
+        abort_if($selectedId && ! $selectedEnrollment, 403);
+        $selectedState = $selectedEnrollment ? $this->states(collect([$selectedEnrollment]))[$selectedId] : null;
+
+        // One latest contribution per child by this teacher, including a later
+        // review of that contribution. Never present another teacher's work as theirs.
+        $ownLatest = TahfidzReportEntry::selectRaw('MAX(id)')->where('academic_term_id', $termId)
+            ->where('input_by', $request->user()->id)->groupBy('student_id');
+        $history = TahfidzReportEntry::whereIn('id', $ownLatest)->whereIn('student_id', (clone $visible)->select('student_id'))
+            ->latest('id')->paginate(10, ['*'], 'history_page')->withQueryString();
+        $historyEnrollments = (clone $visible)->whereIn('student_id', $history->pluck('student_id'))->with('student', 'classroomTerm')->latest('id')->get();
+        $historyStudents = $historyEnrollments->unique('student_id')->keyBy('student_id');
+        $historyStates = collect($this->states($historyEnrollments))->keyBy(fn ($state) => $state['entry']->student_id);
+
+        return view('guru.tahfidz-report.index', compact('terms', 'term', 'classrooms', 'selectedClass', 'students', 'selectedEnrollment', 'selectedState', 'history', 'historyStudents', 'historyStates'));
     }
 
     public function save(Request $request, ClassEnrollment $enrollment, TahfidzReportWorkflow $workflow)
@@ -40,7 +67,10 @@ class TahfidzReportController extends Controller
         ]);
         $workflow->save($request->user(), $enrollment, $data, $data['action'] === 'final', (int) $data['version']);
 
-        return back()->with('status', 'Isian Tahfidz disimpan. Nilai final menunggu pemeriksaan wali kelas.');
+        $message = $data['action'] === 'final' ? 'Nilai final disimpan dan menunggu pemeriksaan wali kelas.' : 'Draf berhasil disimpan.';
+
+        return redirect()->route('guru.tahfidz-report.index', ['academic_term_id' => $enrollment->academic_term_id, 'classroom_term_id' => $enrollment->classroom_term_id])
+            ->with('status', $enrollment->student->name.' (NIS '.$enrollment->student->nis.'): '.$message.' Pilih peserta didik berikutnya.');
     }
 
     public function monitor(Request $request, ClassroomTerm $classroom)
