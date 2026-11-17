@@ -2,10 +2,10 @@
 
 namespace App\Providers\Filament;
 
-use App\Filament\Pages\Auth\Login;
+use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Middleware\AuthenticateAdminPanel;
 use Filament\Actions\Action;
 use Filament\FontProviders\LocalFontProvider;
-use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
@@ -33,7 +33,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->authGuard('admin')
-            ->login(Login::class)
+            ->login([AuthenticatedSessionController::class, 'redirectToMainLogin'])
             ->brandName('Ruang GQ')
             ->font('Outfit', url: asset('fonts/outfit/outfit.css'), provider: LocalFontProvider::class)
             ->brandLogo(fn () => view('filament.brand-logo'))
@@ -47,10 +47,6 @@ class AdminPanelProvider extends PanelProvider
                 'danger' => Color::Rose,
             ])
             ->viteTheme('resources/css/filament/admin/theme.css')
-            ->renderHook(
-                PanelsRenderHook::AUTH_LOGIN_FORM_AFTER,
-                fn (): string => view('filament.partials.google-login')->render(),
-            )
             ->navigationGroups([
                 NavigationGroup::make('Data Sekolah')->collapsible(),
                 NavigationGroup::make('Struktur Kelas')->collapsible(),
@@ -105,7 +101,7 @@ class AdminPanelProvider extends PanelProvider
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
             ])
-            ->authMiddleware([Authenticate::class])
+            ->authMiddleware([AuthenticateAdminPanel::class])
             ->renderHook(
                 PanelsRenderHook::TOPBAR_END,
                 fn (): string => view('filament.partials.notifications')->render(),

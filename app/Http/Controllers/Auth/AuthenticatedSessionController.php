@@ -17,6 +17,12 @@ class AuthenticatedSessionController extends Controller
         return view('auth.login');
     }
 
+    public function redirectToMainLogin(): RedirectResponse
+    {
+        // Keep old bookmarks working without exposing a second login form.
+        return redirect()->route('login');
+    }
+
     public function store(Request $request, WorkspaceRedirectService $workspaceRedirects): RedirectResponse
     {
         $data = $request->validate([
@@ -31,7 +37,7 @@ class AuthenticatedSessionController extends Controller
 
         Auth::guard('admin')->logout();
 
-        if (! Auth::attempt([$field => $login, 'password' => $data['password']], $request->boolean('remember'))) {
+        if (! Auth::guard('web')->attempt([$field => $login, 'password' => $data['password']], $request->boolean('remember'))) {
             throw ValidationException::withMessages([
                 'login' => 'Email/Username atau password tidak sesuai.',
             ]);
@@ -44,7 +50,8 @@ class AuthenticatedSessionController extends Controller
 
     public function destroy(Request $request): RedirectResponse
     {
-        Auth::logout();
+        Auth::guard('web')->logout();
+        Auth::guard('admin')->logout();
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();

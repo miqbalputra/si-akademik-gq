@@ -17,7 +17,7 @@ class AdminGuardIsolationTest extends TestCase
 
         $this->actingAs($admin, 'web')
             ->get('/admin')
-            ->assertRedirect('/admin/login');
+            ->assertRedirect(route('login'));
 
         $this->assertGuest('admin');
     }
