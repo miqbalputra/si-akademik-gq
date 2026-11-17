@@ -101,7 +101,7 @@ class AdminPanelProvider extends PanelProvider
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
             ])
-            ->authMiddleware([AuthenticateAdminPanel::class])
+            ->authMiddleware([AuthenticateAdminPanel::class], isPersistent: true)
             ->renderHook(
                 PanelsRenderHook::TOPBAR_END,
                 fn (): string => view('filament.partials.notifications')->render(),
