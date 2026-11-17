@@ -54,13 +54,15 @@
         $guruTodayItems[] = ['label' => 'Tasmi\'', 'href' => route('guru.tasmi.index'), 'match' => ['guru.tasmi.*']];
     }
     $guruClassItems = [
-        ['label' => 'Nilai Final Tahfidz Rapor', 'href' => route('guru.tahfidz-report.index'), 'match' => ['guru.tahfidz-report.index']],
         ['label' => 'KKM', 'href' => route('guru.kkm.index'), 'match' => ['guru.kkm.*']],
         ['label' => 'Input Nilai', 'href' => route('guru.diniyyah-scores.index'), 'match' => ['guru.diniyyah-scores.*']],
     ];
+    $guruReportItems = [
+        ['label' => 'Nilai Final Tahfidz Rapor', 'href' => route('guru.tahfidz-report.index'), 'match' => ['guru.tahfidz-report.index']],
+    ];
     if ($isHomeroomTeacher) {
-        $guruClassItems[] = ['label' => 'Leger Kelas Saya', 'href' => route('diniyyah.ledger.index'), 'match' => ['diniyyah.ledger.*']];
-        $guruClassItems[] = ['label' => 'Rapor Kelas Saya', 'href' => route('report-cards.index'), 'match' => ['report-cards.*']];
+        $guruReportItems[] = ['label' => 'Leger Kelas Saya', 'href' => route('diniyyah.ledger.index'), 'match' => ['diniyyah.ledger.*']];
+        $guruReportItems[] = ['label' => 'Rapor Kelas Saya', 'href' => route('report-cards.index'), 'match' => ['report-cards.*', 'guru.tahfidz-report.monitor']];
         $guruClassItems[] = ['label' => 'Tasmi\' Kelas Saya', 'href' => route('guru.tasmi-wali.index'), 'match' => ['guru.tasmi-wali.*']];
         $guruClassItems[] = ['label' => 'Monitoring Jurnal Kelas', 'href' => route('wali.diniyyah-journals.index'), 'match' => ['wali.diniyyah-journals.*']];
         $guruClassItems[] = ['label' => 'Rekap JP Kelas', 'href' => route('wali.jp-recap.index'), 'match' => ['wali.jp-recap.*']];
@@ -136,6 +138,7 @@
             ['label' => 'Kegiatan', 'items' => $guruTodayItems],
             ['label' => 'Perangkat Pembelajaran', 'items' => $guruLearningItems],
             ['label' => 'Kelas & Santri', 'items' => $guruClassItems],
+            ['label' => 'Rapor', 'items' => $guruReportItems],
             ['label' => 'Koordinasi Tahfidz', 'items' => $guruCoordinationItems],
             ['label' => 'Laporan & Arsip', 'items' => $guruArchiveItems],
         ], fn (array $group): bool => $group['items'] !== []))
