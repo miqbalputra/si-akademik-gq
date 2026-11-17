@@ -3,8 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\ClassEnrollment;
-use App\Models\ClassroomTerm;
-use App\Models\Student;
 use App\Models\TasmiExaminerAssignment;
 use App\Models\TasmiRecord;
 use App\Models\Teacher;
@@ -12,11 +10,13 @@ use App\Services\TasmiReportDownloadService;
 use App\Services\TasmiReportService;
 use App\Services\TasmiService;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class GuruTasmiController extends Controller
 {
@@ -131,7 +131,7 @@ class GuruTasmiController extends Controller
 
         $validated = $this->validateStore($request);
         $validated['hijri_date'] = $this->tasmiService->hijriDateFor($validated['exam_date'])
-            ?? $validated['hijri_date'];
+            ?? ($validated['hijri_date'] ?? null);
 
         // Verifikasi kelas sesuai gender guru.
         $eligibleClassroomTerms = $this->tasmiService->eligibleClassroomTerms($teacher);
@@ -151,7 +151,7 @@ class GuruTasmiController extends Controller
         $this->assertValidJuzRange($validated);
 
         try {
-            $record = TasmiRecord::create([
+            $record = DB::transaction(fn () => TasmiRecord::create([
                 'academic_term_id' => $assignment->academic_term_id,
                 'classroom_term_id' => $validated['classroom_term_id'],
                 'class_enrollment_id' => $enrollment->id,
@@ -169,17 +169,14 @@ class GuruTasmiController extends Controller
                 'input_by' => $user->id,
                 'input_at' => now(),
                 'last_updated_by' => $user->id,
-            ]);
-        } catch (\Illuminate\Database\QueryException $e) {
-            if ($this->isDuplicateKeyException($e)) {
-                return back()->withInput()
-                    ->withErrors(['exam_date' => 'Record tasmi\' untuk santri ini pada tanggal dan tipe ujian yang sama sudah ada. Gunakan menu edit bila ingin memperbarui.']);
-            }
-            throw $e;
+            ]));
+        } catch (UniqueConstraintViolationException) {
+            return back()->withInput()
+                ->withErrors(['exam_date' => 'Record tasmi\' untuk santri ini pada tanggal dan tipe ujian yang sama sudah ada. Gunakan menu edit bila ingin memperbarui.']);
         }
 
         return redirect()
-            ->route('guru.tasmi.records', $record)
+            ->route('guru.tasmi.records')
             ->with('status', "Data tasmi' {$record->student->name} berhasil disimpan.");
     }
 
@@ -256,20 +253,25 @@ class GuruTasmiController extends Controller
 
         $validated = $this->validateUpdate($request, $tasmi_record);
         $validated['hijri_date'] = $this->tasmiService->hijriDateFor($validated['exam_date'])
-            ?? $validated['hijri_date'];
+            ?? ($validated['hijri_date'] ?? null);
         $this->assertValidJuzRange($validated);
 
-        $tasmi_record->fill([
-            'exam_type' => $validated['exam_type'],
-            'juz_start' => $validated['juz_start'],
-            'juz_end' => $validated['juz_end'],
-            'exam_day_label' => $validated['exam_day_label'] ?? null,
-            'exam_date' => $validated['exam_date'],
-            'hijri_date' => $validated['hijri_date'] ?? null,
-            'predicate' => $validated['predicate'],
-            'notes' => $validated['notes'] ?? null,
-            'last_updated_by' => $user->id,
-        ])->save();
+        try {
+            DB::transaction(fn () => $tasmi_record->fill([
+                'exam_type' => $validated['exam_type'],
+                'juz_start' => $validated['juz_start'],
+                'juz_end' => $validated['juz_end'],
+                'exam_day_label' => $validated['exam_day_label'] ?? null,
+                'exam_date' => $validated['exam_date'],
+                'hijri_date' => $validated['hijri_date'] ?? null,
+                'predicate' => $validated['predicate'],
+                'notes' => $validated['notes'] ?? null,
+                'last_updated_by' => $user->id,
+            ])->save());
+        } catch (UniqueConstraintViolationException) {
+            return back()->withInput()
+                ->withErrors(['exam_date' => 'Record tasmi\' untuk santri ini pada tanggal dan tipe ujian yang sama sudah ada. Pilih tanggal atau tipe ujian yang berbeda.']);
+        }
 
         return redirect()
             ->route('guru.tasmi.edit', $tasmi_record)
@@ -287,7 +289,7 @@ class GuruTasmiController extends Controller
         abort_unless($isOwner, 403, 'Anda hanya bisa menghapus record tasmi\' yang Anda input sendiri.');
         abort_unless($tasmi_record->student()->where('status', 'active')->exists(), 404);
 
-        $tasmi_record->delete();
+        DB::transaction(fn () => $tasmi_record->delete());
 
         return redirect()
             ->route('guru.tasmi.records')
@@ -354,7 +356,7 @@ class GuruTasmiController extends Controller
     {
         if ($data['exam_type'] === TasmiRecord::EXAM_TYPE_ONE_JUZ) {
             if ((int) $data['juz_start'] !== (int) $data['juz_end']) {
-                throw \Illuminate\Validation\ValidationException::withMessages([
+                throw ValidationException::withMessages([
                     'juz_end' => 'Untuk Tasmi\' 1 Juz, juz awal dan juz akhir harus sama.',
                 ]);
             }
@@ -363,17 +365,11 @@ class GuruTasmiController extends Controller
         if ($data['exam_type'] === TasmiRecord::EXAM_TYPE_FIVE_JUZ) {
             $range = abs((int) $data['juz_end'] - (int) $data['juz_start']) + 1;
             if ($range !== 5) {
-                throw \Illuminate\Validation\ValidationException::withMessages([
+                throw ValidationException::withMessages([
                     'juz_end' => 'Untuk Tasmi\' 5 Juz, pilih rentang tepat 5 juz. Juz awal dan akhir boleh naik atau turun.',
                 ]);
             }
         }
-    }
-
-    private function isDuplicateKeyException(\Illuminate\Database\QueryException $e): bool
-    {
-        // PostgreSQL unique violation (23505) atau SQLite integrity violation.
-        return $e->getCode() === '23505' || str_contains((string) $e->getMessage(), 'Unique violation') || str_contains((string) $e->getMessage(), 'UNIQUE constraint failed');
     }
 
     private function reporterTeacher(Request $request): Teacher

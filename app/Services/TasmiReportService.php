@@ -52,7 +52,7 @@ class TasmiReportService
     }
 
     /** @param array<string, mixed> $filters
-     *  @return Builder<TasmiRecord>
+     * @return Builder<TasmiRecord>
      */
     public function applyFilters(Builder $query, array $filters): Builder
     {
@@ -64,8 +64,15 @@ class TasmiReportService
             ->when($filters['exam_type'] ?? null, fn (Builder $q, $value) => $q->where('tasmi_records.exam_type', $value))
             ->when($filters['predicate'] ?? null, fn (Builder $q, $value) => $q->where('tasmi_records.predicate', $value))
             ->when($filters['juz'] ?? null, function (Builder $q, $value): void {
-                $q->where('tasmi_records.juz_start', '<=', $value)
-                    ->where('tasmi_records.juz_end', '>=', $value);
+                $q->where(function (Builder $range) use ($value): void {
+                    $range->where(function (Builder $ascending) use ($value): void {
+                        $ascending->where('tasmi_records.juz_start', '<=', $value)
+                            ->where('tasmi_records.juz_end', '>=', $value);
+                    })->orWhere(function (Builder $descending) use ($value): void {
+                        $descending->where('tasmi_records.juz_end', '<=', $value)
+                            ->where('tasmi_records.juz_start', '>=', $value);
+                    });
+                });
             })
             ->when($filters['date_from'] ?? null, fn (Builder $q, $value) => $q->whereDate('tasmi_records.exam_date', '>=', $value))
             ->when($filters['date_until'] ?? null, fn (Builder $q, $value) => $q->whereDate('tasmi_records.exam_date', '<=', $value))
@@ -119,8 +126,8 @@ class TasmiReportService
     }
 
     /** @param array<string, mixed> $filters
-     *  @param array<string, Collection> $options
-     *  @return array<string, string>
+     * @param  array<string, Collection>  $options
+     * @return array<string, string>
      */
     public function filterLabels(array $filters, array $options): array
     {
@@ -180,7 +187,7 @@ class TasmiReportService
     }
 
     /** @param Collection<int, TasmiRecord> $records
-     *  @return Collection<int, array<string, string|int|null>>
+     * @return Collection<int, array<string, string|int|null>>
      */
     public function rows(Collection $records): Collection
     {

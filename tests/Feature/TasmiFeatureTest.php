@@ -10,13 +10,15 @@ use App\Models\ClassroomTerm;
 use App\Models\School;
 use App\Models\Student;
 use App\Models\StudentDeparture;
-use App\Models\Teacher;
 use App\Models\TasmiExaminerAssignment;
 use App\Models\TasmiRecord;
+use App\Models\Teacher;
 use App\Models\User;
-use App\Services\TasmiService;
 use App\Services\StudentDepartureWorkflow;
+use App\Services\TasmiService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -84,6 +86,120 @@ class TasmiFeatureTest extends TestCase
         ]);
 
         return compact('school', 'year', 'term', 'user', 'teacher', 'classroom', 'classroomTerm', 'student', 'enrollment');
+    }
+
+    public static function examinerGenders(): array
+    {
+        return ['ustadz' => ['male'], 'ustadzah' => ['female']];
+    }
+
+    #[DataProvider('examinerGenders')]
+    public function test_examiner_can_store_and_update_with_strict_numeric_audit_columns(string $gender): void
+    {
+        $ctx = $this->makeContext($gender);
+        TasmiExaminerAssignment::create(['academic_term_id' => $ctx['term']->id, 'teacher_id' => $ctx['teacher']->id, 'status' => 'active']);
+        // SQLite normally accepts text in DECIMAL columns. Emulate the production
+        // numeric-column constraint so predicates cannot silently pass this test.
+        DB::unprepared("CREATE TRIGGER strict_audit_scores BEFORE INSERT ON score_change_logs
+            WHEN (NEW.old_score IS NOT NULL AND typeof(NEW.old_score) NOT IN ('integer', 'real'))
+              OR (NEW.new_score IS NOT NULL AND typeof(NEW.new_score) NOT IN ('integer', 'real'))
+            BEGIN SELECT RAISE(ABORT, 'audit scores must be numeric'); END");
+
+        $this->actingAs($ctx['user'])->get(route('guru.tasmi.create', ['classroom_term_id' => $ctx['classroomTerm']->id]))
+            ->assertOk()->assertSee($ctx['student']->name);
+        $this->post(route('guru.tasmi.store'), [
+            'classroom_term_id' => $ctx['classroomTerm']->id, 'student_id' => $ctx['student']->id,
+            'exam_type' => '1_juz', 'juz_single' => 30, 'exam_date' => '2026-08-15', 'predicate' => 'jayyid',
+        ])->assertRedirect(route('guru.tasmi.records'));
+
+        $record = TasmiRecord::sole();
+        $this->assertDatabaseHas('activity_log', ['subject_id' => $record->id, 'subject_type' => TasmiRecord::class, 'description' => 'created_tasmi_record']);
+        $activity = DB::table('activity_log')->where('description', 'created_tasmi_record')->first();
+        $this->assertSame('jayyid', json_decode($activity->properties, true)['attributes']['predicate']);
+
+        $this->put(route('guru.tasmi.update', $record), [
+            'exam_type' => '1_juz', 'juz_start' => 30, 'juz_end' => 30, 'exam_date' => '2026-08-15', 'predicate' => 'mumtaz',
+        ])->assertRedirect(route('guru.tasmi.edit', $record));
+        $this->assertSame('mumtaz', $record->fresh()->predicate);
+        $activity = DB::table('activity_log')->where('description', 'updated_tasmi_record')->first();
+        $this->assertSame(['from' => 'jayyid', 'to' => 'mumtaz'], json_decode($activity->properties, true)['changes']['predicate']);
+        $this->assertDatabaseCount('score_change_logs', 2);
+    }
+
+    public function test_duplicate_date_on_update_returns_validation_and_preserves_both_records(): void
+    {
+        $ctx = $this->makeContext();
+        TasmiExaminerAssignment::create(['academic_term_id' => $ctx['term']->id, 'teacher_id' => $ctx['teacher']->id, 'status' => 'active']);
+        $data = [
+            'academic_term_id' => $ctx['term']->id, 'classroom_term_id' => $ctx['classroomTerm']->id,
+            'class_enrollment_id' => $ctx['enrollment']->id, 'student_id' => $ctx['student']->id,
+            'examiner_teacher_id' => $ctx['teacher']->id, 'exam_type' => '1_juz', 'juz_start' => 30, 'juz_end' => 30,
+            'predicate' => 'jayyid', 'input_by' => $ctx['user']->id,
+        ];
+        TasmiRecord::create($data + ['exam_date' => '2026-08-15']);
+        $record = TasmiRecord::create($data + ['exam_date' => '2026-08-16']);
+        $before = DB::table('tasmi_records')->orderBy('id')->get()->toJson();
+        $auditCount = DB::table('score_change_logs')->count();
+
+        $this->actingAs($ctx['user'])->from(route('guru.tasmi.edit', $record))->put(route('guru.tasmi.update', $record), [
+            'exam_type' => '1_juz', 'juz_start' => 30, 'juz_end' => 30, 'exam_date' => '2026-08-15', 'predicate' => 'mumtaz',
+        ])->assertRedirect(route('guru.tasmi.edit', $record))->assertSessionHasErrors('exam_date');
+
+        $this->assertSame($before, DB::table('tasmi_records')->orderBy('id')->get()->toJson());
+        $this->assertSame($auditCount, DB::table('score_change_logs')->count());
+    }
+
+    public function test_optional_hijri_date_does_not_block_saving_if_conversion_is_unavailable(): void
+    {
+        $ctx = $this->makeContext();
+        TasmiExaminerAssignment::create(['academic_term_id' => $ctx['term']->id, 'teacher_id' => $ctx['teacher']->id, 'status' => 'active']);
+        $this->partialMock(TasmiService::class)->shouldReceive('hijriDateFor')->andReturnNull();
+
+        $this->actingAs($ctx['user'])->post(route('guru.tasmi.store'), [
+            'classroom_term_id' => $ctx['classroomTerm']->id, 'student_id' => $ctx['student']->id,
+            'exam_type' => '1_juz', 'juz_single' => 30, 'exam_date' => '2026-08-15', 'predicate' => 'jayyid',
+        ])->assertRedirect(route('guru.tasmi.records'));
+        $record = TasmiRecord::sole();
+        $this->put(route('guru.tasmi.update', $record), [
+            'exam_type' => '1_juz', 'juz_start' => 30, 'juz_end' => 30, 'exam_date' => '2026-08-15', 'predicate' => 'mumtaz',
+        ])->assertRedirect(route('guru.tasmi.edit', $record));
+        $this->assertNull($record->fresh()->hijri_date);
+    }
+
+    public function test_failed_audit_rolls_back_create_and_update_without_changing_existing_data(): void
+    {
+        $ctx = $this->makeContext();
+        TasmiExaminerAssignment::create(['academic_term_id' => $ctx['term']->id, 'teacher_id' => $ctx['teacher']->id, 'status' => 'active']);
+        DB::unprepared("CREATE TRIGGER fail_tasmi_audit BEFORE INSERT ON score_change_logs
+            WHEN NEW.score_table = 'tasmi_records'
+            BEGIN SELECT RAISE(ABORT, 'forced audit failure'); END");
+
+        $this->actingAs($ctx['user'])->post(route('guru.tasmi.store'), [
+            'classroom_term_id' => $ctx['classroomTerm']->id, 'student_id' => $ctx['student']->id,
+            'exam_type' => '1_juz', 'juz_single' => 30, 'exam_date' => '2026-08-15', 'predicate' => 'jayyid',
+        ])->assertServerError();
+
+        $this->assertDatabaseCount('tasmi_records', 0);
+        $this->assertDatabaseCount('score_change_logs', 0);
+
+        DB::unprepared('DROP TRIGGER fail_tasmi_audit');
+        $this->post(route('guru.tasmi.store'), [
+            'classroom_term_id' => $ctx['classroomTerm']->id, 'student_id' => $ctx['student']->id,
+            'exam_type' => '1_juz', 'juz_single' => 30, 'exam_date' => '2026-08-15', 'predicate' => 'jayyid',
+        ])->assertRedirect(route('guru.tasmi.records'));
+        $record = TasmiRecord::sole();
+        $tables = ['tasmi_records', 'score_change_logs', 'activity_log', 'panel_notifications'];
+        $before = collect($tables)->mapWithKeys(fn (string $table) => [$table => DB::table($table)->orderBy('id')->get()->toJson()]);
+        DB::unprepared("CREATE TRIGGER fail_tasmi_update_audit BEFORE INSERT ON score_change_logs
+            WHEN NEW.reason = 'updated_tasmi'
+            BEGIN SELECT RAISE(ABORT, 'forced audit failure'); END");
+
+        $this->put(route('guru.tasmi.update', $record), [
+            'exam_type' => '1_juz', 'juz_start' => 30, 'juz_end' => 30, 'exam_date' => '2026-08-15', 'predicate' => 'mumtaz',
+        ])->assertServerError();
+        foreach ($tables as $table) {
+            $this->assertSame($before[$table], DB::table($table)->orderBy('id')->get()->toJson(), "Partial update in {$table}");
+        }
     }
 
     public function test_guru_without_examiner_assignment_cannot_access_tasmi_index(): void
@@ -250,7 +366,7 @@ class TasmiFeatureTest extends TestCase
             'notes' => 'Lancar',
         ]);
 
-        $resp->assertRedirect(route('guru.tasmi.records', TasmiRecord::first()));
+        $resp->assertRedirect(route('guru.tasmi.records'));
         $this->assertDatabaseHas('tasmi_records', [
             'student_id' => $ctx['student']->id,
             'exam_type' => '1_juz',
@@ -262,7 +378,7 @@ class TasmiFeatureTest extends TestCase
         // Audit log tercatat.
         $this->assertDatabaseHas('score_change_logs', [
             'score_table' => 'tasmi_records',
-            'new_score' => 'mumtaz',
+            'new_score' => null,
             'reason' => 'created_tasmi',
         ]);
 
@@ -481,8 +597,8 @@ class TasmiFeatureTest extends TestCase
         // Audit log update tercatat
         $this->assertDatabaseHas('score_change_logs', [
             'score_id' => $record->id,
-            'old_score' => 'maqbul',
-            'new_score' => 'mumtaz',
+            'old_score' => null,
+            'new_score' => null,
             'reason' => 'updated_tasmi',
         ]);
     }

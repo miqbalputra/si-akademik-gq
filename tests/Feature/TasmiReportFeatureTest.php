@@ -14,6 +14,7 @@ use App\Models\TasmiExaminerAssignment;
 use App\Models\TasmiRecord;
 use App\Models\Teacher;
 use App\Models\User;
+use App\Services\TasmiReportService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -89,6 +90,30 @@ class TasmiReportFeatureTest extends TestCase
             'input_at' => now(),
             'last_updated_by' => $inputBy->id,
         ]);
+    }
+
+    public function test_juz_filter_includes_ascending_and_descending_ranges_in_pages_and_exports(): void
+    {
+        $ctx = $this->context();
+        $student = Student::create(['name' => 'Santri Rentang', 'gender' => 'male', 'nis' => '030', 'status' => 'active']);
+        $descending = $this->record($ctx, $student, ['exam_type' => '5_juz', 'juz_start' => 30, 'juz_end' => 26]);
+        $ascending = $this->record($ctx, $student, ['exam_type' => '5_juz', 'juz_start' => 26, 'juz_end' => 30, 'exam_date' => '2026-08-16']);
+        $this->record($ctx, $student, ['juz_start' => 25, 'juz_end' => 25, 'exam_date' => '2026-08-17']);
+        $other = Student::create(['name' => 'Santri PJ Lain', 'gender' => 'male', 'nis' => '031', 'status' => 'active']);
+        $this->record($ctx, $other, ['examiner' => $ctx['otherPj'], 'input_by' => $ctx['otherPjUser'], 'exam_type' => '5_juz', 'juz_start' => 30, 'juz_end' => 26]);
+        $service = app(TasmiReportService::class);
+
+        foreach ([26, 28, 30] as $juz) {
+            $this->actingAs($ctx['pjUser'])->get(route('guru.tasmi.records', ['juz' => $juz]))
+                ->assertOk()->assertDontSee('Santri PJ Lain')->assertViewHas('report', fn ($report) => $report['summary']['total_records'] === 2);
+            $query = $service->forExaminer($ctx['pj']);
+            $export = $service->exportReport($service->applyFilters(clone $query, ['juz' => $juz]), ['juz' => $juz], $service->options($query));
+            $this->assertSame(2, $export['summary']['total_records']);
+            $this->assertCount(2, $export['rows']);
+        }
+        $this->assertSame([$descending->id, $ascending->id], $service->applyFilters($service->forExaminer($ctx['pj']), ['juz' => 28])->orderBy('id')->pluck('id')->all());
+        $this->assertSame(1, $service->applyFilters($service->forExaminer($ctx['pj']), ['juz' => 25])->count());
+        $this->assertSame(0, $service->applyFilters($service->forExaminer($ctx['pj']), ['juz' => 24])->count());
     }
 
     public function test_examiner_report_covers_own_history_and_exports_without_other_examiner_data(): void

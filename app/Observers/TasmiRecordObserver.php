@@ -15,11 +15,19 @@ class TasmiRecordObserver
             'score_table' => $record->getTable(),
             'score_id' => $record->id,
             'old_score' => null,
-            'new_score' => $record->predicate,
+            // DECIMAL audit columns are only for numeric scores. Preserve the
+            // Tasmi predicate in activity_log JSON instead of coercing it.
+            'new_score' => null,
             'changed_by' => $record->input_by ?: Auth::id(),
             'changed_at' => now(),
             'reason' => 'created_tasmi',
         ]);
+
+        activity()
+            ->performedOn($record)
+            ->causedBy($record->inputBy ?? Auth::user())
+            ->withProperties(['attributes' => $record->getAttributes()])
+            ->log('created_tasmi_record');
 
         $this->dispatchCreatedNotifications($record);
     }
@@ -42,14 +50,13 @@ class TasmiRecordObserver
             return;
         }
 
-        // Catat perubahan utama di score_change_logs (kolom old/new dipakai
-        // untuk predicate sesuai skema yang ada). Detail field lain dicatat
-        // via activity log bawah.
+        // Keep the audit event in score_change_logs; textual predicates and
+        // field changes belong in the activity_log JSON below.
         ScoreChangeLog::create([
             'score_table' => $record->getTable(),
             'score_id' => $record->id,
-            'old_score' => $record->getOriginal('predicate'),
-            'new_score' => $record->predicate,
+            'old_score' => null,
+            'new_score' => null,
             'changed_by' => $record->last_updated_by ?: Auth::id(),
             'changed_at' => now(),
             'reason' => 'updated_tasmi',
@@ -92,8 +99,8 @@ class TasmiRecordObserver
     {
         $student = $record->student;
         $studentName = $student?->name ?? 'santri';
-        $examType = \App\Models\TasmiRecord::examTypeOptions()[$record->exam_type] ?? $record->exam_type;
-        $predicate = \App\Models\TasmiRecord::predicateLabel($record->predicate);
+        $examType = TasmiRecord::examTypeOptions()[$record->exam_type] ?? $record->exam_type;
+        $predicate = TasmiRecord::predicateLabel($record->predicate);
         $dateLabel = $record->exam_date?->locale('id')->translatedFormat('d M Y') ?? '-';
         $juzLabel = $record->juz_range_label;
 
@@ -146,8 +153,8 @@ class TasmiRecordObserver
         // Bangun body berdasarkan field yang berubah.
         $parts = [];
         if (isset($changes['predicate'])) {
-            $old = \App\Models\TasmiRecord::predicateLabel($changes['predicate']['from']);
-            $new = \App\Models\TasmiRecord::predicateLabel($changes['predicate']['to']);
+            $old = TasmiRecord::predicateLabel($changes['predicate']['from']);
+            $new = TasmiRecord::predicateLabel($changes['predicate']['to']);
             $parts[] = "predikat {$old} → {$new}";
         }
         if (isset($changes['juz_start']) || isset($changes['juz_end'])) {
