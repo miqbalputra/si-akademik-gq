@@ -1,5 +1,7 @@
 # Rapor otomatis dari Legger
 
+Admin dapat memantau peringkat lintas kelas beserta unduhan Excel/PDF melalui **Leger & Rapor → Peringkat Semua Kelas**. Lihat [panduan peringkat admin](peringkat-admin.md).
+
 ## Penggunaan oleh wali kelas
 
 1. Buka **Leger Kelas Saya**, periksa kelengkapan nilai Diniyyah, praktik, Tahfidz, KKM, dan presensi.

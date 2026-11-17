@@ -132,6 +132,9 @@
             ? ['label' => 'Leger / Rapor', 'href' => route('diniyyah.ledger.show', $snapshot), 'match' => ['diniyyah.ledger.*']]
             : ['label' => 'Leger / Rapor', 'href' => route('filament.admin.resources.diniyyah-ledger-snapshots.index'), 'match' => ['filament.admin.resources.diniyyah-ledger-snapshots.*']],
     ];
+    if ($isManagementPortal && $portalUser?->hasRole('admin')) {
+        array_unshift($managementArchiveItems, ['label' => 'Peringkat Semua Kelas', 'href' => route('admin.class-rankings.index'), 'match' => ['admin.class-rankings.*']]);
+    }
 
     $portalNavGroups = $isGuruPortal
         ? array_values(array_filter([

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AdminClassRankingController;
 use App\Http\Controllers\AdminMonthlyJpReportController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
@@ -262,6 +263,11 @@ Route::middleware(['auth:admin', 'role:admin'])->prefix('admin/class-attendance-
     Route::get('/preview', [ClassAttendanceReportController::class, 'preview'])->name('preview');
     Route::get('/export/{format}', [ClassAttendanceReportController::class, 'export'])
         ->whereIn('format', ['xlsx', 'pdf'])->name('export');
+});
+
+Route::middleware(['auth:admin', 'role:admin'])->prefix('admin/peringkat-kelas')->name('admin.class-rankings.')->group(function () {
+    Route::get('/', [AdminClassRankingController::class, 'index'])->name('index');
+    Route::get('/export/{format}', [AdminClassRankingController::class, 'export'])->whereIn('format', ['xlsx', 'pdf'])->name('export');
 });
 
 Route::middleware(['auth:web', 'role:guru'])->prefix('attendance-reports')->name('class-attendance-report.')->group(function () {

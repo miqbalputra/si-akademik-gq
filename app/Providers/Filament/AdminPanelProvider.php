@@ -2,13 +2,15 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Pages\Auth\Login;
+use Filament\Actions\Action;
+use Filament\FontProviders\LocalFontProvider;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
-use Filament\Actions\Action;
-use Filament\FontProviders\LocalFontProvider;
 use Filament\Navigation\NavigationGroup;
+use Filament\Navigation\NavigationItem;
 use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
@@ -31,7 +33,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->authGuard('admin')
-            ->login(\App\Filament\Pages\Auth\Login::class)
+            ->login(Login::class)
             ->brandName('Ruang GQ')
             ->font('Outfit', url: asset('fonts/outfit/outfit.css'), provider: LocalFontProvider::class)
             ->brandLogo(fn () => view('filament.brand-logo'))
@@ -57,6 +59,13 @@ class AdminPanelProvider extends PanelProvider
                 NavigationGroup::make('Tahfidz')->collapsible(),
                 NavigationGroup::make('Leger & Rapor')->collapsible(),
                 NavigationGroup::make('Pengaturan')->collapsible(),
+            ])
+            ->navigationItems([
+                NavigationItem::make('Peringkat Semua Kelas')
+                    ->url(fn (): string => route('admin.class-rankings.index'))
+                    ->icon('heroicon-o-chart-bar')->group('Leger & Rapor')->sort(5)
+                    ->visible(fn (): bool => auth('admin')->user()?->hasRole('admin') ?? false)
+                    ->isActiveWhen(fn (): bool => request()->routeIs('admin.class-rankings.*')),
             ])
             ->userMenuItems([
                 Action::make('workspace_guru')
