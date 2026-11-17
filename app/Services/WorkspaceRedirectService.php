@@ -3,17 +3,22 @@
 namespace App\Services;
 
 use App\Models\User;
+use Filament\Panel;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Auth;
 
 class WorkspaceRedirectService
 {
     public const GURU = 'guru';
+
     public const KABAG_TAHFIDZ = 'kabag_tahfidz';
+
     public const KABAG_DINIYYAH = 'kabag_diniyyah';
+
     public const MANAGEMENT = 'management';
+
     public const WALI = 'wali';
 
     /**
@@ -95,7 +100,7 @@ class WorkspaceRedirectService
         $destination = $this->defaultDestination($user);
 
         if (str_starts_with(parse_url($destination, PHP_URL_PATH) ?: '', '/admin')
-            && $user->canAccessPanel(\Filament\Panel::make())) {
+            && $user->canAccessPanel(Panel::make())) {
             $this->switchToAdminGuard($request, $user);
         }
 
@@ -106,6 +111,13 @@ class WorkspaceRedirectService
     {
         Auth::guard('web')->logout();
         Auth::guard('admin')->login($user);
+        $request->session()->regenerate();
+    }
+
+    public function switchToPortalGuard(Request $request, User $user): void
+    {
+        Auth::guard('admin')->logout();
+        Auth::guard('web')->login($user);
         $request->session()->regenerate();
     }
 }

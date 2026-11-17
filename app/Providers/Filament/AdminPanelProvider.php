@@ -4,13 +4,14 @@ namespace App\Providers\Filament;
 
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Middleware\AuthenticateAdminPanel;
+use App\Services\WorkspaceRedirectService;
+use App\Support\AdminNavigation;
 use Filament\Actions\Action;
 use Filament\FontProviders\LocalFontProvider;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
-use Filament\Navigation\NavigationGroup;
-use Filament\Navigation\NavigationItem;
+use Filament\Navigation\NavigationBuilder;
 use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
@@ -47,42 +48,27 @@ class AdminPanelProvider extends PanelProvider
                 'danger' => Color::Rose,
             ])
             ->viteTheme('resources/css/filament/admin/theme.css')
-            ->navigationGroups([
-                NavigationGroup::make('Data Sekolah')->collapsible(),
-                NavigationGroup::make('Struktur Kelas')->collapsible(),
-                NavigationGroup::make('Diniyyah')->collapsible(),
-                NavigationGroup::make('Kurikulum & RPP')->collapsible(),
-                NavigationGroup::make('Tahfidz')->collapsible(),
-                NavigationGroup::make('Leger & Rapor')->collapsible(),
-                NavigationGroup::make('Pengaturan')->collapsible(),
-            ])
-            ->navigationItems([
-                NavigationItem::make('Peringkat Semua Kelas')
-                    ->url(fn (): string => route('admin.class-rankings.index'))
-                    ->icon('heroicon-o-chart-bar')->group('Leger & Rapor')->sort(5)
-                    ->visible(fn (): bool => auth('admin')->user()?->hasRole('admin') ?? false)
-                    ->isActiveWhen(fn (): bool => request()->routeIs('admin.class-rankings.*')),
-            ])
+            ->navigation(fn (NavigationBuilder $builder) => app(AdminNavigation::class)->build($builder))
             ->userMenuItems([
                 Action::make('workspace_guru')
                     ->label('Buka Portal Guru')
                     ->icon('heroicon-o-academic-cap')
-                    ->url(fn (): string => route('guru.dashboard'))
+                    ->url(fn (): string => route('workspace.open-portal', ['workspace' => WorkspaceRedirectService::GURU]))->postToUrl()
                     ->visible(fn (): bool => auth()->user()?->hasRole('guru') ?? false),
                 Action::make('workspace_kabag_tahfidz')
                     ->label('Buka Kabag Tahfidz')
                     ->icon('heroicon-o-book-open')
-                    ->url(fn (): string => route('kabag-tahfidz.dashboard'))
+                    ->url(fn (): string => route('workspace.open-portal', ['workspace' => WorkspaceRedirectService::KABAG_TAHFIDZ]))->postToUrl()
                     ->visible(fn (): bool => auth()->user()?->hasRole('kabag_tahfidz') ?? false),
                 Action::make('workspace_kabag_diniyyah')
                     ->label('Buka Kabag Diniyyah')
                     ->icon('heroicon-o-clipboard-document-check')
-                    ->url(fn (): string => route('kabag-diniyyah.dashboard'))
+                    ->url(fn (): string => route('workspace.open-portal', ['workspace' => WorkspaceRedirectService::KABAG_DINIYYAH]))->postToUrl()
                     ->visible(fn (): bool => auth()->user()?->hasRole('kabag_diniyyah') ?? false),
                 Action::make('workspace_wali')
                     ->label('Buka Portal Wali')
                     ->icon('heroicon-o-users')
-                    ->url(fn (): string => route('wali.dashboard'))
+                    ->url(fn (): string => route('workspace.open-portal', ['workspace' => WorkspaceRedirectService::WALI]))->postToUrl()
                     ->visible(fn (): bool => auth()->user()?->hasRole('wali_santri') ?? false),
             ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
@@ -102,6 +88,10 @@ class AdminPanelProvider extends PanelProvider
                 DispatchServingFilamentEvent::class,
             ])
             ->authMiddleware([AuthenticateAdminPanel::class], isPersistent: true)
+            ->renderHook(
+                PanelsRenderHook::SIDEBAR_NAV_START,
+                fn (): string => view('filament.partials.navigation-search')->render(),
+            )
             ->renderHook(
                 PanelsRenderHook::TOPBAR_END,
                 fn (): string => view('filament.partials.notifications')->render(),

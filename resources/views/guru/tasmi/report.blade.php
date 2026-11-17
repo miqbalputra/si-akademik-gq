@@ -11,9 +11,9 @@
     <section class="space-y-6">
         <header class="portal-page-header flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
             <div>
-                <a href="{{ $backUrl }}" class="inline-flex items-center gap-2 text-success-ink transition hover:text-success-ink text-theme-sm font-medium">
+                <x-workspace-link :href="$backUrl" class="inline-flex items-center gap-2 text-success-ink transition hover:text-success-ink text-theme-sm font-medium">
                     <span aria-hidden="true">←</span> {{ $backLabel }}
-                </a>
+                </x-workspace-link>
                 <p class="mt-4 text-theme-xs font-normal uppercase text-success-ink">{{ $isManagement ? 'Monitoring Tahfidz' : 'Laporan Tasmi\'' }}</p>
                 <h1 class="mt-1 text-heading ui-page-title">{{ $pageTitle }}</h1>
                 <p class="mt-2 max-w-2xl text-theme-sm font-normal text-muted">{{ $pageDescription }}</p>

@@ -5,8 +5,9 @@
     $isTahfidzPortal = ($portalLabel ?? null) === 'Portal Kabag Tahfidz';
     $isDiniyyahPortal = ($portalLabel ?? null) === 'Portal Kabag Diniyyah';
     $portalUser = auth()->user();
-    $notificationPrefix = $isManagementPortal ? 'admin.notifications.' : 'notifications.';
-    $portalLogoutUrl = $isManagementPortal ? route('filament.admin.auth.logout') : route('logout');
+    $usesAdminGuard = auth()->getDefaultDriver() === 'admin';
+    $notificationPrefix = $usesAdminGuard ? 'admin.notifications.' : 'notifications.';
+    $portalLogoutUrl = $usesAdminGuard ? route('filament.admin.auth.logout') : route('logout');
     $workspaceService = app(\App\Services\WorkspaceRedirectService::class);
     $workspaceItems = $portalUser ? $workspaceService->availableFor($portalUser) : [];
     $currentWorkspace = $isGuruPortal
@@ -25,6 +26,7 @@
                 ? route('kabag-diniyyah.dashboard')
                 : ($isWaliPortal ? route('wali.dashboard') : ($isManagementPortal ? url('/admin') : url('/')))));
     $isHomeActive = request()->routeIs($isGuruPortal ? 'guru.dashboard' : ($isTahfidzPortal ? 'kabag-tahfidz.dashboard' : ($isDiniyyahPortal ? 'kabag-diniyyah.dashboard' : ($isWaliPortal ? 'wali.dashboard' : 'filament.admin.pages.dashboard'))));
+    if ($usesAdminGuard) $portalHomeUrl = url('/admin');
     $canAccessAttendance = $isGuruPortal && ($portalUser?->canAccessAttendance() ?? false);
     $isTasmiExaminer = $isGuruPortal && ($portalUser?->isTasmiExaminer() ?? false);
     $isHomeroomTeacher = $isGuruPortal && ($portalUser?->teacher?->homeroomAssignments()->exists() ?? false);
@@ -130,7 +132,7 @@
     $managementArchiveItems = [
         isset($snapshot)
             ? ['label' => 'Leger / Rapor', 'href' => route('diniyyah.ledger.show', $snapshot), 'match' => ['diniyyah.ledger.*']]
-            : ['label' => 'Leger / Rapor', 'href' => route('filament.admin.resources.diniyyah-ledger-snapshots.index'), 'match' => ['filament.admin.resources.diniyyah-ledger-snapshots.*']],
+            : ['label' => 'Rapor Diniyyah', 'href' => route('filament.admin.resources.report-cards.index'), 'match' => ['filament.admin.resources.report-cards.*']],
     ];
     if ($isManagementPortal && $portalUser?->hasRole('admin')) {
         array_unshift($managementArchiveItems, ['label' => 'Peringkat Semua Kelas', 'href' => route('admin.class-rankings.index'), 'match' => ['admin.class-rankings.*']]);
@@ -237,14 +239,14 @@
                         <div class="space-y-1">
                             @foreach($group['items'] as $item)
                                 @php($isActive = collect($item['match'])->contains(fn ($pattern) => request()->routeIs($pattern)))
-                                <a
-                                    href="{{ $item['href'] }}"
-                                    class="school-sidebar-link flex items-center gap-3 rounded-lg px-3 py-2.5 text-theme-sm font-medium transition @if($isActive) bg-brand-soft text-brand-ink dark:bg-surface/5 dark:text-brand-300 @else text-body hover:bg-surface-subtle hover:text-heading dark:text-body dark:hover:bg-surface/5 dark:hover:text-white @endif"
-                                    @if($isActive) aria-current="page" @endif
+                                <x-workspace-link
+                                    :href="$item['href']"
+                                    :class="'school-sidebar-link flex items-center gap-3 rounded-lg px-3 py-2.5 text-theme-sm font-medium transition '.($isActive ? 'bg-brand-soft text-brand-ink dark:bg-surface/5 dark:text-brand-300' : 'text-body hover:bg-surface-subtle hover:text-heading dark:text-body dark:hover:bg-surface/5 dark:hover:text-white')"
+                                    :aria-current="$isActive ? 'page' : null"
                                 >
                                     <span class="h-1.5 w-1.5 shrink-0 rounded-full @if($isActive) bg-brand-500 @else bg-line-strong dark:bg-gray-600 @endif" aria-hidden="true"></span>
                                     <span class="min-w-0 flex-1">{{ $item['label'] }}</span>
-                                </a>
+                                </x-workspace-link>
                             @endforeach
                         </div>
                     </details>
@@ -296,10 +298,10 @@
                                 </summary>
                                 <div class="school-nav-dropdown-panel absolute end-0 top-12 z-50 grid min-w-56 gap-1 rounded-xl border border-line bg-surface p-2 shadow-theme-lg dark:border-gray-700 dark:bg-surface" role="menu" aria-label="Ganti ruang kerja">
                                     @foreach($workspaceItems as $key => $workspace)
-                                        <a href="{{ $workspace['destination'] }}" class="school-nav-dropdown-link flex items-center justify-between rounded-lg px-3 py-2 text-theme-sm font-medium text-body hover:bg-surface-subtle dark:text-body dark:hover:bg-gray-800" role="menuitem" @if($currentWorkspace === $key) aria-current="page" @endif>
+                                        <x-workspace-link :href="$workspace['destination']" class="school-nav-dropdown-link flex items-center justify-between rounded-lg px-3 py-2 text-theme-sm font-medium text-body hover:bg-surface-subtle dark:text-body dark:hover:bg-gray-800" role="menuitem" :aria-current="$currentWorkspace === $key ? 'page' : null">
                                             <span>{{ $workspace['label'] }}</span>
                                             @if($currentWorkspace === $key)<span class="school-nav-active-dot h-1.5 w-1.5 rounded-full bg-brand-500" aria-hidden="true"></span>@endif
-                                        </a>
+                                        </x-workspace-link>
                                     @endforeach
                                 </div>
                             </details>

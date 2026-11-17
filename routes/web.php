@@ -42,6 +42,7 @@ use App\Http\Controllers\WaliJpRecapController;
 use App\Http\Controllers\WaliKelasTasmiController;
 use App\Http\Controllers\WaliKelasTasmiReminderController;
 use App\Http\Controllers\WorkspaceSelectionController;
+use App\Http\Controllers\WorkspaceTransitionController;
 use App\Http\Middleware\PreventStaleKkmPages;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -82,6 +83,11 @@ Route::get('/auth/google/callback', [GoogleController::class, 'handleGoogleCallb
 Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
     ->middleware('auth:web')
     ->name('logout');
+
+Route::post('/workspace/open-panel', [WorkspaceTransitionController::class, 'openPanel'])
+    ->middleware('auth:web')->name('workspace.open-panel');
+Route::post('/workspace/open-portal', [WorkspaceTransitionController::class, 'openPortal'])
+    ->middleware('auth:admin')->name('workspace.open-portal');
 
 Route::middleware('auth:web')->prefix('pilih-ruang-kerja')->name('workspace.')->group(function () {
     Route::get('/', [WorkspaceSelectionController::class, 'create'])->name('choose');

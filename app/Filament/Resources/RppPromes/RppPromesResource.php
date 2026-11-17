@@ -8,28 +8,48 @@ use App\Filament\Resources\RppPromes\Pages\ListRppPromes;
 use App\Models\DiniyyahClassSubject;
 use App\Models\RppPromes;
 use BackedEnum;
+use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
-use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
 class RppPromesResource extends Resource
 {
     protected static ?string $model = RppPromes::class;
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCalendarDays;
+
     protected static string|\UnitEnum|null $navigationGroup = 'Kurikulum & RPP';
+
     protected static ?string $navigationLabel = 'Program Semester';
+
     protected static ?string $modelLabel = 'Promes';
+
     protected static ?string $pluralModelLabel = 'Program Semester';
 
-    public static function canViewAny(): bool { return auth()->user()?->hasAnyRole(['admin', 'kabag_diniyyah', 'kepala_sekolah']) ?? false; }
-    public static function canCreate(): bool { return auth()->user()?->hasAnyRole(['admin', 'kabag_diniyyah']) ?? false; }
-    public static function canEdit($record): bool { return static::canCreate(); }
-    public static function canDelete($record): bool { return static::canCreate(); }
+    public static function canViewAny(): bool
+    {
+        return auth()->user()?->hasAnyRole(['admin', 'kabag_diniyyah', 'kepala_sekolah']) ?? false;
+    }
+
+    public static function canCreate(): bool
+    {
+        return auth()->user()?->hasAnyRole(['admin', 'kabag_diniyyah']) ?? false;
+    }
+
+    public static function canEdit($record): bool
+    {
+        return static::canCreate();
+    }
+
+    public static function canDelete($record): bool
+    {
+        return static::canCreate();
+    }
 
     public static function form(Schema $schema): Schema
     {
@@ -49,5 +69,8 @@ class RppPromesResource extends Resource
         ])->recordActions([EditAction::make()]);
     }
 
-    public static function getPages(): array { return ['index' => ListRppPromes::route('/'), 'create' => CreateRppPromes::route('/create'), 'edit' => EditRppPromes::route('/{record}/edit')]; }
+    public static function getPages(): array
+    {
+        return ['index' => ListRppPromes::route('/'), 'create' => CreateRppPromes::route('/create'), 'edit' => EditRppPromes::route('/{record}/edit')];
+    }
 }

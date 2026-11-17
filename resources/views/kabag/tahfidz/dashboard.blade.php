@@ -36,7 +36,7 @@
                     ];
                 @endphp
                 @foreach($actions as [$label, $description, $href])
-                    <a href="{{ $href }}" class="group rounded-2xl border border-line bg-surface-subtle p-4 transition hover:-translate-y-0.5 hover:border-success-line hover:bg-success-soft hover:shadow-md"><span class="text-theme-sm font-medium text-heading">{{ $label }}</span><span class="mt-1 block text-theme-xs text-muted font-normal">{{ $description }}</span><span class="mt-3 block text-theme-xs font-normal text-success-ink">Buka →</span></a>
+                    <x-workspace-link :href="$href" class="group rounded-2xl border border-line bg-surface-subtle p-4 transition hover:-translate-y-0.5 hover:border-success-line hover:bg-success-soft hover:shadow-md"><span class="block text-theme-sm font-medium text-heading">{{ $label }}</span><span class="mt-1 block text-theme-xs text-muted font-normal">{{ $description }}</span><span class="mt-3 block text-theme-xs text-success-ink">Buka →</span></x-workspace-link>
                 @endforeach
             </div>
         </section>

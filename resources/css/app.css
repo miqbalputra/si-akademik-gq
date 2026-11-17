@@ -38,6 +38,9 @@
     html:has(.kkm-guide-modal[open]) { overflow: hidden; }
 }
 @layer components {
+    .app-shell :is(.school-sidebar-link, .school-nav-dropdown-toggle) { min-height: 44px; }
+    .app-shell header button[aria-label] { min-height: 44px; min-width: 44px; }
+    .app-shell button[aria-label="Keluar dari akun"] { min-height: 44px; min-width: 44px; }
     .kkm-view-nav { display: flex; gap: .35rem; border-bottom: 1px solid var(--ui-line); }
     .kkm-view-nav > a { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; border-bottom: 3px solid transparent; padding: .85rem 1rem; color: var(--ui-muted); font-size: 14px; font-weight: 500; text-decoration: none; }
     .kkm-view-nav > a:hover { color: var(--ui-heading); }

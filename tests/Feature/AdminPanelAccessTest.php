@@ -7,6 +7,7 @@ use App\Filament\Pages\DemoFlow;
 use App\Filament\Resources\DiniyyahClassSubjects\DiniyyahClassSubjectResource;
 use App\Filament\Resources\ReportCards\ReportCardResource;
 use App\Filament\Resources\Students\StudentResource;
+use App\Models\AcademicTerm;
 use App\Models\User;
 use Database\Seeders\DemoSeeder;
 use Database\Seeders\RolePermissionSeeder;
@@ -21,6 +22,12 @@ class AdminPanelAccessTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        // DemoSeeder locks a ledger and creates its report. Supply the required
+        // issue date in the test fixture without changing the operational seeder.
+        AcademicTerm::creating(function (AcademicTerm $term): void {
+            $term->report_issue_date ??= '2026-12-20';
+        });
 
         $this->seed(RolePermissionSeeder::class);
     }
