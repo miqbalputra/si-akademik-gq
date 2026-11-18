@@ -1,5 +1,6 @@
 import Chart from 'chart.js/auto';
 import Alpine from 'alpinejs';
+import './guru-navigation';
 import { initDiniyyahScoreEditor } from './diniyyah-score-editor';
 
 window.Chart = Chart;

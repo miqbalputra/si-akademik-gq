@@ -17,7 +17,6 @@
             : ($isDiniyyahPortal
                 ? \App\Services\WorkspaceRedirectService::KABAG_DINIYYAH
                 : ($isManagementPortal ? \App\Services\WorkspaceRedirectService::MANAGEMENT : null)));
-    $hasLinkedTeacher = $isGuruPortal && $portalUser?->teacher !== null;
     $portalHomeUrl = $isGuruPortal
         ? route('guru.dashboard')
         : ($isTahfidzPortal
@@ -27,70 +26,10 @@
                 : ($isWaliPortal ? route('wali.dashboard') : ($isManagementPortal ? url('/admin') : url('/')))));
     $isHomeActive = request()->routeIs($isGuruPortal ? 'guru.dashboard' : ($isTahfidzPortal ? 'kabag-tahfidz.dashboard' : ($isDiniyyahPortal ? 'kabag-diniyyah.dashboard' : ($isWaliPortal ? 'wali.dashboard' : 'filament.admin.pages.dashboard'))));
     if ($usesAdminGuard) $portalHomeUrl = url('/admin');
-    $canAccessAttendance = $isGuruPortal && ($portalUser?->canAccessAttendance() ?? false);
-    $isTasmiExaminer = $isGuruPortal && ($portalUser?->isTasmiExaminer() ?? false);
-    $isHomeroomTeacher = $isGuruPortal && ($portalUser?->teacher?->homeroomAssignments()->exists() ?? false);
-
-    $guruTodayItems = [
-        ['label' => 'Jurnal', 'href' => route('guru.diniyyah-journals.index'), 'match' => ['guru.diniyyah-journals.*']],
-        ['label' => 'Tahfidz', 'href' => route('guru.tahfidz.index'), 'match' => ['guru.tahfidz.*']],
-    ];
-    if ($hasLinkedTeacher) {
-        array_splice($guruTodayItems, 1, 0, [[
-            'label' => 'Jurnal Pengganti', 'href' => route('guru.diniyyah-substitute-journals.index'), 'match' => ['guru.diniyyah-substitute-journals.*', 'guru.diniyyah-substitute-tafsir-journals.*'],
-        ], [
-            'label' => 'Pengganti Tafsir', 'href' => route('guru.diniyyah-substitute-tafsir-journals.index'), 'match' => ['guru.diniyyah-substitute-tafsir-journals.*'],
-        ]]);
-    }
-    if ($hasSimultaneousTafsirSchedule ?? false) {
-        array_splice($guruTodayItems, 1, 0, [[
-            'label' => 'Jurnal Tafsir', 'href' => route('guru.diniyyah-tafsir-journals.index'), 'match' => ['guru.diniyyah-tafsir-journals.*'],
-        ]]);
-    }
-    if ($canAccessAttendance) {
-        array_splice($guruTodayItems, 1, 0, [[
-            'label' => 'Presensi', 'href' => route('attendance.index'), 'match' => ['attendance.*'],
-        ]]);
-    }
-    if ($isTasmiExaminer) {
-        $guruTodayItems[] = ['label' => 'Tasmi\'', 'href' => route('guru.tasmi.index'), 'match' => ['guru.tasmi.*']];
-    }
-    $guruClassItems = [
-        ['label' => 'KKM', 'href' => route('guru.kkm.index'), 'match' => ['guru.kkm.*']],
-        ['label' => 'Input Nilai', 'href' => route('guru.diniyyah-scores.index'), 'match' => ['guru.diniyyah-scores.*']],
-    ];
-    $guruReportItems = [
-        ['label' => 'Nilai Final Tahfidz Rapor', 'href' => route('guru.tahfidz-report.index'), 'match' => ['guru.tahfidz-report.index']],
-    ];
-    if ($isHomeroomTeacher) {
-        $guruReportItems[] = ['label' => 'Leger Kelas Saya', 'href' => route('diniyyah.ledger.index'), 'match' => ['diniyyah.ledger.*']];
-        $guruReportItems[] = ['label' => 'Rapor Kelas Saya', 'href' => route('report-cards.index'), 'match' => ['report-cards.*', 'guru.tahfidz-report.monitor']];
-        $guruClassItems[] = ['label' => 'Tasmi\' Kelas Saya', 'href' => route('guru.tasmi-wali.index'), 'match' => ['guru.tasmi-wali.*']];
-        $guruClassItems[] = ['label' => 'Monitoring Jurnal Kelas', 'href' => route('wali.diniyyah-journals.index'), 'match' => ['wali.diniyyah-journals.*']];
-        $guruClassItems[] = ['label' => 'Rekap JP Kelas', 'href' => route('wali.jp-recap.index'), 'match' => ['wali.jp-recap.*']];
-    }
-    $guruArchiveItems = [
-        ['label' => 'Performa Jurnal Saya', 'href' => route('guru.performa'), 'match' => ['guru.performa']],
-        ['label' => 'Riwayat Jurnal', 'href' => route('guru.diniyyah-journals.riwayat'), 'match' => ['guru.diniyyah-journals.riwayat']],
-        ['label' => 'Kalender', 'href' => route('guru.calendar'), 'match' => ['guru.calendar']],
-    ];
-    if ($hasLinkedTeacher) {
-        array_unshift($guruArchiveItems, [
-            'label' => 'Presensi Saya', 'href' => route('guru.attendance-report.index'), 'match' => ['guru.attendance-report.*'],
-        ]);
-    }
-
-    $guruLearningItems = $hasLinkedTeacher ? [
-        ['label' => 'RPP Saya', 'href' => route('guru.rpp.index'), 'match' => ['guru.rpp.index', 'guru.rpp.show', 'guru.rpp.edit']],
-        ...(! config('rpp_sync.enabled') ? [['label' => 'Buat RPP', 'href' => route('guru.rpp.create'), 'match' => ['guru.rpp.create']]] : []),
-        ['label' => 'Referensi RPP', 'href' => route('guru.rpp.references'), 'match' => ['guru.rpp.references']],
-        ['label' => 'Promes Saya', 'href' => route('guru.rpp.promes'), 'match' => ['guru.rpp.promes']],
-        ...(! config('rpp_sync.enabled') ? [['label' => 'Sampah RPP', 'href' => route('guru.rpp.trash'), 'match' => ['guru.rpp.trash']]] : []),
-    ] : [];
-    $guruCoordinationItems = [];
-    if ($isGuruPortal && $portalUser?->hasRole('kabag_tahfidz')) {
-        $guruCoordinationItems[] = ['label' => "Monitoring Tasmi' Semua Kelas", 'href' => route('admin.tasmi-report.index'), 'match' => ['admin.tasmi-report.*']];
-    }
+    $guruNavigation = app(\App\Support\GuruNavigation::class);
+    $guruGroups = $isGuruPortal && $portalUser
+        ? $guruNavigation->groups($portalUser, $hasSimultaneousTafsirSchedule ?? false)
+        : [];
 
     $waliTodayItems = [
         ['label' => 'Tahfidz', 'href' => route('wali.tahfidz'), 'match' => ['wali.tahfidz']],
@@ -139,14 +78,7 @@
     }
 
     $portalNavGroups = $isGuruPortal
-        ? array_values(array_filter([
-            ['label' => 'Kegiatan', 'items' => $guruTodayItems],
-            ['label' => 'Perangkat Pembelajaran', 'items' => $guruLearningItems],
-            ['label' => 'Kelas & Santri', 'items' => $guruClassItems],
-            ['label' => 'Rapor', 'items' => $guruReportItems],
-            ['label' => 'Koordinasi Tahfidz', 'items' => $guruCoordinationItems],
-            ['label' => 'Laporan & Arsip', 'items' => $guruArchiveItems],
-        ], fn (array $group): bool => $group['items'] !== []))
+        ? $guruGroups
         : ($isTahfidzPortal
             ? [
                 ['label' => 'Monitoring', 'items' => $tahfidzMonitoringItems],
@@ -189,7 +121,10 @@
         @include('partials.pwa-install-prompt')
     @endif
 
-    <div x-data="{ mobileSidebarOpen: false }" @keydown.escape.window="mobileSidebarOpen = false" class="min-h-screen xl:flex">
+    <div x-data="{ mobileSidebarOpen: false, desktopSidebar: window.innerWidth >= 1280 }"
+        @resize.window="desktopSidebar = window.innerWidth >= 1280"
+        @keydown.escape.window="if (mobileSidebarOpen) { mobileSidebarOpen = false; $refs.portalMenuButton.focus(); }"
+        class="min-h-screen xl:flex">
         <div
             x-cloak
             x-show="mobileSidebarOpen"
@@ -201,8 +136,9 @@
 
         <aside
             id="portal-sidebar"
+            :inert="!mobileSidebarOpen && !desktopSidebar"
             :class="mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'"
-            class="school-sidebar fixed inset-y-0 start-0 z-50 flex w-72 flex-col border-e border-line bg-surface transition-transform duration-300 xl:sticky xl:top-0 xl:h-screen xl:translate-x-0 dark:border-gray-800 dark:bg-surface"
+            class="school-sidebar max-w-full fixed inset-y-0 start-0 z-50 flex w-72 flex-col border-e border-line bg-surface transition-transform duration-300 xl:sticky xl:top-0 xl:h-screen xl:translate-x-0 dark:border-gray-800 dark:bg-surface"
             aria-label="Navigasi {{ $portalLabel ?? 'portal' }}"
         >
             <div class="flex h-20 shrink-0 items-center justify-between border-b border-line px-6 dark:border-gray-800">
@@ -213,15 +149,31 @@
                         <small>Griya Qur'an Tunas Ilmu</small>
                     </span>
                 </a>
-                <button type="button" @click="mobileSidebarOpen = false" class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-soft hover:bg-surface-muted hover:text-body xl:hidden dark:hover:bg-gray-800 dark:hover:text-white" aria-label="Tutup menu">
+                <button type="button" @click="mobileSidebarOpen = false" class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-soft hover:bg-surface-muted hover:text-body xl:hidden dark:hover:bg-gray-800 dark:hover:text-white" aria-label="Tutup menu">
                     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
                 </button>
             </div>
 
-            <nav class="school-sidebar-nav flex-1 overflow-y-auto px-4 py-6" aria-label="Menu portal">
+            <nav class="school-sidebar-nav flex-1 overflow-y-auto px-4 py-6" aria-label="Menu portal"
+                @if($isGuruPortal) data-guru-nav data-storage-key="{{ $guruNavigation->storageKey($portalUser) }}" @endif
+            >
+                @if($isGuruPortal)
+                    <div class="mb-5">
+                        <label for="guru-menu-search" class="mb-2 block px-1 text-theme-sm font-medium text-heading">Cari menu</label>
+                        <div class="flex items-center gap-1 rounded-lg border border-line bg-surface px-2">
+                            <input id="guru-menu-search" data-guru-menu-search type="search" placeholder="Contoh: rapor, presensi" autocomplete="off" aria-controls="guru-menu-groups" class="min-h-11 w-full min-w-0 bg-transparent px-1 text-theme-sm text-heading">
+                            <button type="button" data-guru-menu-clear class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-surface-subtle" aria-label="Hapus pencarian menu" hidden>
+                                <span aria-hidden="true">×</span>
+                            </button>
+                        </div>
+                        <p data-guru-menu-status role="status" aria-live="polite" class="mt-2 px-1 text-theme-xs text-muted"></p>
+                        <p data-guru-menu-empty class="mt-2 px-1 text-theme-sm text-muted" hidden>Menu tidak ditemukan. Coba kata lain.</p>
+                    </div>
+                @endif
                 <p class="mb-2 px-3 ui-menu-group text-soft">{{ $portalLabel ?? 'Ruang GQ' }}</p>
                 <a
                     href="{{ $portalHomeUrl }}"
+                    @if($isGuruPortal) data-guru-home @endif
                     class="school-sidebar-link mb-5 flex items-center gap-3 rounded-lg px-3 py-2.5 text-theme-sm font-medium transition @if($isHomeActive) bg-brand-soft text-brand-ink dark:bg-surface/5 dark:text-brand-300 @else text-body hover:bg-surface-subtle hover:text-heading dark:text-body dark:hover:bg-surface/5 dark:hover:text-white @endif"
                     @if($isHomeActive) aria-current="page" @endif
                 >
@@ -229,16 +181,21 @@
                     <span>Beranda</span>
                 </a>
 
+                <div @if($isGuruPortal) id="guru-menu-groups" @endif>
                 @foreach($portalNavGroups as $group)
-                    @php($isGroupActive = collect($group['items'])->contains(fn ($item) => collect($item['match'])->contains(fn ($pattern) => request()->routeIs($pattern))))
-                    <details class="school-sidebar-group school-nav-dropdown mb-6" @if($isGroupActive) open @endif>
+                    @php($isGroupActive = $group['active'] ?? collect($group['items'])->contains(fn ($item) => collect($item['match'])->contains(fn ($pattern) => request()->routeIs($pattern))))
+                    <details class="school-sidebar-group school-nav-dropdown mb-4"
+                        @if($isGuruPortal) data-guru-group="{{ $group['key'] }}" data-active="{{ $isGroupActive ? 'true' : 'false' }}" data-default-open="{{ $group['default_open'] ? 'true' : 'false' }}" @endif
+                        @if($isGroupActive || ($group['default_open'] ?? false)) open @endif
+                    >
                         <summary class="school-nav-dropdown-toggle mb-2 flex cursor-pointer list-none items-center justify-between rounded-lg px-3 py-2 ui-menu-group text-soft hover:bg-surface-subtle dark:hover:bg-surface/5">
                             <span>{{ $group['label'] }}</span>
                             <svg class="school-nav-chevron h-4 w-4" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m5 7.5 5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
                         </summary>
                         <div class="space-y-1">
                             @foreach($group['items'] as $item)
-                                @php($isActive = collect($item['match'])->contains(fn ($pattern) => request()->routeIs($pattern)))
+                                @php($isActive = $item['active'] ?? collect($item['match'])->contains(fn ($pattern) => request()->routeIs($pattern)))
+                                <div @if($isGuruPortal) data-guru-item data-search-label="{{ $item['label'].' '.($item['aliases'] ?? '') }}" @endif>
                                 <x-workspace-link
                                     :href="$item['href']"
                                     :class="'school-sidebar-link flex items-center gap-3 rounded-lg px-3 py-2.5 text-theme-sm font-medium transition '.($isActive ? 'bg-brand-soft text-brand-ink dark:bg-surface/5 dark:text-brand-300' : 'text-body hover:bg-surface-subtle hover:text-heading dark:text-body dark:hover:bg-surface/5 dark:hover:text-white')"
@@ -247,10 +204,12 @@
                                     <span class="h-1.5 w-1.5 shrink-0 rounded-full @if($isActive) bg-brand-500 @else bg-line-strong dark:bg-gray-600 @endif" aria-hidden="true"></span>
                                     <span class="min-w-0 flex-1">{{ $item['label'] }}</span>
                                 </x-workspace-link>
+                                </div>
                             @endforeach
                         </div>
                     </details>
                 @endforeach
+                </div>
             </nav>
 
             <div class="shrink-0 border-t border-line p-4 dark:border-gray-800">
@@ -275,7 +234,7 @@
         <div class="min-w-0 flex-1">
             <header class="school-header sticky top-0 z-30 border-b border-line bg-surface/90 backdrop-blur-xl dark:border-gray-800 dark:bg-surface/90">
                 <nav class="school-header-inner flex min-h-[4.5rem] flex-wrap items-center gap-x-3 gap-y-2 px-4 sm:flex-nowrap sm:gap-4 sm:px-6 xl:px-8" aria-label="Konteks {{ $portalLabel ?? 'portal' }}">
-                    <button type="button" @click="mobileSidebarOpen = true" class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-line bg-surface text-muted transition hover:bg-surface-subtle xl:hidden dark:border-gray-700 dark:bg-surface dark:text-body dark:hover:bg-gray-800" aria-label="Buka menu" aria-controls="portal-sidebar">
+                    <button type="button" x-ref="portalMenuButton" @click="mobileSidebarOpen = true" class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-line bg-surface text-muted transition hover:bg-surface-subtle xl:hidden dark:border-gray-700 dark:bg-surface dark:text-body dark:hover:bg-gray-800" aria-label="Buka menu" aria-controls="portal-sidebar" :aria-expanded="mobileSidebarOpen">
                         <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
                     </button>
 

@@ -7,9 +7,11 @@ use App\Models\AcademicYear;
 use App\Models\ClassEnrollment;
 use App\Models\Classroom;
 use App\Models\ClassroomTerm;
+use App\Models\HomeroomAssignment;
 use App\Models\School;
 use App\Models\Student;
 use App\Models\StudentAttendance;
+use App\Models\Teacher;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -23,14 +25,16 @@ class NavigationDataSafetyTest extends TestCase
     public function test_navigating_and_switching_workspaces_does_not_change_existing_academic_data(): void
     {
         $user = User::factory()->create();
-        foreach (['admin', 'kabag_diniyyah'] as $role) {
+        foreach (['admin', 'kabag_diniyyah', 'guru'] as $role) {
             $user->assignRole(Role::firstOrCreate(['name' => $role, 'guard_name' => 'web']));
         }
         $school = School::create(['name' => 'Sekolah Pengujian']);
         $year = AcademicYear::create(['school_id' => $school->id, 'name' => '2026/2027']);
-        $term = AcademicTerm::create(['academic_year_id' => $year->id, 'name' => 'Ganjil', 'semester' => 'ganjil', 'is_active' => true]);
+        $term = AcademicTerm::create(['academic_year_id' => $year->id, 'name' => 'Ganjil', 'semester' => 'ganjil', 'is_active' => true, 'starts_at' => '2026-07-13', 'ends_at' => '2026-12-31']);
         $classroom = Classroom::create(['name' => 'Kelas Pengujian']);
         $class = ClassroomTerm::create(['academic_term_id' => $term->id, 'classroom_id' => $classroom->id, 'name' => 'Kelas Pengujian']);
+        $teacher = Teacher::create(['user_id' => $user->id, 'name' => 'Wali Kelas Pengujian', 'gender' => 'male', 'status' => 'active']);
+        HomeroomAssignment::create(['teacher_id' => $teacher->id, 'classroom_term_id' => $class->id]);
         $student = Student::create(['name' => 'Santri Data Lama', 'nis' => '000123', 'gender' => 'male']);
         $enrollment = ClassEnrollment::create(['academic_term_id' => $term->id, 'classroom_term_id' => $class->id, 'student_id' => $student->id]);
         StudentAttendance::create(['academic_term_id' => $term->id, 'classroom_term_id' => $class->id, 'class_enrollment_id' => $enrollment->id, 'student_id' => $student->id, 'attendance_date' => '2026-08-15', 'status' => 'sick']);
@@ -53,6 +57,11 @@ class NavigationDataSafetyTest extends TestCase
         $this->get(route('kabag-diniyyah.dashboard'))->assertOk();
         $this->post(route('workspace.open-panel'), ['destination' => 'ReportCardResource'])->assertRedirect();
         $this->get(route('filament.admin.resources.report-cards.index'))->assertOk();
+
+        $this->actingAs($user, 'web')->get(route('guru.performa'))->assertOk()->assertSee('Rapor Kelas Saya');
+        $this->get(route('guru.calendar'))->assertOk();
+        $this->get(route('guru.jadwal.riwayat'))->assertOk();
+        $this->get(route('guru.tahfidz-report.index'))->assertOk();
 
         foreach ($tables as $table) {
             $this->assertSame($before[$table], DB::table($table)->orderBy('id')->get()->toJson(), "Academic data changed in {$table}");

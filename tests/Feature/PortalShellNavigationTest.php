@@ -48,16 +48,19 @@ class PortalShellNavigationTest extends TestCase
 
         $response->assertOk()
             ->assertSee('school-nav-dropdown', false)
-            ->assertSee('Kegiatan')
-            ->assertSee('Kelas &amp; Santri', false)
-            ->assertSee('Laporan &amp; Arsip', false)
+            ->assertSee('Mengajar')
+            ->assertSee('Rapor')
+            ->assertSee('Cari menu')
+            ->assertSee('Tahfidz &amp; Tasmi', false)
+            ->assertSee('Riwayat Saya')
             ->assertSee('Input Nilai')
-            ->assertSee('Jurnal Pengganti')
+            ->assertSee('Jurnal Guru Pengganti')
             ->assertSee('Pengganti Tafsir')
-            ->assertSee('Performa Jurnal Saya')
-            ->assertSee('Presensi Saya')
-            ->assertDontSee('Tasmi\' Kelas Saya')
-            ->assertDontSee('Monitoring Jurnal Kelas')
+            ->assertSee('Rekap Jurnal Mengajar')
+            ->assertSee('Kehadiran Saya')
+            ->assertSee(route('guru.jadwal.riwayat'), false)
+            ->assertDontSee('Hasil Tasmi Kelas Saya')
+            ->assertDontSee('Pantau Jurnal Kelas')
             ->assertSee(route('guru.attendance-report.index'), false);
     }
 

@@ -53,38 +53,38 @@
             <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <a href="{{ $singleJournalLink }}" class="group rounded-2xl border border-success-line bg-surface p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-success-line hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-success-600">
                     <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-success-soft text-success-ink" aria-hidden="true">✎</span>
-                    <span class="mt-3 block text-theme-sm font-medium text-heading">Isi jurnal Diniyyah</span>
+                    <span class="mt-3 block text-theme-sm font-medium text-heading">Jurnal Mengajar</span>
                     <span class="mt-1 block text-theme-xs font-normal text-muted">Catat materi dan kehadiran kelas.</span>
                 </a>
                 @if($teacher)
                     <a href="{{ route('guru.diniyyah-substitute-journals.index') }}" class="group rounded-2xl border border-warning-line bg-surface p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-warning-line hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-warning-600">
                         <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-warning-soft text-warning-ink" aria-hidden="true">↺</span>
-                        <span class="mt-3 block text-theme-sm font-medium text-heading">Jurnal guru pengganti</span>
+                        <span class="mt-3 block text-theme-sm font-medium text-heading">Jurnal Guru Pengganti</span>
                         <span class="mt-1 block text-theme-xs font-normal text-muted">Isi jurnal saat menggantikan guru lain.</span>
                     </a>
                 @endif
                 @if($hasSimultaneousTafsirSchedule ?? false)
                     <a href="{{ route('guru.diniyyah-tafsir-journals.index') }}" class="group rounded-2xl border border-brand-line bg-surface p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand-line hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">
                         <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-soft text-brand-ink" aria-hidden="true">☷</span>
-                        <span class="mt-3 block text-theme-sm font-medium text-heading">Jurnal Tafsir serentak</span>
+                        <span class="mt-3 block text-theme-sm font-medium text-heading">Jurnal Tafsir</span>
                         <span class="mt-1 block text-theme-xs font-normal text-muted">Catat satu materi untuk beberapa kelas sekaligus.</span>
                     </a>
                 @endif
                 <a href="{{ route('guru.performa', ['month' => $performaMonth, 'year' => $performaYear]) }}" class="group rounded-2xl border border-warning-line bg-surface p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-warning-line hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-warning-600">
                     <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-warning-soft text-warning-ink" aria-hidden="true">▥</span>
-                    <span class="mt-3 block text-theme-sm font-medium text-heading">Lihat performa</span>
+                    <span class="mt-3 block text-theme-sm font-medium text-heading">Rekap Jurnal Mengajar</span>
                     <span class="mt-1 block text-theme-xs font-normal text-muted">Cek jurnal kosong dan download laporan.</span>
                 </a>
                 @if($teacher)
                     <a href="{{ route('guru.attendance-report.index') }}" class="group rounded-2xl border border-info-line bg-surface p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-info-line hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-info-600">
                         <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-info-soft text-info-ink" aria-hidden="true">✓</span>
-                        <span class="mt-3 block text-theme-sm font-medium text-heading">Presensi saya</span>
+                        <span class="mt-3 block text-theme-sm font-medium text-heading">Kehadiran Saya</span>
                         <span class="mt-1 block text-theme-xs font-normal text-muted">Lihat rekap GeoPresensi dan unduh laporan.</span>
                     </a>
                 @endif
                 <a href="{{ route('guru.calendar') }}" class="group rounded-2xl border border-brand-line bg-surface p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand-line hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">
                     <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-soft text-brand-ink" aria-hidden="true">◷</span>
-                    <span class="mt-3 block text-theme-sm font-medium text-heading">Buka kalender</span>
+                    <span class="mt-3 block text-theme-sm font-medium text-heading">Kalender Akademik</span>
                     <span class="mt-1 block text-theme-xs font-normal text-muted">Lihat jadwal dan agenda terdekat.</span>
                 </a>
                 @if(auth()->user()?->hasRole('kabag_tahfidz'))
@@ -232,18 +232,18 @@
 
                             <div class="mt-5 flex flex-col gap-2 sm:flex-row">
                                 <a href="{{ route('attendance.index') }}" class="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-info-700 px-4 py-3 text-white shadow-sm transition-colors hover:bg-info-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-info-700 text-theme-sm font-medium">
-                                    Input presensi
+                                    Presensi Santri
                                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" /></svg>
                                 </a>
                                 <a href="{{ route('wali.diniyyah-journals.index') }}" class="inline-flex flex-1 items-center justify-center rounded-xl border border-line bg-surface px-4 py-3 text-body transition-colors hover:border-info-line hover:bg-info-soft hover:text-info-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-info-700 text-theme-sm font-medium">
-                                    Pantau jurnal kelas
+                                    Pantau Jurnal Kelas
                                 </a>
                             </div>
                             <div class="mt-2">
                                 <a href="{{ route('guru.tasmi-wali.index') }}" class="flex items-center justify-between rounded-xl border border-line bg-surface-subtle px-4 py-3 text-theme-sm font-medium text-body transition-colors hover:border-success-line hover:bg-success-soft hover:text-success-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-success-700">
                                     <span class="flex items-center gap-2">
                                         <svg class="h-4 w-4 text-success-ink" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>
-                                        Tasmi&#039; Kelas Saya <span class="text-theme-xs font-normal text-soft">(read-only)</span>
+                                        Hasil Tasmi Kelas Saya <span class="text-theme-xs font-normal text-soft">(read-only)</span>
                                     </span>
                                     <span class="text-soft">→</span>
                                 </a>
@@ -284,11 +284,11 @@
 
                             <div class="mt-5 space-y-2">
                                 <a href="{{ route('guru.diniyyah-scores.index') }}" class="group flex items-center justify-between rounded-xl bg-success-700 px-4 py-3 text-theme-sm font-medium text-white transition-colors hover:bg-success-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-success-700">
-                                    Input nilai Diniyyah
+                                    Input Nilai Pelajaran
                                     <svg class="h-4 w-4 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" /></svg>
                                 </a>
                                 <a href="{{ $singleJournalLink }}" class="flex items-center justify-between rounded-xl border border-line bg-surface px-4 py-3 text-theme-sm font-medium text-body transition-colors hover:border-success-line hover:bg-success-soft hover:text-success-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-success-700">
-                                    Jurnal kelas
+                                    Jurnal Mengajar
                                     <span class="text-soft">→</span>
                                 </a>
                                 @if($hasSimultaneousTafsirSchedule ?? false)
@@ -417,7 +417,7 @@
                             </div>
                             <div class="mt-5 grid gap-2 sm:grid-cols-2">
                                 <a href="{{ route('guru.diniyyah-substitute-journals.index') }}" class="flex items-center justify-between rounded-xl border border-line bg-surface-subtle px-4 py-3 text-theme-sm font-medium text-body transition-colors hover:border-warning-line hover:bg-warning-soft hover:text-warning-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-warning-500">
-                                    Jurnal guru pengganti
+                                    Jurnal Guru Pengganti
                                     <span class="text-soft">→</span>
                                 </a>
                                 <a href="{{ route('guru.jadwal.riwayat') }}" class="flex items-center justify-between rounded-xl border border-line bg-surface-subtle px-4 py-3 text-theme-sm font-medium text-body transition-colors hover:border-warning-line hover:bg-warning-soft hover:text-warning-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-warning-500">
