@@ -11,6 +11,8 @@ class ReportCardPrintOptions
 {
     public function save(ReportCard $card, array $options, User $user): void
     {
+        // The school authority is fixed, including submissions from older forms.
+        $options['principal_name'] = config('report-cards.principal_name');
         DB::transaction(function () use ($card, $options, $user) {
             $card = ReportCard::lockForUpdate()->findOrFail($card->id);
             if ($card->status !== 'draft') {

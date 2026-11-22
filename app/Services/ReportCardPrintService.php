@@ -13,6 +13,10 @@ class ReportCardPrintService
     public function data(ReportCard $card): ?array
     {
         $data = $card->snapshots()->latest('id')->first()?->snapshot_data['print'] ?? null;
+        if ($data && $card->status === 'draft') {
+            // Presentation only: never rewrite an existing snapshot while viewing it.
+            $data['options']['principal_name'] = config('report-cards.principal_name');
+        }
         if ($data && ($data['date_policy'] ?? '') === 'admin-period-v1' && $card->status === 'draft') {
             $data['options']['issue_date'] = $card->academicTerm()->first()?->report_issue_date?->format('Y-m-d');
         }

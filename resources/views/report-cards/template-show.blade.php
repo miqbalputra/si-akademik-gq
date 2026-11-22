@@ -19,7 +19,8 @@
             <p class="text-muted">Nilai dan KKM mengikuti leger final. Pelengkap ini disimpan dengan riwayat perubahan.</p>
             <div class="grid gap-4 md:grid-cols-2">
                 <div class="ui-field"><span>Tanggal rapor (ditentukan admin)</span><p>{{ $printData['options']['issue_date'] ?? 'Admin belum menetapkan tanggal rapor periode ini.' }}</p></div>
-                @foreach(['issue_place'=>'Tempat penerbitan','homeroom_name'=>'Nama wali kelas','principal_name'=>'Nama kepala','principal_title'=>'Jabatan kepala'] as $key=>$label)
+                <div class="ui-field"><span>Nama kepala sekolah (tetap)</span><p>{{ $printData['options']['principal_name'] }}</p><p class="text-theme-xs text-muted">Tanda tangan tercantum otomatis pada cetakan rapor.</p></div>
+                @foreach(['issue_place'=>'Tempat penerbitan','homeroom_name'=>'Nama wali kelas','principal_title'=>'Jabatan kepala'] as $key=>$label)
                 <label class="ui-field"><span>{{ $label }}</span><input required type="{{ $key === 'issue_date' ? 'date' : 'text' }}" name="{{ $key }}" value="{{ old($key, $printData['options'][$key]) }}" class="form-input" @if($key !== 'issue_date')maxlength="{{ $key === 'issue_place' ? 80 : 100 }}"@endif></label>
                 @endforeach
                 @if($printData['semester'] === 'genap')

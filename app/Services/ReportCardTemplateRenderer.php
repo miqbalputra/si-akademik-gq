@@ -140,13 +140,33 @@ class ReportCardTemplateRenderer
             throw new DomainException('Jumlah mapel melebihi kapasitas satu lembar F4. Siapkan versi template lebih panjang sebelum mencetak.');
         }
         $images = [];
+        $principalTitle = collect($cells)->firstWhere('address', $semester === 1 ? 'H52' : 'H54');
+        $principalName = collect($cells)->firstWhere('address', $semester === 1 ? 'H56' : 'H58');
         foreach ($layout['images'] as $img) {
-            if ($img['signature'] && $options['principal_name'] !== config('report-cards.template_signature_name')) {
+            if ($img['signature'] && $options['principal_name'] !== config('report-cards.principal_name')) {
                 continue;
             }
-            $img['y'] += $shift($img['row']);
-            $img['y'] += $offset($img['y']);
-            $file = $img['signature'] ? $img['file'] : config('report-cards.logo_file');
+            $file = $img['signature'] ? config('report-cards.principal_signature_file') : config('report-cards.logo_file');
+            if ($img['signature']) {
+                // Fit the original transparent asset between the title and name.
+                // Use the final cell positions so extra subject rows stay aligned.
+                [$sourceWidth, $sourceHeight] = getimagesize(resource_path('report-cards/'.$file));
+                // Use the blank padding around the centered text as well. This
+                // enlarges the signature about 10% without moving either label.
+                $titleLineHeight = $principalTitle['size'] * 4 / 3 * 1.12;
+                $nameLineHeight = $principalName['size'] * 4 / 3 * 1.12;
+                $top = $principalTitle['y'] + ($principalTitle['height'] + $titleLineHeight) / 2 + 1;
+                $bottom = $principalName['y'] + ($principalName['height'] - $nameLineHeight) / 2 - 1;
+                $availableHeight = max(1, $bottom - $top);
+                $imageScale = min(120 / $sourceWidth, $availableHeight / $sourceHeight);
+                $img['width'] = $sourceWidth * $imageScale;
+                $img['height'] = $sourceHeight * $imageScale;
+                $img['x'] = $principalName['x'] + ($principalName['width'] - $img['width']) / 2;
+                $img['y'] = $top + ($availableHeight - $img['height']) / 2;
+            } else {
+                $img['y'] += $shift($img['row']);
+                $img['y'] += $offset($img['y']);
+            }
             $img['src'] = 'data:image/png;base64,'.base64_encode(file_get_contents(resource_path('report-cards/'.$file)));
             $images[] = $img;
         }

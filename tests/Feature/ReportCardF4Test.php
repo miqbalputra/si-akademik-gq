@@ -237,6 +237,79 @@ class ReportCardF4Test extends TestCase
         $this->assertStringContainsString('telah menyelesaikan KBM', collect($page['cells'])->firstWhere('address', 'A36')['text']);
     }
 
+    public function test_principal_name_is_fixed_in_form_and_cannot_be_changed_by_submissions(): void
+    {
+        [$snapshot, $user] = $this->context();
+        app(ReportCardAutomation::class)->createMissing($snapshot, $user->id);
+        $card = ReportCard::firstOrFail();
+        $original = $card->snapshots()->first()->toArray();
+        $options = app(ReportCardPrintService::class)->data($card)['options'];
+        $this->assertSame('Ustadz Ahmad Nurul Huda', $options['principal_name']);
+        $this->actingAs($user)->get(route('report-cards.show', $card))
+            ->assertOk()->assertSee('Nama kepala sekolah (tetap)')
+            ->assertDontSee('name="principal_name"', false);
+        unset($options['principal_name']);
+        $this->put(route('report-cards.print-options', $card), $options)->assertSessionHasNoErrors()->assertRedirect();
+        $options['principal_name'] = 'Nama yang tidak diizinkan';
+        $this->put(route('report-cards.print-options', $card), $options)->assertSessionHasNoErrors()->assertRedirect();
+        $this->assertSame('Ustadz Ahmad Nurul Huda', $card->snapshots()->latest('id')->first()->snapshot_data['print']['options']['principal_name']);
+        $this->assertSame($original, $card->snapshots()->oldest('id')->first()->toArray());
+        $this->assertSame('590.25', $card->fresh()->total_score);
+    }
+
+    public function test_supplied_signature_fits_between_title_and_name_in_both_semesters_and_expanded_layouts(): void
+    {
+        [$snapshot, $user] = $this->context();
+        app(ReportCardAutomation::class)->createMissing($snapshot, $user->id);
+        $data = app(ReportCardPrintService::class)->data(ReportCard::firstOrFail());
+        $asset = resource_path('report-cards/'.config('report-cards.principal_signature_file'));
+        $this->assertSame('bd472c6bed34293dd00d331921608a3273829f39d1acfea3cf9e2aaeffe82257', hash_file('sha256', $asset));
+        [$width, $height] = getimagesize($asset);
+        foreach (['ganjil' => ['H52', 'H56'], 'genap' => ['H54', 'H58']] as $semester => [$titleAddress, $nameAddress]) {
+            foreach ([false, true] as $expanded) {
+                $renderData = $data;
+                $renderData['semester'] = $semester;
+                if ($expanded) {
+                    $renderData['subjects'] = array_fill(0, 8, $data['subjects'][0]);
+                    $renderData['practice'] = array_fill(0, 2, $data['practice'][0]);
+                }
+                $page = app(ReportCardTemplateRenderer::class)->page($renderData);
+                $signature = collect($page['images'])->firstWhere('signature', true);
+                $title = collect($page['cells'])->firstWhere('address', $titleAddress);
+                $name = collect($page['cells'])->firstWhere('address', $nameAddress);
+                $this->assertSame('Ustadz Ahmad Nurul Huda', $name['text']);
+                $this->assertSame(file_get_contents($asset), base64_decode(explode(',', $signature['src'], 2)[1]));
+                $this->assertEqualsWithDelta($width / $height, $signature['width'] / $signature['height'], .001);
+                $this->assertEqualsWithDelta($name['x'] + $name['width'] / 2, $signature['x'] + $signature['width'] / 2, .001);
+                $titleTextBottom = $title['y'] + ($title['height'] + $title['size'] * 4 / 3 * 1.12) / 2;
+                $nameTextTop = $name['y'] + ($name['height'] - $name['size'] * 4 / 3 * 1.12) / 2;
+                $this->assertGreaterThan(56, $signature['height']);
+                $this->assertGreaterThanOrEqual($titleTextBottom + 1, $signature['y']);
+                $this->assertLessThanOrEqual($nameTextTop - 1, $signature['y'] + $signature['height']);
+            }
+        }
+    }
+
+    public function test_viewing_existing_reports_never_rewrites_snapshots_or_signs_for_a_different_archived_principal(): void
+    {
+        [$snapshot, $user] = $this->context();
+        app(ReportCardAutomation::class)->createMissing($snapshot, $user->id);
+        $card = ReportCard::firstOrFail();
+        $stored = $card->snapshots()->first();
+        $payload = $stored->snapshot_data;
+        $payload['print']['options']['principal_name'] = 'Kepala pada arsip lama';
+        $stored->update(['snapshot_data' => $payload]);
+        foreach (['draft', 'locked', 'published'] as $status) {
+            $card->update(['status' => $status]);
+            $before = $card->fresh(['snapshots', 'lines', 'attendance'])->toArray();
+            $print = app(ReportCardPrintService::class)->data($card);
+            $page = app(ReportCardPrintService::class)->page($card);
+            $this->assertSame($status === 'draft' ? 'Ustadz Ahmad Nurul Huda' : 'Kepala pada arsip lama', $print['options']['principal_name']);
+            $this->assertSame($status === 'draft', collect($page['images'])->contains('signature', true));
+            $this->assertSame($before, $card->fresh(['snapshots', 'lines', 'attendance'])->toArray());
+        }
+    }
+
     private function context(string $semester = 'ganjil'): array
     {
         Role::firstOrCreate(['name' => 'guru', 'guard_name' => 'web']);

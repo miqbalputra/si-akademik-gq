@@ -221,7 +221,7 @@ class ReportCardController extends Controller
                     $fail('Tanggal rapor hanya ditentukan admin.');
                 }
             }], 'issue_place' => ['required', 'string', 'max:80'],
-            'homeroom_name' => ['required', 'string', 'max:100'], 'principal_name' => ['required', 'string', 'max:100'],
+            'homeroom_name' => ['required', 'string', 'max:100'],
             'principal_title' => ['required', 'string', 'max:100'], 'note' => ['nullable', 'string', 'max:350'],
             'promotion_status' => ['nullable', 'in:promoted,retained,graduated'], 'next_class' => ['nullable', 'required_if:promotion_status,promoted', 'string', 'max:60'],
         ]);
