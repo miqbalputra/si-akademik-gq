@@ -107,6 +107,8 @@ class PanelNotification extends Model
             'kkm_needs_revision' => 'KKM perlu revisi',
             'tasmi_created' => 'Tasmi\' baru',
             'tasmi_updated' => 'Tasmi\' diperbarui',
+            'tasmi_approved' => 'Tasmi\' disetujui wali kelas',
+            'tasmi_correction_requested' => 'Tasmi\' perlu perbaikan',
             'tasmi_deleted' => 'Tasmi\' dihapus',
             'diniyyah_score_input' => 'Nilai diniyyah diinput',
             'assessment_submitted' => 'Nilai disubmit',

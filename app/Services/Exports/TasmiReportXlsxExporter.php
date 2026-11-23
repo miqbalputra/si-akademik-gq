@@ -83,7 +83,7 @@ class TasmiReportXlsxExporter
 
     private function detail($sheet, array $report): void
     {
-        $headers = ['No', 'Tanggal', 'Hijriyah', 'Semester', 'Santri', 'NIS', 'Kelas', 'Jenis', 'Juz', 'Predikat', 'Catatan', 'PJ Tasmi\'', 'Diinput oleh', 'Waktu input', 'Terakhir diperbarui'];
+        $headers = ['No', 'Tanggal', 'Hijriyah', 'Semester', 'Santri', 'NIS', 'Kelas', 'Jenis', 'Juz', 'Predikat', 'Catatan', 'PJ Tasmi\'', 'Diinput oleh', 'Waktu input', 'Terakhir diperbarui', 'Persetujuan wali kelas', 'Diperiksa oleh', 'Waktu pemeriksaan', 'Alasan perbaikan'];
         $this->theme->title($sheet, 'DETAIL HASIL TASMI\'', 'Seluruh baris mengikuti scope dan filter laporan.', count($headers));
         $this->theme->tableHeader($sheet, 5, $headers);
         $rowNumber = 5;
@@ -94,6 +94,7 @@ class TasmiReportXlsxExporter
                 $row['date'] ?? '-', $row['hijri_date'] ?? '-', $row['term'] ?? '-', $row['student'] ?? '-', $row['nis'] ?? '-',
                 $row['classroom'] ?? '-', $row['exam_type'] ?? '-', $row['juz'] ?? '-', $row['predicate'] ?? '-', $row['notes'] ?? '-',
                 $row['examiner'] ?? '-', $row['input_by'] ?? '-', $row['input_at'] ?? '-', $row['updated_at'] ?? '-',
+                $row['review_status'] ?? '-', $row['reviewed_by'] ?? '-', $row['reviewed_at'] ?? '-', $row['correction_reason'] ?? '-',
             ]], null, "A{$rowNumber}");
         }
         if ($rowNumber === 5) {
@@ -101,7 +102,7 @@ class TasmiReportXlsxExporter
             $sheet->setCellValue('A6', 'Tidak ada hasil Tasmi\' untuk filter ini.');
         }
         $sheet->getStyle("A6:A{$rowNumber}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-        $this->theme->widths($sheet, [7, 14, 18, 18, 24, 14, 21, 17, 13, 17, 34, 22, 22, 20, 22]);
+        $this->theme->widths($sheet, [7, 14, 18, 18, 24, 14, 21, 17, 13, 17, 34, 22, 22, 20, 22, 32, 24, 22, 40]);
         $this->theme->finaliseTable($sheet, 5, $rowNumber, count($headers));
     }
 }

@@ -9,6 +9,23 @@ use Illuminate\Support\Facades\Auth;
 
 class TasmiRecordObserver
 {
+    public function creating(TasmiRecord $record): void
+    {
+        $record->review_status = TasmiRecord::REVIEW_PENDING;
+        $record->review_version = 0;
+    }
+
+    public function updating(TasmiRecord $record): void
+    {
+        if ($record->isDirty(TasmiRecord::RESULT_FIELDS)) {
+            $record->review_status = TasmiRecord::REVIEW_PENDING;
+            $record->reviewed_by = null;
+            $record->reviewed_at = null;
+            $record->correction_reason = null;
+            $record->review_version = (int) $record->getRawOriginal('review_version') + 1;
+        }
+    }
+
     public function created(TasmiRecord $record): void
     {
         ScoreChangeLog::create([
@@ -35,7 +52,7 @@ class TasmiRecordObserver
     public function updated(TasmiRecord $record): void
     {
         $changes = [];
-        $trackedFields = ['predicate', 'juz_start', 'juz_end', 'exam_type', 'exam_date', 'hijri_date', 'examiner_teacher_id', 'student_id', 'notes'];
+        $trackedFields = TasmiRecord::RESULT_FIELDS;
 
         foreach ($trackedFields as $field) {
             if ($record->wasChanged($field)) {

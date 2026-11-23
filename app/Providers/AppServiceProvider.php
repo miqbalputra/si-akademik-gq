@@ -2,13 +2,14 @@
 
 namespace App\Providers;
 
+use App\Filament\Auth\LogoutResponse;
 use App\Models\DiniyyahClassJournal;
-use App\Models\ReportCard;
 use App\Models\DiniyyahClassJournalAbsence;
 use App\Models\DiniyyahScore;
 use App\Models\DiniyyahTeacherAssignment;
 use App\Models\DiniyyahTeachingSchedule;
 use App\Models\HomeroomAssignment;
+use App\Models\ReportCard;
 use App\Models\SchoolEvent;
 use App\Models\StudentAttendance;
 use App\Models\TahfidzUasScore;
@@ -33,14 +34,14 @@ use App\Policies\DiniyyahClassJournalPolicy;
 use App\Policies\ReportCardPolicy;
 use App\Services\GuruJournalReminderPreferenceService;
 use App\Services\GuruPerformaService;
-use App\Services\ThemePaletteService;
-use App\Services\TasmiWaliReminderPreferenceService;
 use App\Services\TafsirJournalMenuService;
+use App\Services\TasmiWaliReminderPreferenceService;
+use App\Services\ThemePaletteService;
 use Filament\Auth\Http\Responses\Contracts\LogoutResponse as LogoutResponseContract;
 use Filament\Forms\Components\Field;
 use Filament\Tables\Columns\Column;
-use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\View\View as BladeView;
 
@@ -51,7 +52,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->bind(LogoutResponseContract::class, \App\Filament\Auth\LogoutResponse::class);
+        $this->app->bind(LogoutResponseContract::class, LogoutResponse::class);
         $this->app->scoped(ThemePaletteService::class);
     }
 
@@ -123,11 +124,13 @@ class AppServiceProvider extends ServiceProvider
 
             if (! $isGuruDashboard || ! $user?->hasRole('guru') || ! $user->teacher) {
                 $view->with('tasmiWaliReminder', null);
+                $view->with('tasmiCorrectionReminder', null);
 
                 return;
             }
 
             $view->with('tasmiWaliReminder', app(TasmiWaliReminderPreferenceService::class)->reminderFor($user));
+            $view->with('tasmiCorrectionReminder', app(TasmiWaliReminderPreferenceService::class)->correctionsFor($user));
         });
 
         View::composer('components.layouts.portal', function (BladeView $view): void {

@@ -24,9 +24,15 @@ class ManagementTasmiReportController extends Controller
         $baseQuery = $this->reportService->forManagement();
         $options = $this->reportService->options($baseQuery, true);
         $report = $this->reportService->paginate($this->reportService->applyFilters($baseQuery, $filters));
+        $statisticsFilters = $filters;
+        unset($statisticsFilters['review_status']);
+        $workflowStatistics = $this->reportService->workflowStatistics(
+            $this->reportService->applyFilters($this->reportService->forManagement(), $statisticsFilters),
+        );
 
         return view('guru.tasmi.report', [
             'report' => $report,
+            'workflowStatistics' => $workflowStatistics,
             'options' => $options,
             'filters' => $filters,
             'scope' => 'management',
@@ -67,13 +73,14 @@ class ManagementTasmiReportController extends Controller
     {
         $this->authorizeManagement($request);
         $filters = $this->validatedFilters($request);
-        $baseQuery = $this->reportService->forManagement();
+        $baseQuery = $this->reportService->forManagement()->where('review_status', TasmiRecord::REVIEW_APPROVED);
         $options = $this->reportService->options($baseQuery, true);
         $report = $this->reportService->exportReport(
             $this->reportService->applyFilters($baseQuery, $filters),
             $filters,
             $options,
         );
+        $report['filter_labels']['Persetujuan'] = 'Hanya hasil yang disetujui wali kelas — siap piagam';
 
         return $this->downloadService->download($report, $format, "Laporan Tasmi' Semua PJ", 'management');
     }
@@ -92,9 +99,11 @@ class ManagementTasmiReportController extends Controller
             'student_id' => ['nullable', 'integer', 'exists:students,id'],
             'examiner_teacher_id' => ['nullable', 'integer', 'exists:teachers,id'],
             'exam_type' => ['nullable', Rule::in(array_keys(TasmiRecord::examTypeOptions()))],
+            'gender_group' => ['nullable', Rule::in(array_keys(TasmiReportService::classGenderOptions()))],
             'juz' => ['nullable', 'integer', 'min:1', 'max:30'],
             'predicate' => ['nullable', Rule::in(array_keys(TasmiRecord::predicateOptions()))],
             'date_from' => ['nullable', 'date'],
+            'review_status' => ['nullable', Rule::in(array_keys(TasmiRecord::reviewStatusOptions()))],
             'date_until' => ['nullable', 'date', 'after_or_equal:date_from'],
             'search' => ['nullable', 'string', 'max:120'],
         ]);

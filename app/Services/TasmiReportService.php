@@ -19,6 +19,44 @@ use Illuminate\Support\Collection;
  */
 class TasmiReportService
 {
+    public static function classGenderOptions(): array
+    {
+        return ['male' => 'Kelas laki-laki (Ikhwan)', 'female' => 'Kelas perempuan (Akhwat)', 'other' => 'Campuran / belum ditentukan'];
+    }
+
+    /** Count results, not students; keep unclassified historical classes visible. */
+    public function workflowStatistics(Builder $query): array
+    {
+        $empty = ['input' => 0, 'pending' => 0, 'approved' => 0, 'correction' => 0];
+        $statistics = ['total' => $empty, 'groups' => []];
+        foreach (self::classGenderOptions() as $gender => $label) {
+            $statistics['groups'][$gender] = ['label' => $label, ...$empty];
+        }
+        $counts = (clone $query)->reorder()
+            ->leftJoin('classroom_terms as tasmi_stat_terms', 'tasmi_stat_terms.id', '=', 'tasmi_records.classroom_term_id')
+            ->leftJoin('classrooms as tasmi_stat_classes', 'tasmi_stat_classes.id', '=', 'tasmi_stat_terms.classroom_id')
+            ->select('tasmi_stat_classes.gender_group', 'tasmi_records.review_status')
+            ->selectRaw('COUNT(*) as aggregate')
+            ->groupBy('tasmi_stat_classes.gender_group', 'tasmi_records.review_status')
+            ->toBase()->get();
+
+        foreach ($counts as $row) {
+            $gender = in_array($row->gender_group, ['male', 'female'], true) ? $row->gender_group : 'other';
+            $status = match ($row->review_status) {
+                TasmiRecord::REVIEW_APPROVED => 'approved',
+                TasmiRecord::REVIEW_CORRECTION => 'correction',
+                default => 'pending',
+            };
+            $count = (int) $row->aggregate;
+            $statistics['total']['input'] += $count;
+            $statistics['total'][$status] += $count;
+            $statistics['groups'][$gender]['input'] += $count;
+            $statistics['groups'][$gender][$status] += $count;
+        }
+
+        return $statistics;
+    }
+
     /** @return Builder<TasmiRecord> */
     public function forExaminer(Teacher $teacher): Builder
     {
@@ -63,6 +101,20 @@ class TasmiReportService
             ->when($filters['examiner_teacher_id'] ?? null, fn (Builder $q, $value) => $q->where('tasmi_records.examiner_teacher_id', $value))
             ->when($filters['exam_type'] ?? null, fn (Builder $q, $value) => $q->where('tasmi_records.exam_type', $value))
             ->when($filters['predicate'] ?? null, fn (Builder $q, $value) => $q->where('tasmi_records.predicate', $value))
+            ->when($filters['gender_group'] ?? null, function (Builder $q, $value): void {
+                if ($value === 'other') {
+                    $q->whereDoesntHave('classroomTerm.classroom', fn (Builder $class) => $class->withTrashed()->whereIn('gender_group', ['male', 'female']));
+                } else {
+                    $q->whereHas('classroomTerm.classroom', fn (Builder $class) => $class->withTrashed()->where('gender_group', $value));
+                }
+            })
+            ->when($filters['review_status'] ?? null, function (Builder $q, $value): void {
+                if ($value === TasmiRecord::REVIEW_PENDING) {
+                    $q->where(fn (Builder $status) => $status->whereNull('tasmi_records.review_status')->orWhere('tasmi_records.review_status', $value));
+                } else {
+                    $q->where('tasmi_records.review_status', $value);
+                }
+            })
             ->when($filters['juz'] ?? null, function (Builder $q, $value): void {
                 $q->where(function (Builder $range) use ($value): void {
                     $range->where(function (Builder $ascending) use ($value): void {
@@ -140,10 +192,12 @@ class TasmiReportService
             'Semester' => $term?->name ?? 'Semua semester',
             'Tanggal' => collect([$filters['date_from'] ?? null, $filters['date_until'] ?? null])->filter()->implode(' s.d. ') ?: 'Semua tanggal',
             'Kelas' => $classroomTerm?->classroom?->name ?? $classroomTerm?->name ?? 'Semua kelas',
+            'Kelompok kelas' => self::classGenderOptions()[$filters['gender_group'] ?? ''] ?? 'Semua kelompok kelas',
             'Santri' => $student?->name ?? 'Semua santri',
             'Jenis Tasmi\'' => TasmiRecord::examTypeOptions()[$filters['exam_type'] ?? ''] ?? 'Semua jenis',
             'Juz' => ($filters['juz'] ?? null) ? 'Mencakup Juz '.$filters['juz'] : 'Semua juz',
             'Predikat' => TasmiRecord::predicateLabel($filters['predicate'] ?? null) ?? 'Semua predikat',
+            'Persetujuan' => TasmiRecord::reviewStatusOptions()[$filters['review_status'] ?? ''] ?? 'Semua status',
             'PJ Tasmi\'' => $examiner?->name ?? 'Semua PJ Tasmi\'',
         ];
     }
@@ -207,6 +261,10 @@ class TasmiReportService
                 'input_by' => $record->inputBy?->name,
                 'input_at' => $record->input_at?->timezone('Asia/Jakarta')->format('d-m-Y H:i'),
                 'updated_at' => $record->updated_at?->timezone('Asia/Jakarta')->format('d-m-Y H:i'),
+                'review_status' => $record->review_status_label,
+                'reviewed_by' => $record->reviewer?->name,
+                'reviewed_at' => $record->reviewed_at?->timezone('Asia/Jakarta')->format('d-m-Y H:i'),
+                'correction_reason' => $record->correction_reason,
             ];
         });
     }
@@ -221,6 +279,7 @@ class TasmiReportService
             'academicTerm.academicYear',
             'inputBy',
             'lastUpdatedBy',
+            'reviewer',
         ])->whereHas('student', fn (Builder $query) => $query->where('status', 'active'));
     }
 }

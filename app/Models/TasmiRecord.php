@@ -36,14 +36,51 @@ class TasmiRecord extends Model
         'input_at' => 'datetime',
         'juz_start' => 'integer',
         'juz_end' => 'integer',
+        'review_version' => 'integer',
+        'reviewed_at' => 'datetime',
     ];
 
+    public const REVIEW_PENDING = 'pending';
+
+    public const REVIEW_APPROVED = 'approved';
+
+    public const REVIEW_CORRECTION = 'correction_requested';
+
+    public const RESULT_FIELDS = [
+        'academic_term_id', 'classroom_term_id', 'class_enrollment_id', 'student_id',
+        'examiner_teacher_id', 'exam_type', 'juz_start', 'juz_end',
+        'exam_day_label', 'exam_date', 'hijri_date', 'predicate', 'notes',
+    ];
+
+    public static function reviewStatusOptions(): array
+    {
+        return [
+            self::REVIEW_PENDING => 'Menunggu persetujuan wali kelas',
+            self::REVIEW_APPROVED => 'Disetujui wali kelas',
+            self::REVIEW_CORRECTION => 'Perlu perbaikan PJ Tasmi\'',
+        ];
+    }
+
+    public function getReviewStatusLabelAttribute(): string
+    {
+        return self::reviewStatusOptions()[$this->review_status ?? ''] ?? 'Data lama — belum diverifikasi';
+    }
+
+    public function reviewer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reviewed_by');
+    }
+
     public const EXAM_TYPE_ONE_JUZ = '1_juz';
+
     public const EXAM_TYPE_FIVE_JUZ = '5_juz';
 
     public const PREDICATE_MAQBUL = 'maqbul';
+
     public const PREDICATE_JAYYID = 'jayyid';
+
     public const PREDICATE_JAYYID_JIDDAN = 'jayyid_jiddan';
+
     public const PREDICATE_MUMTAZ = 'mumtaz';
 
     public static function examTypeOptions(): array

@@ -3,9 +3,10 @@
 namespace App\Filament\Resources\TasmiRecords\Tables;
 
 use App\Models\TasmiRecord;
+use Filament\Forms\Components\DatePicker;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\Filter;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -40,6 +41,7 @@ class TasmiRecordsTable
                         default => 'gray',
                     }),
                 TextColumn::make('academicTerm.name')->label('Periode')->toggleable(),
+                TextColumn::make('review_status_label')->label('Persetujuan wali kelas')->badge(),
                 TextColumn::make('updated_at')->label('Diperbarui')->dateTime('d M Y H:i')->toggleable(),
             ])
             ->filters([
@@ -61,8 +63,8 @@ class TasmiRecordsTable
                 Filter::make('exam_date')
                     ->label('Rentang Tanggal')
                     ->form([
-                        'from' => \Filament\Forms\Components\DatePicker::make('from')->label('Dari'),
-                        'until' => \Filament\Forms\Components\DatePicker::make('until')->label('Sampai'),
+                        'from' => DatePicker::make('from')->label('Dari'),
+                        'until' => DatePicker::make('until')->label('Sampai'),
                     ])
                     ->query(function (Builder $query, array $data): Builder {
                         return $query

@@ -6,10 +6,12 @@ use App\Models\ClassEnrollment;
 use App\Models\TasmiExaminerAssignment;
 use App\Models\TasmiRecord;
 use App\Models\Teacher;
+use App\Models\User;
 use App\Services\TasmiReportDownloadService;
 use App\Services\TasmiReportService;
 use App\Services\TasmiService;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -107,8 +109,7 @@ class GuruTasmiController extends Controller
 
     public function hijriDate(Request $request): JsonResponse
     {
-        $user = $request->user();
-        abort_unless($user?->teacher && $user->isTasmiExaminer(), 403, 'Anda tidak ditugaskan sebagai PJ Tasmi\'.');
+        $this->reporterTeacher($request);
 
         $validated = $request->validate([
             'date' => ['required', 'date'],
@@ -224,7 +225,7 @@ class GuruTasmiController extends Controller
         $user = $request->user();
         $teacher = $user->teacher;
         abort_unless($teacher, 403);
-        abort_unless($user->isTasmiExaminer(), 403);
+        abort_unless($this->canEditRecord($user, $tasmi_record), 403);
 
         $isOwner = $tasmi_record->examiner_teacher_id === $teacher->id;
         abort_unless($isOwner, 403, 'Anda hanya bisa mengedit record tasmi\' yang Anda input sendiri.');
@@ -237,6 +238,8 @@ class GuruTasmiController extends Controller
             'dayOptions' => TasmiRecord::examDayOptions(),
             'examTypeOptions' => TasmiRecord::examTypeOptions(),
             'predicateOptions' => TasmiRecord::predicateOptions(),
+            'enrollmentOptions' => $this->editableEnrollments($teacher, $tasmi_record)->get(),
+            'canDelete' => $user->isTasmiExaminer(),
         ]);
     }
 
@@ -245,7 +248,7 @@ class GuruTasmiController extends Controller
         $user = $request->user();
         $teacher = $user->teacher;
         abort_unless($teacher, 403);
-        abort_unless($user->isTasmiExaminer(), 403);
+        abort_unless($this->canEditRecord($user, $tasmi_record), 403);
 
         $isOwner = $tasmi_record->examiner_teacher_id === $teacher->id;
         abort_unless($isOwner, 403, 'Anda hanya bisa mengedit record tasmi\' yang Anda input sendiri.');
@@ -256,18 +259,38 @@ class GuruTasmiController extends Controller
             ?? ($validated['hijri_date'] ?? null);
         $this->assertValidJuzRange($validated);
 
+        $identity = [];
+        if (! empty($validated['class_enrollment_id'])) {
+            $enrollment = $this->editableEnrollments($teacher, $tasmi_record)->whereKey($validated['class_enrollment_id'])->first();
+            abort_unless($enrollment, 403, 'Santri dan kelas pengganti harus sesuai periode dan gender PJ Tasmi\'.');
+            $identity = ['class_enrollment_id' => $enrollment->id, 'classroom_term_id' => $enrollment->classroom_term_id, 'student_id' => $enrollment->student_id];
+        }
+
         try {
-            DB::transaction(fn () => $tasmi_record->fill([
-                'exam_type' => $validated['exam_type'],
-                'juz_start' => $validated['juz_start'],
-                'juz_end' => $validated['juz_end'],
-                'exam_day_label' => $validated['exam_day_label'] ?? null,
-                'exam_date' => $validated['exam_date'],
-                'hijri_date' => $validated['hijri_date'] ?? null,
-                'predicate' => $validated['predicate'],
-                'notes' => $validated['notes'] ?? null,
-                'last_updated_by' => $user->id,
-            ])->save());
+            DB::transaction(function () use ($tasmi_record, $validated, $user, $request, $identity): void {
+                $current = TasmiRecord::query()->whereKey($tasmi_record->id)->lockForUpdate()->firstOrFail();
+                abort_unless($current->examiner_teacher_id === $user->teacher->id && $this->canEditRecord($user, $current), 403);
+                abort_unless($current->student()->where('status', 'active')->exists(), 404);
+                if ($request->filled('review_version') && (int) $request->input('review_version') !== $current->review_version) {
+                    throw ValidationException::withMessages(['review' => 'Data atau persetujuan sudah berubah. Muat ulang halaman sebelum mengedit.']);
+                }
+                $current->fill([
+                    ...$identity,
+                    'exam_type' => $validated['exam_type'],
+                    'juz_start' => $validated['juz_start'],
+                    'juz_end' => $validated['juz_end'],
+                    'exam_day_label' => $validated['exam_day_label'] ?? null,
+                    'exam_date' => $validated['exam_date'],
+                    'hijri_date' => $validated['hijri_date'] ?? null,
+                    'predicate' => $validated['predicate'],
+                    'notes' => $validated['notes'] ?? null,
+                    'last_updated_by' => $user->id,
+                ]);
+                if ($current->review_status === TasmiRecord::REVIEW_CORRECTION && ! $current->isDirty(TasmiRecord::RESULT_FIELDS)) {
+                    throw ValidationException::withMessages(['review' => 'Perbaiki data sesuai alasan wali kelas sebelum mengirim ulang.']);
+                }
+                $current->save();
+            });
         } catch (UniqueConstraintViolationException) {
             return back()->withInput()
                 ->withErrors(['exam_date' => 'Record tasmi\' untuk santri ini pada tanggal dan tipe ujian yang sama sudah ada. Pilih tanggal atau tipe ujian yang berbeda.']);
@@ -275,7 +298,7 @@ class GuruTasmiController extends Controller
 
         return redirect()
             ->route('guru.tasmi.edit', $tasmi_record)
-            ->with('status', 'Data tasmi\' berhasil diperbarui. Perubahan tercatat di audit log.');
+            ->with('status', 'Data tasmi\' berhasil diperbarui. Hasil yang berubah harus diperiksa kembali oleh wali kelas.');
     }
 
     public function destroy(Request $request, TasmiRecord $tasmi_record): RedirectResponse
@@ -336,6 +359,8 @@ class GuruTasmiController extends Controller
     private function validateUpdate(Request $request, TasmiRecord $record): array
     {
         return $request->validate([
+            'review_version' => ['nullable', 'integer', 'min:0'],
+            'class_enrollment_id' => ['nullable', 'integer', 'exists:class_enrollments,id'],
             'exam_type' => ['required', Rule::in(array_keys(TasmiRecord::examTypeOptions()))],
             'juz_start' => ['required', 'integer', 'min:1', 'max:30'],
             'juz_end' => ['required', 'integer', 'min:1', 'max:30'],
@@ -385,6 +410,22 @@ class GuruTasmiController extends Controller
         return $teacher;
     }
 
+    private function editableEnrollments(Teacher $teacher, TasmiRecord $record): Builder
+    {
+        return ClassEnrollment::query()->with(['student', 'classroomTerm.classroom'])
+            ->where('academic_term_id', $record->academic_term_id)
+            ->where('status', 'active')->forVisibleStudents()
+            ->whereHas('classroomTerm', fn ($q) => $q->where('academic_term_id', $record->academic_term_id)
+                ->whereHas('classroom', fn ($c) => $c->where('gender_group', $this->tasmiService->expectedGenderScope($teacher) ?? 'unknown')))
+            ->orderBy('classroom_term_id')->orderBy('roll_number')->orderBy('student_id');
+    }
+
+    private function canEditRecord(User $user, TasmiRecord $record): bool
+    {
+        return $user->isTasmiExaminer() || ($record->examiner_teacher_id === $user->teacher?->id
+            && TasmiExaminerAssignment::query()->where('teacher_id', $user->teacher->id)->where('academic_term_id', $record->academic_term_id)->exists());
+    }
+
     /** @return array<string, mixed> */
     private function validatedReportFilters(Request $request): array
     {
@@ -396,6 +437,7 @@ class GuruTasmiController extends Controller
             'juz' => ['nullable', 'integer', 'min:1', 'max:30'],
             'predicate' => ['nullable', Rule::in(array_keys(TasmiRecord::predicateOptions()))],
             'date_from' => ['nullable', 'date'],
+            'review_status' => ['nullable', Rule::in(array_keys(TasmiRecord::reviewStatusOptions()))],
             'date_until' => ['nullable', 'date', 'after_or_equal:date_from'],
             'search' => ['nullable', 'string', 'max:120'],
         ]);

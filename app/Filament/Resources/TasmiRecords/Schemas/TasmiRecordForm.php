@@ -3,10 +3,11 @@
 namespace App\Filament\Resources\TasmiRecords\Schemas;
 
 use App\Models\TasmiRecord;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\DatePicker;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 
@@ -16,6 +17,7 @@ class TasmiRecordForm
     {
         return $schema
             ->components([
+                Hidden::make('review_version')->default(0),
                 Section::make('Identitas Ujian')
                     ->schema([
                         Select::make('academic_term_id')

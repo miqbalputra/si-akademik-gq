@@ -300,6 +300,9 @@
             </header>
 
             <main class="school-main mx-auto w-full max-w-[1600px] px-4 py-6 sm:px-6 sm:py-8 xl:px-8">
+                @if($isGuruPortal)
+                    <x-tasmi-correction-reminder :reminder="$tasmiCorrectionReminder ?? null" />
+                @endif
                 {{ $slot }}
                 <footer class="school-footer mt-10 border-t border-line pt-5 text-center text-theme-xs text-soft dark:border-gray-800 dark:text-muted font-normal">
                     &copy; {{ date('Y') }} Ruang GQ · Griya Qur'an Tunas Ilmu · SchoolVia.id

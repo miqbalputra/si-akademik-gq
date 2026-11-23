@@ -9,7 +9,9 @@ use App\Models\TasmiRecord;
 use App\Models\Teacher;
 use App\Services\TasmiReportDownloadService;
 use App\Services\TasmiReportService;
+use App\Services\TasmiReviewService;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -22,7 +24,7 @@ class WaliKelasTasmiController extends Controller
 
     /**
      * Tampilkan data tasmi' untuk santri di kelas yang diwalikan guru ini.
-     * Read-only — wali kelas hanya melihat, tidak bisa input/edit.
+     * Wali kelas memeriksa hasil tanpa mengubah nilai yang diinput PJ.
      */
     public function index(Request $request): View
     {
@@ -38,7 +40,7 @@ class WaliKelasTasmiController extends Controller
             'filters' => $filters,
             'scope' => 'homeroom',
             'pageTitle' => "Hasil Tasmi' Kelas Saya",
-            'pageDescription' => 'Hasil Tasmi\' santri pada kelas yang Anda ampuh pada tanggal ujian.',
+            'pageDescription' => 'Periksa dan setujui hasil Tasmi\' santri pada kelas yang Anda ampu pada tanggal ujian.',
             'backUrl' => route('guru.dashboard'),
             'backLabel' => 'Dashboard Guru',
             'exportRoute' => 'guru.tasmi-wali.export',
@@ -72,7 +74,24 @@ class WaliKelasTasmiController extends Controller
             'portalLabel' => 'Portal Guru',
             'breadcrumb' => "Detail Hasil Tasmi'",
             'readOnly' => true,
+            'canReview' => true,
         ]);
+    }
+
+    public function review(Request $request, TasmiRecord $tasmi_record, TasmiReviewService $reviews): RedirectResponse
+    {
+        $this->waliTeacher($request);
+        // Scope before validation so another class's record is never exposed.
+        $this->reportService->forHomeroom($request->user()->teacher)->whereKey($tasmi_record->id)->firstOrFail();
+        $data = $request->validate([
+            'review_version' => ['required', 'integer', 'min:0'],
+            'decision' => ['required', Rule::in([TasmiRecord::REVIEW_APPROVED, TasmiRecord::REVIEW_CORRECTION])],
+            'correction_reason' => ['required_if:decision,correction_requested', 'nullable', 'string', 'max:2000'],
+        ]);
+        $reviews->review($request->user(), $tasmi_record, (int) $data['review_version'], $data['decision'], $data['correction_reason'] ?? null);
+
+        return redirect()->route('guru.tasmi-wali.show', $tasmi_record)->with('status',
+            $data['decision'] === TasmiRecord::REVIEW_APPROVED ? 'Hasil Tasmi\' disetujui dan siap diunduh admin.' : 'Permintaan perbaikan sudah dikirim ke PJ Tasmi\'.');
     }
 
     public function export(Request $request, string $format)
@@ -112,6 +131,7 @@ class WaliKelasTasmiController extends Controller
             'juz' => ['nullable', 'integer', 'min:1', 'max:30'],
             'predicate' => ['nullable', Rule::in(array_keys(TasmiRecord::predicateOptions()))],
             'date_from' => ['nullable', 'date'],
+            'review_status' => ['nullable', Rule::in(array_keys(TasmiRecord::reviewStatusOptions()))],
             'date_until' => ['nullable', 'date', 'after_or_equal:date_from'],
             'search' => ['nullable', 'string', 'max:120'],
         ]);

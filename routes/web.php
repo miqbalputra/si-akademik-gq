@@ -214,6 +214,7 @@ Route::middleware(['auth:web', 'role:guru'])->prefix('guru')->name('guru.')->gro
     Route::post('/tasmi-wali/reminder/dismiss', [WaliKelasTasmiReminderController::class, 'dismiss'])
         ->name('tasmi-wali.reminder.dismiss');
     Route::get('/tasmi-wali/{tasmi_record}', [WaliKelasTasmiController::class, 'show'])->name('tasmi-wali.show');
+    Route::post('/tasmi-wali/{tasmi_record}/review', [WaliKelasTasmiController::class, 'review'])->name('tasmi-wali.review');
 
     // Perangkat pembelajaran RPP Diniyyah — seluruh pilihan kelas/mapel
     // dibatasi oleh penugasan Diniyyah aktif milik guru login.

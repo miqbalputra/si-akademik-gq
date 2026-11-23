@@ -24,6 +24,8 @@
         </div>
     @endif
 
+    <div class="mb-5"><x-tasmi-review-status :record="$record" /></div>
+
     {{-- Audit reminder --}}
     <div style="margin-bottom:18px;background:var(--ui-warning-soft);border:1px solid var(--ui-warning-line);border-radius:12px;padding:12px 16px;font-size:12px;color:var(--ui-warning-ink);display:flex;align-items:center;gap:8px;line-height:18px;font-weight:400;" class="fade-up">
         <svg style="width:16px;height:16px;flex-shrink:0;" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" /></svg>
@@ -33,8 +35,18 @@
     <form method="POST" action="{{ route('guru.tasmi.update', $record) }}" class="fade-up delay-1">
         @csrf
         @method('PUT')
+        <input type="hidden" name="review_version" value="{{ $record->review_version }}">
 
         <div class="card" style="padding:24px;margin-bottom:18px;">
+            <label class="ui-field mb-5"><span>Santri dan kelas</span>
+                <select name="class_enrollment_id">
+                    <option value="">Tetap: {{ $record->student?->name }} · {{ $record->classroomTerm?->classroom?->name ?? '-' }}</option>
+                    @foreach($enrollmentOptions as $enrollment)
+                        <option value="{{ $enrollment->id }}" @selected((string)old('class_enrollment_id') === (string)$enrollment->id)>{{ $enrollment->student?->name }} · {{ $enrollment->classroomTerm?->classroom?->name ?? '-' }}{{ $enrollment->student?->nis ? ' · NIS '.$enrollment->student->nis : '' }}</option>
+                    @endforeach
+                </select>
+                <span class="text-theme-xs text-muted">Jika salah memilih santri atau kelas, pilih pengganti pada semester yang sama. Perubahan akan diperiksa wali kelas tujuan.</span>
+            </label>
             {{-- Hari & Tanggal --}}
             @php($selectedExamDay = old('exam_day_label', $record->exam_day_label))
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%, 180px),1fr));gap:14px;margin-bottom:20px;">
@@ -134,10 +146,12 @@
             </button>
             <a href="{{ route('guru.tasmi.records') }}" class="btn btn-outline text-theme-sm font-medium">Batal</a>
 
+            @if($canDelete)
             <button type="submit" form="tasmi-delete-form" class="btn btn-danger text-theme-sm font-medium" style="margin-left:auto;" onclick="return confirm('Hapus record tasmi\' ini? Tindakan ini tercatat di audit log (soft delete).');">
                 <svg style="width:14px;height:14px;" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .342c.361.027.722.062 1.082.097m-1.082-.097L5.34 5.79a2.25 2.25 0 0 1 2.15-1.967L16.5 3.75a2.25 2.25 0 0 1 2.15 1.967L20.228 5.79" /></svg>
                 Hapus
             </button>
+            @endif
         </div>
     </form>
 

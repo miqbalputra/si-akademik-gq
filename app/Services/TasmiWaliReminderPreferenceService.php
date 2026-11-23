@@ -2,12 +2,11 @@
 
 namespace App\Services;
 
-use App\Models\PanelNotification;
 use App\Models\PanelUserPreference;
+use App\Models\TasmiRecord;
 use App\Models\User;
 use Carbon\CarbonInterface;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Collection;
+use Illuminate\Database\Eloquent\Builder;
 
 class TasmiWaliReminderPreferenceService
 {
@@ -18,131 +17,66 @@ class TasmiWaliReminderPreferenceService
     public function dismiss(User $user): CarbonInterface
     {
         $dismissedAt = now('Asia/Jakarta');
-        $preference = PanelUserPreference::firstOrNew([
-            'user_id' => $user->id,
-            'panel_key' => self::PANEL_KEY,
-        ]);
+        $preference = PanelUserPreference::firstOrNew(['user_id' => $user->id, 'panel_key' => self::PANEL_KEY]);
         $preferences = $preference->preferences ?? [];
         $preferences['dismissed_at'] = $dismissedAt->toIso8601String();
-        $preferences['dismissed_notification_id'] = PanelNotification::query()
-            ->where('user_id', $user->id)
-            ->whereIn('notification_type', ['tasmi_created', 'tasmi_updated'])
-            ->max('id');
+        $preferences['review_signature'] = $user->teacher ? $this->signature($this->unapproved($user)) : null;
         $preference->preferences = $preferences;
         $preference->save();
 
         return $dismissedAt;
     }
 
-    /** @return array<string, mixed>|null */
+    /** The reminder follows review state, even if notifications were read or archived. */
     public function reminderFor(User $user): ?array
     {
-        $teacher = $user->teacher;
-        if (! $user->hasRole('guru') || ! $teacher) {
+        if (! $user->hasRole('guru') || ! $user->teacher) {
             return null;
         }
-
-        $notifications = PanelNotification::query()
-            ->where('user_id', $user->id)
-            ->whereNull('archived_at')
-            ->where('status', 'unread')
-            ->whereIn('notification_type', ['tasmi_created', 'tasmi_updated'])
-            ->latest('updated_at')
-            ->get();
-
-        if ($notifications->isEmpty()) {
+        $query = $this->unapproved($user);
+        $count = (clone $query)->count();
+        if ($count === 0) {
             return null;
         }
-
-        $notificationRecordIds = $notifications
-            ->mapWithKeys(fn (PanelNotification $notification) => [$notification->id => $this->recordIdFromLink($notification->link_url)])
-            ->filter();
-        if ($notificationRecordIds->isEmpty()) {
-            return null;
-        }
-
-        $records = $this->reports->forHomeroom($teacher)
-            ->whereIn('tasmi_records.id', $notificationRecordIds->values()->unique())
-            ->get()
-            ->keyBy('id');
-        if ($records->isEmpty()) {
-            return null;
-        }
-
-        $items = $notifications->map(function (PanelNotification $notification) use ($notificationRecordIds, $records): ?array {
-            $record = $records->get($notificationRecordIds->get($notification->id));
-            if (! $record) {
-                return null;
-            }
-
-            return [
-                'notification_id' => $notification->id,
-                'changed_at' => $notification->updated_at,
-                'detail_url' => $notification->link_url,
+        $items = (clone $query)->latest('tasmi_records.updated_at')->latest('tasmi_records.id')->limit(10)->get()
+            ->map(fn (TasmiRecord $record) => [
+                'detail_url' => route('guru.tasmi-wali.show', $record),
                 'student_name' => $record->student?->name ?? 'Santri',
                 'classroom_name' => $record->classroomTerm?->classroom?->name ?? $record->classroomTerm?->name ?? '-',
                 'date_label' => $record->exam_date?->locale('id')->translatedFormat('d M Y') ?? '-',
                 'juz_label' => $record->juz_range_label,
                 'predicate_label' => $record::predicateLabel($record->predicate) ?? '-',
-            ];
-        })->filter()->unique(fn (array $item) => $item['detail_url'])->values();
-
-        if ($items->isEmpty()) {
-            return null;
-        }
-
-        $dismissal = $this->dismissal($user);
-        $dismissedAt = $dismissal['at'];
-        $dismissedNotificationId = $dismissal['notification_id'];
-        $newItems = $dismissedAt
-            ? $items->filter(function (array $item) use ($dismissedAt, $dismissedNotificationId): bool {
-                $changedAt = $item['changed_at'];
-
-                return $changedAt?->greaterThan($dismissedAt)
-                    || ($changedAt?->equalTo($dismissedAt) && $dismissedNotificationId !== null && $item['notification_id'] > $dismissedNotificationId);
-            })->values()
-            : $items;
+                'status_label' => $record->review_status_label,
+            ]);
+        $preference = PanelUserPreference::where('user_id', $user->id)->where('panel_key', self::PANEL_KEY)->first();
 
         return [
-            'count' => $items->count(),
-            'items' => $items,
-            'new_items' => $newItems,
-            'should_show_modal' => $newItems->isNotEmpty(),
+            'count' => $count, 'items' => $items, 'new_items' => $items,
+            'should_show_modal' => ($preference?->preferences['review_signature'] ?? null) !== $this->signature($query),
         ];
     }
 
-    /** @return array{at: CarbonInterface|null, notification_id: int|null} */
-    private function dismissal(User $user): array
+    public function correctionsFor(User $user): ?array
     {
-        $preference = PanelUserPreference::query()
-            ->where('user_id', $user->id)
-            ->where('panel_key', self::PANEL_KEY)
-            ->first(['preferences']);
-        $value = $preference?->preferences['dismissed_at'] ?? null;
-        $notificationId = $preference?->preferences['dismissed_notification_id'] ?? null;
-        $notificationId = is_numeric($notificationId) ? (int) $notificationId : null;
-
-        if (! is_string($value) || $value === '') {
-            return ['at' => null, 'notification_id' => $notificationId];
-        }
-
-        try {
-            return [
-                'at' => Carbon::parse($value)->setTimezone('Asia/Jakarta'),
-                'notification_id' => $notificationId,
-            ];
-        } catch (\Throwable) {
-            return ['at' => null, 'notification_id' => $notificationId];
-        }
-    }
-
-    private function recordIdFromLink(?string $link): ?int
-    {
-        $path = parse_url((string) $link, PHP_URL_PATH) ?: '';
-        if (! preg_match('#/guru/tasmi-wali/(\d+)$#', $path, $matches)) {
+        if (! $user->hasRole('guru') || ! $user->teacher) {
             return null;
         }
+        $query = $this->reports->forExaminer($user->teacher)->where('review_status', TasmiRecord::REVIEW_CORRECTION);
+        $count = (clone $query)->count();
 
-        return (int) $matches[1];
+        return $count ? ['count' => $count, 'records' => $query->latest('tasmi_records.reviewed_at')->limit(10)->get()] : null;
+    }
+
+    private function unapproved(User $user): Builder
+    {
+        return $this->reports->forHomeroom($user->teacher)->where(fn (Builder $q) => $q
+            ->whereNull('tasmi_records.review_status')
+            ->orWhereIn('tasmi_records.review_status', [TasmiRecord::REVIEW_PENDING, TasmiRecord::REVIEW_CORRECTION]));
+    }
+
+    private function signature(Builder $query): string
+    {
+        // Version distinguishes changes within the same second, unlike timestamps.
+        return hash('sha256', (clone $query)->reorder()->orderBy('tasmi_records.id')->pluck('tasmi_records.review_version', 'tasmi_records.id')->toJson());
     }
 }
