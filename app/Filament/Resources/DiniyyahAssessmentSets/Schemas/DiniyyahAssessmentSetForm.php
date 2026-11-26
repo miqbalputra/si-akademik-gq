@@ -3,6 +3,8 @@
 namespace App\Filament\Resources\DiniyyahAssessmentSets\Schemas;
 
 use App\Models\DiniyyahClassSubject;
+use App\Models\DiniyyahAssessmentSet;
+use App\Support\UiLabel;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -60,14 +62,11 @@ class DiniyyahAssessmentSetForm
                     ->default(0)
                     ->required(),
                 Select::make('status')->label('Status')
-                    ->options([
-                        'draft' => 'Draft',
-                        'active' => 'Aktif',
-                        'submitted' => 'Submitted',
-                        'validated' => 'Tervalidasi',
-                        'needs_revision' => 'Perlu Revisi',
-                        'closed' => 'Ditutup',
-                    ])
+                    ->options(fn (?DiniyyahAssessmentSet $record): array => $record && in_array($record->status, ['submitted', 'validated', 'needs_revision'], true)
+                        ? [$record->status => UiLabel::statusLabel($record->status)]
+                        : ['draft' => 'Draf', 'active' => 'Aktif', 'closed' => 'Ditutup'])
+                    ->in(fn (Select $component): array => array_keys($component->getOptions()))
+                    ->helperText('Pengajuan, validasi, dan permintaan revisi mengikuti tindakan penilaian.')
                     ->required()
                     ->default('draft'),
             ]);

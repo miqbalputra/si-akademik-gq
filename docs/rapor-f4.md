@@ -2,6 +2,20 @@
 
 Admin dapat memantau peringkat lintas kelas beserta unduhan Excel/PDF melalui **Leger & Rapor → Peringkat Semua Kelas**. Lihat [panduan peringkat admin](peringkat-admin.md).
 
+## Alur Nilai & Rapor
+
+Di **Portal Guru → Rapor → Alur Nilai & Rapor**, pilih kelas beserta tahun ajaran dan semester. Halaman menampilkan tahap saat ini dan tautan tindakan berdasarkan penugasan aktif.
+
+| Tahap | Pelaksana dan syarat melanjutkan |
+| --- | --- |
+| Pilih kelas | Guru melihat kelas tempat ia ditugaskan mengisi nilai atau menjadi wali kelas. Pengisian final Tahfidz juga punya pilihan kelas sesuai cakupan akun guru yang sudah berlaku. |
+| Lengkapi nilai | Guru pengampu mengisi mapel di kelas tugasnya. Halaman input Praktik Ibadah otomatis membuka pengisian nama ujian jika masih kosong. Nama bisa diisi setelah menyimpan draf, dan wajib lengkap sebelum pengajuan nilai. Suluk diisi wali kelas. KKM Suluk dan Praktik Ibadah mengikuti ketetapan sekolah 70 untuk periode dengan alur KKM aktif. Admin atau Kabag Diniyyah memvalidasi dari **Monitoring Nilai**. |
+| Tinjau leger | Wali kelas memeriksa final Tahfidz dan presensi, lalu membuat atau menyegarkan draf leger. Leger hanya dapat dikunci setelah nilai seluruh santri lengkap 100%, nama ujian Praktik Ibadah terisi, dan pemeriksaan sumber lulus. Penguncian membuat rapor yang belum ada. |
+| Lengkapi rapor | Wali kelas membuka **Rapor kelas → Tinjau rapor**, lalu menyimpan draf pelengkap. Admin menentukan tanggal rapor di **Data Sekolah → Periode**. Semester genap memerlukan keputusan kenaikan dan kelas tujuan jika naik kelas, sebelum rapor siap difinalkan. |
+| Final & cetak | Wali kelas dapat mencetak rapor kelas yang siap. Admin atau Kabag Diniyyah mengunci dan menerbitkan dari **Rapor Diniyyah**. Kepala sekolah memiliki akses baca rapor. Wali santri hanya melihat rapor terbit milik anak yang terhubung dengan akunnya. |
+
+Leger atau rapor yang telah terkunci mempertahankan snapshot dan riwayatnya. Rapor dari leger sebelum format gabungan tetap mengikuti jalur arsip. Pemeriksaan kelengkapan sebelum penguncian dan penerbitan F4 berlaku untuk rapor dari leger gabungan. Jika rapor F4 lama telanjur terkunci dengan pelengkap kosong, pengelola dapat memakai **Buka revisi** dengan alasan tercatat. Snapshot sebelumnya tetap tersimpan. Kegagalan satu rapor dalam tindakan massal membatalkan perubahan dalam tindakan itu. Perubahan panduan ini memakai skema yang sudah ada dan halaman panduan tidak menyimpan data nilai.
+
 ## Penggunaan oleh wali kelas
 
 1. Buka **Leger Kelas Saya**, periksa kelengkapan nilai Diniyyah, praktik, Tahfidz, KKM, dan presensi.

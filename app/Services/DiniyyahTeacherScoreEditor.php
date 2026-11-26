@@ -17,7 +17,25 @@ class DiniyyahTeacherScoreEditor
     public function editable(DiniyyahAssessmentSet $set): bool
     {
         return in_array($set->status, ['active', 'needs_revision'], true)
-            && ! DiniyyahLedgerSnapshot::where('classroom_term_id', $set->classSubject->classroom_term_id)->whereIn('status', ['locked', 'published'])->exists()
+            && $this->classroomIsOpen($set);
+    }
+
+    public function canEditExamName(DiniyyahAssessmentSet $set): bool
+    {
+        if (! $set->classSubject?->subject?->isPraktikIbadah()) {
+            return false;
+        }
+
+        if ($set->missingExamName() && in_array($set->status, ['draft', 'submitted', 'validated'], true)) {
+            return $this->classroomIsOpen($set);
+        }
+
+        return $this->editable($set);
+    }
+
+    private function classroomIsOpen(DiniyyahAssessmentSet $set): bool
+    {
+        return ! DiniyyahLedgerSnapshot::where('classroom_term_id', $set->classSubject->classroom_term_id)->whereIn('status', ['locked', 'published'])->exists()
             && ! ReportCard::where('classroom_term_id', $set->classSubject->classroom_term_id)->whereIn('status', ['locked', 'published'])->exists();
     }
 

@@ -1,6 +1,6 @@
 <x-layouts.portal title="{{ $assessmentSet->title }}" portalLabel="Portal Guru" breadcrumb="Input Nilai / {{ $assessmentSet->classSubject?->classroomTerm?->name }}">
     <x-slot name="navLinks">
-        <a href="{{ route('guru.diniyyah-scores.index') }}" class="btn btn-outline btn-sm text-theme-sm font-medium">
+        <a href="{{ route('guru.diniyyah-scores.index', ['classroom_term_id' => $assessmentSet->classSubject?->classroom_term_id]) }}" class="btn btn-outline btn-sm text-theme-sm font-medium">
             <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
@@ -32,10 +32,8 @@
     </style>
     @endpush
 
-    @php
-        $canEditExamName = $canEdit && $assessmentSet->classSubject?->subject?->isPraktikIbadah();
-    @endphp
     <div data-score-editor data-can-edit="{{ $canEdit ? '1' : '0' }}"
+        data-exam-name-missing="{{ $examNameMissing ? '1' : '0' }}"
         data-autosave-url="{{ route('guru.diniyyah-scores.autosave', $assessmentSet) }}"
         data-component-url="{{ route('guru.diniyyah-scores.components.store', $assessmentSet) }}"
         data-next-ulangan="{{ $nextComponents['ulangan'] }}" data-next-tugas="{{ $nextComponents['tugas'] }}">
@@ -59,7 +57,7 @@
                     <p class="mt-2 text-theme-sm text-muted">Suluk diisi wali kelas. KKM tetap 70 dari Sekolah/Kabag Diniyyah.</p>
                 @else
                     <p class="mt-2 text-theme-sm text-muted">Nilai akhir = {{ $assessmentSet->daily_weight ?? 40 }}% rata-rata nilai harian + {{ $assessmentSet->exam_weight ?? 60 }}% nilai ujian. Keaktifan/presensi otomatis dari jurnal. Kolom opsional yang kosong tidak dihitung sebagai nol.</p>
-                    @if(!$canEditExamName && $assessmentSet->tested_material && $assessmentSet->tested_material !== '-')<p class="mt-1 text-theme-sm text-muted">Materi ujian: {{ $assessmentSet->tested_material }}</p>@endif
+                    @if(!$canEditExamName && !$examNameMissing && $assessmentSet->tested_material && $assessmentSet->tested_material !== '-')<p class="mt-1 text-theme-sm text-muted">Materi ujian: {{ $assessmentSet->tested_material }}</p>@endif
                 @endif
             </div>
             
@@ -94,8 +92,8 @@
                     @csrf
                     <button
                         type="submit"
-                        class="inline-flex w-full justify-center rounded-xl px-5 py-2.5 text-white shadow-md transition-all {{ $completionPercentage >= 100 && $enrollments->count() > 0 ? 'bg-success-600 hover:bg-success-700 hover:shadow-success-500/20' : 'bg-line-strong' }} text-theme-sm font-medium"
-                        @disabled($completionPercentage < 100 || $enrollments->count() === 0)
+                        class="inline-flex w-full justify-center rounded-xl px-5 py-2.5 text-white shadow-md transition-all {{ !$examNameMissing && $completionPercentage >= 100 && $enrollments->count() > 0 ? 'bg-success-600 hover:bg-success-700 hover:shadow-success-500/20' : 'bg-line-strong' }} text-theme-sm font-medium"
+                        @disabled($examNameMissing || $completionPercentage < 100 || $enrollments->count() === 0)
                     >
                         Submit ke Kabag Diniyyah
                     </button>
@@ -124,20 +122,43 @@
         @php
             $oldExamName = old('tested_material');
         @endphp
-        <form data-exam-name-form method="POST" action="{{ route('guru.diniyyah-scores.exam-name.update', $assessmentSet) }}" class="mb-6 rounded-2xl glass-card p-4">
-            @csrf
-            @method('PUT')
-            <input type="hidden" name="original_material_hash" value="{{ hash('sha256', $assessmentSet->tested_material ?? '') }}">
-            <label for="tested-material" class="text-muted ui-form-label">Nama Ujian Praktik</label>
-            <div class="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center">
-                <input id="tested-material" type="text" name="tested_material" class="form-input flex-1"
-                    value="{{ is_string($oldExamName) ? $oldExamName : ($assessmentSet->tested_material === '-' ? '' : $assessmentSet->tested_material) }}"
-                    placeholder="Contoh: Shalat Jenazah atau Wudhu" maxlength="255" required
-                    aria-describedby="exam-name-help" @if($errors->has('tested_material')) aria-invalid="true" @endif>
-                <button type="submit" class="btn btn-primary shrink-0">Simpan Nama Ujian</button>
-            </div>
-            <p id="exam-name-help" class="mt-2 text-theme-sm text-muted">Saat nilai masuk rapor, nama ini tampil di bagian Praktik Ibadah.</p>
-        </form>
+        <section class="mb-6 space-y-4 rounded-2xl border p-4 sm:p-5 {{ $examNameMissing ? 'border-warning-line bg-warning-soft' : 'border-brand-line bg-brand-soft/50' }}">
+            @if ($examNameMissing)
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <h2 class="ui-card-title text-heading">Nama Ujian Praktik wajib diisi</h2>
+                        <p class="mt-1 text-theme-sm text-body">{{ $canEdit ? 'Simpan nama ujian agar nilai bisa diajukan.' : 'Simpan nama ujian agar penilaian bisa masuk ke leger.' }}</p>
+                    </div>
+                    <button type="button" class="btn btn-primary" data-exam-name-open hidden aria-haspopup="dialog" aria-controls="exam-name-dialog">Isi Nama Ujian</button>
+                </div>
+            @endif
+            <form data-exam-name-form method="POST" action="{{ route('guru.diniyyah-scores.exam-name.update', $assessmentSet) }}">
+                @csrf
+                @method('PUT')
+                <input type="hidden" name="original_material_hash" value="{{ hash('sha256', $assessmentSet->tested_material ?? '') }}">
+                <label for="tested-material" class="text-heading ui-form-label">Nama Ujian Praktik</label>
+                <div class="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center">
+                    <input id="tested-material" type="text" name="tested_material" class="form-input min-w-0 flex-1"
+                        value="{{ is_string($oldExamName) ? $oldExamName : ($examNameMissing ? '' : $assessmentSet->tested_material) }}"
+                        placeholder="Contoh: Shalat Jenazah atau Wudhu" maxlength="255" required
+                        aria-describedby="exam-name-help{{ $errors->has('tested_material') ? ' exam-name-error' : '' }}" @if($errors->has('tested_material')) aria-invalid="true" @endif>
+                    <button type="submit" class="btn btn-primary shrink-0">Simpan Nama Ujian</button>
+                </div>
+                <p id="exam-name-help" class="mt-2 text-theme-sm text-muted">Nama ini tampil di bagian Praktik Ibadah pada rapor.</p>
+                @error('tested_material')<p id="exam-name-error" class="mt-2 text-theme-sm text-danger-ink">{{ $message }}</p>@enderror
+            </form>
+            @if ($examNameMissing)
+                <dialog id="exam-name-dialog" data-exam-name-dialog class="m-auto max-h-[85vh] w-11/12 max-w-xl space-y-4 overflow-y-auto rounded-2xl border border-warning-line bg-surface p-5 text-body shadow-2xl backdrop:bg-gray-950/55 sm:p-6"
+                    aria-labelledby="exam-name-dialog-title" aria-describedby="exam-name-dialog-description">
+                    <h2 id="exam-name-dialog-title" class="ui-card-title text-heading">Isi Nama Ujian Praktik Ibadah</h2>
+                    <p id="exam-name-dialog-description" class="text-theme-sm text-muted">{{ $assessmentSet->classSubject?->classroomTerm?->name }} · {{ $assessmentSet->classSubject?->classroomTerm?->academicTerm?->name }}</p>
+                    <div data-exam-name-dialog-content></div>
+                    <form method="dialog">
+                        <button class="btn btn-outline">Isi nanti</button>
+                    </form>
+                </dialog>
+            @endif
+        </section>
     @endif
 
     <section data-kkm-warning role="status" aria-live="polite" class="mb-4 rounded-2xl border border-warning-line bg-warning-soft p-4 text-warning-ink" @if($kkmFeedback['below_kkm_students'] === 0) hidden @endif>

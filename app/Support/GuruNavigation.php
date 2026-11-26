@@ -33,11 +33,14 @@ class GuruNavigation
         if ($user->canAccessAttendance()) {
             $teaching[] = $item('Presensi Santri', 'attendance.index', ['attendance.*'], 'Absensi kehadiran siswa peserta didik');
         }
-        $teaching[] = $item('Input Nilai Pelajaran', 'guru.diniyyah-scores.index', ['guru.diniyyah-scores.*']);
-        $teaching[] = $item('KKM Mata Pelajaran', 'guru.kkm.index', ['guru.kkm.*']);
         $teaching[] = $item('Kalender Akademik', 'guru.calendar', ['guru.calendar']);
 
-        $reports = [$item('Nilai Final Tahfidz Rapor', 'guru.tahfidz-report.index', ['guru.tahfidz-report.index'])];
+        $reports = [
+            $item('Alur Nilai & Rapor', 'guru.report-workflow', ['guru.report-workflow']),
+            $item('Input Nilai Pelajaran', 'guru.diniyyah-scores.index', ['guru.diniyyah-scores.*'], 'Diniyyah Suluk Praktik Ibadah'),
+            $item('KKM Mata Pelajaran', 'guru.kkm.index', ['guru.kkm.*']),
+            $item('Nilai Final Tahfidz Rapor', 'guru.tahfidz-report.index', ['guru.tahfidz-report.index']),
+        ];
         $classes = [];
         if ($isHomeroom) {
             $reports[] = $item('Leger Kelas Saya', 'diniyyah.ledger.index', ['diniyyah.ledger.*'], 'Legger ranking peringkat');
@@ -95,7 +98,7 @@ class GuruNavigation
             $groups[] = [
                 'key' => Str::slug($label), 'label' => $label, 'items' => $items,
                 'active' => collect($items)->contains('active', true),
-                'default_open' => $label === 'Mengajar' || ($label === 'Rapor' && $isHomeroom),
+                'default_open' => in_array($label, ['Mengajar', 'Rapor'], true),
             ];
         }
 

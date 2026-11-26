@@ -1,10 +1,10 @@
 <x-layouts.portal title="Input Nilai Diniyyah" portalLabel="Portal Guru" breadcrumb="Input Nilai">
     <header class="portal-page-header animate-fade-in-up">
         <div>
-            <p class="school-index">Panel Guru Pengajar</p>
             <h1 class="mt-2 text-heading ui-page-title">Input Nilai Diniyyah</h1>
-            <p class="mt-2 text-theme-sm text-body font-normal">Isi dan evaluasi nilai mata pelajaran Diniyyah untuk kelas binaan Anda.</p>
+            <p class="mt-2 text-theme-sm text-body">Isi nilai sebagai draf, lalu ajukan ke Kabag Diniyyah setelah lengkap.</p>
         </div>
+        <a class="btn btn-outline" href="{{ route('guru.report-workflow', ['classroom_term_id' => $classroomId]) }}">Alur Nilai &amp; Rapor</a>
     </header>
 
     @php
@@ -76,7 +76,9 @@
                         <p class="mt-1 text-theme-sm font-normal text-muted">
                             {{ $assessmentSet->classSubject?->classroomTerm?->name }}
                         </p>
-                        @if ($assessmentSet->classSubject?->subject?->isPraktikIbadah() && $assessmentSet->tested_material && $assessmentSet->tested_material !== '-')
+                        @if ($assessmentSet->missingExamName() && !$isReadOnly)
+                            <p class="mt-1 text-theme-sm font-medium text-warning-ink">Nama ujian wajib diisi</p>
+                        @elseif ($assessmentSet->classSubject?->subject?->isPraktikIbadah() && filled($assessmentSet->tested_material) && !$assessmentSet->missingExamName())
                             <p class="mt-1 text-theme-sm text-body">{{ $assessmentSet->tested_material }}</p>
                         @endif
                     </div>

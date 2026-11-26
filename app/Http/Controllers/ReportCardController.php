@@ -44,11 +44,11 @@ class ReportCardController extends Controller
             $result = $workflow->lockForSnapshot($snapshot, $request->user());
 
             return redirect()
-                ->route('diniyyah.ledger.show', $snapshot)
+                ->route('report-cards.classroom', $snapshot)
                 ->with('status', "{$result['locked']} rapor berhasil dikunci. {$result['skipped']} rapor dilewati.");
         } catch (DomainException $exception) {
             return redirect()
-                ->route('diniyyah.ledger.show', $snapshot)
+                ->route('report-cards.classroom', $snapshot)
                 ->withErrors(['report_cards' => $exception->getMessage()]);
         }
     }
@@ -61,11 +61,11 @@ class ReportCardController extends Controller
             $result = $workflow->publishForSnapshot($snapshot, $request->user());
 
             return redirect()
-                ->route('diniyyah.ledger.show', $snapshot)
+                ->route('report-cards.classroom', $snapshot)
                 ->with('status', "{$result['published']} rapor berhasil dipublish. {$result['skipped']} rapor dilewati.");
         } catch (DomainException $exception) {
             return redirect()
-                ->route('diniyyah.ledger.show', $snapshot)
+                ->route('report-cards.classroom', $snapshot)
                 ->withErrors(['report_cards' => $exception->getMessage()]);
         }
     }
@@ -174,8 +174,8 @@ class ReportCardController extends Controller
     public function classroom(Request $request, DiniyyahLedgerSnapshot $snapshot): View
     {
         $this->authorizeClass($request, $snapshot);
-        $cards = $this->classCards($snapshot);
         $service = app(ReportCardPrintService::class);
+        $cards = $service->classCards($snapshot);
         $readiness = $cards->mapWithKeys(fn ($card) => [$card->id => $service->readiness($card)]);
         $missingCount = $snapshot->rows()->whereHas('classEnrollment.student', fn ($q) => $q->where('status', 'active'))->count() - $cards->count();
 
@@ -185,11 +185,16 @@ class ReportCardController extends Controller
     public function printClass(Request $request, DiniyyahLedgerSnapshot $snapshot): View|RedirectResponse
     {
         $this->authorizeClass($request, $snapshot);
-        $cards = $this->classCards($snapshot);
+        $service = app(ReportCardPrintService::class);
+        $cards = $service->classCards($snapshot);
         abort_if($cards->isEmpty(), 422, 'Belum ada rapor.');
         try {
             $this->ensureClassComplete($snapshot, $cards);
-            $pages = $cards->map(fn ($card) => app(ReportCardPrintService::class)->page($card))->all();
+            $pages = $cards->map(fn ($card) => $service->page($card));
+            if ($pages->contains(fn ($page) => $page['missing'] !== [])) {
+                throw new DomainException('Masih ada rapor yang belum siap cetak. Lengkapi dari daftar rapor kelas.');
+            }
+            $pages = $pages->all();
         } catch (DomainException $exception) {
             return back()->withErrors(['print' => $exception->getMessage()]);
         }
@@ -201,9 +206,10 @@ class ReportCardController extends Controller
     {
         $this->authorizeClass($request, $snapshot);
         try {
-            $cards = $this->classCards($snapshot);
+            $service = app(ReportCardPrintService::class);
+            $cards = $service->classCards($snapshot);
             $this->ensureClassComplete($snapshot, $cards);
-            $content = app(ReportCardPrintService::class)->pdf($cards->all());
+            $content = $service->pdf($cards->all());
 
             return response($content, 200, ['Content-Type' => 'application/pdf', 'Content-Disposition' => 'attachment; filename="Rapor-Kelas-'.$snapshot->classroom_term_id.'.pdf"', 'Cache-Control' => 'private, no-store']);
         } catch (DomainException $exception) {
@@ -220,10 +226,10 @@ class ReportCardController extends Controller
                 if (! $request->user()->hasRole('admin') && $value !== $current) {
                     $fail('Tanggal rapor hanya ditentukan admin.');
                 }
-            }], 'issue_place' => ['required', 'string', 'max:80'],
-            'homeroom_name' => ['required', 'string', 'max:100'],
-            'principal_title' => ['required', 'string', 'max:100'], 'note' => ['nullable', 'string', 'max:350'],
-            'promotion_status' => ['nullable', 'in:promoted,retained,graduated'], 'next_class' => ['nullable', 'required_if:promotion_status,promoted', 'string', 'max:60'],
+            }], 'issue_place' => ['nullable', 'string', 'max:80'],
+            'homeroom_name' => ['nullable', 'string', 'max:100'],
+            'principal_title' => ['nullable', 'string', 'max:100'], 'note' => ['nullable', 'string', 'max:350'],
+            'promotion_status' => ['nullable', 'in:promoted,retained,graduated'], 'next_class' => ['nullable', 'string', 'max:60'],
         ]);
         $options->save($reportCard, $data, $request->user());
 
@@ -233,14 +239,6 @@ class ReportCardController extends Controller
     private function authorizeClass(Request $request, DiniyyahLedgerSnapshot $snapshot): void
     {
         abort_unless($request->user()->hasAnyRole(['admin', 'kabag_diniyyah', 'kepala_sekolah']) || app(DiniyyahLedgerAccess::class)->allows($request->user(), $snapshot->classroom_term_id), 403);
-    }
-
-    private function classCards(DiniyyahLedgerSnapshot $snapshot): Collection
-    {
-        return ReportCard::where('academic_term_id', $snapshot->academic_term_id)->where('classroom_term_id', $snapshot->classroom_term_id)
-            ->whereIn('class_enrollment_id', $snapshot->rows()->select('class_enrollment_id'))
-            ->where('report_type', 'diniyyah')->whereHas('student', fn ($q) => $q->where('status', 'active'))
-            ->with('student', 'classEnrollment')->get()->sortBy(fn ($card) => [$card->classEnrollment?->roll_number ?? PHP_INT_MAX, $card->student?->name])->values();
     }
 
     private function ensureClassComplete(DiniyyahLedgerSnapshot $snapshot, Collection $cards): void

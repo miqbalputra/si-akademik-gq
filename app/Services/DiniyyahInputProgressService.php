@@ -14,7 +14,7 @@ class DiniyyahInputProgressService
             ->with([
                 'classSubject.classroomTerm' => function ($query) {
                     $query->withCount(['enrollments as active_enrollments_count' => function ($q) {
-                        $q->where('status', 'active');
+                        $q->where('status', 'active')->forVisibleStudents();
                     }]);
                 },
                 'classSubject.subject',
@@ -32,7 +32,7 @@ class DiniyyahInputProgressService
         $assessmentSet->loadMissing([
             'classSubject.classroomTerm' => function ($query) {
                 $query->withCount(['enrollments as active_enrollments_count' => function ($q) {
-                    $q->where('status', 'active');
+                    $q->where('status', 'active')->forVisibleStudents();
                 }]);
             },
             'classSubject.subject',
@@ -46,10 +46,13 @@ class DiniyyahInputProgressService
             $totalStudents = ClassEnrollment::query()
                 ->where('classroom_term_id', $assessmentSet->classSubject->classroom_term_id)
                 ->where('status', 'active')
+                ->forVisibleStudents()
                 ->count();
         }
 
-        $completeStudents = $assessmentSet->results->where('is_complete', true)->count();
+        $completeStudents = $assessmentSet->results()->where('is_complete', true)->whereNotNull('final_score')
+            ->whereHas('classEnrollment', fn ($q) => $q->where('classroom_term_id', $assessmentSet->classSubject->classroom_term_id)
+                ->where('status', 'active')->forVisibleStudents())->count();
         $incompleteStudents = max($totalStudents - $completeStudents, 0);
         $progressPercentage = $totalStudents > 0 ? round($completeStudents / $totalStudents * 100, 2) : 0.0;
         $teachers = $assessmentSet->classSubject?->subject?->isSuluk()

@@ -44,6 +44,19 @@ export function initDiniyyahScoreEditor() {
         const rows = [...root.querySelectorAll('[data-student]')];
         const filter = root.querySelector('#student-filter');
         filter?.addEventListener('input', () => rows.forEach(row => { row.hidden = !row.dataset.student.includes(filter.value.trim().toLowerCase()); }));
+        const examNameForm = root.querySelector('[data-exam-name-form]');
+        const examNameDialog = root.querySelector('[data-exam-name-dialog]');
+        const openExamName = root.querySelector('[data-exam-name-open]');
+        const showExamNameDialog = () => {
+            if (!examNameDialog.open) examNameDialog.showModal();
+        };
+        if (examNameForm && typeof examNameDialog?.showModal === 'function') {
+            examNameDialog.querySelector('[data-exam-name-dialog-content]').append(examNameForm);
+            openExamName.hidden = false;
+            openExamName.addEventListener('click', showExamNameDialog);
+            examNameDialog.addEventListener('close', () => openExamName.focus());
+            showExamNameDialog();
+        }
         if (root.dataset.canEdit !== '1') return;
 
         const status = root.querySelector('[data-save-status]');
@@ -51,7 +64,8 @@ export function initDiniyyahScoreEditor() {
         const saveButton = root.querySelector('[data-save-button]');
         const submitForm = root.querySelector('[data-score-submit]');
         const submitButton = submitForm?.querySelector('button');
-        const saveExamNameButton = root.querySelector('[data-exam-name-form] button');
+        const saveExamNameButton = examNameForm?.querySelector('button[type="submit"]');
+        const examNameMissing = root.dataset.examNameMissing === '1';
         const addButtons = [...root.querySelectorAll('[data-add-component]')];
         const inputs = new Map([...root.querySelectorAll('input[data-score]')].map(input => [`${input.dataset.enrollmentId}-${input.dataset.componentId}`, input]));
         let timer, adding = false, saving = false, blocked = false;
@@ -61,7 +75,7 @@ export function initDiniyyahScoreEditor() {
         function controls() {
             saveButton.disabled = saving || adding || blocked;
             const scoresPending = queue.dirty || saving || adding || blocked;
-            if (submitButton) submitButton.disabled = !complete || scoresPending;
+            if (submitButton) submitButton.disabled = examNameMissing || !complete || scoresPending;
             if (saveExamNameButton) saveExamNameButton.disabled = scoresPending;
             addButtons.forEach(button => { button.disabled = saving || adding || blocked; });
         }
@@ -98,8 +112,8 @@ export function initDiniyyahScoreEditor() {
             root.querySelector('[data-completion-percentage]').textContent = `${data.percentage}%`;
             complete = data.total_students > 0 && data.complete_students === data.total_students;
             if (submitButton) {
-                submitButton.classList.toggle('bg-success-600', complete);
-                submitButton.classList.toggle('bg-line-strong', !complete);
+                submitButton.classList.toggle('bg-success-600', complete && !examNameMissing);
+                submitButton.classList.toggle('bg-line-strong', !complete || examNameMissing);
             }
             const below = new Set(data.below_kkm_enrollment_ids ?? []);
             const kkm = data.kkm == null ? '' : new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2 }).format(data.kkm);

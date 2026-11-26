@@ -45,7 +45,7 @@ class DiniyyahLedgerController extends Controller
         return redirect()->route('diniyyah.ledger.show', $snapshot);
     }
 
-    public function show(Request $request, DiniyyahLedgerSnapshot $snapshot): View
+    public function show(Request $request, DiniyyahLedgerSnapshot $snapshot, DiniyyahLedgerWorkflow $workflow): View
     {
         abort_unless($this->access->allows($request->user(), $snapshot->classroom_term_id), 403);
 
@@ -62,17 +62,18 @@ class DiniyyahLedgerController extends Controller
             ->reject(fn (array $issue): bool => isset($issue['class_enrollment_id'])
                 && ! in_array((int) $issue['class_enrollment_id'], $visibleEnrollmentIds, true))
             ->values();
-        $combined = ($snapshot->snapshot_data['layout_version'] ?? '') === 'combined-v1';
-        $completeRows = $visibleRows->filter(fn ($row): bool => $combined ? $row->cells->firstWhere('column_key', 'combined_total')?->value_numeric !== null : $row->total_diniyyah_score !== null)->count();
         $snapshot->setRelation('rows', $visibleRows);
-        $summary['total_students'] = $visibleRows->count();
-        $summary['complete_rows'] = $completeRows;
-        $summary['incomplete_rows'] = $visibleRows->count() - $completeRows;
+        $readiness = $workflow->readiness($snapshot);
+        $summary['total_students'] = $readiness['total'];
+        $summary['complete_rows'] = $readiness['complete'];
+        $summary['incomplete_rows'] = $readiness['total'] - $readiness['complete'];
         $summary['blocking_issues'] = $issues->where('level', 'blocking')->count();
         $exports = ReportExportRequest::where('requested_by', $request->user()->id)->where('export_type', 'diniyyah_ledger_excel')->where('filters->snapshot_id', $snapshot->id)->latest('id')->limit(5)->get();
         $ledger = app(DiniyyahLedgerPresentation::class)->build($snapshot);
+        $frozen = in_array($snapshot->status, ['locked', 'published'], true);
+        $blockingReason = $readiness['blocking_reason'];
 
-        return view('diniyyah.ledger.show', compact('snapshot', 'columns', 'summary', 'issues', 'exports', 'ledger'));
+        return view('diniyyah.ledger.show', compact('snapshot', 'columns', 'summary', 'issues', 'exports', 'ledger', 'frozen', 'blockingReason', 'readiness'));
     }
 
     /**

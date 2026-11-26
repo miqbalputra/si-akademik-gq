@@ -43,16 +43,26 @@
         </header>
 
         <div class="flex flex-wrap gap-2">
-            <a href="{{ route('diniyyah.ledger.index') }}" class="btn btn-outline min-h-11 text-theme-sm font-medium">Kembali ke kelas saya</a>
+            <a href="{{ route('guru.report-workflow', ['classroom_term_id' => $snapshot->classroom_term_id]) }}" class="btn btn-outline min-h-11 text-theme-sm font-medium">Alur Nilai &amp; Rapor</a>
             <a href="{{ route('diniyyah.ledger.export-excel', $snapshot) }}" class="btn min-h-11 bg-success-600 text-white hover:bg-success-700 text-theme-sm font-medium">Unduh Excel</a>
             <a href="{{ route('diniyyah.ledger.export-pdf', $snapshot) }}" class="btn min-h-11">Unduh PDF</a>
-            <a href="{{ route('report-cards.classroom', $snapshot) }}" class="btn btn-outline min-h-11">Rapor kelas · F4</a>
             <a href="{{ route('guru.tahfidz-report.monitor', $snapshot->classroom_term_id) }}" class="btn btn-outline min-h-11">Periksa isian Tahfidz</a>
-            @if(!in_array($snapshot->status, ['locked','published'], true))
-                <form method="POST" action="{{ route('diniyyah.ledger.generate', $snapshot->classroom_term_id) }}">@csrf<button class="btn">Segarkan leger</button></form>
-                <form method="POST" action="{{ route('diniyyah.ledger.lock', $snapshot) }}">@csrf<button class="btn btn-primary" @disabled(($summary['blocking_issues'] ?? 0) > 0)>Kunci leger final</button></form>
+            @if($frozen)
+                <a href="{{ route('report-cards.classroom', $snapshot) }}" class="btn btn-primary min-h-11">Lanjut ke rapor kelas</a>
+            @else
+                <form method="POST" action="{{ route('diniyyah.ledger.generate', $snapshot->classroom_term_id) }}">@csrf<button class="btn">Segarkan draf leger</button></form>
+                <form method="POST" action="{{ route('diniyyah.ledger.lock', $snapshot) }}">@csrf<button class="btn btn-primary" @disabled($blockingReason !== null) aria-describedby="ledger-completion">Kunci leger final</button></form>
             @endif
         </div>
+        @unless ($frozen)
+            <div id="ledger-completion" class="rounded-xl border border-line bg-surface p-4">
+                <p class="font-semibold text-heading">Kelengkapan nilai santri {{ $readiness['percentage'] }}%</p>
+                <progress class="mt-2 h-2 w-full accent-brand-600" max="100" value="{{ $readiness['percentage'] }}" aria-label="Kelengkapan nilai santri">{{ $readiness['percentage'] }}%</progress>
+                <p class="mt-2 text-theme-sm {{ $blockingReason ? 'text-warning-ink' : 'text-success-ink' }}" role="status">
+                    {{ $readiness['complete'] }} dari {{ $readiness['total'] }} santri lengkap. {{ $blockingReason ?? 'Leger siap dikunci untuk lanjut ke rapor.' }}
+                </p>
+            </div>
+        @endunless
         @foreach($exports as $export)
             @if($export->status === 'completed')<a class="btn" href="{{ route('diniyyah.ledger.download', $export) }}">Unduh Excel yang selesai diproses</a>
             @elseif(in_array($export->status, ['queued','processing'],true))<p class="text-muted" role="status">Ekspor Excel sedang diproses. Muat ulang halaman untuk memeriksa hasilnya.</p>

@@ -114,7 +114,16 @@ class ReportCardF4Test extends TestCase
         $data = app(ReportCardPrintService::class)->data($card);
         $this->assertContains('Keputusan kenaikan kelas', app(ReportCardTemplateData::class)->missing($data));
         $this->actingAs($user)->from(route('report-cards.show', $card))->get(route('report-cards.download-pdf', $card))->assertRedirect()->assertSessionHasErrors('print');
-        $this->actingAs($user)->put(route('report-cards.print-options', $card), array_replace($data['options'], ['promotion_status' => 'promoted', 'next_class' => null]))->assertSessionHasErrors('next_class');
+        $this->actingAs($user)->put(route('report-cards.print-options', $card), array_replace($data['options'], ['promotion_status' => 'promoted', 'next_class' => null]))->assertSessionHasNoErrors();
+        $this->assertContains('Kelas tujuan', app(ReportCardPrintService::class)->readiness($card));
+        $beforeLock = $card->fresh()->getAttributes();
+        try {
+            app(ReportCardWorkflow::class)->lock($card, $user);
+            $this->fail('Rapor dengan kelas tujuan kosong seharusnya tidak bisa dikunci.');
+        } catch (\DomainException $exception) {
+            $this->assertStringContainsString('Kelas tujuan', $exception->getMessage());
+        }
+        $this->assertSame($beforeLock, $card->fresh()->getAttributes());
         app(ReportCardPrintOptions::class)->save($card, array_replace($data['options'], ['promotion_status' => 'promoted', 'next_class' => 'Mustawa 6']), $user);
         $page = app(ReportCardPrintService::class)->page($card);
         $this->assertSame('CETAK SMT2', $page['sheet']);
@@ -122,6 +131,31 @@ class ReportCardF4Test extends TestCase
         $this->assertSame('Mustawa 6', collect($page['cells'])->firstWhere('address', 'N42')['text']);
         app(ReportCardWorkflow::class)->lock($card, $user);
         $this->actingAs($user)->put(route('report-cards.print-options', $card), $data['options'])->assertForbidden();
+    }
+
+    public function test_preexisting_locked_incomplete_f4_can_only_be_reopened_with_an_audited_revision(): void
+    {
+        [$snapshot, $homeroom] = $this->context('genap');
+        app(ReportCardAutomation::class)->createMissing($snapshot, $homeroom->id);
+        $card = ReportCard::firstOrFail();
+        $card->update(['status' => 'locked']);
+        $original = $card->snapshots()->latest('id')->firstOrFail();
+        $data = $original->snapshot_data;
+        $admin = User::factory()->create();
+        $admin->assignRole(Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']));
+        $workflow = app(ReportCardWorkflow::class);
+
+        try {
+            $workflow->publish($card, $admin);
+            $this->fail('Rapor terkunci yang belum lengkap seharusnya tidak terbit.');
+        } catch (\DomainException $exception) {
+            $this->assertStringContainsString('Keputusan kenaikan kelas', $exception->getMessage());
+        }
+        $this->assertSame('locked', $card->fresh()->status);
+        $workflow->openRevision($card, $admin, 'Melengkapi keputusan kenaikan kelas.');
+        $this->assertSame('draft', $card->fresh()->status);
+        $this->assertSame($data, $original->fresh()->snapshot_data);
+        $this->assertSame('locked', $card->revisionLogs()->sole()->before_data['status']);
     }
 
     public function test_failed_automatic_generation_rolls_back_all_cards_and_does_not_change_the_ledger(): void
@@ -134,7 +168,7 @@ class ReportCardF4Test extends TestCase
             app(DiniyyahLedgerWorkflow::class)->lock($snapshot, $user);
             $this->fail('Missing ledger attendance must block generation.');
         } catch (DomainException $e) {
-            $this->assertStringContainsString('Presensi', $e->getMessage());
+            $this->assertStringContainsString('100%', $e->getMessage());
         }
         $this->assertSame('draft', $snapshot->fresh()->status);
         $this->assertDatabaseCount('report_cards', 0);

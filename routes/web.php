@@ -19,6 +19,7 @@ use App\Http\Controllers\GuruAttendanceReportController;
 use App\Http\Controllers\GuruDashboardController;
 use App\Http\Controllers\GuruDiniyyahJournalController;
 use App\Http\Controllers\GuruDiniyyahScoreController;
+use App\Http\Controllers\GuruReportWorkflowController;
 use App\Http\Controllers\GuruDiniyyahSubstituteJournalController;
 use App\Http\Controllers\GuruDiniyyahSubstituteTafsirJournalController;
 use App\Http\Controllers\GuruDiniyyahTafsirJournalController;
@@ -141,6 +142,7 @@ Route::middleware('auth:web')->prefix('notifications')->name('notifications.')->
 });
 
 Route::middleware(['auth:web', 'role:guru'])->prefix('guru')->name('guru.')->group(function () {
+    Route::get('/alur-nilai-rapor', GuruReportWorkflowController::class)->name('report-workflow');
     Route::get('/tahfidz-rapor', [TahfidzReportController::class, 'index'])->name('tahfidz-report.index');
     Route::post('/tahfidz-rapor/{enrollment}', [TahfidzReportController::class, 'save'])->name('tahfidz-report.save');
     Route::get('/pemeriksaan-tahfidz/{classroom}', [TahfidzReportController::class, 'monitor'])->name('tahfidz-report.monitor');

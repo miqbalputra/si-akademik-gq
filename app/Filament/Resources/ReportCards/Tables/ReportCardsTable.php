@@ -73,7 +73,7 @@ class ReportCardsTable
                     ->label('Buka revisi')
                     ->color('warning')
                     ->authorize(fn (): bool => self::canManageReportCards())
-                    ->visible(fn ($record): bool => self::canManageReportCards() && $record->status === 'published')
+                    ->visible(fn ($record): bool => self::canManageReportCards() && app(ReportCardWorkflow::class)->canOpenRevision($record))
                     ->requiresConfirmation()
                     ->form([
                         Textarea::make('reason')->label('Alasan revisi')->required()->minLength(10)->maxLength(1000),
@@ -119,7 +119,13 @@ class ReportCardsTable
                         ->requiresConfirmation()
                         ->deselectRecordsAfterCompletion()
                         ->action(function (Collection $records): void {
-                            $result = app(ReportCardBulkWorkflow::class)->lockMany($records, auth()->user());
+                            try {
+                                $result = app(ReportCardBulkWorkflow::class)->lockMany($records, auth()->user());
+                            } catch (DomainException $exception) {
+                                Notification::make()->title('Rapor belum dapat dikunci')->body($exception->getMessage())->warning()->send();
+
+                                return;
+                            }
 
                             Notification::make()
                                 ->title("{$result['locked']} rapor dikunci, {$result['skipped']} dilewati")
@@ -132,7 +138,13 @@ class ReportCardsTable
                         ->requiresConfirmation()
                         ->deselectRecordsAfterCompletion()
                         ->action(function (Collection $records): void {
-                            $result = app(ReportCardBulkWorkflow::class)->publishMany($records, auth()->user());
+                            try {
+                                $result = app(ReportCardBulkWorkflow::class)->publishMany($records, auth()->user());
+                            } catch (DomainException $exception) {
+                                Notification::make()->title('Rapor belum dapat diterbitkan')->body($exception->getMessage())->warning()->send();
+
+                                return;
+                            }
 
                             Notification::make()
                                 ->title("{$result['published']} rapor dipublish, {$result['skipped']} dilewati")

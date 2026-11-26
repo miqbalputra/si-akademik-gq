@@ -12,13 +12,28 @@ class ReportCardTemplateRenderer
     {
         $semester = $data['semester'] === 'genap' ? 2 : 1;
         $layout = json_decode(file_get_contents(resource_path('report-cards/layout-v1.json')), true, flags: JSON_THROW_ON_ERROR)[$semester];
+        $adviceOpeningAddress = $semester === 1 ? 'A43' : 'A45';
+        $adviceBodyAddress = $semester === 1 ? 'A44' : 'A46';
+        $adviceBody = collect($layout['cells'])->firstWhere('address', $adviceBodyAddress);
         $extraSubjects = max(0, count($data['subjects']) - 6);
         $extraPractice = max(0, count($data['practice']) - 1);
         $subjectHeight = $layout['rows'][22] - $layout['rows'][21];
         $practiceHeight = $layout['rows'][34] - $layout['rows'][33];
         $shift = fn ($row) => ($row > 21 ? $extraSubjects * $subjectHeight : 0) + ($row > 33 ? $extraPractice * $practiceHeight : 0);
         $cells = $layout['cells'];
-        foreach ($cells as &$cell) {
+        foreach ($cells as $index => &$cell) {
+            if ($cell['address'] === $adviceBodyAddress) {
+                unset($cells[$index]);
+
+                continue;
+            }
+            if ($cell['address'] === $adviceOpeningAddress) {
+                $cell['text'] = rtrim($cell['text'])."\n".$adviceBody['text'];
+                $cell['height'] = $adviceBody['y'] + $adviceBody['height'] - $cell['y'];
+                $cell['borders']['bottom'] = $adviceBody['borders']['bottom'];
+                $cell['wrap'] = true;
+                $cell['is_advice'] = true;
+            }
             $cell['y'] += $shift($cell['row']);
         }
         unset($cell);
@@ -46,7 +61,9 @@ class ReportCardTemplateRenderer
             .($rank >= 1 && $rank <= (($data['note_policy'] ?? '') === 'top-three-v2' ? 3 : ($semester === 1 ? 2 : 3)) ? ' mendapat peringkat ke '.$rank : ' telah menyelesaikan KBM pada semester ini')
             .'. Semoga apa yang didapatkan menjadi ilmu yang bermanfaat.';
         $date = empty($options['issue_date']) ? 'Tanggal belum diisi' : CarbonImmutable::parse($options['issue_date'])->locale('id')->translatedFormat('d F Y');
+        $dateAddress = $semester === 1 ? 'N47' : 'N49';
         $values = [
+            $dateAddress => $options['issue_place'].', '.$date,
             'D8' => $data['student_name'], 'D9' => $data['student_nis'], 'D10' => $data['classroom_name'],
             'Q8' => $semester === 1 ? '1 (Satu)' : '2 (Dua)', 'Q9' => $data['academic_year'],
             'I22' => $this->number($data['subject_average'], 2),
@@ -59,18 +76,21 @@ class ReportCardTemplateRenderer
             'F39' => $data['attendance']['sick_count'], 'F40' => $data['attendance']['permission_count'], 'F41' => $data['attendance']['absent_count'],
         ];
         if ($semester === 1) {
-            $values += ['N47' => $options['issue_place'].', '.$date, 'N53' => $options['homeroom_name'] ?? '—', 'H52' => $options['principal_title'], 'H56' => $options['principal_name']];
+            $values += ['N53' => $options['homeroom_name'] ?? '—', 'H52' => $options['principal_title'], 'H56' => $options['principal_name']];
         } else {
             $promotion = $options['promotion_status'];
-            $values += ['N49' => $options['issue_place'].', '.$date, 'N55' => $options['homeroom_name'] ?? '—', 'H54' => $options['principal_title'], 'H58' => $options['principal_name'],
+            $values += ['N55' => $options['homeroom_name'] ?? '—', 'H54' => $options['principal_title'], 'H58' => $options['principal_name'],
                 'N42' => $promotion === 'promoted' ? $options['next_class'] : ($promotion === 'graduated' ? 'Lulus' : '—'),
                 'N43' => $promotion === 'retained' ? $data['classroom_name'] : '—'];
         }
         $words = app(ReportCardTemplateData::class);
         foreach ($cells as &$cell) {
             $cell['text'] = $values[$cell['address']] ?? $cell['text'];
-            if ($cell['address'] === ($semester === 1 ? 'A44' : 'A46')) {
-                $cell['wrap'] = true;
+            if ($cell['address'] === $dateAddress) {
+                $cell['x'] = $adviceBody['x'];
+                $cell['width'] = $adviceBody['width'];
+                $cell['align'] = 'right';
+                $cell['is_issue_date'] = true;
             }
             if ($cell['row'] >= 16 && $cell['row'] <= 21) {
                 $i = $cell['subject_index'] ?? ($cell['row'] - 16);

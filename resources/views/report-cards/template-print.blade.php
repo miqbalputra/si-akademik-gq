@@ -14,6 +14,8 @@
         .canvas-frame { position: relative; margin: 0 auto; }
         .canvas { position: relative; transform-origin: top left; }
         .cell { position: absolute; display: flex; padding: 0 2px; line-height: 1.12; overflow: visible; }
+        .cell.advice { line-height: 16px; }
+        .cell.issue-date { padding-right: 0; }
         .cell > span { max-width: 100%; overflow-wrap: anywhere; }
         .picture { position: absolute; }
         @media print { body { background: white; print-color-adjust: exact; -webkit-print-color-adjust: exact; } .toolbar { display: none; } .page { margin: 0; } }
@@ -39,7 +41,7 @@
                     $justify = match($cell['align']) { 'center' => 'center', 'right' => 'flex-end', default => 'flex-start' };
                     $align = match($cell['vertical']) { 'center' => 'center', 'top' => 'flex-start', default => 'flex-end' };
                 @endphp
-                <div class="cell" style="left:{{ $cell['x'] }}px;top:{{ $cell['y'] }}px;width:{{ $cell['width'] }}px;height:{{ $cell['height'] }}px;font-family:'{{ $cell['font'] }}',Carlito,Arial,'Noto Sans Arabic',sans-serif;font-size:{{ $cell['size'] }}pt;font-weight:{{ $cell['bold'] ? 700 : 400 }};font-style:{{ $cell['italic'] ? 'italic' : 'normal' }};color:#{{ $cell['color'] }};justify-content:{{ $justify }};align-items:{{ $align }};text-align:{{ $cell['align'] === 'general' ? 'left' : $cell['align'] }};white-space:{{ $cell['wrap'] ? 'pre-line' : 'nowrap' }};{{ $cell['fill'] ? 'background:#'.$cell['fill'].';' : '' }}@foreach($cell['borders'] as $side => $thickness){{ $thickness ? 'border-'.$side.':'.$thickness.'px '.($thickness === 3 ? 'double' : 'solid').' #000;' : '' }}@endforeach"><span>{{ $cell['text'] }}</span></div>
+                <div @class(['cell', 'advice' => $cell['is_advice'] ?? false, 'issue-date' => $cell['is_issue_date'] ?? false]) style="left:{{ $cell['x'] }}px;top:{{ $cell['y'] }}px;width:{{ $cell['width'] }}px;height:{{ $cell['height'] }}px;font-family:'{{ $cell['font'] }}',Carlito,Arial,'Noto Sans Arabic',sans-serif;font-size:{{ $cell['size'] }}pt;font-weight:{{ $cell['bold'] ? 700 : 400 }};font-style:{{ $cell['italic'] ? 'italic' : 'normal' }};color:#{{ $cell['color'] }};justify-content:{{ $justify }};align-items:{{ $align }};text-align:{{ $cell['align'] === 'general' ? 'left' : $cell['align'] }};white-space:{{ $cell['wrap'] ? 'pre-line' : 'nowrap' }};{{ $cell['fill'] ? 'background:#'.$cell['fill'].';' : '' }}@foreach($cell['borders'] as $side => $thickness){{ $thickness ? 'border-'.$side.':'.$thickness.'px '.($thickness === 3 ? 'double' : 'solid').' #000;' : '' }}@endforeach"><span>{{ $cell['text'] }}</span></div>
             @endforeach
             @foreach($page['images'] as $img)
                 <img class="picture" alt="" src="{{ $img['src'] }}" style="left:{{ $img['x'] }}px;top:{{ $img['y'] }}px;width:{{ $img['width'] }}px;height:{{ $img['height'] }}px;object-fit:contain">

@@ -28,17 +28,15 @@ class ReportCard extends Model
         static::updating(function (ReportCard $reportCard): void {
             $previousStatus = $reportCard->getOriginal('status');
             $dirty = array_diff(array_keys($reportCard->getDirty()), ['updated_at']);
+            $isOpeningRevision = $reportCard->revisionTransitionAuthorized
+                && $reportCard->status === 'draft' && in_array('status', $dirty, true)
+                && empty(array_diff($dirty, ['status', 'published_at', 'published_by', 'locked_at', 'locked_by']));
 
             if ($previousStatus === 'draft' && in_array('status', $dirty, true) && $reportCard->status !== 'locked') {
                 throw new DomainException('Rapor draf hanya dapat dikunci melalui alur validasi rapor.');
             }
 
             if ($previousStatus === 'published') {
-                $isOpeningRevision = $reportCard->revisionTransitionAuthorized
-                    && $reportCard->status === 'draft'
-                    && ! empty(array_intersect($dirty, ['status']))
-                    && empty(array_diff($dirty, ['status', 'published_at', 'published_by', 'locked_at', 'locked_by']));
-
                 if (! $isOpeningRevision) {
                     throw new DomainException('Rapor terbit tidak dapat diubah. Buka revisi melalui alur revisi yang tercatat.');
                 }
@@ -49,7 +47,7 @@ class ReportCard extends Model
                     && in_array('status', $dirty, true)
                     && empty(array_diff($dirty, ['status', 'published_at', 'published_by']));
 
-                if (! $isPublishing) {
+                if (! $isPublishing && ! $isOpeningRevision) {
                     throw new DomainException('Rapor terkunci tidak dapat diubah sebelum diterbitkan.');
                 }
             }

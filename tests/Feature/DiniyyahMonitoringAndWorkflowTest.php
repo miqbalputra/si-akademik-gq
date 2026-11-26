@@ -73,6 +73,7 @@ class DiniyyahMonitoringAndWorkflowTest extends TestCase
     public function test_assessment_workflow_submit_approve_and_revision(): void
     {
         [$assessmentSet, $enrollments] = $this->makeAssessmentWithEnrollments(1);
+        $assessmentSet->update(['assessment_method' => 'direct_final']);
         $component = DiniyyahScoreComponent::create([
             'diniyyah_assessment_set_id' => $assessmentSet->id,
             'code' => 'nilai_akhir',

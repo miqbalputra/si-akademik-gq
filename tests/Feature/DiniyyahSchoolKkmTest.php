@@ -263,6 +263,7 @@ class DiniyyahSchoolKkmTest extends TestCase
     public function test_fixed_kkm_is_snapshotted_in_ledger_and_report_without_waiting_for_acc(): void
     {
         $c = $this->context();
+        $c['term']->update(['report_issue_date' => '2026-12-20']);
         $set = DiniyyahAssessmentSet::create(['diniyyah_class_subject_id' => $c['subjects']['female']->id, 'title' => 'Suluk', 'assessment_method' => 'direct_final', 'status' => 'validated', 'appears_on_ledger' => true, 'appears_on_report' => true]);
         $enrollment = $this->enrollment($c);
         $revision = $c['scope']->activeRevision;

@@ -2,14 +2,24 @@
 
 namespace App\Services;
 
+use App\Models\DiniyyahLedgerSnapshot;
 use App\Models\ReportCard;
 use DomainException;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\Process\Exception\ExceptionInterface;
 use Symfony\Component\Process\Process;
 
 class ReportCardPrintService
 {
+    public function classCards(DiniyyahLedgerSnapshot $snapshot): Collection
+    {
+        return ReportCard::where('academic_term_id', $snapshot->academic_term_id)->where('classroom_term_id', $snapshot->classroom_term_id)
+            ->whereIn('class_enrollment_id', $snapshot->rows()->select('class_enrollment_id'))
+            ->where('report_type', 'diniyyah')->whereHas('student', fn ($q) => $q->where('status', 'active'))
+            ->with('student', 'classEnrollment')->get()->sortBy(fn ($card) => [$card->classEnrollment?->roll_number ?? PHP_INT_MAX, $card->student?->name])->values();
+    }
+
     public function data(ReportCard $card): ?array
     {
         $data = $card->snapshots()->latest('id')->first()?->snapshot_data['print'] ?? null;

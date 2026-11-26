@@ -15,6 +15,7 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Auth;
 
@@ -50,6 +51,11 @@ class DiniyyahAssessmentSetResource extends Resource
     public static function table(Table $table): Table
     {
         return DiniyyahAssessmentSetsTable::configure($table);
+    }
+
+    public static function canRestore(Model $record): bool
+    {
+        return static::canCreate() && static::policyAllows('restore', $record);
     }
 
     public static function getRelations(): array

@@ -4,10 +4,12 @@ namespace Tests\Feature;
 
 use App\Models\AcademicTerm;
 use App\Models\AcademicYear;
+use App\Models\ClassEnrollment;
 use App\Models\Classroom;
 use App\Models\ClassroomTerm;
 use App\Models\DiniyyahLedgerSnapshot;
 use App\Models\School;
+use App\Models\Student;
 use App\Models\User;
 use App\Services\DiniyyahLedgerGenerator;
 use App\Services\DiniyyahLedgerWorkflow;
@@ -77,7 +79,13 @@ class DiniyyahLedgerWorkflowTest extends TestCase
             'classroom_term_id' => $classroomTerm->id,
             'title' => 'Leger Diniyyah Mustawa 1 Ikhwan',
             'status' => 'draft',
+            'snapshot_data' => ['columns' => [['key' => 'assessment_1', 'source_type' => 'diniyyah_assessment_set']]],
         ]);
+        $student = Student::create(['name' => 'Santri Leger', 'gender' => 'male', 'nis' => 'LEGER-1', 'status' => 'active']);
+        $enrollment = ClassEnrollment::create(['academic_term_id' => $term->id, 'classroom_term_id' => $classroomTerm->id, 'student_id' => $student->id, 'status' => 'active']);
+        $row = $snapshot->rows()->create(['class_enrollment_id' => $enrollment->id, 'student_name' => $student->name, 'row_number' => 1,
+            'total_diniyyah_score' => 0, 'average_diniyyah_score' => 0, 'rank_in_class' => 1]);
+        $row->cells()->create(['column_key' => 'assessment_1', 'label' => 'Penilaian', 'source_type' => 'diniyyah_assessment_set', 'value_numeric' => 0]);
         $user = User::factory()->create();
 
         return [$snapshot, $user];

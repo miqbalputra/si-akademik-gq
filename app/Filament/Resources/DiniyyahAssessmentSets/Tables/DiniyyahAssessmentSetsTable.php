@@ -104,8 +104,8 @@ class DiniyyahAssessmentSetsTable
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                    RestoreBulkAction::make(),
+                    DeleteBulkAction::make()->authorizeIndividualRecords('delete'),
+                    RestoreBulkAction::make()->authorizeIndividualRecords('restore'),
                 ]),
             ]);
     }

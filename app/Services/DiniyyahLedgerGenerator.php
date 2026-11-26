@@ -78,13 +78,26 @@ class DiniyyahLedgerGenerator
                 ->with('student')
                 ->where('classroom_term_id', $classroomTerm->id)
                 ->where('status', 'active')
+                ->when($includeTahfidz, fn ($query) => $query->forVisibleStudents())
                 ->orderBy('roll_number')
                 ->orderBy('student_id')
                 ->get();
 
             $rankPayload = [];
             $issues = [];
+            if ($includeTahfidz) {
+                $withoutSet = $classroomTerm->diniyyahClassSubjects()->where('is_active', true)
+                    ->where('appears_on_ledger', true)->whereDoesntHave('assessmentSets')->with('subject')->get();
+                foreach ($withoutSet as $subject) {
+                    $issues[] = ['level' => 'blocking', 'code' => 'assessment_set_missing',
+                        'message' => ($subject->subject?->name ?? 'Mapel kelas').' belum memiliki set penilaian. Minta guru pengampu membuka Input Nilai.'];
+                }
+            }
             foreach ($assessmentSets as $set) {
+                if ($set->missingExamName()) {
+                    $issues[] = ['level' => 'blocking', 'code' => 'practice_exam_name_missing', 'assessment_set_id' => $set->id,
+                        'message' => 'Nama ujian '.$set->title.' belum diisi oleh guru pengampu.'];
+                }
                 if (app(DiniyyahKkmResolver::class)->required($set->classSubject)
                     && ! app(DiniyyahKkmResolver::class)->resolve($set->classSubject)['kkm_revision_id']) {
                     $issues[] = ['level' => 'blocking', 'code' => 'kkm_not_approved', 'assessment_set_id' => $set->id, 'message' => 'KKM '.$set->title.' belum disetujui.'];

@@ -7,6 +7,7 @@ use App\Models\ReportCard;
 use App\Models\User;
 use DomainException;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class ReportCardBulkWorkflow
 {
@@ -66,21 +67,23 @@ class ReportCardBulkWorkflow
      */
     public function lockMany(Collection $reportCards, User $user): array
     {
-        $result = ['locked' => 0, 'skipped' => 0];
-        $reportCards = $this->visibleCardsForUser($reportCards, $user);
+        return DB::transaction(function () use ($reportCards, $user): array {
+            $result = ['locked' => 0, 'skipped' => 0];
+            $reportCards = $this->visibleCardsForUser($reportCards, $user)->sortBy(fn ($card) => [$card->classroom_term_id, $card->id]);
 
-        foreach ($reportCards as $reportCard) {
-            if ($reportCard->status !== 'draft') {
-                $result['skipped']++;
+            foreach ($reportCards as $reportCard) {
+                if ($reportCard->status !== 'draft') {
+                    $result['skipped']++;
 
-                continue;
+                    continue;
+                }
+
+                $this->workflow->lock($reportCard, $user);
+                $result['locked']++;
             }
 
-            $this->workflow->lock($reportCard, $user);
-            $result['locked']++;
-        }
-
-        return $result;
+            return $result;
+        });
     }
 
     /**
@@ -89,21 +92,23 @@ class ReportCardBulkWorkflow
      */
     public function publishMany(Collection $reportCards, User $user): array
     {
-        $result = ['published' => 0, 'skipped' => 0];
-        $reportCards = $this->visibleCardsForUser($reportCards, $user);
+        return DB::transaction(function () use ($reportCards, $user): array {
+            $result = ['published' => 0, 'skipped' => 0];
+            $reportCards = $this->visibleCardsForUser($reportCards, $user)->sortBy('id');
 
-        foreach ($reportCards as $reportCard) {
-            if ($reportCard->status !== 'locked') {
-                $result['skipped']++;
+            foreach ($reportCards as $reportCard) {
+                if ($reportCard->status !== 'locked') {
+                    $result['skipped']++;
 
-                continue;
+                    continue;
+                }
+
+                $this->workflow->publish($reportCard, $user);
+                $result['published']++;
             }
 
-            $this->workflow->publish($reportCard, $user);
-            $result['published']++;
-        }
-
-        return $result;
+            return $result;
+        });
     }
 
     /** @return Collection<int, ReportCard> */

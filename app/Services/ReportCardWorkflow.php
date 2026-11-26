@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\DiniyyahAssessmentSet;
+use App\Models\DiniyyahLedgerSnapshot;
 use App\Models\ReportCard;
 use App\Models\ReportCardRevisionLog;
 use App\Models\User;
@@ -38,6 +39,7 @@ class ReportCardWorkflow
             throw new DomainException('Hanya rapor draf yang dapat dikunci.');
         }
 
+        $this->ensurePrintComplete($reportCard);
         $snapshot = $reportCard->snapshots()->latest('id')->first();
         if (($snapshot?->snapshot_data['print']['date_policy'] ?? '') === 'admin-period-v1') {
             $date = $reportCard->academicTerm?->report_issue_date?->format('Y-m-d');
@@ -63,10 +65,17 @@ class ReportCardWorkflow
 
     public function publish(ReportCard $reportCard, User $user): void
     {
+        DB::transaction(fn () => $this->publishLocked(ReportCard::whereKey($reportCard->id)->lockForUpdate()->firstOrFail(), $user));
+        $reportCard->refresh();
+    }
+
+    private function publishLocked(ReportCard $reportCard, User $user): void
+    {
         if ($reportCard->status !== 'locked') {
             throw new DomainException('Rapor harus dikunci sebelum dipublish.');
         }
 
+        $this->ensurePrintComplete($reportCard);
         $reportCard->update([
             'status' => 'published',
             'published_at' => now(),
@@ -99,6 +108,30 @@ class ReportCardWorkflow
         $this->notifyPublished($reportCard, $user);
     }
 
+    private function ensurePrintComplete(ReportCard $reportCard): void
+    {
+        $missing = $this->printProblems($reportCard);
+        if ($missing !== []) {
+            throw new DomainException(($reportCard->student?->name ?? 'Santri').' — lengkapi rapor: '.implode(', ', $missing).'.');
+        }
+    }
+
+    private function printProblems(ReportCard $reportCard): array
+    {
+        $print = app(ReportCardPrintService::class);
+        $ledgerId = $print->data($reportCard)['ledger_snapshot_id'] ?? null;
+        if (! $ledgerId || (DiniyyahLedgerSnapshot::find($ledgerId)?->snapshot_data['layout_version'] ?? '') !== 'combined-v1') {
+            return [];
+        }
+
+        return $print->readiness($reportCard);
+    }
+
+    public function canOpenRevision(ReportCard $reportCard): bool
+    {
+        return $reportCard->status === 'published' || ($reportCard->status === 'locked' && $this->printProblems($reportCard) !== []);
+    }
+
     public function openRevision(ReportCard $reportCard, User $user, string $reason): void
     {
         $reason = trim($reason);
@@ -111,8 +144,8 @@ class ReportCardWorkflow
 
         DB::transaction(function () use ($reportCard, $user, $reason): void {
             $reportCard = ReportCard::query()->lockForUpdate()->with(['lines', 'attendance', 'signatures'])->findOrFail($reportCard->id);
-            if ($reportCard->status !== 'published') {
-                throw new DomainException('Revisi hanya dapat dibuka untuk rapor yang sudah terbit.');
+            if (! $this->canOpenRevision($reportCard)) {
+                throw new DomainException('Revisi tersedia untuk rapor terbit atau rapor F4 terkunci yang pelengkapnya masih kurang.');
             }
 
             $revisionNumber = (int) $reportCard->revisionLogs()->max('revision_number') + 1;

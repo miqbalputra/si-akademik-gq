@@ -28,6 +28,8 @@ class DiniyyahAssessmentSet extends Model
 {
     use HasFactory, SoftDeletes;
 
+    public const EMPTY_EXAM_NAMES = ['', '-', '–', '—'];
+
     protected static function booted(): void
     {
         static::saving(fn (self $set) => app(\App\Services\DiniyyahKkmResolver::class)->apply($set));
@@ -45,6 +47,12 @@ class DiniyyahAssessmentSet extends Model
     public function classSubject(): BelongsTo
     {
         return $this->belongsTo(DiniyyahClassSubject::class, 'diniyyah_class_subject_id');
+    }
+
+    public function missingExamName(): bool
+    {
+        return $this->classSubject?->subject?->isPraktikIbadah()
+            && in_array(trim($this->tested_material ?? ''), self::EMPTY_EXAM_NAMES, true);
     }
 
     public function components(): HasMany

@@ -28,8 +28,8 @@ class DiniyyahLedgerWorkflow
             throw new DomainException('Leger yang sudah terkunci atau terbit tidak bisa dikunci ulang.');
         }
 
-        if (($snapshot->snapshot_data['summary']['blocking_issues'] ?? 0) > 0) {
-            throw new DomainException('Leger masih memiliki masalah kelengkapan dan belum bisa dikunci.');
+        if ($reason = $this->completionIssue($snapshot, $this->completion($snapshot))) {
+            throw new DomainException($reason);
         }
 
         $snapshot->update([
@@ -47,6 +47,9 @@ class DiniyyahLedgerWorkflow
         if (in_array($snapshot->status, ['locked', 'published'], true)) {
             throw new DomainException('Leger terkunci tidak bisa divalidasi ulang.');
         }
+        if ($reason = $this->completionIssue($snapshot, $this->completion($snapshot))) {
+            throw new DomainException($reason);
+        }
 
         $snapshot->update([
             'status' => 'validated',
@@ -58,13 +61,88 @@ class DiniyyahLedgerWorkflow
     }
 
     // ── Notifikasi ────────────────────────────────────────────────────────
-    private function ensureKkmCurrent(DiniyyahLedgerSnapshot $snapshot): void
+    public function readiness(DiniyyahLedgerSnapshot $snapshot): array
+    {
+        $completion = $this->completion($snapshot);
+        if (in_array($snapshot->status, ['locked', 'published'], true)) {
+            return $completion + ['blocking_reason' => null];
+        }
+        try {
+            $this->ensureSourcesCurrent($snapshot);
+        } catch (DomainException $exception) {
+            return $completion + ['blocking_reason' => $exception->getMessage()];
+        }
+
+        return $completion + ['blocking_reason' => $this->completionIssue($snapshot, $completion)];
+    }
+
+    private function completion(DiniyyahLedgerSnapshot $snapshot): array
+    {
+        $snapshot->loadMissing('rows.cells');
+        $frozen = in_array($snapshot->status, ['locked', 'published'], true);
+        $enrollmentIds = $frozen ? $snapshot->rows->pluck('class_enrollment_id')
+            : $snapshot->classroomTerm->enrollments()->where('status', 'active')->forVisibleStudents()->pluck('id');
+        $total = $enrollmentIds->count();
+        $columns = collect($snapshot->snapshot_data['columns'] ?? []);
+        $hasAssessments = $columns->contains('source_type', 'diniyyah_assessment_set');
+        $numericKeys = $columns->whereIn('source_type', ['diniyyah_assessment_set', 'student_attendance_recap'])->pluck('key');
+        $combined = ($snapshot->snapshot_data['layout_version'] ?? '') === 'combined-v1';
+        if ($combined) {
+            $numericKeys = $numericKeys->merge(['tahfidz_uas', 'tahfidz_sabaq', 'tahfidz_sabqi', 'tahfidz_manzil',
+                'attendance_sick', 'attendance_permission', 'attendance_absent', 'combined_total', 'combined_average', 'combined_rank'])->unique();
+        }
+        $complete = $hasAssessments ? $snapshot->rows->whereIn('class_enrollment_id', $enrollmentIds)->filter(function ($row) use ($numericKeys, $combined): bool {
+            $cells = $row->cells->keyBy('column_key');
+
+            return $row->total_diniyyah_score !== null && $row->average_diniyyah_score !== null && $row->rank_in_class !== null
+                && $numericKeys->every(fn ($key) => $cells->get($key)?->value_numeric !== null)
+                && (! $combined || filled($cells->get('tahfidz_juz')?->value_text));
+        })->count() : 0;
+
+        return ['total' => $total, 'complete' => $complete, 'percentage' => $total > 0 ? intdiv($complete * 100, $total) : 0];
+    }
+
+    private function completionIssue(DiniyyahLedgerSnapshot $snapshot, array $completion): ?string
+    {
+        if ($completion['percentage'] < 100) {
+            return $completion['total'] === 0
+                ? 'Leger belum memiliki santri aktif.'
+                : 'Lengkapi nilai seluruh santri hingga 100%, lalu segarkan draf leger.';
+        }
+
+        return ($snapshot->snapshot_data['summary']['blocking_issues'] ?? 0) > 0
+            ? 'Periksa kendala yang tercatat di leger, lalu segarkan setelah sumber diperbarui.'
+            : null;
+    }
+
+    private function ensureSourcesCurrent(DiniyyahLedgerSnapshot $snapshot): void
     {
         if (isset($snapshot->snapshot_data['attendance_fingerprint'])
             && $snapshot->snapshot_data['attendance_fingerprint'] !== app(AttendanceRecapService::class)->ledgerFingerprint($snapshot)) {
             throw new DomainException('Presensi peserta didik berubah. Segarkan leger agar ketidakhadiran rapor sesuai presensi asli.');
         }
+        if (($snapshot->snapshot_data['layout_version'] ?? '') === 'combined-v1' && isset($snapshot->snapshot_data['attendance_fingerprint'])) {
+            $current = $snapshot->classroomTerm->enrollments()->where('status', 'active')->forVisibleStudents()->orderBy('id')->pluck('id')->all();
+            $saved = $snapshot->rows()->orderBy('class_enrollment_id')->pluck('class_enrollment_id')->all();
+            if ($current !== $saved) {
+                throw new DomainException('Daftar santri aktif berubah. Segarkan leger sebelum dikunci.');
+            }
+            if ($snapshot->classroomTerm->diniyyahClassSubjects()->where('is_active', true)->where('appears_on_ledger', true)->whereDoesntHave('assessmentSets')->exists()) {
+                throw new DomainException('Masih ada mapel kelas yang belum memiliki set penilaian. Minta guru pengampu membuka Input Nilai.');
+            }
+        }
+        $unnamedPractice = DiniyyahAssessmentSet::where('appears_on_ledger', true)
+            ->whereHas('classSubject', fn ($q) => $q->where('classroom_term_id', $snapshot->classroom_term_id)->where('is_active', true)->where('appears_on_ledger', true))
+            ->with('classSubject.subject')->get()->contains(fn ($set) => $set->missingExamName());
+        if ($unnamedPractice) {
+            throw new DomainException('Nama ujian Praktik Ibadah belum diisi. Minta guru pengampu melengkapinya, lalu segarkan draf leger.');
+        }
         app(DiniyyahCombinedLedger::class)->ensureCurrent($snapshot);
+    }
+
+    private function ensureKkmCurrent(DiniyyahLedgerSnapshot $snapshot): void
+    {
+        $this->ensureSourcesCurrent($snapshot);
         if (! $snapshot->classroomTerm?->academicTerm?->kkm_workflow_enabled) {
             return;
         }

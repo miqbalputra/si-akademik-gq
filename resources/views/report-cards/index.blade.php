@@ -1,6 +1,7 @@
 <x-layouts.portal title="Rapor Kelas Saya" portalLabel="Portal Guru" breadcrumb="Wali Kelas / Rapor">
     <div class="space-y-5">
         <header><h1 class="ui-page-title text-heading">Rapor Kelas Saya</h1><p class="mt-2 text-muted">Rapor dibuat otomatis setelah leger final dikunci. Tinjau pelengkapnya, lalu cetak pada kertas F4.</p></header>
+        <a class="btn btn-outline" href="{{ route('guru.report-workflow') }}">Alur Nilai &amp; Rapor</a>
         <div class="grid gap-4 md:grid-cols-2">
             @forelse($classrooms as $classroom)
                 @php

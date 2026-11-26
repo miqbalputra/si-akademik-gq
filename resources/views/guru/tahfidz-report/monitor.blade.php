@@ -5,7 +5,7 @@
         <p>Periksa nilai final guru sebelum menyegarkan dan mengunci leger. Santri yang belum lengkap tetap terlihat di daftar ini.</p>
         @if(session('status'))<div class="inline-feedback inline-feedback-success" role="status">{{ session('status') }}</div>@endif
         @if($errors->any())<div class="inline-feedback inline-feedback-error" role="alert">{{ $errors->first() }}</div>@endif
-        <a class="btn btn-outline" href="{{ route('diniyyah.ledger.index') }}">Kembali ke leger kelas saya</a>
+        <a class="btn btn-outline" href="{{ route('guru.report-workflow', ['classroom_term_id' => $classroom->id]) }}">Kembali ke Alur Nilai &amp; Rapor</a>
         <div class="card-lg overflow-x-auto"><table class="w-full text-left"><thead><tr>@foreach(['Santri','Juz yang diujikan','Ujian','Sabaq','Sabqi','Manzil','Pengisi / Status','Pemeriksaan'] as $heading)<th class="p-3">{{ $heading }}</th>@endforeach</tr></thead><tbody>
         @forelse($enrollments as $enrollment)
             @php

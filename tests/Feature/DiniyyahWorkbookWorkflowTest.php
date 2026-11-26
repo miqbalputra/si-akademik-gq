@@ -64,7 +64,8 @@ class DiniyyahWorkbookWorkflowTest extends TestCase
             $subject = DiniyyahSubject::create(['code' => $code, 'name' => ucfirst($code)]);
             $cs = DiniyyahClassSubject::create(['classroom_term_id' => $ct->id, 'subject_id' => $subject->id, 'assessment_method' => 'direct_final', 'is_active' => true, 'appears_on_ledger' => true]);
             DiniyyahTeacherAssignment::create(['diniyyah_class_subject_id' => $cs->id, 'teacher_id' => $teachers['mapel']->id]);
-            $sets[$code] = DiniyyahAssessmentSet::create(['diniyyah_class_subject_id' => $cs->id, 'title' => ucfirst($code), 'assessment_method' => 'direct_final', 'status' => 'validated', 'appears_on_ledger' => true]);
+            $sets[$code] = DiniyyahAssessmentSet::create(['diniyyah_class_subject_id' => $cs->id, 'title' => ucfirst($code), 'assessment_method' => 'direct_final',
+                'status' => 'validated', 'appears_on_ledger' => true, 'tested_material' => $code === 'praktik_ibadah' ? 'Wudhu' : null]);
             app(DiniyyahAssessmentComponentBuilder::class)->createDefaults($sets[$code]);
             DiniyyahAssessmentResult::create(['diniyyah_assessment_set_id' => $sets[$code]->id, 'class_enrollment_id' => $enrollment->id, 'final_score' => 80, 'is_complete' => true]);
         }
@@ -89,6 +90,34 @@ class DiniyyahWorkbookWorkflowTest extends TestCase
         $this->assertSame('88.00', $set->results()->sole()->final_score);
         $this->get(route('guru.diniyyah-scores.index'))->assertOk()->assertSee('Suluk')->assertDontSee('Fiqih');
         $this->actingAs($c['teachers']['mapel']->user)->get(route('guru.diniyyah-scores.index'))->assertOk()->assertSee('Fiqih')->assertDontSee('Suluk diisi');
+    }
+
+    public function test_report_guide_is_read_only_scoped_by_assignment_and_uses_actual_ledger_readiness(): void
+    {
+        $c = $this->context();
+        $guide = route('guru.report-workflow', ['classroom_term_id' => $c['ct']->id]);
+        $wali = $c['teachers']['wali']->user;
+        $pengampu = $c['teachers']['mapel']->user;
+        $this->actingAs($c['teachers']['other']->user)->get($guide)->assertForbidden();
+        $this->actingAs($pengampu)->get($guide)->assertOk()
+            ->assertSee('Penilaian yang Anda isi')->assertDontSee('Segarkan draf leger')->assertDontSee('Periksa presensi');
+        $this->get(route('guru.diniyyah-scores.index', ['classroom_term_id' => $c['ct']->id + 100]))->assertForbidden();
+
+        $this->actingAs($wali)->get($guide)->assertOk()
+            ->assertSee('Tinjau leger kelas')->assertSee('Periksa presensi');
+        $this->assertDatabaseCount('diniyyah_ledger_snapshots', 0);
+        $this->assertDatabaseCount('report_cards', 0);
+        $this->post(route('diniyyah.ledger.generate', $c['ct']))->assertRedirect();
+        $snapshot = DiniyyahLedgerSnapshot::sole();
+
+        $subject = DiniyyahSubject::create(['code' => 'adab', 'name' => 'Adab']);
+        $c['ct']->diniyyahClassSubjects()->create(['subject_id' => $subject->id, 'assessment_method' => 'direct_final']);
+        $this->get($guide)->assertOk()->assertSee('Set penilaian belum dibuat untuk Adab');
+        $this->from(route('diniyyah.ledger.show', $snapshot))->post(route('diniyyah.ledger.lock', $snapshot))
+            ->assertSessionHasErrors('ledger');
+        $this->assertSame('draft', $snapshot->fresh()->status);
+        $this->assertDatabaseCount('report_cards', 0);
+        $this->assertSame('80.00', $c['sets']['suluk']->results()->sole()->final_score);
     }
 
     public function test_only_the_homeroom_can_generate_read_and_export_the_combined_ledger(): void
@@ -180,6 +209,69 @@ class DiniyyahWorkbookWorkflowTest extends TestCase
         $this->assertGreaterThan(0, $snapshot->snapshot_data['summary']['blocking_issues']);
         $this->expectException(\DomainException::class);
         app(DiniyyahLedgerWorkflow::class)->lock($snapshot, $c['teachers']['wali']->user);
+    }
+
+    public function test_practice_name_popup_and_submission_execute_only_for_the_assigned_teacher(): void
+    {
+        $c = $this->context();
+        $set = $c['sets']['praktik_ibadah'];
+        $set->update(['status' => 'active', 'tested_material' => '—']);
+        $teacher = $c['teachers']['mapel']->user;
+        $edit = route('guru.diniyyah-scores.edit', $set);
+        $submit = route('guru.diniyyah-scores.submit', $set);
+        $name = route('guru.diniyyah-scores.exam-name.update', $set);
+
+        $this->actingAs($c['teachers']['wali']->user)->get($edit)->assertForbidden();
+        $this->actingAs($teacher)->get($edit)->assertOk()
+            ->assertSee('data-exam-name-dialog', false)->assertSee('Nama Ujian Praktik wajib diisi');
+        $this->put(route('guru.diniyyah-scores.update', $set), [
+            'scores' => [$c['enrollment']->id => [$set->components()->sole()->id => 80]],
+        ])->assertSessionHasNoErrors();
+        $this->post($submit)->assertRedirect($edit)->assertSessionHasErrors('tested_material');
+        $this->assertSame('active', $set->fresh()->status);
+        $this->assertSame('draft', $set->scores()->sole()->status);
+        $this->put($name, ['tested_material' => '–', 'original_material_hash' => hash('sha256', '—')])->assertSessionHasErrors('tested_material');
+        $this->put($name, ['tested_material' => 'Shalat Jenazah', 'original_material_hash' => hash('sha256', '—')])->assertSessionHasNoErrors();
+        $this->get($edit)->assertOk()->assertSee('Shalat Jenazah')->assertDontSee('data-exam-name-dialog', false);
+        $this->post($submit)->assertSessionHasNoErrors();
+        $this->assertSame('submitted', $set->fresh()->status);
+    }
+
+    public function test_homeroom_cannot_progress_until_ledger_rows_are_complete_and_existing_practice_is_named(): void
+    {
+        $c = $this->context();
+        $set = $c['sets']['praktik_ibadah'];
+        $set->update(['tested_material' => '-']);
+        $wali = $c['teachers']['wali']->user;
+        $generate = route('diniyyah.ledger.generate', $c['ct']);
+        $this->actingAs($wali)->post($generate)->assertRedirect();
+        $snapshot = DiniyyahLedgerSnapshot::sole();
+        $ledger = route('diniyyah.ledger.show', $snapshot);
+        $lock = route('diniyyah.ledger.lock', $snapshot);
+        $this->get($ledger)->assertOk()->assertSee('Nama ujian Praktik Ibadah belum diisi');
+        $this->from($ledger)->post($lock)->assertSessionHasErrors('ledger');
+
+        $this->actingAs($c['teachers']['mapel']->user)->get(route('guru.diniyyah-scores.edit', $set))
+            ->assertOk()->assertSee('data-exam-name-dialog', false)->assertSee('data-can-edit="0"', false);
+        $this->put(route('guru.diniyyah-scores.exam-name.update', $set), [
+            'tested_material' => 'Wudhu', 'original_material_hash' => hash('sha256', '-'),
+        ])->assertSessionHasNoErrors();
+        $this->assertSame('validated', $set->fresh()->status);
+        $this->assertSame('80.00', $set->results()->sole()->final_score);
+
+        $this->actingAs($wali)->from($ledger)->post($lock)->assertSessionHasErrors('ledger');
+        $this->post($generate)->assertRedirect($ledger);
+        $this->assertSame(0, $snapshot->fresh()->snapshot_data['summary']['blocking_issues']);
+        $snapshot->rows()->sole()->cells()->where('column_key', 'attendance_permission')->delete();
+        $this->get($ledger)->assertOk()->assertSee('Kelengkapan nilai santri 0%');
+        $this->from($ledger)->post($lock)->assertSessionHasErrors('ledger');
+        $this->assertDatabaseCount('report_cards', 0);
+        $this->assertSame('draft', $snapshot->fresh()->status);
+        $this->post($generate)->assertRedirect($ledger);
+        $this->get($ledger)->assertOk()->assertSee('Kelengkapan nilai santri 100%')->assertSee('Leger siap dikunci');
+        $this->from($ledger)->post($lock)->assertSessionHasNoErrors();
+        $this->assertSame('locked', $snapshot->fresh()->status);
+        $this->assertSame('Wudhu', app(ReportCardPrintService::class)->data(ReportCard::sole())['practice'][0]['material']);
     }
 
     public function test_assigned_teacher_names_practice_exams_per_class_and_the_name_reaches_the_printed_report(): void

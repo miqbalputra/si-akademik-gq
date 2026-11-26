@@ -27,6 +27,9 @@
                     <p class="mt-3 max-w-xl text-theme-sm text-on-primary/80 sm:text-base">
                         Mulai dari kegiatan yang perlu diselesaikan: catatan kelas, presensi, penilaian, dan agenda mengajar.
                     </p>
+                    <a href="{{ route('guru.report-workflow') }}" class="mt-5 inline-flex items-center rounded-xl bg-surface px-4 py-2.5 text-theme-sm font-medium text-heading hover:bg-brand-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
+                        Alur Nilai &amp; Rapor
+                    </a>
                 </div>
 
                 <div class="school-today-note w-full sm:w-auto sm:min-w-64">
@@ -283,8 +286,8 @@
                             </div>
 
                             <div class="mt-5 space-y-2">
-                                <a href="{{ route('guru.diniyyah-scores.index') }}" class="group flex items-center justify-between rounded-xl bg-success-700 px-4 py-3 text-theme-sm font-medium text-white transition-colors hover:bg-success-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-success-700">
-                                    Input Nilai Pelajaran
+                                <a href="{{ route('guru.report-workflow') }}" class="group flex items-center justify-between rounded-xl bg-success-700 px-4 py-3 text-theme-sm font-medium text-white transition-colors hover:bg-success-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-success-700">
+                                    Alur Nilai &amp; Rapor
                                     <svg class="h-4 w-4 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" /></svg>
                                 </a>
                                 <a href="{{ $singleJournalLink }}" class="flex items-center justify-between rounded-xl border border-line bg-surface px-4 py-3 text-theme-sm font-medium text-body transition-colors hover:border-success-line hover:bg-success-soft hover:text-success-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-success-700">

@@ -2,7 +2,7 @@
 
 Definisi menu guru berada di `app/Support/GuruNavigation.php`. Shell portal yang sama menampilkan definisi tersebut di desktop dan sidebar mobile. Perubahan ini hanya presentasi: rute, controller, policy, formulir, dan proses akademik tetap menggunakan implementasi sebelumnya.
 
-Urutan: Beranda, Mengajar, Tahfidz & Tasmi, Kelas Saya, RPP & Program Semester, Riwayat Saya, Koordinasi, Rapor. Kelompok Rapor selalu paling bawah sebagai tujuan akhir pengolahan nilai. Kelompok kosong disembunyikan. Rapor menampilkan input nilai final tahfidz untuk semua guru; leger dan rapor kelas mengikuti visibilitas wali kelas sebelumnya. Menu wali kelas historis tetap mengikuti perilaku lama, sedangkan akses dan cakupan data tujuan tetap diputuskan oleh controller/policy yang sudah ada. Penugasan presensi, Tafsir, PJ Tasmi, peran kabag, dan konfigurasi sinkronisasi RPP tetap diperhitungkan.
+Urutannya Beranda, Mengajar, Tahfidz & Tasmi, Kelas Saya, RPP & Program Semester, Riwayat Saya, Koordinasi, lalu Rapor. Kelompok Rapor dibuka secara bawaan dan dimulai dengan **Alur Nilai & Rapor**, dilanjutkan tautan input nilai Diniyyah, KKM, dan input final Tahfidz. Tautan Leger Kelas Saya dan Rapor Kelas Saya tetap tersedia bagi wali kelas sesuai visibilitas sebelumnya. Panduan kelas hanya menampilkan kelas dengan penugasan aktif. Controller dan policy tujuan memeriksa hak akses masing-masing. Kelompok kosong disembunyikan.
 
 Saat menambah menu, isi label yang jelas, rute, pola halaman aktif, dan alias pencarian bila ada nama lama. Gunakan `except` untuk halaman yang memiliki menu sendiri, seperti Riwayat Jurnal. Setiap tujuan memiliki satu kategori. Detail, ekspor, cetak, dan riwayat Tasmi tetap berada di halaman induk.
 

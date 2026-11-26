@@ -33,7 +33,9 @@ class ReportCardPrintOptions
                 unset($options['issue_date']);
             }
             $data['print']['options'] = array_replace($before, $options);
-            $card->update(['homeroom_note' => $options['note'] ?? null]);
+            if (array_key_exists('note', $options)) {
+                $card->update(['homeroom_note' => $options['note']]);
+            }
             $card->snapshots()->create([
                 'layout_version' => $snapshot->layout_version, 'snapshot_data' => $data,
                 'generated_at' => now(), 'generated_by' => $user->id,

@@ -277,13 +277,13 @@ class ReportCardGeneratorTest extends TestCase
 
         $this->actingAs($admin)
             ->post(route('report-cards.ledger.lock', $snapshot))
-            ->assertRedirect(route('diniyyah.ledger.show', $snapshot));
+            ->assertRedirect(route('report-cards.classroom', $snapshot));
 
         $this->assertSame(1, ReportCard::where('status', 'locked')->count());
 
         $this->actingAs($admin)
             ->post(route('report-cards.ledger.publish', $snapshot))
-            ->assertRedirect(route('diniyyah.ledger.show', $snapshot));
+            ->assertRedirect(route('report-cards.classroom', $snapshot));
 
         $this->assertSame(1, ReportCard::where('status', 'published')->count());
     }

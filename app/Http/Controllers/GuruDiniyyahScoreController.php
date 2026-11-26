@@ -26,6 +26,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class GuruDiniyyahScoreController extends Controller
 {
@@ -35,6 +37,11 @@ class GuruDiniyyahScoreController extends Controller
 
         // Auto-create assessment sets for assignments that don't have one yet
         $ownedSubjects = app(DiniyyahAssessmentAccess::class)->classSubjects($request->user());
+        $classroomId = $request->validate(['classroom_term_id' => ['nullable', 'integer', 'min:1']])['classroom_term_id'] ?? null;
+        if ($classroomId !== null) {
+            $ownedSubjects->where('classroom_term_id', $classroomId);
+            abort_unless((clone $ownedSubjects)->exists(), 403);
+        }
         if ($teacher) {
             $subjects = (clone $ownedSubjects)->with('subject')->get();
 
@@ -76,7 +83,7 @@ class GuruDiniyyahScoreController extends Controller
             ->with([
                 'classSubject.classroomTerm' => function ($query) {
                     $query->withCount(['enrollments as active_enrollments_count' => function ($q) {
-                        $q->where('status', 'active');
+                        $q->where('status', 'active')->forVisibleStudents();
                     }]);
                 },
                 'classSubject.subject',
@@ -130,10 +137,10 @@ class GuruDiniyyahScoreController extends Controller
             $set->forceFill(app(DiniyyahKkmResolver::class)->resolve($set->classSubject, $set->kkm === null ? null : (float) $set->kkm));
         }
 
-        return view('guru.diniyyah-scores.index', compact('assessmentSets', 'summaries', 'schoolEvents', 'upcomingAlerts'));
+        return view('guru.diniyyah-scores.index', compact('assessmentSets', 'summaries', 'schoolEvents', 'upcomingAlerts', 'classroomId'));
     }
 
-    public function edit(Request $request, DiniyyahAssessmentSet $assessmentSet): View
+    public function edit(Request $request, DiniyyahAssessmentSet $assessmentSet, DiniyyahTeacherScoreEditor $editor): View
     {
         Gate::authorize('inputScores', $assessmentSet);
         $assessmentSet->forceFill(app(DiniyyahKkmResolver::class)->resolve($assessmentSet->classSubject, $assessmentSet->kkm === null ? null : (float) $assessmentSet->kkm));
@@ -141,7 +148,9 @@ class GuruDiniyyahScoreController extends Controller
         $assessmentSet->load(['classSubject.classroomTerm', 'classSubject.subject', 'components' => fn ($query) => $query->orderBy('sort_order')]);
         $builder = app(DiniyyahAssessmentComponentBuilder::class);
         $assessmentSet->setRelation('components', $builder->ordered($assessmentSet));
-        $canEdit = app(DiniyyahTeacherScoreEditor::class)->editable($assessmentSet);
+        $canEdit = $editor->editable($assessmentSet);
+        $canEditExamName = $editor->canEditExamName($assessmentSet);
+        $examNameMissing = $assessmentSet->missingExamName();
         $nextComponents = ['ulangan' => $builder->nextCode($assessmentSet, 'ulangan'), 'tugas' => $builder->nextCode($assessmentSet, 'tugas')];
 
         $enrollments = ClassEnrollment::query()
@@ -181,6 +190,8 @@ class GuruDiniyyahScoreController extends Controller
             'completeStudents',
             'completionPercentage',
             'canEdit',
+            'canEditExamName',
+            'examNameMissing',
             'nextComponents',
             'kkmFeedback',
         ));
@@ -212,17 +223,17 @@ class GuruDiniyyahScoreController extends Controller
     public function updateExamName(Request $request, DiniyyahAssessmentSet $assessmentSet, DiniyyahTeacherScoreEditor $editor): RedirectResponse
     {
         Gate::authorize('inputScores', $assessmentSet);
-        abort_unless($assessmentSet->classSubject->subject?->isPraktikIbadah() && $editor->editable($assessmentSet), 403);
+        abort_unless($editor->canEditExamName($assessmentSet), 403);
 
         $data = $request->validate([
-            'tested_material' => ['required', 'string', 'max:255', 'not_in:-'],
+            'tested_material' => ['required', 'string', 'max:255', Rule::notIn(DiniyyahAssessmentSet::EMPTY_EXAM_NAMES)],
             'original_material_hash' => ['required', 'string', 'size:64'],
         ], attributes: ['tested_material' => 'nama ujian praktik']);
 
         return app(DiniyyahKkmResolver::class)->withClassLocks($assessmentSet->classSubject->classroomTerm, function () use ($request, $assessmentSet, $editor, $data): RedirectResponse {
             $assessmentSet->refresh();
             Gate::authorize('inputScores', $assessmentSet);
-            abort_unless($assessmentSet->classSubject->subject?->isPraktikIbadah() && $editor->editable($assessmentSet), 403);
+            abort_unless($editor->canEditExamName($assessmentSet), 403);
 
             $redirect = redirect()->route('guru.diniyyah-scores.edit', $assessmentSet);
             if ($assessmentSet->tested_material !== $data['tested_material']) {
@@ -311,31 +322,24 @@ class GuruDiniyyahScoreController extends Controller
             ->with('status', 'Nilai berhasil disimpan dan dihitung ulang.');
     }
 
-    public function submit(Request $request, DiniyyahAssessmentSet $assessmentSet, DiniyyahInputProgressService $progressService, DiniyyahAssessmentWorkflow $workflow): RedirectResponse
+    public function submit(Request $request, DiniyyahAssessmentSet $assessmentSet, DiniyyahAssessmentWorkflow $workflow): RedirectResponse
     {
         Gate::authorize('inputScores', $assessmentSet);
         abort_unless(in_array($assessmentSet->status, ['active', 'needs_revision'], true), 403);
 
-        return app(DiniyyahKkmResolver::class)->withClassLocks($assessmentSet->classSubject->classroomTerm, function () use ($assessmentSet, $progressService, $workflow): RedirectResponse {
-            $assessmentSet->refresh();
-            Gate::authorize('inputScores', $assessmentSet);
-            abort_unless(in_array($assessmentSet->status, ['active', 'needs_revision'], true), 403);
-            abort_if($this->frozen($assessmentSet->classSubject->classroom_term_id), 403, 'Leger atau rapor kelas sudah terkunci.');
-            app(DiniyyahScoreCalculator::class)->calculateAssessmentSet($assessmentSet);
-            $summary = $progressService->summary($assessmentSet->fresh());
+        try {
+            app(DiniyyahKkmResolver::class)->withClassLocks($assessmentSet->classSubject->classroomTerm, function () use ($assessmentSet, $workflow): void {
+                $assessmentSet->refresh();
+                Gate::authorize('inputScores', $assessmentSet);
+                abort_unless(in_array($assessmentSet->status, ['active', 'needs_revision'], true), 403);
+                abort_if($this->frozen($assessmentSet->classSubject->classroom_term_id), 403, 'Leger atau rapor kelas sudah terkunci.');
+                $workflow->submit($assessmentSet);
+            });
+        } catch (ValidationException $exception) {
+            return redirect()->route('guru.diniyyah-scores.edit', $assessmentSet)->withErrors($exception->errors());
+        }
 
-            if ($summary['total_students'] === 0 || $summary['incomplete_students'] > 0) {
-                return redirect()
-                    ->route('guru.diniyyah-scores.edit', $assessmentSet)
-                    ->withErrors(['scores' => 'Nilai belum lengkap, belum bisa disubmit ke Kabag Diniyyah.']);
-            }
-
-            $workflow->submit($assessmentSet);
-
-            return redirect()
-                ->route('guru.diniyyah-scores.index')
-                ->with('status', 'Nilai berhasil disubmit ke Kabag Diniyyah.');
-        });
+        return redirect()->route('guru.diniyyah-scores.index')->with('status', 'Nilai diajukan ke Kabag Diniyyah.');
     }
 
     private function frozen(int $classroomTermId): bool
