@@ -16,6 +16,7 @@ use App\Models\DiniyyahScore;
 use App\Models\DiniyyahSubject;
 use App\Models\DiniyyahTeacherAssignment;
 use App\Models\HomeroomAssignment;
+use App\Models\ReportCard;
 use App\Models\ReportExportRequest;
 use App\Models\School;
 use App\Models\Student;
@@ -29,6 +30,7 @@ use App\Services\DiniyyahAssessmentComponentBuilder;
 use App\Services\DiniyyahLedgerGenerator;
 use App\Services\DiniyyahLedgerWorkflow;
 use App\Services\DiniyyahScoreCalculator;
+use App\Services\ReportCardPrintService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Role;
@@ -178,6 +180,47 @@ class DiniyyahWorkbookWorkflowTest extends TestCase
         $this->assertGreaterThan(0, $snapshot->snapshot_data['summary']['blocking_issues']);
         $this->expectException(\DomainException::class);
         app(DiniyyahLedgerWorkflow::class)->lock($snapshot, $c['teachers']['wali']->user);
+    }
+
+    public function test_assigned_teacher_names_practice_exams_per_class_and_the_name_reaches_the_printed_report(): void
+    {
+        $c = $this->context();
+        $practice = $c['sets']['praktik_ibadah'];
+        $practice->update(['status' => 'active', 'tested_material' => '-', 'kkm' => 70]);
+        $otherRoom = Classroom::create(['name' => 'M5 Ikhwan Uji', 'level_name' => 'M5']);
+        $otherClass = $c['term']->classroomTerms()->create(['classroom_id' => $otherRoom->id, 'name' => $otherRoom->name]);
+        $otherSubject = $practice->classSubject->replicate()->fill(['classroom_term_id' => $otherClass->id]);
+        $otherSubject->save();
+        $otherPractice = $otherSubject->assessmentSets()->create(['title' => $practice->title, 'assessment_method' => 'direct_final', 'status' => 'active']);
+        $examUrl = route('guru.diniyyah-scores.exam-name.update', $practice);
+        $otherUrl = route('guru.diniyyah-scores.exam-name.update', $otherPractice);
+        $name = ['tested_material' => 'Shalat Jenazah', 'original_material_hash' => hash('sha256', '-')];
+        $otherName = ['tested_material' => 'Wudhu', 'original_material_hash' => hash('sha256', '')];
+
+        $this->actingAs($c['teachers']['wali']->user)->put($examUrl, $name)->assertForbidden();
+        $teacher = $c['teachers']['mapel'];
+        $this->actingAs($teacher->user)->get(route('guru.diniyyah-scores.edit', $practice))
+            ->assertOk()->assertSee('Nama Ujian Praktik');
+        $this->put($otherUrl, $otherName)->assertForbidden();
+        $otherSubject->teacherAssignments()->create(['teacher_id' => $teacher->id]);
+        $this->put($otherUrl, $otherName)->assertSessionHasNoErrors()->assertRedirect();
+        $this->put($examUrl, array_replace($name, ['tested_material' => '-']))->assertSessionHasErrors('tested_material');
+        $this->put($examUrl, $name)->assertSessionHasNoErrors()->assertRedirect();
+        $this->put($examUrl, array_replace($name, ['tested_material' => 'Tayamum']))->assertSessionHasErrors('tested_material');
+        $this->assertSame('Shalat Jenazah', $practice->fresh()->tested_material);
+        $this->assertSame('Wudhu', $otherPractice->fresh()->tested_material);
+        $this->assertSame('70.00', $practice->fresh()->kkm);
+        $this->assertSame('80.00', $practice->results()->sole()->final_score);
+
+        $practice->update(['status' => 'validated']);
+        $snapshot = app(DiniyyahLedgerGenerator::class)->generate($c['ct'], null, true);
+        app(DiniyyahLedgerWorkflow::class)->lock($snapshot, $c['teachers']['wali']->user);
+        $card = ReportCard::sole();
+        $print = app(ReportCardPrintService::class);
+        $this->assertSame('Shalat Jenazah', $print->data($card)['practice'][0]['material']);
+        $this->assertTrue(collect($print->page($card)['cells'])->contains('text', 'Shalat Jenazah'));
+        $this->assertFalse(collect($print->page($card)['cells'])->contains('text', 'Wudhu'));
+        $this->put($examUrl, $name)->assertForbidden();
     }
 
     public function test_multiple_practical_materials_are_separate_columns_and_draft_material_can_be_excluded(): void

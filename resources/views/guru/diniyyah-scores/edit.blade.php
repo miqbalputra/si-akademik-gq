@@ -32,6 +32,9 @@
     </style>
     @endpush
 
+    @php
+        $canEditExamName = $canEdit && $assessmentSet->classSubject?->subject?->isPraktikIbadah();
+    @endphp
     <div data-score-editor data-can-edit="{{ $canEdit ? '1' : '0' }}"
         data-autosave-url="{{ route('guru.diniyyah-scores.autosave', $assessmentSet) }}"
         data-component-url="{{ route('guru.diniyyah-scores.components.store', $assessmentSet) }}"
@@ -56,7 +59,7 @@
                     <p class="mt-2 text-theme-sm text-muted">Suluk diisi wali kelas. KKM tetap 70 dari Sekolah/Kabag Diniyyah.</p>
                 @else
                     <p class="mt-2 text-theme-sm text-muted">Nilai akhir = {{ $assessmentSet->daily_weight ?? 40 }}% rata-rata nilai harian + {{ $assessmentSet->exam_weight ?? 60 }}% nilai ujian. Keaktifan/presensi otomatis dari jurnal. Kolom opsional yang kosong tidak dihitung sebagai nol.</p>
-                    @if($assessmentSet->tested_material && $assessmentSet->tested_material !== '-')<p class="mt-1 text-theme-sm text-muted">Materi ujian: {{ $assessmentSet->tested_material }}</p>@endif
+                    @if(!$canEditExamName && $assessmentSet->tested_material && $assessmentSet->tested_material !== '-')<p class="mt-1 text-theme-sm text-muted">Materi ujian: {{ $assessmentSet->tested_material }}</p>@endif
                 @endif
             </div>
             
@@ -115,6 +118,26 @@
         <div class="mb-4 rounded-2xl border border-danger-line bg-danger-soft p-4 text-theme-sm font-medium text-danger-ink shadow-sm animate-fade-in-up">
             {{ $errors->first() }}
         </div>
+    @endif
+
+    @if ($canEditExamName)
+        @php
+            $oldExamName = old('tested_material');
+        @endphp
+        <form data-exam-name-form method="POST" action="{{ route('guru.diniyyah-scores.exam-name.update', $assessmentSet) }}" class="mb-6 rounded-2xl glass-card p-4">
+            @csrf
+            @method('PUT')
+            <input type="hidden" name="original_material_hash" value="{{ hash('sha256', $assessmentSet->tested_material ?? '') }}">
+            <label for="tested-material" class="text-muted ui-form-label">Nama Ujian Praktik</label>
+            <div class="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center">
+                <input id="tested-material" type="text" name="tested_material" class="form-input flex-1"
+                    value="{{ is_string($oldExamName) ? $oldExamName : ($assessmentSet->tested_material === '-' ? '' : $assessmentSet->tested_material) }}"
+                    placeholder="Contoh: Shalat Jenazah atau Wudhu" maxlength="255" required
+                    aria-describedby="exam-name-help" @if($errors->has('tested_material')) aria-invalid="true" @endif>
+                <button type="submit" class="btn btn-primary shrink-0">Simpan Nama Ujian</button>
+            </div>
+            <p id="exam-name-help" class="mt-2 text-theme-sm text-muted">Saat nilai masuk rapor, nama ini tampil di bagian Praktik Ibadah.</p>
+        </form>
     @endif
 
     <section data-kkm-warning role="status" aria-live="polite" class="mb-4 rounded-2xl border border-warning-line bg-warning-soft p-4 text-warning-ink" @if($kkmFeedback['below_kkm_students'] === 0) hidden @endif>

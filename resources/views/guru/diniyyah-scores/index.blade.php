@@ -76,6 +76,9 @@
                         <p class="mt-1 text-theme-sm font-normal text-muted">
                             {{ $assessmentSet->classSubject?->classroomTerm?->name }}
                         </p>
+                        @if ($assessmentSet->classSubject?->subject?->isPraktikIbadah() && $assessmentSet->tested_material && $assessmentSet->tested_material !== '-')
+                            <p class="mt-1 text-theme-sm text-body">{{ $assessmentSet->tested_material }}</p>
+                        @endif
                     </div>
                     <span class="shrink-0 rounded-full px-3 py-1 {{ $badgeClass }} text-theme-xs font-medium">
                         {{ $badgeText }}

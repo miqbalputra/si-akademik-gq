@@ -51,6 +51,7 @@ export function initDiniyyahScoreEditor() {
         const saveButton = root.querySelector('[data-save-button]');
         const submitForm = root.querySelector('[data-score-submit]');
         const submitButton = submitForm?.querySelector('button');
+        const saveExamNameButton = root.querySelector('[data-exam-name-form] button');
         const addButtons = [...root.querySelectorAll('[data-add-component]')];
         const inputs = new Map([...root.querySelectorAll('input[data-score]')].map(input => [`${input.dataset.enrollmentId}-${input.dataset.componentId}`, input]));
         let timer, adding = false, saving = false, blocked = false;
@@ -59,7 +60,9 @@ export function initDiniyyahScoreEditor() {
 
         function controls() {
             saveButton.disabled = saving || adding || blocked;
-            if (submitButton) submitButton.disabled = !complete || queue.dirty || saving || adding || blocked;
+            const scoresPending = queue.dirty || saving || adding || blocked;
+            if (submitButton) submitButton.disabled = !complete || scoresPending;
+            if (saveExamNameButton) saveExamNameButton.disabled = scoresPending;
             addButtons.forEach(button => { button.disabled = saving || adding || blocked; });
         }
         function showError(message) {

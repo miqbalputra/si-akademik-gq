@@ -25,14 +25,19 @@ class DiniyyahSubject extends Model
 
     public function schoolKkm(): ?int
     {
+        return $this->isSuluk() || $this->isPraktikIbadah() ? 70 : null;
+    }
+
+    public function isPraktikIbadah(): bool
+    {
         foreach ([$this->code, $this->name] as $identifier) {
             $key = preg_replace('/[^a-z0-9]+/', '_', strtolower(trim($identifier ?? '')));
-            if (in_array($key, ['suluk', 'praktik_ibadah', 'praktek_ibadah'], true)) {
-                return 70;
+            if (in_array($key, ['praktik_ibadah', 'praktek_ibadah'], true)) {
+                return true;
             }
         }
 
-        return null;
+        return false;
     }
 
     public function isSuluk(): bool

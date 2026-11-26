@@ -209,6 +209,36 @@ class GuruDiniyyahScoreController extends Controller
         return response()->json($editor->add($assessmentSet, $request->user(), $data['type'], $data['expected_code']))->header('Cache-Control', 'private, no-store');
     }
 
+    public function updateExamName(Request $request, DiniyyahAssessmentSet $assessmentSet, DiniyyahTeacherScoreEditor $editor): RedirectResponse
+    {
+        Gate::authorize('inputScores', $assessmentSet);
+        abort_unless($assessmentSet->classSubject->subject?->isPraktikIbadah() && $editor->editable($assessmentSet), 403);
+
+        $data = $request->validate([
+            'tested_material' => ['required', 'string', 'max:255', 'not_in:-'],
+            'original_material_hash' => ['required', 'string', 'size:64'],
+        ], attributes: ['tested_material' => 'nama ujian praktik']);
+
+        return app(DiniyyahKkmResolver::class)->withClassLocks($assessmentSet->classSubject->classroomTerm, function () use ($request, $assessmentSet, $editor, $data): RedirectResponse {
+            $assessmentSet->refresh();
+            Gate::authorize('inputScores', $assessmentSet);
+            abort_unless($assessmentSet->classSubject->subject?->isPraktikIbadah() && $editor->editable($assessmentSet), 403);
+
+            $redirect = redirect()->route('guru.diniyyah-scores.edit', $assessmentSet);
+            if ($assessmentSet->tested_material !== $data['tested_material']) {
+                if (hash('sha256', $assessmentSet->tested_material ?? '') !== $data['original_material_hash']) {
+                    return $redirect->withErrors(['tested_material' => 'Nama ujian sudah berubah. Periksa nama yang tersimpan sebelum mengeditnya lagi.']);
+                }
+                $assessmentSet->update([
+                    'tested_material' => $data['tested_material'],
+                    'updated_by' => $request->user()->id,
+                ]);
+            }
+
+            return $redirect->with('status', 'Nama ujian praktik berhasil disimpan.');
+        });
+    }
+
     public function update(Request $request, DiniyyahAssessmentSet $assessmentSet, DiniyyahScoreCalculator $calculator): RedirectResponse
     {
         Gate::authorize('inputScores', $assessmentSet);
