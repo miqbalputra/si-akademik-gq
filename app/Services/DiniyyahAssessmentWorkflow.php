@@ -15,6 +15,7 @@ class DiniyyahAssessmentWorkflow
     {
         app(DiniyyahKkmResolver::class)->withAssessmentLock($assessmentSet, function () use ($assessmentSet): void {
             $this->ensureOpen($assessmentSet, ['draft', 'active', 'needs_revision']);
+            app(DiniyyahPracticeScoreSetup::class)->synchronize($assessmentSet);
             $this->ensureExamName($assessmentSet);
             app(DiniyyahScoreCalculator::class)->calculateAssessmentSet($assessmentSet);
             $summary = app(DiniyyahInputProgressService::class)->summary($assessmentSet);
@@ -23,7 +24,7 @@ class DiniyyahAssessmentWorkflow
             }
 
             $assessmentSet->update(['status' => 'submitted']);
-            $assessmentSet->scores()->where('status', 'draft')->update(['status' => 'submitted']);
+            $assessmentSet->gradingScores()->where('status', 'draft')->update(['status' => 'submitted']);
             $this->notifySubmitted($assessmentSet);
         });
     }
@@ -39,7 +40,7 @@ class DiniyyahAssessmentWorkflow
         $this->ensureExamName($assessmentSet);
         app(DiniyyahKkmResolver::class)->ensureApproved($assessmentSet);
         $assessmentSet->update(['status' => 'validated']);
-        $assessmentSet->scores()->whereIn('status', ['draft', 'submitted'])->update(['status' => 'validated']);
+        $assessmentSet->gradingScores()->whereIn('status', ['draft', 'submitted'])->update(['status' => 'validated']);
 
         $validation = DiniyyahScoreValidation::create([
             'diniyyah_assessment_set_id' => $assessmentSet->id,

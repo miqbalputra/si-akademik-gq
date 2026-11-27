@@ -279,6 +279,32 @@ class GuruDiniyyahScoreInputTest extends TestCase
         $this->postJson(route('guru.diniyyah-scores.components.store', $set), $component)->assertForbidden();
     }
 
+    public function test_direct_practice_setup_leaves_a_legacy_zero_grade_and_locked_ledger_unchanged(): void
+    {
+        [$set, $teacher, $enrollment, $daily] = $this->makeInputContext();
+        $set->classSubject->subject->update(['code' => 'praktik_ibadah', 'name' => 'Praktik Ibadah']);
+        $score = $set->scores()->create(['diniyyah_score_component_id' => $daily->id, 'class_enrollment_id' => $enrollment->id,
+            'score' => 0, 'input_by' => $teacher->user_id, 'status' => 'draft'])->fresh();
+        $set->classSubject->update(['assessment_method' => 'direct_final']);
+        $edit = route('guru.diniyyah-scores.edit', $set);
+        $before = $set->fresh()->toArray();
+        $components = $set->components()->orderBy('id')->get()->toArray();
+        $this->actingAs($teacher->user)->get($edit)->assertOk()->assertSee('tetap memakai metode lama');
+        $this->assertSame($before, $set->fresh()->toArray());
+        $this->assertSame($components, $set->components()->orderBy('id')->get()->toArray());
+        $this->assertSame($score->toArray(), $score->fresh()->toArray());
+
+        $emptySet = $set->replicate();
+        $emptySet->title = 'Praktik arsip';
+        $emptySet->save();
+        $snapshot = DiniyyahLedgerSnapshot::create(['academic_term_id' => $enrollment->academic_term_id,
+            'classroom_term_id' => $enrollment->classroom_term_id, 'title' => 'Leger final', 'status' => 'locked'])->fresh();
+        $this->get(route('guru.diniyyah-scores.edit', $emptySet))->assertOk()->assertSee('Nilai hanya dapat dibaca.');
+        $this->assertSame('weighted', $emptySet->fresh()->assessment_method);
+        $this->assertSame(0, $emptySet->components()->count());
+        $this->assertSame($snapshot->toArray(), $snapshot->fresh()->toArray());
+    }
+
     private function makeTeacher(string $name): Teacher
     {
         Role::firstOrCreate(['name' => 'guru', 'guard_name' => 'web']);

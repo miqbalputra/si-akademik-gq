@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\DiniyyahKkmResolver;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -32,7 +33,7 @@ class DiniyyahAssessmentSet extends Model
 
     protected static function booted(): void
     {
-        static::saving(fn (self $set) => app(\App\Services\DiniyyahKkmResolver::class)->apply($set));
+        static::saving(fn (self $set) => app(DiniyyahKkmResolver::class)->apply($set));
     }
 
     protected function casts(): array
@@ -60,9 +61,34 @@ class DiniyyahAssessmentSet extends Model
         return $this->hasMany(DiniyyahScoreComponent::class);
     }
 
+    public function usesDirectPracticeScore(): bool
+    {
+        return $this->assessment_method === 'direct_final' && $this->classSubject?->subject?->isPraktikIbadah();
+    }
+
+    public function gradingComponents(): HasMany
+    {
+        $components = $this->components();
+        if ($this->usesDirectPracticeScore()) {
+            $components->where('component_group', 'final');
+        }
+
+        return $components;
+    }
+
     public function scores(): HasMany
     {
         return $this->hasMany(DiniyyahScore::class);
+    }
+
+    public function gradingScores(): HasMany
+    {
+        $scores = $this->scores();
+        if ($this->usesDirectPracticeScore()) {
+            $scores->whereHas('component', fn ($component) => $component->where('component_group', 'final'));
+        }
+
+        return $scores;
     }
 
     public function results(): HasMany

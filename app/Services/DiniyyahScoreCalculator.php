@@ -18,7 +18,7 @@ class DiniyyahScoreCalculator
     public function syncAttendanceScores(DiniyyahAssessmentSet $assessmentSet, ?ClassEnrollment $enrollment = null): void
     {
         $assessmentSet->loadMissing('components', 'classSubject');
-        if ($this->frozen($assessmentSet)) {
+        if ($assessmentSet->usesDirectPracticeScore() || $this->frozen($assessmentSet)) {
             return;
         }
         $attendanceComponent = $assessmentSet->components->firstWhere('code', 'keaktifan_presensi');
@@ -108,7 +108,8 @@ class DiniyyahScoreCalculator
                 continue;
             }
             app(DiniyyahKkmResolver::class)->withAssessmentLock($set, function () use ($set): void {
-                if ($this->frozen($set)) {
+                $set->refresh();
+                if ($set->usesDirectPracticeScore() || $this->frozen($set)) {
                     return;
                 }
                 $before = $set->scores()->whereHas('component', fn ($q) => $q->where('code', 'keaktifan_presensi'))->orderBy('class_enrollment_id')->pluck('score', 'class_enrollment_id')->all();
@@ -126,7 +127,11 @@ class DiniyyahScoreCalculator
 
     public function calculateAssessmentSet(DiniyyahAssessmentSet $assessmentSet): int
     {
-        return app(DiniyyahKkmResolver::class)->withAssessmentLock($assessmentSet, fn () => $this->calculateAssessmentSetLocked($assessmentSet));
+        return app(DiniyyahKkmResolver::class)->withAssessmentLock($assessmentSet, function () use ($assessmentSet): int {
+            $assessmentSet->refresh();
+
+            return $this->calculateAssessmentSetLocked($assessmentSet);
+        });
     }
 
     private function calculateAssessmentSetLocked(DiniyyahAssessmentSet $assessmentSet): int
@@ -146,7 +151,7 @@ class DiniyyahScoreCalculator
         $this->syncAttendanceScores($assessmentSet);
 
         // Preload scores to prevent N+1
-        $allScores = $assessmentSet->scores()
+        $allScores = $assessmentSet->gradingScores()
             ->whereIn('class_enrollment_id', $enrollments->pluck('id'))
             ->get()
             ->groupBy('class_enrollment_id');
@@ -205,7 +210,7 @@ class DiniyyahScoreCalculator
         $assessmentSet->forceFill($resolvedKkm);
         $assessmentSet->loadMissing('components');
 
-        $scores = $assessmentSet->scores()
+        $scores = $assessmentSet->gradingScores()
             ->where('class_enrollment_id', $enrollment->id)
             ->get()
             ->keyBy('diniyyah_score_component_id');

@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\ClassEnrollment;
 use App\Models\ClassroomTerm;
-use App\Models\DiniyyahAssessmentResult;
 use App\Models\DiniyyahAssessmentSet;
 use App\Models\DiniyyahLedgerSnapshot;
 use App\Models\DiniyyahScore;
@@ -16,6 +15,7 @@ use App\Services\DiniyyahAssessmentComponentBuilder;
 use App\Services\DiniyyahAssessmentWorkflow;
 use App\Services\DiniyyahInputProgressService;
 use App\Services\DiniyyahKkmResolver;
+use App\Services\DiniyyahPracticeScoreSetup;
 use App\Services\DiniyyahScoreCalculator;
 use App\Services\DiniyyahTeacherScoreEditor;
 use Carbon\CarbonInterface;
@@ -143,9 +143,11 @@ class GuruDiniyyahScoreController extends Controller
     public function edit(Request $request, DiniyyahAssessmentSet $assessmentSet, DiniyyahTeacherScoreEditor $editor): View
     {
         Gate::authorize('inputScores', $assessmentSet);
+        $legacyMethodPreserved = ! app(DiniyyahPracticeScoreSetup::class)->synchronize($assessmentSet);
         $assessmentSet->forceFill(app(DiniyyahKkmResolver::class)->resolve($assessmentSet->classSubject, $assessmentSet->kkm === null ? null : (float) $assessmentSet->kkm));
 
-        $assessmentSet->load(['classSubject.classroomTerm', 'classSubject.subject', 'components' => fn ($query) => $query->orderBy('sort_order')]);
+        $assessmentSet->load(['classSubject.classroomTerm', 'classSubject.subject']);
+        $assessmentSet->setRelation('components', $assessmentSet->gradingComponents()->get());
         $builder = app(DiniyyahAssessmentComponentBuilder::class);
         $assessmentSet->setRelation('components', $builder->ordered($assessmentSet));
         $canEdit = $editor->editable($assessmentSet);
@@ -162,14 +164,12 @@ class GuruDiniyyahScoreController extends Controller
             ->orderBy('student_id')
             ->get();
 
-        $scores = DiniyyahScore::query()
-            ->where('diniyyah_assessment_set_id', $assessmentSet->id)
+        $scores = $assessmentSet->gradingScores()
             ->whereIn('class_enrollment_id', $enrollments->pluck('id'))
             ->get()
             ->keyBy(fn (DiniyyahScore $score) => $score->class_enrollment_id.'-'.$score->diniyyah_score_component_id);
 
-        $results = DiniyyahAssessmentResult::query()
-            ->where('diniyyah_assessment_set_id', $assessmentSet->id)
+        $results = $assessmentSet->results()
             ->whereIn('class_enrollment_id', $enrollments->pluck('id'))
             ->get()
             ->keyBy('class_enrollment_id');
@@ -192,6 +192,7 @@ class GuruDiniyyahScoreController extends Controller
             'canEdit',
             'canEditExamName',
             'examNameMissing',
+            'legacyMethodPreserved',
             'nextComponents',
             'kkmFeedback',
         ));
@@ -270,8 +271,6 @@ class GuruDiniyyahScoreController extends Controller
             'scores.*.*' => ['nullable', 'numeric', 'min:0', 'max:100'],
         ]);
 
-        $assessmentSet->load('components');
-        $componentIds = $assessmentSet->components->pluck('id')->all();
         $enrollmentIds = ClassEnrollment::query()
             ->where('classroom_term_id', $assessmentSet->classSubject->classroom_term_id)
             ->where('status', 'active')
@@ -279,21 +278,28 @@ class GuruDiniyyahScoreController extends Controller
             ->pluck('id')
             ->all();
 
-        app(DiniyyahKkmResolver::class)->withClassLocks($assessmentSet->classSubject->classroomTerm, function () use ($assessmentSet, $validated, $componentIds, $enrollmentIds, $request, $calculator): void {
+        app(DiniyyahKkmResolver::class)->withClassLocks($assessmentSet->classSubject->classroomTerm, function () use ($assessmentSet, $validated, $enrollmentIds, $request, $calculator): void {
             $assessmentSet->refresh();
             Gate::authorize('inputScores', $assessmentSet);
             abort_unless(in_array($assessmentSet->status, ['active', 'needs_revision'], true), 403);
             abort_if($this->frozen($assessmentSet->classSubject->classroom_term_id), 403, 'Leger atau rapor kelas sudah terkunci.');
+            app(DiniyyahPracticeScoreSetup::class)->synchronize($assessmentSet);
+            $components = $assessmentSet->gradingComponents()->get()->keyBy('id');
             foreach ($validated['scores'] ?? [] as $enrollmentId => $componentScores) {
                 if (! in_array((int) $enrollmentId, $enrollmentIds, true)) {
                     continue;
                 }
 
                 foreach ($componentScores as $componentId => $score) {
-                    if (! in_array((int) $componentId, $componentIds, true)) {
+                    $component = $components->get($componentId);
+                    if (! $component) {
+                        if ($assessmentSet->usesDirectPracticeScore()) {
+                            throw ValidationException::withMessages(['scores' => 'Kolom nilai sudah berubah. Muat ulang halaman untuk mengisi Nilai Akhir.']);
+                        }
+
                         continue;
                     }
-                    if ($assessmentSet->components->firstWhere('id', (int) $componentId)?->code === 'keaktifan_presensi') {
+                    if ($component->code === 'keaktifan_presensi') {
                         continue; // Browser input may never replace the journal-derived score.
                     }
 

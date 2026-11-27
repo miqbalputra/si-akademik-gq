@@ -10,6 +10,7 @@ use App\Models\Classroom;
 use App\Models\ClassroomTerm;
 use App\Models\DiniyyahAssessmentResult;
 use App\Models\DiniyyahAssessmentSet;
+use App\Models\DiniyyahClassJournal;
 use App\Models\DiniyyahClassSubject;
 use App\Models\DiniyyahLedgerSnapshot;
 use App\Models\DiniyyahScore;
@@ -27,6 +28,7 @@ use App\Models\TahfidzUasResult;
 use App\Models\Teacher;
 use App\Models\User;
 use App\Services\DiniyyahAssessmentComponentBuilder;
+use App\Services\DiniyyahAssessmentWorkflow;
 use App\Services\DiniyyahLedgerGenerator;
 use App\Services\DiniyyahLedgerWorkflow;
 use App\Services\DiniyyahScoreCalculator;
@@ -40,7 +42,7 @@ class DiniyyahWorkbookWorkflowTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function context(): array
+    private function context(string $practiceMethod = 'direct_final'): array
     {
         foreach (['guru', 'admin', 'kabag_diniyyah', 'kepala_sekolah'] as $role) {
             Role::firstOrCreate(['name' => $role, 'guard_name' => 'web']);
@@ -64,10 +66,13 @@ class DiniyyahWorkbookWorkflowTest extends TestCase
             $subject = DiniyyahSubject::create(['code' => $code, 'name' => ucfirst($code)]);
             $cs = DiniyyahClassSubject::create(['classroom_term_id' => $ct->id, 'subject_id' => $subject->id, 'assessment_method' => 'direct_final', 'is_active' => true, 'appears_on_ledger' => true]);
             DiniyyahTeacherAssignment::create(['diniyyah_class_subject_id' => $cs->id, 'teacher_id' => $teachers['mapel']->id]);
-            $sets[$code] = DiniyyahAssessmentSet::create(['diniyyah_class_subject_id' => $cs->id, 'title' => ucfirst($code), 'assessment_method' => 'direct_final',
-                'status' => 'validated', 'appears_on_ledger' => true, 'tested_material' => $code === 'praktik_ibadah' ? 'Wudhu' : null]);
+            $method = $code === 'praktik_ibadah' ? $practiceMethod : 'direct_final';
+            $sets[$code] = DiniyyahAssessmentSet::create(['diniyyah_class_subject_id' => $cs->id, 'title' => ucfirst($code), 'assessment_method' => $method,
+                'status' => $method === 'direct_final' ? 'validated' : 'active', 'appears_on_ledger' => true, 'tested_material' => $code === 'praktik_ibadah' ? 'Wudhu' : null]);
             app(DiniyyahAssessmentComponentBuilder::class)->createDefaults($sets[$code]);
-            DiniyyahAssessmentResult::create(['diniyyah_assessment_set_id' => $sets[$code]->id, 'class_enrollment_id' => $enrollment->id, 'final_score' => 80, 'is_complete' => true]);
+            if ($method === 'direct_final') {
+                DiniyyahAssessmentResult::create(['diniyyah_assessment_set_id' => $sets[$code]->id, 'class_enrollment_id' => $enrollment->id, 'final_score' => 80, 'is_complete' => true]);
+            }
         }
         $halaqah = TahfidzHalaqah::create(['academic_term_id' => $term->id, 'teacher_id' => $teachers['other']->id, 'name' => 'Halaqah Uji']);
         $member = TahfidzHalaqahMember::create(['tahfidz_halaqah_id' => $halaqah->id, 'student_id' => $student->id, 'class_enrollment_id' => $enrollment->id]);
@@ -313,6 +318,69 @@ class DiniyyahWorkbookWorkflowTest extends TestCase
         $this->assertTrue(collect($print->page($card)['cells'])->contains('text', 'Shalat Jenazah'));
         $this->assertFalse(collect($print->page($card)['cells'])->contains('text', 'Wudhu'));
         $this->put($examUrl, $name)->assertForbidden();
+    }
+
+    public function test_legacy_practice_uses_the_class_direct_method_and_keeps_its_attendance_history(): void
+    {
+        $c = $this->context('weighted');
+        $set = $c['sets']['praktik_ibadah'];
+        $enrollmentId = $c['enrollment']->id;
+        $components = $set->components()->orderBy('id')->get();
+        $attendance = $set->scores()->create([
+            'class_enrollment_id' => $enrollmentId,
+            'diniyyah_score_component_id' => $components->firstWhere('code', 'keaktifan_presensi')->id,
+            'score' => 94.12,
+            'status' => 'draft',
+        ])->fresh();
+        $partial = $set->results()->create([
+            'class_enrollment_id' => $enrollmentId, 'daily_raw_score' => 94.12, 'daily_weighted_score' => 37.65,
+        ])->fresh();
+        $edit = route('guru.diniyyah-scores.edit', $set);
+        $autosave = route('guru.diniyyah-scores.autosave', $set);
+        $oldExamId = $components->firstWhere('code', 'nilai_ujian_mentah')->id;
+        $this->actingAs($c['teachers']['wali']->user)->get($edit)->assertForbidden();
+        $this->assertSame('weighted', $set->fresh()->assessment_method);
+
+        $this->actingAs($c['teachers']['mapel']->user);
+        $this->putJson($autosave, ['changes' => [
+            ['enrollment_id' => $enrollmentId, 'component_id' => $oldExamId, 'score' => 74, 'original' => null],
+        ]])->assertUnprocessable();
+        $this->get($edit)->assertOk()->assertSee('Isi satu Nilai Akhir per santri')
+            ->assertDontSee('Ulangan Harian')->assertDontSee('Nilai Tugas')->assertDontSee('Keaktifan/Presensi')
+            ->assertDontSee('Nilai akhir =')->assertViewHas('filledCells', 0)->assertViewHas('totalCells', 1);
+        $this->get($edit)->assertOk();
+        $set->refresh();
+        $this->assertSame('direct_final', $set->assessment_method);
+        $this->assertSame('Wudhu', $set->tested_material);
+        $this->assertSame($components->toArray(), $set->components()->whereIn('id', $components->modelKeys())->orderBy('id')->get()->toArray());
+        $this->assertSame($partial->toArray(), $set->results()->sole()->toArray());
+        $this->assertSame($attendance->toArray(), $set->scores()->sole()->toArray());
+        DiniyyahClassJournal::create(['diniyyah_teacher_assignment_id' => $set->classSubject->teacherAssignments()->sole()->id,
+            'date' => '2027-03-10', 'session_hour' => '1', 'material' => 'Wudhu', 'jp_count' => 1]);
+        $this->assertSame($attendance->toArray(), $attendance->fresh()->toArray());
+        $this->assertSame($partial->toArray(), $partial->fresh()->toArray());
+
+        $this->from($edit)->put(route('guru.diniyyah-scores.update', $set), ['scores' => [$enrollmentId => [$oldExamId => 75]]])
+            ->assertSessionHasErrors('scores')->assertRedirect($edit);
+        $this->postJson(route('guru.diniyyah-scores.components.store', $set), ['type' => 'ulangan', 'expected_code' => 'ulangan_harian_3'])
+            ->assertUnprocessable();
+        $final = $set->gradingComponents()->sole();
+        $this->assertSame('nilai_akhir', $final->code);
+        $this->putJson($autosave, ['changes' => [
+            ['enrollment_id' => $enrollmentId, 'component_id' => $final->id, 'score' => 81.35, 'original' => null],
+        ]])->assertOk()->assertJsonPath('rows.0.final_score', '81.35')
+            ->assertJsonPath('progress.total_cells', 1)->assertJsonPath('progress.filled_cells', 1);
+        $this->post(route('guru.diniyyah-scores.submit', $set))->assertRedirect(route('guru.diniyyah-scores.index'));
+        $validator = User::factory()->create();
+        $validator->assignRole('kabag_diniyyah');
+        app(DiniyyahAssessmentWorkflow::class)->approve($set->refresh(), $validator);
+        $this->assertSame($attendance->toArray(), $attendance->fresh()->toArray());
+        $this->assertSame('validated', $set->gradingScores()->sole()->status);
+        $snapshot = app(DiniyyahLedgerGenerator::class)->generate($c['ct'], null, true);
+        app(DiniyyahLedgerWorkflow::class)->lock($snapshot, $c['teachers']['wali']->user);
+        $practice = app(ReportCardPrintService::class)->data(ReportCard::sole())['practice'][0];
+        $this->assertSame('Wudhu', $practice['material']);
+        $this->assertSame(81.35, $practice['score_raw']);
     }
 
     public function test_multiple_practical_materials_are_separate_columns_and_draft_material_can_be_excluded(): void

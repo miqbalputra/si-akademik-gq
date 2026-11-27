@@ -56,7 +56,11 @@
                 @if($assessmentSet->classSubject?->subject?->isSuluk())
                     <p class="mt-2 text-theme-sm text-muted">Suluk diisi wali kelas. KKM tetap 70 dari Sekolah/Kabag Diniyyah.</p>
                 @else
-                    <p class="mt-2 text-theme-sm text-muted">Nilai akhir = {{ $assessmentSet->daily_weight ?? 40 }}% rata-rata nilai harian + {{ $assessmentSet->exam_weight ?? 60 }}% nilai ujian. Keaktifan/presensi otomatis dari jurnal. Kolom opsional yang kosong tidak dihitung sebagai nol.</p>
+                    @if($assessmentSet->usesDirectPracticeScore())
+                        <p class="mt-2 text-theme-sm text-muted">Isi satu Nilai Akhir per santri. Nilai ini langsung digunakan di rapor setelah divalidasi.</p>
+                    @else
+                        <p class="mt-2 text-theme-sm text-muted">Nilai akhir = {{ $assessmentSet->daily_weight ?? 40 }}% rata-rata nilai harian + {{ $assessmentSet->exam_weight ?? 60 }}% nilai ujian. Keaktifan/presensi otomatis dari jurnal. Kolom opsional yang kosong tidak dihitung sebagai nol.</p>
+                    @endif
                     @if(!$canEditExamName && !$examNameMissing && $assessmentSet->tested_material && $assessmentSet->tested_material !== '-')<p class="mt-1 text-theme-sm text-muted">Materi ujian: {{ $assessmentSet->tested_material }}</p>@endif
                 @endif
             </div>
@@ -80,6 +84,10 @@
                 </div>
             </div>
         </div>
+
+        @if($legacyMethodPreserved)
+            <p class="mt-4 rounded-xl border border-warning-line bg-warning-soft/80 p-3 text-theme-sm text-warning-ink">Set ini tetap memakai metode lama untuk menjaga data penilaian yang sudah tersimpan.</p>
+        @endif
 
         <!-- Validation/Submission Status Alert -->
         <div class="mt-6 flex flex-col gap-4 rounded-2xl bg-surface-subtle/80 border border-line/50 p-4 sm:flex-row sm:items-center sm:justify-between">

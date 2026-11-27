@@ -44,6 +44,7 @@ class DiniyyahTeacherScoreEditor
         $set->refresh();
         Gate::forUser($user)->authorize('inputScores', $set);
         abort_unless($this->editable($set), 403, 'Nilai tidak dapat diubah: sudah diajukan/divalidasi atau leger/rapor kelas terkunci.');
+        app(DiniyyahPracticeScoreSetup::class)->synchronize($set);
     }
 
     /** Only changed cells are written. The entire batch rolls back on a stale or invalid cell. */
@@ -51,14 +52,17 @@ class DiniyyahTeacherScoreEditor
     {
         return app(DiniyyahKkmResolver::class)->withClassLocks($set->classSubject->classroomTerm, function () use ($set, $user, $changes) {
             $this->authorize($set, $user);
-            $components = $set->components()->get()->keyBy('id');
+            $components = $set->gradingComponents()->get()->keyBy('id');
             $enrollments = ClassEnrollment::where('classroom_term_id', $set->classSubject->classroom_term_id)
                 ->where('status', 'active')->forVisibleStudents()->get()->keyBy('id');
             $planned = [];
             foreach ($changes as $index => $change) {
                 $component = $components->get($change['component_id']);
                 if (! $component || ! $enrollments->has($change['enrollment_id']) || $component->code === 'keaktifan_presensi') {
-                    throw ValidationException::withMessages(['changes.'.$index => 'Santri atau komponen nilai tidak dapat diedit pada penilaian ini.']);
+                    $message = ! $component && $set->usesDirectPracticeScore()
+                        ? 'Kolom nilai sudah berubah. Muat ulang halaman untuk mengisi Nilai Akhir.'
+                        : 'Santri atau komponen nilai tidak dapat diedit pada penilaian ini.';
+                    throw ValidationException::withMessages(['changes.'.$index => $message]);
                 }
                 $key = $change['enrollment_id'].'-'.$change['component_id'];
                 if (isset($planned[$key])) {
@@ -146,8 +150,8 @@ class DiniyyahTeacherScoreEditor
         $complete = $results->where('is_complete', true)->count();
 
         return [
-            'total_cells' => $total * $set->components()->count(),
-            'filled_cells' => $set->scores()->whereIn('class_enrollment_id', $ids)->whereNotNull('score')->count(),
+            'total_cells' => $total * $set->gradingComponents()->count(),
+            'filled_cells' => $set->gradingScores()->whereIn('class_enrollment_id', $ids)->whereNotNull('score')->count(),
             'total_students' => $total, 'complete_students' => $complete,
             'percentage' => $total ? round($complete / $total * 100, 2) : 0,
         ] + $this->kkmFeedback($set, $results);
