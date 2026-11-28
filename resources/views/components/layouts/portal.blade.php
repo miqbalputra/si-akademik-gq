@@ -41,6 +41,7 @@
 
     $tahfidzMonitoringItems = [
         ['label' => 'Dashboard Tahfidz', 'href' => route('kabag-tahfidz.dashboard'), 'match' => ['kabag-tahfidz.dashboard']],
+        ['label' => 'Nilai Tahfidz Rapor', 'href' => route('kabag-tahfidz.report.index'), 'match' => ['kabag-tahfidz.report.*']],
         ['label' => 'Laporan Tasmi\'', 'href' => route('admin.tasmi-report.index'), 'match' => ['admin.tasmi-report.*']],
         ['label' => 'Penugasan PJ Tasmi\'', 'href' => \App\Filament\Resources\TasmiExaminerAssignments\TasmiExaminerAssignmentResource::getUrl(), 'match' => ['filament.admin.resources.tasmi-examiner-assignments.*']],
     ];

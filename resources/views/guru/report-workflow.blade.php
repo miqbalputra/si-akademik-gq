@@ -4,11 +4,7 @@
         $isHomeroom = $details['isHomeroom'] ?? false;
         $snapshot = $details['snapshot'] ?? null;
         $params = $classroom ? ['classroom_term_id' => $classroom->id] : [];
-        $tahfidzParams = $classroom ? ['academic_term_id' => $classroom->academic_term_id] : [];
         $ledgerReady = $snapshot && ($details['inputsReady'] ?? false) && !$details['ledgerIssue'];
-        if ($details['tahfidzClassLink'] ?? false) {
-            $tahfidzParams += $params;
-        }
         $steps = [
             ['Pilih kelas', 'Kelas dan semester'],
             ['Lengkapi nilai', 'Diniyyah, Suluk, Tahfidz'],
@@ -64,9 +60,6 @@
             @else
                 <p class="text-muted">Belum ada kelas dengan penugasan Diniyyah atau wali kelas yang aktif.</p>
             @endif
-            @if (!$classroom && $canInputTahfidz)
-                <a class="btn btn-outline mt-4" href="{{ route('guru.tahfidz-report.index') }}">Input nilai final Tahfidz</a>
-            @endif
         </section>
 
         @if ($classroom)
@@ -89,9 +82,6 @@
                     <div class="flex flex-wrap gap-2">
                         <a class="btn btn-primary" href="{{ route('guru.diniyyah-scores.index', $params) }}">Buka input nilai kelas</a>
                         <a class="btn btn-outline" href="{{ route('guru.kkm.index') }}">Lihat KKM</a>
-                        @if ($canInputTahfidz)
-                            <a class="btn btn-outline" href="{{ route('guru.tahfidz-report.index', $tahfidzParams) }}">Input final Tahfidz</a>
-                        @endif
                     </div>
                 </section>
             @endif
@@ -114,7 +104,7 @@
                     @if ($details['ledgerReadiness'])<p class="text-theme-sm font-medium text-heading">Kelengkapan nilai santri {{ $details['ledgerReadiness']['percentage'] }}%</p>@endif
                     @if ($details['ledgerIssue'])<p class="text-theme-sm text-warning-ink" role="status">{{ $details['ledgerIssue'] }}</p>@endif
                     <div class="flex flex-wrap gap-2">
-                        <a class="btn btn-outline" href="{{ route('guru.tahfidz-report.monitor', $classroom) }}">Periksa Tahfidz</a>
+                        <a class="btn btn-outline" href="{{ route('guru.tahfidz-report.monitor', $classroom) }}">Status &amp; pemeriksaan Tahfidz</a>
                         <a class="btn btn-outline" href="{{ route('attendance.edit', $classroom) }}">Periksa presensi</a>
                         @if ($snapshot)<a class="btn {{ $ledgerReady ? 'btn-primary' : 'btn-outline' }}" href="{{ route('diniyyah.ledger.show', $snapshot) }}">Tinjau draf leger</a>@endif
                         <form method="POST" action="{{ route('diniyyah.ledger.generate', $classroom) }}">
@@ -135,6 +125,7 @@
                     <div class="flex flex-wrap gap-2">
                         <a class="btn btn-primary" href="{{ route('report-cards.classroom', $snapshot) }}">Buka rapor kelas</a>
                         <a class="btn btn-outline" href="{{ route('diniyyah.ledger.show', $snapshot) }}">Lihat leger final</a>
+                        <a class="btn btn-outline" href="{{ route('guru.tahfidz-report.monitor', $classroom) }}">Status Tahfidz</a>
                     </div>
                 </section>
             @else

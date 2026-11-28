@@ -7,16 +7,22 @@ use App\Models\AcademicYear;
 use App\Models\ClassEnrollment;
 use App\Models\Classroom;
 use App\Models\ClassroomTerm;
+use App\Models\DiniyyahAssessmentResult;
+use App\Models\DiniyyahAssessmentSet;
+use App\Models\DiniyyahClassSubject;
 use App\Models\DiniyyahLedgerSnapshot;
+use App\Models\DiniyyahSubject;
 use App\Models\HomeroomAssignment;
 use App\Models\ReportCard;
 use App\Models\School;
 use App\Models\Student;
 use App\Models\StudentAttendance;
+use App\Models\TahfidzReportEntry;
 use App\Models\TahfidzUasResult;
 use App\Models\Teacher;
 use App\Models\User;
 use App\Services\AttendanceRecapService;
+use App\Services\DiniyyahAssessmentComponentBuilder;
 use App\Services\DiniyyahCombinedLedger;
 use App\Services\DiniyyahLedgerWorkflow;
 use App\Services\ReportCardPrintService;
@@ -26,7 +32,11 @@ use App\Services\TahfidzReportWorkflow;
 use DomainException;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Validation\ValidationException;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -36,11 +46,11 @@ class TahfidzReportInputTest extends TestCase
 
     private function context(): array
     {
-        foreach (['guru', 'admin'] as $role) {
+        foreach (['guru', 'admin', 'kabag_tahfidz'] as $role) {
             Role::firstOrCreate(['name' => $role, 'guard_name' => 'web']);
         }
         $user = User::factory()->create();
-        $user->assignRole('guru');
+        $user->assignRole('guru', 'kabag_tahfidz');
         $teacher = Teacher::create(['user_id' => $user->id, 'name' => 'Ustadz Pengisi', 'gender' => 'male', 'status' => 'active']);
         $school = School::create(['name' => 'Griya Quran']);
         $year = AcademicYear::create(['school_id' => $school->id, 'name' => '2026-2027']);
@@ -59,22 +69,26 @@ class TahfidzReportInputTest extends TestCase
         return ['juz_tested' => 'Juz 29 dan 30', 'uas_score' => 0, 'sabaq_score' => 80, 'sabqi_score' => 81.5, 'manzil_score' => 82];
     }
 
-    public function test_teacher_gender_is_enforced_for_lists_and_direct_submission_in_both_directions(): void
+    public function test_only_kabag_can_input_and_the_portal_lists_both_genders_without_a_teacher_profile(): void
     {
-        [$male, $boy, $term, $class] = $this->context();
+        [$wali, $boy, $term, $class] = $this->context();
+        $wali->removeRole('kabag_tahfidz');
         $girl = Student::create(['name' => 'Santri Akhwat', 'nis' => '002', 'gender' => 'female', 'status' => 'active']);
         $girlEnrollment = ClassEnrollment::create(['academic_term_id' => $term->id, 'classroom_term_id' => $class->id, 'student_id' => $girl->id, 'status' => 'active']);
-        $female = User::factory()->create();
-        $female->assignRole('guru');
-        Teacher::create(['user_id' => $female->id, 'name' => 'Ustadzah', 'gender' => 'female', 'status' => 'active']);
         $data = $this->values() + ['version' => 0, 'action' => 'final'];
-        $this->actingAs($male)->get(route('guru.tahfidz-report.index', ['classroom_term_id' => $class->id]))->assertOk()->assertSee('Santri Ikhwan')->assertDontSee('Santri Akhwat');
-        $this->actingAs($male)->post(route('guru.tahfidz-report.save', $girlEnrollment), $data)->assertForbidden();
-        $male->assignRole('admin');
-        $this->actingAs($male)->post(route('guru.tahfidz-report.save', $girlEnrollment), $data)->assertForbidden();
-        $this->actingAs($female)->get(route('guru.tahfidz-report.index', ['classroom_term_id' => $class->id]))->assertOk()->assertSee('Santri Akhwat')->assertDontSee('Santri Ikhwan');
-        $this->actingAs($female)->post(route('guru.tahfidz-report.save', $boy), $data)->assertForbidden();
-        $this->actingAs($female)->post(route('guru.tahfidz-report.save', $girlEnrollment), $data)->assertSessionHasNoErrors();
+        $index = route('kabag-tahfidz.report.index', ['classroom_term_id' => $class->id]);
+        $this->actingAs($wali)->get($index)->assertForbidden();
+        $this->post(route('kabag-tahfidz.report.save', $girlEnrollment), $data)->assertForbidden();
+        $this->post(route('guru.tahfidz-report.save', $boy), $data)->assertForbidden();
+        $this->get(route('kabag-tahfidz.report.template', $term))->assertForbidden();
+        $this->post(route('kabag-tahfidz.report.import', $term))->assertForbidden();
+
+        $kabag = User::factory()->create();
+        $kabag->assignRole('kabag_tahfidz');
+        $this->actingAs($kabag)->get(route('kabag-tahfidz.dashboard'))->assertOk()->assertSee('Nilai Tahfidz Rapor');
+        $this->get($index)->assertOk()->assertSee('Santri Ikhwan')->assertSee('Santri Akhwat');
+        $this->post(route('kabag-tahfidz.report.save', $girlEnrollment), $data)->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('tahfidz_report_entries', ['student_id' => $girl->id, 'input_by' => $kabag->id, 'input_role' => 'kabag_tahfidz']);
         $this->assertDatabaseCount('tahfidz_report_entries', 1);
     }
 
@@ -105,8 +119,8 @@ class TahfidzReportInputTest extends TestCase
     public function test_final_requires_all_values_and_score_bounds_are_validated(): void
     {
         [$user, $enrollment] = $this->context();
-        $this->actingAs($user)->post(route('guru.tahfidz-report.save', $enrollment), ['action' => 'final', 'version' => 0])->assertSessionHasErrors('tahfidz');
-        $this->actingAs($user)->post(route('guru.tahfidz-report.save', $enrollment), array_replace($this->values(), ['uas_score' => 101, 'action' => 'final', 'version' => 0]))->assertSessionHasErrors('uas_score');
+        $this->actingAs($user)->post(route('kabag-tahfidz.report.save', $enrollment), ['action' => 'final', 'version' => 0])->assertSessionHasErrors('tahfidz');
+        $this->actingAs($user)->post(route('kabag-tahfidz.report.save', $enrollment), array_replace($this->values(), ['uas_score' => 101, 'action' => 'final', 'version' => 0]))->assertSessionHasErrors('uas_score');
         $this->assertDatabaseCount('tahfidz_report_entries', 0);
     }
 
@@ -114,7 +128,7 @@ class TahfidzReportInputTest extends TestCase
     {
         [$wali, $enrollment, $term, $class] = $this->context();
         $other = User::factory()->create();
-        $other->assignRole('guru');
+        $other->assignRole('guru', 'kabag_tahfidz');
         Teacher::create(['user_id' => $other->id, 'name' => 'Guru lainnya', 'gender' => 'male', 'status' => 'active']);
         app(TahfidzReportWorkflow::class)->save($other, $enrollment, $this->values(), true, 0);
         $this->actingAs($other)->get(route('guru.tahfidz-report.monitor', $class))->assertForbidden();
@@ -144,7 +158,7 @@ class TahfidzReportInputTest extends TestCase
         $this->assertSame('413.50', $row->cells()->where('column_key', 'combined_total')->first()->value_numeric);
         $this->assertSame($before, $legacy->fresh()->toArray());
         $snapshot->update(['status' => 'locked']);
-        $this->actingAs($user)->post(route('guru.tahfidz-report.save', $enrollment), $this->values() + ['version' => 2, 'action' => 'final'])->assertSessionHasErrors('tahfidz');
+        $this->actingAs($user)->post(route('kabag-tahfidz.report.save', $enrollment), $this->values() + ['version' => 2, 'action' => 'final'])->assertSessionHasErrors('tahfidz');
         $this->assertDatabaseCount('tahfidz_report_entries', 2);
     }
 
@@ -208,44 +222,172 @@ class TahfidzReportInputTest extends TestCase
     public function test_class_then_student_selection_only_opens_one_form_and_rejects_mismatched_children(): void
     {
         [$user, $enrollment, $term, $class] = $this->context();
-        $this->actingAs($user)->get(route('guru.tahfidz-report.index'))->assertOk()
+        $this->actingAs($user)->get(route('kabag-tahfidz.report.index'))->assertOk()
             ->assertViewHas('selectedEnrollment', null)->assertDontSee('name="uas_score"', false);
-        $this->get(route('guru.tahfidz-report.index', ['classroom_term_id' => $class->id]))->assertOk()
-            ->assertSee('Santri Ikhwan — NIS 001')->assertDontSee('name="uas_score"', false);
-        $url = route('guru.tahfidz-report.index', ['academic_term_id' => $term->id, 'classroom_term_id' => $class->id, 'enrollment_id' => $enrollment->id]);
+        $this->get(route('kabag-tahfidz.report.index', ['classroom_term_id' => $class->id]))->assertOk()
+            ->assertSee('Santri Ikhwan')->assertDontSee('name="uas_score"', false);
+        $url = route('kabag-tahfidz.report.index', ['academic_term_id' => $term->id, 'classroom_term_id' => $class->id, 'enrollment_id' => $enrollment->id]);
         $response = $this->get($url)->assertOk()->assertSee('name="uas_score"', false);
         $this->assertSame(1, substr_count($response->getContent(), 'name="uas_score"'));
         $otherRoom = Classroom::create(['name' => 'Kelas Lain']);
         $otherClass = ClassroomTerm::create(['academic_term_id' => $term->id, 'classroom_id' => $otherRoom->id, 'name' => 'Kelas Lain']);
         $otherChild = Student::create(['name' => 'Santri Kelas Lain', 'nis' => '009', 'gender' => 'male', 'status' => 'active']);
         $other = ClassEnrollment::create(['academic_term_id' => $term->id, 'classroom_term_id' => $otherClass->id, 'student_id' => $otherChild->id, 'status' => 'active']);
-        $this->get(route('guru.tahfidz-report.index', ['classroom_term_id' => $class->id, 'enrollment_id' => $other->id]))->assertForbidden();
-        $this->get(route('guru.tahfidz-report.index', ['enrollment_id' => $enrollment->id]))->assertForbidden();
-        $this->post(route('guru.tahfidz-report.save', $enrollment), $this->values() + ['version' => 0, 'action' => 'final'])
-            ->assertRedirect(route('guru.tahfidz-report.index', ['academic_term_id' => $term->id, 'classroom_term_id' => $class->id]));
-        $this->get(route('guru.tahfidz-report.index', ['academic_term_id' => $term->id, 'classroom_term_id' => $class->id]))
+        $this->get(route('kabag-tahfidz.report.index', ['classroom_term_id' => $class->id, 'enrollment_id' => $other->id]))->assertForbidden();
+        $this->get(route('kabag-tahfidz.report.index', ['enrollment_id' => $enrollment->id]))->assertForbidden();
+        $this->post(route('kabag-tahfidz.report.save', $enrollment), $this->values() + ['version' => 0, 'action' => 'final'])
+            ->assertRedirect(route('kabag-tahfidz.report.index', ['academic_term_id' => $term->id, 'classroom_term_id' => $class->id]));
+        $this->get(route('kabag-tahfidz.report.index', ['academic_term_id' => $term->id, 'classroom_term_id' => $class->id]))
             ->assertOk()->assertViewHas('selectedEnrollment', null)->assertSee('Juz 29 dan 30')->assertDontSee('name="uas_score"', false);
     }
 
-    public function test_own_entries_list_preserves_teachers_contributions_and_labels_later_changes(): void
+    public function test_current_roster_displays_latest_value_and_preserves_previous_revisions(): void
     {
         [$user, $enrollment, $term, $class] = $this->context();
         $workflow = app(TahfidzReportWorkflow::class);
-        $own = $workflow->save($user, $enrollment, $this->values(), true, 0);
-        $before = $own->fresh()->toArray();
+        $first = $workflow->save($user, $enrollment, $this->values(), true, 0);
+        $before = $first->fresh()->toArray();
         $other = User::factory()->create();
-        $other->assignRole('guru');
-        Teacher::create(['user_id' => $other->id, 'name' => 'Guru Lain', 'gender' => 'male', 'status' => 'active']);
+        $other->assignRole('kabag_tahfidz');
         $workflow->save($other, $enrollment, array_replace($this->values(), ['uas_score' => 55]), true, 1);
-        $anotherStudent = Student::create(['name' => 'Isian Guru Lain', 'nis' => '010', 'gender' => 'male', 'status' => 'active']);
-        $another = ClassEnrollment::create(['academic_term_id' => $term->id, 'classroom_term_id' => $class->id, 'student_id' => $anotherStudent->id, 'status' => 'active']);
-        $workflow->save($other, $another, $this->values(), true, 0);
-        $this->actingAs($user)->get(route('guru.tahfidz-report.index'))->assertOk()
-            ->assertViewHas('history', fn ($history) => $history->count() === 1 && $history->first()->id === $own->id)
-            ->assertSee('Ada pembaruan dari guru lain')->assertDontSee('Isian Guru Lain');
-        $this->get(route('guru.tahfidz-report.index', ['classroom_term_id' => $class->id, 'enrollment_id' => $enrollment->id]))
+
+        $this->actingAs($user)->get(route('kabag-tahfidz.report.index', ['classroom_term_id' => $class->id, 'enrollment_id' => $enrollment->id]))
             ->assertOk()->assertSee('value="55.00"', false);
-        $this->assertSame($before, $own->fresh()->toArray());
+        $this->assertSame($before, $first->fresh()->toArray());
+        $this->assertDatabaseCount('tahfidz_report_entries', 2);
+    }
+
+    public function test_downloads_class_and_full_excel_and_reviewed_upload_reaches_rapor(): void
+    {
+        [$wali, $enrollment, $term, $class] = $this->context();
+        $wali->removeRole('kabag_tahfidz');
+        $kabag = User::factory()->create();
+        $kabag->assignRole('kabag_tahfidz');
+        $other = $this->enrollInSecondClass($term);
+        $archived = Student::create(['name' => 'Santri Arsip', 'nis' => '003', 'gender' => 'female', 'status' => 'inactive']);
+        ClassEnrollment::create(['academic_term_id' => $term->id, 'classroom_term_id' => $class->id, 'student_id' => $archived->id, 'status' => 'active']);
+
+        $this->actingAs($kabag);
+        $classWorkbook = $this->downloadTemplate($term, $class);
+        $classSheet = $classWorkbook->getActiveSheet();
+        $this->assertSame(['NIS', 'Nama Santri', 'Kelas', 'Juz yang diujikan', 'Nilai Ujian Tahfidz', 'Sabaq', 'Sabqi', 'Manzil'],
+            $classSheet->rangeToArray('A4:H4')[0]);
+        $this->assertSame(['001', 'Santri Ikhwan', 'Kelas Ikhwan'], $classSheet->rangeToArray('A5:C5')[0]);
+        $this->assertSame(5, $classSheet->getHighestDataRow());
+        $classWorkbook->disconnectWorksheets();
+
+        $full = $this->downloadTemplate($term);
+        $sheet = $full->getActiveSheet();
+        $this->assertSame(6, $sheet->getHighestDataRow());
+        $this->assertSame(['002', 'Santri Kelas Kedua', 'Kelas Lanjutan'], $sheet->rangeToArray('A6:C6')[0]);
+        $sheet->fromArray(['Juz 29 dan 30', 0, 80, '81,5', 82], null, 'D5', true);
+        $sheet->setCellValue('F6', 70);
+        $this->post(route('kabag-tahfidz.report.import', $term), ['file' => $this->excelUpload($full)])
+            ->assertRedirect(route('kabag-tahfidz.report.index', ['academic_term_id' => $term->id]))
+            ->assertSessionHasNoErrors()->assertSessionHas('status', '1 nilai final menunggu pemeriksaan wali kelas dan 1 draf disimpan.');
+        $this->assertDatabaseHas('tahfidz_report_entries', ['student_id' => $enrollment->student_id, 'input_by' => $kabag->id, 'input_role' => 'kabag_tahfidz', 'status' => 'final']);
+        $this->assertDatabaseHas('tahfidz_report_entries', ['student_id' => $other->student_id, 'status' => 'draft', 'sabaq_score' => 70]);
+
+        $this->actingAs($wali)->get(route('guru.tahfidz-report.monitor', $class))->assertOk()
+            ->assertViewHas('kabagComplete', 1)->assertSee('Menunggu pemeriksaan')->assertDontSee('Santri Kelas Kedua');
+        $this->post(route('guru.tahfidz-report.review', $enrollment), ['version' => 1])->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('tahfidz_report_entries', ['student_id' => $enrollment->student_id, 'status' => 'reviewed', 'input_role' => 'kabag_tahfidz']);
+
+        $subject = DiniyyahSubject::create(['code' => 'fiqih', 'name' => 'Fiqih']);
+        $classSubject = DiniyyahClassSubject::create(['classroom_term_id' => $class->id, 'subject_id' => $subject->id,
+            'assessment_method' => 'direct_final', 'is_active' => true, 'appears_on_ledger' => true]);
+        $set = DiniyyahAssessmentSet::create(['diniyyah_class_subject_id' => $classSubject->id, 'title' => 'Fiqih',
+            'assessment_method' => 'direct_final', 'status' => 'validated', 'appears_on_ledger' => true]);
+        app(DiniyyahAssessmentComponentBuilder::class)->createDefaults($set);
+        DiniyyahAssessmentResult::create(['diniyyah_assessment_set_id' => $set->id, 'class_enrollment_id' => $enrollment->id,
+            'final_score' => 85, 'is_complete' => true]);
+
+        $this->post(route('diniyyah.ledger.generate', $class))->assertSessionHasNoErrors();
+        $snapshot = DiniyyahLedgerSnapshot::sole();
+        $this->post(route('diniyyah.ledger.lock', $snapshot))->assertSessionHasNoErrors();
+        $card = ReportCard::where('class_enrollment_id', $enrollment->id)->firstOrFail();
+        $this->assertSame([
+            'tahfidz_juz' => 'Juz 29 dan 30', 'tahfidz_uas' => '0.00', 'tahfidz_sabaq' => '80.00',
+            'tahfidz_sabqi' => '81.50', 'tahfidz_manzil' => '82.00',
+        ], $card->snapshots()->latest('id')->first()->snapshot_data['print']['tahfidz']);
+    }
+
+    public function test_partial_updates_preserve_scores_and_stale_full_upload_rolls_back_every_row(): void
+    {
+        [$kabag, $enrollment, $term, $class] = $this->context();
+        $other = $this->enrollInSecondClass($term);
+        $this->actingAs($kabag);
+        $stale = $this->downloadTemplate($term);
+        $stale->getActiveSheet()->setCellValue('F5', 95)->setCellValue('F6', 96);
+        app(TahfidzReportWorkflow::class)->save($kabag, $other, ['sabaq_score' => 64], false, 0);
+
+        $import = route('kabag-tahfidz.report.import', $term);
+        $this->post($import, ['file' => $this->excelUpload($stale)])->assertSessionHasErrors('file');
+        $this->assertDatabaseCount('tahfidz_report_entries', 1);
+
+        app(TahfidzReportWorkflow::class)->save($kabag, $enrollment, $this->values(), true, 0);
+        $correction = $this->downloadTemplate($term, $class);
+        $correction->getActiveSheet()->setCellValue('G5', 100);
+        $this->post($import, ['file' => $this->excelUpload($correction)])->assertSessionHasNoErrors();
+        $entry = TahfidzReportEntry::where('student_id', $enrollment->student_id)->where('version', 2)->firstOrFail();
+        $this->assertSame('100.00', $entry->sabqi_score);
+        $this->assertSame('0.00', $entry->uas_score);
+        $this->assertSame('final', $entry->status);
+
+        $locked = $this->downloadTemplate($term, $class);
+        $locked->getActiveSheet()->setCellValue('G5', 82);
+        DiniyyahLedgerSnapshot::create(['academic_term_id' => $term->id, 'classroom_term_id' => $class->id, 'title' => 'Leger', 'status' => 'locked']);
+        $this->post($import, ['file' => $this->excelUpload($locked)])->assertSessionHasErrors('file');
         $this->assertDatabaseCount('tahfidz_report_entries', 3);
+    }
+
+    public function test_import_rejects_wrong_semester_and_invalid_scores_before_saving(): void
+    {
+        [$kabag, $enrollment, $term, $class] = $this->context();
+        $otherTerm = AcademicTerm::create(['academic_year_id' => $term->academic_year_id, 'name' => 'Genap', 'semester' => 'genap']);
+        $this->actingAs($kabag);
+        $workbook = $this->downloadTemplate($term, $class);
+        $sheet = $workbook->getActiveSheet();
+        $sheet->setCellValue('E5', 101);
+        $this->post(route('kabag-tahfidz.report.import', $term), ['file' => $this->excelUpload($workbook)])->assertSessionHasErrors('file');
+
+        $sheet->setCellValue('E5', 90);
+        $this->post(route('kabag-tahfidz.report.import', $otherTerm), ['file' => $this->excelUpload($workbook)])->assertSessionHasErrors('file');
+        $this->assertDatabaseCount('tahfidz_report_entries', 0);
+    }
+
+    private function enrollInSecondClass(AcademicTerm $term): ClassEnrollment
+    {
+        $room = Classroom::create(['name' => 'Kelas Lanjutan']);
+        $class = ClassroomTerm::create(['classroom_id' => $room->id, 'academic_term_id' => $term->id, 'name' => $room->name]);
+        $student = Student::create(['name' => 'Santri Kelas Kedua', 'nis' => '002', 'gender' => 'female', 'status' => 'active']);
+
+        return ClassEnrollment::create(['academic_term_id' => $term->id, 'classroom_term_id' => $class->id, 'student_id' => $student->id, 'status' => 'active']);
+    }
+
+    private function downloadTemplate(AcademicTerm $term, ?ClassroomTerm $class = null): Spreadsheet
+    {
+        $response = $this->get(route('kabag-tahfidz.report.template', ['term' => $term, 'classroom_term_id' => $class?->id]))
+            ->assertOk()->assertHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        $path = tempnam(sys_get_temp_dir(), 'tahfidz-');
+        try {
+            file_put_contents($path, $response->streamedContent());
+
+            return IOFactory::createReader('Xlsx')->load($path);
+        } finally {
+            unlink($path);
+        }
+    }
+
+    private function excelUpload(Spreadsheet $workbook): UploadedFile
+    {
+        $path = tempnam(sys_get_temp_dir(), 'tahfidz-');
+        try {
+            (new Xlsx($workbook))->save($path);
+
+            return UploadedFile::fake()->createWithContent('nilai-tahfidz.xlsx', file_get_contents($path));
+        } finally {
+            unlink($path);
+        }
     }
 }

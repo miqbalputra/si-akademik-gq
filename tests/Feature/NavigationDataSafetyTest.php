@@ -25,7 +25,7 @@ class NavigationDataSafetyTest extends TestCase
     public function test_navigating_and_switching_workspaces_does_not_change_existing_academic_data(): void
     {
         $user = User::factory()->create();
-        foreach (['admin', 'kabag_diniyyah', 'guru'] as $role) {
+        foreach (['admin', 'kabag_diniyyah', 'kabag_tahfidz', 'guru'] as $role) {
             $user->assignRole(Role::firstOrCreate(['name' => $role, 'guard_name' => 'web']));
         }
         $school = School::create(['name' => 'Sekolah Pengujian']);
@@ -61,7 +61,7 @@ class NavigationDataSafetyTest extends TestCase
         $this->actingAs($user, 'web')->get(route('guru.performa'))->assertOk()->assertSee('Rapor Kelas Saya');
         $this->get(route('guru.calendar'))->assertOk();
         $this->get(route('guru.jadwal.riwayat'))->assertOk();
-        $this->get(route('guru.tahfidz-report.index'))->assertOk();
+        $this->get(route('kabag-tahfidz.report.index'))->assertOk();
 
         foreach ($tables as $table) {
             $this->assertSame($before[$table], DB::table($table)->orderBy('id')->get()->toJson(), "Academic data changed in {$table}");

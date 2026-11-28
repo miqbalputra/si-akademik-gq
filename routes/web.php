@@ -97,6 +97,16 @@ Route::middleware('auth:web')->prefix('pilih-ruang-kerja')->name('workspace.')->
 
 Route::middleware(['auth:web', 'role:kabag_tahfidz'])->group(function () {
     Route::get('/kabag/tahfidz', KabagTahfidzDashboardController::class)->name('kabag-tahfidz.dashboard');
+    Route::prefix('kabag/tahfidz/nilai-rapor')->name('kabag-tahfidz.report.')->group(function () {
+        Route::get('/', [TahfidzReportController::class, 'index'])->name('index');
+        Route::get('/template/{term}', [TahfidzReportController::class, 'template'])->name('template');
+        Route::post('/impor/{term}', [TahfidzReportController::class, 'import'])->name('import');
+        Route::post('/santri/{enrollment}', [TahfidzReportController::class, 'save'])->name('save');
+    });
+    Route::get('/guru/tahfidz-rapor', fn (Request $request) => to_route(
+        'kabag-tahfidz.report.index', $request->only('academic_term_id', 'classroom_term_id', 'enrollment_id')
+    ))->name('guru.tahfidz-report.index');
+    Route::post('/guru/tahfidz-rapor/{enrollment}', [TahfidzReportController::class, 'save'])->name('guru.tahfidz-report.save');
 });
 
 Route::middleware(['auth:web', 'role:kabag_diniyyah'])->group(function () {
@@ -143,8 +153,6 @@ Route::middleware('auth:web')->prefix('notifications')->name('notifications.')->
 
 Route::middleware(['auth:web', 'role:guru'])->prefix('guru')->name('guru.')->group(function () {
     Route::get('/alur-nilai-rapor', GuruReportWorkflowController::class)->name('report-workflow');
-    Route::get('/tahfidz-rapor', [TahfidzReportController::class, 'index'])->name('tahfidz-report.index');
-    Route::post('/tahfidz-rapor/{enrollment}', [TahfidzReportController::class, 'save'])->name('tahfidz-report.save');
     Route::get('/pemeriksaan-tahfidz/{classroom}', [TahfidzReportController::class, 'monitor'])->name('tahfidz-report.monitor');
     Route::post('/pemeriksaan-tahfidz/{enrollment}', [TahfidzReportController::class, 'review'])->name('tahfidz-report.review');
     Route::get('/', [GuruDashboardController::class, 'index'])->name('dashboard');

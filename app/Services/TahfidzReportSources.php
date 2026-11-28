@@ -19,7 +19,9 @@ class TahfidzReportSources
         $payload = [$uas->toArray(), $recaps->toArray()];
         // Preserve the fingerprint format of historical ledgers without manual entries.
         if ($entries->isNotEmpty()) {
-            $payload[] = $entries->toArray();
+            $payload[] = $entries->map(fn ($entry) => $entry->input_role === null
+                ? collect($entry->toArray())->except('input_role')->all()
+                : $entry->toArray())->all();
         }
 
         return ['uas' => $uas->groupBy('student_id'), 'recaps' => $recaps->groupBy('student_id'), 'entries' => $entries->keyBy('student_id'),
@@ -45,5 +47,18 @@ class TahfidzReportSources
 
         return ['values' => $values, 'ready' => $complete && $ready, 'status' => $entry?->status ?? ($complete && $ready ? 'legacy_validated' : 'missing'),
             'entry' => $entry, 'uas_id' => $result?->id, 'recap_id' => $recap?->id];
+    }
+
+    public function entryValues(array $sources, int $studentId): array
+    {
+        $values = $this->resolve($sources, $studentId)['values'];
+
+        return [
+            'juz_tested' => $values['tahfidz_juz'],
+            'uas_score' => $values['tahfidz_uas'],
+            'sabaq_score' => $values['tahfidz_sabaq'],
+            'sabqi_score' => $values['tahfidz_sabqi'],
+            'manzil_score' => $values['tahfidz_manzil'],
+        ];
     }
 }

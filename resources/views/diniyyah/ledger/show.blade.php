@@ -46,7 +46,7 @@
             <a href="{{ route('guru.report-workflow', ['classroom_term_id' => $snapshot->classroom_term_id]) }}" class="btn btn-outline min-h-11 text-theme-sm font-medium">Alur Nilai &amp; Rapor</a>
             <a href="{{ route('diniyyah.ledger.export-excel', $snapshot) }}" class="btn min-h-11 bg-success-600 text-white hover:bg-success-700 text-theme-sm font-medium">Unduh Excel</a>
             <a href="{{ route('diniyyah.ledger.export-pdf', $snapshot) }}" class="btn min-h-11">Unduh PDF</a>
-            <a href="{{ route('guru.tahfidz-report.monitor', $snapshot->classroom_term_id) }}" class="btn btn-outline min-h-11">Periksa isian Tahfidz</a>
+            <a href="{{ route('guru.tahfidz-report.monitor', $snapshot->classroom_term_id) }}" class="btn btn-outline min-h-11">Status &amp; pemeriksaan Tahfidz</a>
             @if($frozen)
                 <a href="{{ route('report-cards.classroom', $snapshot) }}" class="btn btn-primary min-h-11">Lanjut ke rapor kelas</a>
             @else

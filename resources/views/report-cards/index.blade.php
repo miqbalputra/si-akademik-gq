@@ -10,7 +10,7 @@
                 <section class="card-lg p-5 space-y-3">
                     <h2 class="ui-card-title">{{ $classroom->name }}</h2>
                     <p class="text-muted">{{ $classroom->academicTerm?->academicYear?->name }} · {{ $classroom->academicTerm?->name }}</p>
-                    <a class="btn btn-outline" href="{{ route('guru.tahfidz-report.monitor', $classroom) }}">Periksa isian Tahfidz</a>
+                    <a class="btn btn-outline" href="{{ route('guru.tahfidz-report.monitor', $classroom) }}">Status &amp; pemeriksaan Tahfidz</a>
                     @if($snapshot)<a class="btn btn-primary" href="{{ route('report-cards.classroom', $snapshot) }}">Buka rapor kelas</a>
                     @else<p>Leger belum dibuat.</p><a class="btn btn-outline" href="{{ route('diniyyah.ledger.index') }}">Buka leger</a>@endif
                 </section>

@@ -56,7 +56,7 @@ class GuruNavigationTest extends TestCase
             'guru.diniyyah-journals.index', 'guru.diniyyah-substitute-journals.index',
             'guru.diniyyah-tafsir-journals.index', 'guru.diniyyah-substitute-tafsir-journals.index',
             'attendance.index', 'guru.diniyyah-scores.index', 'guru.kkm.index', 'guru.calendar',
-            'guru.report-workflow', 'guru.tahfidz-report.index', 'diniyyah.ledger.index', 'report-cards.index',
+            'guru.report-workflow', 'kabag-tahfidz.report.index', 'diniyyah.ledger.index', 'report-cards.index',
             'guru.tahfidz.index', 'guru.tasmi.index', 'guru.tasmi-wali.index',
             'wali.diniyyah-journals.index', 'wali.jp-recap.index', 'guru.rpp.index',
             'guru.rpp.create', 'guru.rpp.references', 'guru.rpp.promes', 'guru.rpp.trash',
@@ -74,17 +74,17 @@ class GuruNavigationTest extends TestCase
         $this->assertNotContains(route('guru.diniyyah-tafsir-journals.index'), $synced);
     }
 
-    public function test_regular_teacher_keeps_rapor_input_without_homeroom_or_examiner_controls(): void
+    public function test_regular_teacher_keeps_diniyyah_input_without_kabag_homeroom_or_examiner_controls(): void
     {
         [$user] = $this->teacher();
         $this->classroom();
         $groups = app(GuruNavigation::class)->groups($user);
-        $this->assertSame(['Alur Nilai & Rapor', 'Input Nilai Pelajaran', 'KKM Mata Pelajaran', 'Nilai Final Tahfidz Rapor'], array_column(collect($groups)->firstWhere('label', 'Rapor')['items'], 'label'));
+        $this->assertSame(['Alur Nilai & Rapor', 'Input Nilai Pelajaran', 'KKM Mata Pelajaran'], array_column(collect($groups)->firstWhere('label', 'Rapor')['items'], 'label'));
         $links = collect($groups)->pluck('items')->flatten(1)->pluck('href');
-        foreach (['diniyyah.ledger.index', 'report-cards.index', 'guru.tasmi.index', 'attendance.index', 'admin.tasmi-report.index'] as $route) {
+        foreach (['kabag-tahfidz.report.index', 'diniyyah.ledger.index', 'report-cards.index', 'guru.tasmi.index', 'attendance.index', 'admin.tasmi-report.index'] as $route) {
             $this->assertNotContains(route($route), $links);
         }
-        $this->actingAs($user)->get(route('guru.tahfidz-report.index'))->assertOk();
+        $this->actingAs($user)->get(route('kabag-tahfidz.report.index'))->assertForbidden();
         $this->get(route('guru.tasmi.index'))->assertForbidden();
         $this->get(route('attendance.index'))->assertForbidden();
     }

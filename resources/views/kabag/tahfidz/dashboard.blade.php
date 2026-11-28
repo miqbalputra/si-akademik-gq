@@ -26,6 +26,7 @@
             <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 @php
                     $actions = [
+                        ['Nilai Tahfidz Rapor', 'Isi Sabaq, Sabqi, Manzil, dan nilai ujian langsung atau melalui Excel.', route('kabag-tahfidz.report.index')],
                         ['Laporan Tasmi\' Semua Kelas', 'Pantau, filter, detail, dan ekspor hasil lintas PJ.', route('admin.tasmi-report.index')],
                         ['Penugasan PJ Tasmi\'', 'Tetapkan dan kelola penguji Tasmi\' pada periode berjalan.', \App\Filament\Resources\TasmiExaminerAssignments\TasmiExaminerAssignmentResource::getUrl()],
                         ['Penempatan Halaqah', 'Tempatkan santri ke halaqah dengan papan koordinasi.', \App\Filament\Pages\HalaqahPlacementBoard::getUrl()],

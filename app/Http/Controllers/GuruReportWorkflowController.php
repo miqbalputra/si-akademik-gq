@@ -9,7 +9,6 @@ use App\Services\DiniyyahLedgerAccess;
 use App\Services\DiniyyahLedgerWorkflow;
 use App\Services\ReportCardPrintService;
 use App\Services\TahfidzReportSources;
-use App\Services\TahfidzReportWorkflow;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 
@@ -27,15 +26,12 @@ class GuruReportWorkflowController extends Controller
             ->with('academicTerm.academicYear')->orderByDesc('academic_term_id')->orderBy('name')->get();
         $classroom = $classroomId === null ? null : $classrooms->find($classroomId);
         abort_if($classroomId !== null && ! $classroom, 403);
-        $canInputTahfidz = $user->teacher?->status === 'active' && in_array($user->teacher?->gender, ['male', 'female'], true);
 
         $details = [];
         if ($classroom) {
             $ownSubjects = $ownedSubjects->where('classroom_term_id', $classroom->id)->with('subject', 'assessmentSets.classSubject.subject')->get();
             $isHomeroom = $homeroomClasses->contains($classroom->id);
-            $tahfidzClassLink = $canInputTahfidz && app(TahfidzReportWorkflow::class)->enrollments($user, $classroom->academic_term_id)
-                ->where('classroom_term_id', $classroom->id)->exists();
-            $details = compact('ownSubjects', 'isHomeroom', 'tahfidzClassLink');
+            $details = compact('ownSubjects', 'isHomeroom');
             if ($isHomeroom) {
                 $details += $this->homeroomProgress($classroom);
             } elseif ($ownSubjects->every(fn ($subject) => $subject->assessmentSets->isNotEmpty()
@@ -44,7 +40,7 @@ class GuruReportWorkflowController extends Controller
             }
         }
 
-        return view('guru.report-workflow', compact('classrooms', 'classroom', 'canInputTahfidz', 'details'));
+        return view('guru.report-workflow', compact('classrooms', 'classroom', 'details'));
     }
 
     private function homeroomProgress(ClassroomTerm $classroom): array

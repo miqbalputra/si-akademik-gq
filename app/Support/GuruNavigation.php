@@ -39,7 +39,6 @@ class GuruNavigation
             $item('Alur Nilai & Rapor', 'guru.report-workflow', ['guru.report-workflow']),
             $item('Input Nilai Pelajaran', 'guru.diniyyah-scores.index', ['guru.diniyyah-scores.*'], 'Diniyyah Suluk Praktik Ibadah'),
             $item('KKM Mata Pelajaran', 'guru.kkm.index', ['guru.kkm.*']),
-            $item('Nilai Final Tahfidz Rapor', 'guru.tahfidz-report.index', ['guru.tahfidz-report.index']),
         ];
         $classes = [];
         if ($isHomeroom) {
@@ -79,6 +78,7 @@ class GuruNavigation
         }
         $coordination = [];
         if ($user->hasRole('kabag_tahfidz')) {
+            $coordination[] = $item('Nilai Tahfidz Rapor', 'kabag-tahfidz.report.index', ['kabag-tahfidz.report.*']);
             $coordination[] = $item("Monitoring Tasmi' Semua Kelas", 'admin.tasmi-report.index', ['admin.tasmi-report.*']);
         }
 
